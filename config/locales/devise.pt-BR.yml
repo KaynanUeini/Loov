@@ -1,0 +1,11 @@
+pt-BR:
+  devise:
+    failure:
+      already_authenticated: "Você já está logado. Faça logout para logar com outra conta."
+      user:
+        already_authenticated: "Você já está logado. Faça logout para logar com outra conta."
+    sessions:
+      signed_in: "Login realizado com sucesso!"
+      signed_out: "Logout realizado com sucesso!"
+    registrations:
+      signed_up: "Cadastro realizado com sucesso!"

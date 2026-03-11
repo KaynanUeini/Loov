@@ -1,0 +1,16 @@
+class AddAttendedNoShowToAppointments < ActiveRecord::Migration[7.1]
+  def up
+    # Se o status for enum do PostgreSQL
+    execute <<-SQL
+      DO $$
+      BEGIN
+        ALTER TYPE appointment_status ADD VALUE IF NOT EXISTS 'attended';
+        ALTER TYPE appointment_status ADD VALUE IF NOT EXISTS 'no_show';
+      EXCEPTION
+        WHEN others THEN NULL; -- coluna é string, sem ação necessária
+      END$$;
+    SQL
+  end
+
+  def down; end
+end

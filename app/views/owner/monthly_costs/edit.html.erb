@@ -1,0 +1,222 @@
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --lime: #afff2d; --lime-dim: #8fcc24; --black: #000; --surface-2: #111111; --surface-3: #1a1a1a; --border: #222222; --text-muted: #666666; --white: #ffffff; --red: #ff4d4d; --yellow: #ffaa00;
+  }
+
+  .wrap { min-height: 100vh; background: var(--black); font-family: 'DM Sans', sans-serif; padding-top: 64px; padding-bottom: 4rem; }
+  .inner { max-width: 640px; margin: 0 auto; padding: 3rem 1.5rem; }
+
+  .eyebrow { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.7rem; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; color: var(--lime); margin-bottom: 1rem; opacity: 0; animation: fadeUp 0.6s ease forwards 0.1s; }
+  .eyebrow::before { content: ''; display: block; width: 24px; height: 1px; background: var(--lime); }
+  .page-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(2rem, 6vw, 3.5rem); line-height: 1; color: var(--white); margin: 0 0 0.5rem 0; opacity: 0; animation: fadeUp 0.6s ease forwards 0.2s; }
+  .page-title span { color: var(--lime); }
+  .page-sub { font-size: 0.875rem; color: var(--text-muted); margin-bottom: 2.5rem; opacity: 0; animation: fadeUp 0.6s ease forwards 0.25s; }
+
+  .revenue-banner { background: rgba(175,255,45,0.06); border: 1px solid rgba(175,255,45,0.15); border-radius: 14px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; opacity: 0; animation: fadeUp 0.6s ease forwards 0.3s; }
+  .revenue-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; }
+  .revenue-value { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; color: var(--lime); letter-spacing: 0.03em; }
+
+  .form-section { background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; margin-bottom: 1.25rem; overflow: hidden; opacity: 0; animation: fadeUp 0.6s ease forwards; }
+  .form-section:nth-child(1) { animation-delay: 0.35s; }
+  .form-section:nth-child(2) { animation-delay: 0.4s; }
+  .form-section:nth-child(3) { animation-delay: 0.45s; }
+
+  .section-header { display: flex; align-items: center; justify-content: space-between; padding: 1.1rem 1.5rem; cursor: pointer; user-select: none; }
+  .section-header:hover { background: rgba(255,255,255,0.02); }
+  .section-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; color: var(--lime); letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.5rem; }
+  .section-total { font-family: 'Bebas Neue', sans-serif; font-size: 1rem; color: var(--text-muted); letter-spacing: 0.03em; }
+  .section-chevron { color: var(--text-muted); font-size: 0.8rem; transition: transform 0.25s ease; }
+  .section-chevron.open { transform: rotate(180deg); }
+  .section-body { max-height: 0; overflow: hidden; transition: max-height 0.35s ease; }
+  .section-body.open { max-height: 1000px; }
+  .section-body-inner { padding: 0 1.5rem 1.5rem; }
+
+  .form-field { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
+  .form-field:last-child { margin-bottom: 0; }
+  .form-label { font-size: 0.75rem; font-weight: 500; color: var(--text-muted); letter-spacing: 0.05em; text-transform: uppercase; }
+  .form-label span { font-size: 0.65rem; color: var(--text-muted); font-weight: 400; text-transform: none; letter-spacing: 0; margin-left: 0.3rem; }
+  .form-input, .form-textarea { background: var(--surface-3); border: 1px solid var(--border); border-radius: 10px; padding: 0.875rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.9375rem; color: var(--white); outline: none; transition: all 0.2s ease; width: 100%; box-sizing: border-box; }
+  .form-input:focus, .form-textarea:focus { border-color: var(--lime); box-shadow: 0 0 0 3px rgba(175,255,45,0.08); }
+  .form-input::placeholder, .form-textarea::placeholder { color: var(--text-muted); }
+  .form-textarea { resize: vertical; min-height: 80px; }
+
+  .profit-preview { background: var(--surface-3); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; opacity: 0; animation: fadeUp 0.6s ease forwards 0.5s; }
+  .profit-preview-title { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.75rem; }
+  .profit-row { display: flex; justify-content: space-between; align-items: center; padding: 0.4rem 0; border-bottom: 1px solid var(--border); font-size: 0.875rem; }
+  .profit-row:last-child { border-bottom: none; padding-top: 0.6rem; }
+  .profit-row.total { font-weight: 600; }
+  .profit-label { color: var(--text-muted); }
+  .profit-val { font-family: 'Bebas Neue', sans-serif; font-size: 1rem; letter-spacing: 0.03em; }
+
+  .form-actions { display: flex; gap: 0.75rem; opacity: 0; animation: fadeUp 0.6s ease forwards 0.55s; }
+  .btn-lime { display: inline-flex; align-items: center; gap: 0.4rem; background: var(--lime); color: var(--black); border: none; border-radius: 100px; padding: 0.875rem 2rem; font-family: 'DM Sans', sans-serif; font-size: 0.9375rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+  .btn-lime:hover { background: var(--lime-dim); transform: translateY(-1px); }
+  .btn-ghost { display: inline-flex; align-items: center; gap: 0.4rem; background: transparent; color: var(--text-muted); border: 1px solid var(--border); border-radius: 100px; padding: 0.875rem 1.5rem; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; cursor: pointer; transition: all 0.2s ease; text-decoration: none; }
+  .btn-ghost:hover { border-color: var(--lime); color: var(--lime); }
+
+  @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+</style>
+
+<div class="wrap">
+  <div class="inner">
+
+    <div class="eyebrow">Lançamento de Custos</div>
+    <h1 class="page-title"><%= MonthlyCost::MONTH_NAMES[@cost.month - 1] %><span>/</span><%= @cost.year %></h1>
+    <p class="page-sub">Registre os custos fixos e variáveis do mês para calcular o lucro real do negócio.</p>
+
+    <div class="revenue-banner">
+      <div>
+        <div class="revenue-label">Faturamento do mês</div>
+        <div class="revenue-value">R$ <%= number_with_precision(@revenue, precision: 2) %></div>
+      </div>
+      <i class="fas fa-chart-line" style="color:var(--lime);font-size:1.5rem;opacity:0.5;"></i>
+    </div>
+
+    <%= form_with model: @cost, url: upsert_owner_monthly_costs_path, method: :post, local: true do |f| %>
+      <%= hidden_field_tag :year,  @cost.year  %>
+      <%= hidden_field_tag :month, @cost.month %>
+
+      <!-- FIXOS -->
+      <div class="form-section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <div class="section-title"><i class="fas fa-lock"></i> Custos Fixos</div>
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <span class="section-total" id="total-fixed">R$ 0,00</span>
+            <i class="fas fa-chevron-down section-chevron open"></i>
+          </div>
+        </div>
+        <div class="section-body open">
+          <div class="section-body-inner">
+            <div class="form-field">
+              <%= f.label :rent, class: "form-label" do %>Aluguel<% end %>
+              <%= f.number_field :rent, class: "form-input cost-input", placeholder: "0,00", step: "0.01", min: "0", data: { group: "fixed" } %>
+            </div>
+            <div class="form-field">
+              <%= f.label :salaries, class: "form-label" do %>Salários e Encargos<% end %>
+              <%= f.number_field :salaries, class: "form-input cost-input", placeholder: "0,00", step: "0.01", min: "0", data: { group: "fixed" } %>
+            </div>
+            <div class="form-field">
+              <%= f.label :utilities, class: "form-label" do %>Água, Luz e Internet<% end %>
+              <%= f.number_field :utilities, class: "form-input cost-input", placeholder: "0,00", step: "0.01", min: "0", data: { group: "fixed" } %>
+            </div>
+            <div class="form-field">
+              <%= f.label :other_fixed, class: "form-label" do %>Outros Fixos <span>(contador, seguros, etc)</span><% end %>
+              <%= f.number_field :other_fixed, class: "form-input cost-input", placeholder: "0,00", step: "0.01", min: "0", data: { group: "fixed" } %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VARIÁVEIS -->
+      <div class="form-section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <div class="section-title"><i class="fas fa-arrows-spin"></i> Custos Variáveis</div>
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <span class="section-total" id="total-variable">R$ 0,00</span>
+            <i class="fas fa-chevron-down section-chevron open"></i>
+          </div>
+        </div>
+        <div class="section-body open">
+          <div class="section-body-inner">
+            <div class="form-field">
+              <%= f.label :products, class: "form-label" do %>Produtos <span>(shampoo, cera, detergente, etc)</span><% end %>
+              <%= f.number_field :products, class: "form-input cost-input", placeholder: "0,00", step: "0.01", min: "0", data: { group: "variable" } %>
+            </div>
+            <div class="form-field">
+              <%= f.label :maintenance, class: "form-label" do %>Manutenção <span>(equipamentos, reparos)</span><% end %>
+              <%= f.number_field :maintenance, class: "form-input cost-input", placeholder: "0,00", step: "0.01", min: "0", data: { group: "variable" } %>
+            </div>
+            <div class="form-field">
+              <%= f.label :other_variable, class: "form-label" do %>Outros Variáveis<% end %>
+              <%= f.number_field :other_variable, class: "form-input cost-input", placeholder: "0,00", step: "0.01", min: "0", data: { group: "variable" } %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- OBSERVAÇÕES -->
+      <div class="form-section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <div class="section-title"><i class="fas fa-note-sticky"></i> Observações</div>
+          <i class="fas fa-chevron-down section-chevron"></i>
+        </div>
+        <div class="section-body">
+          <div class="section-body-inner">
+            <div class="form-field">
+              <%= f.text_area :notes, class: "form-textarea", placeholder: "Ex: aluguel reajustado, comprei equipamento novo, mês com reforma..." %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PREVIEW LUCRO -->
+      <div class="profit-preview">
+        <div class="profit-preview-title"><i class="fas fa-calculator"></i> Prévia do Resultado</div>
+        <div class="profit-row">
+          <span class="profit-label">Faturamento</span>
+          <span class="profit-val" style="color:var(--lime);">R$ <%= number_with_precision(@revenue, precision: 2) %></span>
+        </div>
+        <div class="profit-row">
+          <span class="profit-label">Custos Fixos</span>
+          <span class="profit-val" id="preview-fixed" style="color:var(--yellow);">R$ 0,00</span>
+        </div>
+        <div class="profit-row">
+          <span class="profit-label">Custos Variáveis</span>
+          <span class="profit-val" id="preview-variable" style="color:var(--yellow);">R$ 0,00</span>
+        </div>
+        <div class="profit-row total">
+          <span class="profit-label">Lucro Líquido</span>
+          <span class="profit-val" id="preview-profit" style="color:var(--lime);">R$ <%= number_with_precision(@revenue, precision: 2) %></span>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <%= f.submit "Salvar Custos", class: "btn-lime" %>
+        <%= link_to "Cancelar", owner_monthly_costs_path, class: "btn-ghost" %>
+      </div>
+    <% end %>
+
+  </div>
+</div>
+
+<script>
+var revenue = <%= @revenue %>;
+
+function toggleSection(header) {
+  var body    = header.nextElementSibling;
+  var chevron = header.querySelector('.section-chevron');
+  var isOpen  = body.classList.contains('open');
+  body.classList.toggle('open');
+  chevron.classList.toggle('open', !isOpen);
+}
+
+function fmtBRL(v) {
+  return 'R$ ' + Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function recalc() {
+  var fixed    = 0;
+  var variable = 0;
+  document.querySelectorAll('.cost-input').forEach(function(el) {
+    var val = parseFloat(el.value) || 0;
+    if (el.dataset.group === 'fixed')    fixed    += val;
+    if (el.dataset.group === 'variable') variable += val;
+  });
+  var profit = revenue - fixed - variable;
+  document.getElementById('total-fixed').textContent    = fmtBRL(fixed);
+  document.getElementById('total-variable').textContent = fmtBRL(variable);
+  document.getElementById('preview-fixed').textContent    = fmtBRL(fixed);
+  document.getElementById('preview-variable').textContent = fmtBRL(variable);
+  var profitEl = document.getElementById('preview-profit');
+  profitEl.textContent = (profit < 0 ? '- ' : '') + fmtBRL(profit);
+  profitEl.style.color = profit >= 0 ? '#afff2d' : '#ff4d4d';
+}
+
+document.querySelectorAll('.cost-input').forEach(function(el) {
+  el.addEventListener('input', recalc);
+});
+
+recalc();
+</script>

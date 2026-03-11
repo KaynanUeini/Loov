@@ -1,0 +1,187 @@
+<% Rails.logger.info("Iniciando renderização do template payment.html.erb") %>
+<div class="max-w-4xl mx-auto mt-16 p-6">
+  <% Rails.logger.info("Renderizando título da página") %>
+  <!-- Título da Página -->
+  <h1 class="text-3xl font-semibold text-center mb-8 gradient-text fade-in-welcome">
+    Finalizar Agendamento
+  </h1>
+  <% Rails.logger.info("Título renderizado com sucesso") %>
+
+  <% Rails.logger.info("Renderizando detalhes do agendamento") %>
+  <!-- Detalhes do Agendamento -->
+  <div class="appointment-card mb-16 fade-in-section">
+    <h2 class="text-2xl font-medium mb-6 gradient-text">
+      Detalhes do Agendamento
+    </h2>
+    <p class="flex items-center mb-2" style="color: #B0B0B0;">
+      <i class="fas fa-car-wash mr-2 icon-hover" style="color: #6D54A9;"></i>
+      <strong style="color: #FFFFFF;">Lava-rápido:</strong> <span class="ml-1"><%= @appointment.car_wash.name %></span>
+    </p>
+    <p class="flex items-center mb-2" style="color: #B0B0B0;">
+      <i class="fas fa-tools mr-2 icon-hover" style="color: #6D54A9;"></i>
+      <strong style="color: #FFFFFF;">Serviço:</strong> <span class="ml-1"><%= @appointment.service.title %></span>
+    </p>
+    <p class="flex items-center mb-2" style="color: #B0B0B0;">
+      <i class="fas fa-clock mr-2 icon-hover" style="color: #6D54A9;"></i>
+      <strong style="color: #FFFFFF;">Data:</strong> <span class="ml-1"><%= @appointment.scheduled_at.strftime("%d/%m/%Y às %H:%M") %></span>
+    </p>
+    <p class="flex items-center mb-2" style="color: #B0B0B0;">
+      <i class="fas fa-money-bill-wave mr-2 icon-hover" style="color: #6D54A9;"></i>
+      <strong style="color: #FFFFFF;">Preço:</strong> <span class="ml-1">R$ <%= @appointment.service.price.to_f.round(2) %></span>
+    </p>
+  </div>
+  <% Rails.logger.info("Detalhes do agendamento renderizados com sucesso") %>
+
+  <% Rails.logger.info("Renderizando formulário de pagamento") %>
+  <!-- Formulário de Pagamento -->
+  <div class="appointment-card fade-in-section">
+    <h2 class="text-2xl font-medium mb-6 gradient-text">
+      Informações de Pagamento
+    </h2>
+    <%= form_with url: process_payment_appointment_path(id: 'new'), method: :post, local: true, id: "payment-form" do %>
+      <div class="form-control mb-4">
+        <label class="block mb-2 font-medium" style="color: #FFFFFF;">Detalhes do Cartão</label>
+        <div id="card-element" class="stripe-card-field"></div>
+        <div id="card-errors" role="alert" style="color: #EF4444; margin-top: 0.5rem;"></div>
+      </div>
+      <%= submit_tag "Pagar e Confirmar", class: "btn-primary w-full", id: "submit-payment", data: { disable_with: "Processando..." } %>
+    <% end %>
+  </div>
+  <% Rails.logger.info("Formulário de pagamento renderizado com sucesso") %>
+
+  <% Rails.logger.info("Renderizando scripts JavaScript") %>
+  <!-- Script para o Stripe e animações -->
+  <script src="https://js.stripe.com/v3/"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Forçar visibilidade dos elementos principais
+      const welcomeTitle = document.querySelector('h1.fade-in-welcome');
+      if (welcomeTitle) {
+        console.log("Título encontrado, aplicando animação.");
+        welcomeTitle.style.display = 'block'; // Forçar visibilidade
+        welcomeTitle.style.visibility = 'visible'; // Forçar visibilidade
+        welcomeTitle.style.opacity = '0';
+        welcomeTitle.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+          welcomeTitle.style.opacity = '1';
+          welcomeTitle.style.transform = 'translateY(0)';
+          console.log("Animação do título concluída.");
+        }, 100);
+      } else {
+        console.warn("Elemento h1.fade-in-welcome não encontrado na página.");
+      }
+
+      const sections = document.querySelectorAll('.fade-in-section');
+      if (sections.length > 0) {
+        console.log("Seções encontradas:", sections.length);
+        sections.forEach((section, index) => {
+          section.style.display = 'block'; // Forçar visibilidade
+          section.style.visibility = 'visible'; // Forçar visibilidade
+          section.style.opacity = '0';
+          section.style.transform = 'translateY(20px)';
+          setTimeout(() => {
+            section.style.opacity = '1';
+            section.style.transform = 'translateY(0)';
+            console.log(`Animação da seção ${index} concluída.`);
+          }, (index + 1) * 200);
+        });
+      } else {
+        console.warn("Nenhum elemento com a classe fade-in-section encontrado na página.");
+      }
+
+      // Inicialização do Stripe
+      const stripePublishableKey = '<%= Rails.application.credentials.stripe[:publishable_key] %>';
+      if (!stripePublishableKey) {
+        console.error("Chave de publicação do Stripe não encontrada.");
+        document.getElementById('card-errors').textContent = 'Erro: Chave de publicação do Stripe não configurada.';
+        return;
+      }
+      console.log("Chave de publicação do Stripe:", stripePublishableKey);
+      const stripe = Stripe(stripePublishableKey);
+      const elements = stripe.elements();
+      const card = elements.create('card', {
+        style: {
+          base: {
+            color: '#FFFFFF',
+            fontFamily: '"Poppins", sans-serif',
+            fontSize: '16px',
+            '::placeholder': {
+              color: '#B0B0B0',
+            },
+          },
+          invalid: {
+            color: '#EF4444',
+          },
+        },
+        hidePostalCode: true
+      });
+      const cardElement = document.getElementById('card-element');
+      if (cardElement) {
+        console.log("Elemento #card-element encontrado, montando o Stripe Elements.");
+        cardElement.style.display = 'block'; // Forçar visibilidade
+        cardElement.style.visibility = 'visible'; // Forçar visibilidade
+        card.mount('#card-element');
+      } else {
+        console.error("Elemento #card-element não encontrado na página.");
+        return;
+      }
+
+      const form = document.getElementById('payment-form');
+      const submitButton = document.getElementById('submit-payment');
+      const cardErrors = document.getElementById('card-errors');
+
+      if (!form || !submitButton || !cardErrors) {
+        console.error("Elementos do formulário não encontrados:", { form, submitButton, cardErrors });
+        return;
+      }
+
+      cardErrors.textContent = '';
+
+      const clientSecret = '<%= @appointment.payment_intent_client_secret %>';
+      if (!clientSecret) {
+        console.error("Client Secret não encontrado.");
+        cardErrors.textContent = 'Erro: Client Secret não disponível. Tente novamente.';
+        submitButton.disabled = true;
+        return;
+      }
+      console.log("Client Secret:", clientSecret);
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        submitButton.disabled = true;
+        cardErrors.textContent = '';
+
+        try {
+          const { paymentIntent, error } = await stripe.confirmCardPayment(clientSecret, {
+            payment_method: {
+              card: card,
+              billing_details: {
+                address: {
+                  postal_code: null
+                }
+              }
+            }
+          });
+
+          if (error) {
+            console.error("Erro no Stripe:", error);
+            cardErrors.textContent = error.message || 'Erro ao processar o pagamento. Tente novamente.';
+            submitButton.disabled = false;
+          } else if (paymentIntent.status === 'succeeded') {
+            console.log("Pagamento bem-sucedido:", paymentIntent);
+            form.submit();
+          } else {
+            console.warn("Pagamento não concluído:", paymentIntent.status);
+            cardErrors.textContent = 'Pagamento não foi concluído. Status: ' + paymentIntent.status;
+            submitButton.disabled = false;
+          }
+        } catch (e) {
+          console.error("Exceção capturada:", e);
+          cardErrors.textContent = e.message || 'Erro ao processar o pagamento. Tente novamente.';
+          submitButton.disabled = false;
+        }
+      });
+    });
+  </script>
+</div>
+<% Rails.logger.info("Template payment.html.erb renderizado com sucesso") %>

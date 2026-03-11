@@ -1,0 +1,193 @@
+<% Rails.logger.info("Iniciando renderização do template car_washes/edit.html.erb") %>
+<div class="max-w-4xl mx-auto mt-16 p-6">
+  <h1 class="text-3xl font-semibold text-center mb-8 gradient-text fade-in-welcome">
+    Editar Lava-Rápido
+  </h1>
+
+  <%= form_with model: @car_wash, local: true, class: "appointment-card fade-in-section" do |form| %>
+    <% if @car_wash.errors.any? %>
+      <div class="alert-error shadow-lg mb-4 flex items-center">
+        <svg class="h-6 w-6 text-white mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+        <span class="text-white">
+          <% @car_wash.errors.full_messages.each do |message| %>
+            <%= message %><br>
+          <% end %>
+        </span>
+      </div>
+    <% end %>
+
+    <div class="form-control mb-4">
+      <%= form.label :name, "Nome do Lava-Rápido", class: "block mb-2 font-medium", style: "color: #FFFFFF;" %>
+      <%= form.text_field :name, class: "w-full p-2 border border-gray-600 rounded", required: true %>
+    </div>
+
+    <div class="form-control mb-4">
+      <%= form.label :address, "Endereço", class: "block mb-2 font-medium", style: "color: #FFFFFF;" %>
+      <%= form.text_field :address, class: "w-full p-2 border border-gray-600 rounded", required: true %>
+    </div>
+
+    <h2 class="text-2xl font-medium mb-6 gradient-text">
+      Horários de Funcionamento
+    </h2>
+
+    <div id="operating_hours">
+      <%= form.fields_for :operating_hours do |oh_form| %>
+        <div class="appointment-card mb-4 operating-hour-fields">
+          <div class="form-control mb-4">
+            <%= oh_form.label :day_of_week, "Dia da Semana", class: "block mb-2 font-medium", style: "color: #FFFFFF;" %>
+            <%= oh_form.select :day_of_week, [
+              ["Domingo", 0],
+              ["Segunda-feira", 1],
+              ["Terça-feira", 2],
+              ["Quarta-feira", 3],
+              ["Quinta-feira", 4],
+              ["Sexta-feira", 5],
+              ["Sábado", 6]
+            ], { prompt: "Selecione o dia" }, class: "w-full p-2 border border-gray-600 rounded", required: true %>
+          </div>
+
+          <div class="form-control mb-4">
+            <%= oh_form.label :opens_at, "Horário de Abertura", class: "block mb-2 font-medium", style: "color: #FFFFFF;" %>
+            <%= oh_form.time_field :opens_at, class: "w-full p-2 border border-gray-600 rounded", required: true %>
+          </div>
+
+          <div class="form-control mb-4">
+            <%= oh_form.label :closes_at, "Horário de Fechamento", class: "block mb-2 font-medium", style: "color: #FFFFFF;" %>
+            <%= oh_form.time_field :closes_at, class: "w-full p-2 border border-gray-600 rounded", required: true %>
+          </div>
+
+          <%= oh_form.check_box :_destroy %>
+          <%= oh_form.label :_destroy, "Remover este horário", style: "color: #EF4444;" %>
+        </div>
+      <% end %>
+    </div>
+
+    <%= link_to "Adicionar Horário", "#", id: "add-operating-hour", class: "btn-primary mb-4" %>
+
+    <h2 class="text-2xl font-medium mb-6 gradient-text">
+      Serviços
+    </h2>
+
+    <div id="services">
+      <%= form.fields_for :services do |service_form| %>
+        <div class="appointment-card mb-4 service-fields">
+          <div class="form-control mb-4">
+            <%= service_form.label :title, "Título do Serviço", class: "block mb-2 font-medium", style: "color: #FFFFFF;" %>
+            <%= service_form.text_field :title, class: "w-full p-2 border border-gray-600 rounded", required: true %>
+          </div>
+
+          <div class="form-control mb-4">
+            <%= service_form.label :description, "Descrição", class: "block mb-2 font-medium", style: "color: #FFFFFF;" %>
+            <%= service_form.text_area :description, class: "w-full p-2 border border-gray-600 rounded", required: true %>
+          </div>
+
+          <div class="form-control mb-4">
+            <%= service_form.label :price, "Preço (R$)", class: "block mb-2 font-medium", style: "color: #FFFFFF;" %>
+            <%= service_form.number_field :price, step: 0.01, min: 0, class: "w-full p-2 border border-gray-600 rounded", required: true %>
+          </div>
+
+          <div class="form-control mb-4">
+            <%= service_form.label :duration, "Duração (minutos)", class: "block mb-2 font-medium", style: "color: #FFFFFF;" %>
+            <%= service_form.number_field :duration, min: 1, class: "w-full p-2 border border-gray-600 rounded", required: true %>
+          </div>
+
+          <%= service_form.check_box :_destroy %>
+          <%= service_form.label :_destroy, "Remover este serviço", style: "color: #EF4444;" %>
+        </div>
+      <% end %>
+    </div>
+
+    <%= link_to "Adicionar Serviço", "#", id: "add-service", class: "btn-primary mb-4" %>
+
+    <%= form.submit "Atualizar Lava-Rápido", class: "btn-primary w-full" %>
+  <% end %>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Adicionar campos para horários de funcionamento
+    const addOperatingHourButton = document.getElementById('add-operating-hour');
+    const operatingHoursContainer = document.getElementById('operating_hours');
+
+    if (addOperatingHourButton && operatingHoursContainer) {
+      addOperatingHourButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        const time = new Date().getTime();
+        const regexp = new RegExp('new_operating_hours', 'g');
+        const newFields = `
+          <div class="appointment-card mb-4 operating-hour-fields">
+            <div class="form-control mb-4">
+              <label class="block mb-2 font-medium" style="color: #FFFFFF;" for="car_wash_operating_hours_attributes_${time}_day_of_week">Dia da Semana</label>
+              <select name="car_wash[operating_hours_attributes][${time}][day_of_week]" id="car_wash_operating_hours_attributes_${time}_day_of_week" class="w-full p-2 border border-gray-600 rounded" required>
+                <option value="">Selecione o dia</option>
+                <option value="0">Domingo</option>
+                <option value="1">Segunda-feira</option>
+                <option value="2">Terça-feira</option>
+                <option value="3">Quarta-feira</option>
+                <option value="4">Quinta-feira</option>
+                <option value="5">Sexta-feira</option>
+                <option value="6">Sábado</option>
+              </select>
+            </div>
+
+            <div class="form-control mb-4">
+              <label class="block mb-2 font-medium" style="color: #FFFFFF;" for="car_wash_operating_hours_attributes_${time}_opens_at">Horário de Abertura</label>
+              <input type="time" name="car_wash[operating_hours_attributes][${time}][opens_at]" id="car_wash_operating_hours_attributes_${time}_opens_at" class="w-full p-2 border border-gray-600 rounded" required>
+            </div>
+
+            <div class="form-control mb-4">
+              <label class="block mb-2 font-medium" style="color: #FFFFFF;" for="car_wash_operating_hours_attributes_${time}_closes_at">Horário de Fechamento</label>
+              <input type="time" name="car_wash[operating_hours_attributes][${time}][closes_at]" id="car_wash_operating_hours_attributes_${time}_closes_at" class="w-full p-2 border border-gray-600 rounded" required>
+            </div>
+
+            <input type="checkbox" name="car_wash[operating_hours_attributes][${time}][_destroy]" id="car_wash_operating_hours_attributes_${time}_destroy">
+            <label for="car_wash_operating_hours_attributes_${time}_destroy" style="color: #EF4444;">Remover este horário</label>
+          </div>
+        `;
+        operatingHoursContainer.insertAdjacentHTML('beforeend', newFields);
+      });
+    }
+
+    // Adicionar campos para serviços
+    const addServiceButton = document.getElementById('add-service');
+    const servicesContainer = document.getElementById('services');
+
+    if (addServiceButton && servicesContainer) {
+      addServiceButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        const time = new Date().getTime();
+        const regexp = new RegExp('new_services', 'g');
+        const newFields = `
+          <div class="appointment-card mb-4 service-fields">
+            <div class="form-control mb-4">
+              <label class="block mb-2 font-medium" style="color: #FFFFFF;" for="car_wash_services_attributes_${time}_title">Título do Serviço</label>
+              <input type="text" name="car_wash[services_attributes][${time}][title]" id="car_wash_services_attributes_${time}_title" class="w-full p-2 border border-gray-600 rounded" required>
+            </div>
+
+            <div class="form-control mb-4">
+              <label class="block mb-2 font-medium" style="color: #FFFFFF;" for="car_wash_services_attributes_${time}_description">Descrição</label>
+              <textarea name="car_wash[services_attributes][${time}][description]" id="car_wash_services_attributes_${time}_description" class="w-full p-2 border border-gray-600 rounded" required></textarea>
+            </div>
+
+            <div class="form-control mb-4">
+              <label class="block mb-2 font-medium" style="color: #FFFFFF;" for="car_wash_services_attributes_${time}_price">Preço (R$)</label>
+              <input type="number" step="0.01" min="0" name="car_wash[services_attributes][${time}][price]" id="car_wash_services_attributes_${time}_price" class="w-full p-2 border border-gray-600 rounded" required>
+            </div>
+
+            <div class="form-control mb-4">
+              <label class="block mb-2 font-medium" style="color: #FFFFFF;" for="car_wash_services_attributes_${time}_duration">Duração (minutos)</label>
+              <input type="number" min="1" name="car_wash[services_attributes][${time}][duration]" id="car_wash_services_attributes_${time}_duration" class="w-full p-2 border border-gray-600 rounded" required>
+            </div>
+
+            <input type="checkbox" name="car_wash[services_attributes][${time}][_destroy]" id="car_wash_services_attributes_${time}_destroy">
+            <label for="car_wash_services_attributes_${time}_destroy" style="color: #EF4444;">Remover este serviço</label>
+          </div>
+        `;
+        servicesContainer.insertAdjacentHTML('beforeend', newFields);
+      });
+    }
+  });
+</script>
+<% Rails.logger.info("Template car_washes/edit.html.erb renderizado com sucesso") %>

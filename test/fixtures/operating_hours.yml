@@ -1,0 +1,13 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  car_wash: one
+  day_of_week: 1
+  opens_at: 2025-05-07 02:40:46
+  closes_at: 2025-05-07 02:40:46
+
+two:
+  car_wash: two
+  day_of_week: 1
+  opens_at: 2025-05-07 02:40:46
+  closes_at: 2025-05-07 02:40:46

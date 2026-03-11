@@ -1,0 +1,852 @@
+<% Rails.logger.info("Renderizando appointments/new.html.erb: @car_wash=#{@car_wash.inspect}") %>
+<script>
+  window.carWashId = <%= @car_wash.id %>;
+  window.operatingHours = <%= @car_wash.operating_hours.map { |oh| { day_of_week: oh.day_of_week, opens_at: (oh.opens_at.hour * 60 + oh.opens_at.min), closes_at: (oh.closes_at.hour * 60 + oh.closes_at.min) } }.to_json.html_safe %>;
+  window.capacityPerSlot = <%= @car_wash.capacity_per_slot %>;
+  window.carWashName = "<%= @car_wash.name %>";
+  window.carWashAddress = "<%= @car_wash.address %>";
+</script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --lime: #afff2d;
+    --lime-dim: #8fcc24;
+    --black: #000000;
+    --surface: #0a0a0a;
+    --surface-2: #111111;
+    --surface-3: #1a1a1a;
+    --border: #222222;
+    --text-muted: #666666;
+    --text-secondary: #999999;
+    --white: #ffffff;
+  }
+
+  .appt-wrap {
+    min-height: 100vh;
+    background: var(--black);
+    font-family: 'DM Sans', sans-serif;
+    padding-top: 64px;
+  }
+
+  .appt-back {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 0;
+    opacity: 0;
+    animation: fadeUp 0.5s ease forwards 0.1s;
+  }
+
+  .appt-back a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  .appt-back a:hover { color: var(--lime); }
+
+  .appt-header {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.2s;
+  }
+
+  .appt-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--lime);
+    margin-bottom: 1rem;
+  }
+
+  .appt-eyebrow::before {
+    content: '';
+    display: block;
+    width: 24px;
+    height: 1px;
+    background: var(--lime);
+  }
+
+  .appt-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2rem, 7vw, 4rem);
+    line-height: 0.95;
+    color: var(--white);
+    margin-bottom: 0.5rem;
+  }
+
+  .appt-title span { color: var(--lime); }
+  .appt-subtitle { font-size: 0.9rem; color: var(--text-muted); }
+
+  .appt-flash { max-width: 640px; margin: 0 auto; padding: 0 1.5rem 1rem; }
+
+  .appt-flash-msg {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1.25rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .appt-flash-msg.error {
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.2);
+    color: #fca5a5;
+  }
+
+  .appt-flash-msg.success {
+    background: rgba(175,255,45,0.08);
+    border: 1px solid rgba(175,255,45,0.15);
+    color: var(--lime);
+  }
+
+  .appt-divider { max-width: 640px; margin: 0 auto; padding: 0 1.5rem; }
+  .appt-divider-line { height: 1px; background: var(--border); }
+
+  /* SCREENS */
+  .appt-screens {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+    position: relative;
+  }
+
+  .appt-screen {
+    transition: opacity 0.35s ease, transform 0.35s ease;
+  }
+
+  .appt-screen.hidden {
+    display: none;
+  }
+
+  /* STEPS */
+  .appt-steps {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .appt-step {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    transition: color 0.2s ease;
+  }
+
+  .appt-step-num {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+  }
+
+  .appt-step.active { color: var(--white); }
+  .appt-step.active .appt-step-num { background: var(--lime); color: var(--black); border-color: var(--lime); }
+  .appt-step.done { color: var(--lime); }
+  .appt-step.done .appt-step-num { background: transparent; color: var(--lime); border-color: var(--lime); }
+  .appt-step-divider { flex: 1; height: 1px; background: var(--border); }
+
+  /* FIELDS */
+  .appt-field { margin-bottom: 2rem; }
+
+  .appt-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .appt-label i { color: var(--lime); font-size: 0.7rem; }
+
+  .appt-input {
+    width: 100%;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.875rem 1rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9375rem;
+    color: var(--white);
+    transition: all 0.2s ease;
+    outline: none;
+    appearance: none;
+  }
+
+  .appt-input::placeholder { color: var(--text-muted); }
+  .appt-input:focus { border-color: var(--lime); box-shadow: 0 0 0 3px rgba(175,255,45,0.08); }
+  .appt-input:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* Service cards */
+  .service-cards { display: flex; flex-direction: column; gap: 0.75rem; }
+
+  .service-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    gap: 1rem;
+  }
+
+  .service-card:hover { border-color: var(--lime); background: var(--surface-3); }
+
+  .service-card.selected {
+    border-color: var(--lime);
+    background: var(--surface-3);
+    box-shadow: 0 0 0 1px var(--lime);
+  }
+
+  .service-card-left { flex: 1; }
+
+  .service-card-name {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--white);
+    margin-bottom: 0.2rem;
+  }
+
+  .service-card-meta {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .service-card-meta i { color: var(--lime); font-size: 0.65rem; }
+
+  .service-card-price {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    color: var(--lime);
+    letter-spacing: 0.02em;
+    flex-shrink: 0;
+  }
+
+  .service-card-check {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    font-size: 0.6rem;
+    color: transparent;
+  }
+
+  .service-card.selected .service-card-check {
+    background: var(--lime);
+    border-color: var(--lime);
+    color: var(--black);
+  }
+
+  /* Time slots */
+  .time-slots-container { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+  .time-slot {
+    padding: 0.625rem 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .time-slot:hover { border-color: var(--lime); color: var(--lime); }
+  .time-slot.selected { background: var(--lime); color: var(--black); border-color: var(--lime); font-weight: 600; }
+
+  #loading-indicator {
+    font-size: 0.8125rem;
+    color: var(--lime);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+  }
+
+  #time-error {
+    font-size: 0.8rem;
+    color: #fca5a5;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* SUMMARY SCREEN */
+  .summary-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+
+  .summary-card-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .summary-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    color: var(--lime);
+    flex-shrink: 0;
+  }
+
+  .summary-car-wash-name {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--white);
+  }
+
+  .summary-car-wash-address {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 0.15rem;
+  }
+
+  .summary-rows { padding: 0.5rem 0; }
+
+  .summary-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    gap: 1rem;
+  }
+
+  .summary-row:last-child { border-bottom: none; }
+
+  .summary-row-label {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  .summary-row-value {
+    font-size: 0.875rem;
+    color: var(--white);
+    text-align: right;
+  }
+
+  .summary-row-value.highlight {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    color: var(--lime);
+    letter-spacing: 0.02em;
+  }
+
+  /* ACTIONS */
+  .appt-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+
+  .btn-appt {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.75rem;
+    border-radius: 100px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    border: none;
+    white-space: nowrap;
+  }
+
+  .btn-appt-primary { background: var(--lime); color: var(--black); flex: 1; }
+  .btn-appt-primary:hover:not(:disabled) { background: var(--lime-dim); transform: translateY(-2px); }
+  .btn-appt-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+  .btn-appt-secondary { background: transparent; color: var(--white); border: 1px solid var(--border); }
+  .btn-appt-secondary:hover { border-color: var(--lime); color: var(--lime); }
+
+  /* Flatpickr */
+  .flatpickr-input { cursor: pointer !important; }
+  .flatpickr-calendar {
+    background: var(--surface-2) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+  }
+  .flatpickr-day { color: var(--white) !important; border-radius: 8px !important; }
+  .flatpickr-day:hover { background: var(--surface-3) !important; border-color: var(--lime) !important; }
+  .flatpickr-day.selected, .flatpickr-day.selected:hover {
+    background: var(--lime) !important;
+    color: var(--black) !important;
+    border-color: var(--lime) !important;
+    font-weight: 700 !important;
+  }
+  .flatpickr-day.disabled, .flatpickr-day.disabled:hover { color: var(--border) !important; cursor: not-allowed !important; }
+  .flatpickr-day.nextMonthDay, .flatpickr-day.prevMonthDay { color: var(--border) !important; pointer-events: none !important; }
+  .flatpickr-month { color: var(--white) !important; }
+  .flatpickr-current-month, .flatpickr-current-month span, .flatpickr-current-month input {
+    color: var(--white) !important;
+    font-family: 'Bebas Neue', sans-serif !important;
+    font-size: 1rem !important;
+  }
+  .flatpickr-weekday { color: var(--lime) !important; font-size: 0.7rem !important; font-weight: 600 !important; }
+  .flatpickr-prev-month svg, .flatpickr-next-month svg { fill: var(--white) !important; }
+  .flatpickr-prev-month:hover svg, .flatpickr-next-month:hover svg { fill: var(--lime) !important; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(32px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes slideOut {
+    from { opacity: 1; transform: translateX(0); }
+    to   { opacity: 0; transform: translateX(-32px); }
+  }
+
+  .screen-enter { animation: slideIn 0.35s ease forwards; }
+
+  @media (max-width: 640px) {
+    .appt-back, .appt-header, .appt-divider, .appt-screens, .appt-flash {
+      padding-left: 1.25rem;
+      padding-right: 1.25rem;
+    }
+  }
+</style>
+
+<div class="appt-wrap">
+
+  <div class="appt-back">
+    <a href="#" id="back-btn">
+      <i class="fas fa-arrow-left"></i> <span id="back-label">Voltar</span>
+    </a>
+  </div>
+
+  <div class="appt-header">
+    <div class="appt-eyebrow">Novo Agendamento</div>
+    <h1 class="appt-title">
+      Agendar em<span> <%= @car_wash&.name || "Lava-rápido" %>.</span>
+    </h1>
+    <p class="appt-subtitle"><%= @car_wash&.address %></p>
+  </div>
+
+  <% if flash[:alert] || flash[:notice] %>
+  <div class="appt-flash">
+    <% if flash[:alert] %>
+      <div class="appt-flash-msg error"><i class="fas fa-circle-exclamation"></i><span><%= flash[:alert] %></span></div>
+    <% end %>
+    <% if flash[:notice] %>
+      <div class="appt-flash-msg success"><i class="fas fa-circle-check"></i><span><%= flash[:notice] %></span></div>
+    <% end %>
+  </div>
+  <% end %>
+
+  <div class="appt-divider"><div class="appt-divider-line"></div></div>
+
+  <div class="appt-screens">
+
+    <!-- TELA 1: Seleção -->
+    <div id="screen-selection" class="appt-screen">
+
+      <!-- Steps -->
+      <div class="appt-steps">
+        <div class="appt-step active" id="step-1">
+          <div class="appt-step-num">1</div><span>Data</span>
+        </div>
+        <div class="appt-step-divider"></div>
+        <div class="appt-step" id="step-2">
+          <div class="appt-step-num">2</div><span>Serviço</span>
+        </div>
+        <div class="appt-step-divider"></div>
+        <div class="appt-step" id="step-3">
+          <div class="appt-step-num">3</div><span>Horário</span>
+        </div>
+      </div>
+
+      <!-- Data -->
+      <div class="appt-field">
+        <label class="appt-label"><i class="fas fa-calendar"></i> Data *</label>
+        <input type="text" id="appointment-date" class="appt-input" placeholder="Selecione uma data" readonly>
+      </div>
+
+      <!-- Serviço -->
+      <div class="appt-field" id="field-service" style="opacity:0.35; pointer-events:none;">
+        <label class="appt-label"><i class="fas fa-wrench"></i> Serviço *</label>
+        <div class="service-cards" id="service-cards">
+          <% @car_wash.services.each do |service| %>
+            <div class="service-card"
+              data-id="<%= service.id %>"
+              data-price="<%= service.price.to_f %>"
+              data-duration="<%= service.duration %>"
+              data-title="<%= service.title %>">
+              <div class="service-card-left">
+                <div class="service-card-name"><%= service.title %></div>
+                <div class="service-card-meta">
+                  <i class="fas fa-clock"></i> <%= service.duration %> min
+                  <% if service.description.present? %>
+                    · <%= service.description.truncate(40) %>
+                  <% end %>
+                </div>
+              </div>
+              <div class="service-card-price">R$&nbsp;<%= number_with_precision(service.price, precision: 2, separator: ',') %></div>
+              <div class="service-card-check"><i class="fas fa-check"></i></div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <!-- Horário -->
+      <div class="appt-field" id="field-time" style="opacity:0.35; pointer-events:none;">
+        <label class="appt-label"><i class="fas fa-clock"></i> Horário *</label>
+        <div id="loading-indicator" style="display:none;">
+          <i class="fas fa-spinner fa-spin"></i> Carregando horários...
+        </div>
+        <div id="time-error" style="display:none;">
+          <i class="fas fa-circle-exclamation"></i>&nbsp;<span id="time-error-msg">Nenhum horário disponível.</span>
+        </div>
+        <div id="time-slots" class="time-slots-container"></div>
+      </div>
+
+    </div>
+
+    <!-- TELA 2: Resumo -->
+    <div id="screen-summary" class="appt-screen hidden">
+
+      <%= form_with(model: @appointment, local: true, id: "appointment-form") do |form| %>
+        <%= form.hidden_field :car_wash_id, value: @car_wash.id %>
+        <%= form.hidden_field :service_id, id: "hidden-service-id" %>
+        <%= form.hidden_field :date, id: "hidden-date" %>
+        <%= form.hidden_field :time, id: "hidden-time" %>
+
+        <div class="summary-card">
+          <div class="summary-card-header">
+            <div class="summary-avatar"><%= @car_wash.name.first(2).upcase %></div>
+            <div>
+              <div class="summary-car-wash-name" id="sum-name"><%= @car_wash.name %></div>
+              <div class="summary-car-wash-address" id="sum-address"><%= @car_wash.address %></div>
+            </div>
+          </div>
+          <div class="summary-rows">
+            <div class="summary-row">
+              <span class="summary-row-label">Data</span>
+              <span class="summary-row-value" id="sum-date">—</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-row-label">Horário</span>
+              <span class="summary-row-value" id="sum-time">—</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-row-label">Serviço</span>
+              <span class="summary-row-value" id="sum-service">—</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-row-label">Duração</span>
+              <span class="summary-row-value" id="sum-duration">—</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-row-label">Valor</span>
+              <span class="summary-row-value highlight" id="sum-price">—</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="appt-actions">
+          <button type="button" class="btn-appt btn-appt-secondary" id="btn-back-selection">
+            <i class="fas fa-arrow-left"></i> Corrigir
+          </button>
+          <%= form.submit "Confirmar Agendamento", class: "btn-appt btn-appt-primary", id: "submit-button" %>
+        </div>
+
+      <% end %>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  var selectedDate = null;
+  var selectedDateStr = null;
+  var selectedDuration = null;
+  var selectedServiceId = null;
+  var selectedServiceTitle = null;
+  var selectedServicePrice = null;
+
+  function setStep(step) {
+    for (var i = 1; i <= 3; i++) {
+      var el = document.getElementById('step-' + i);
+      el.classList.remove('active', 'done');
+      if (i < step) el.classList.add('done');
+      else if (i === step) el.classList.add('active');
+    }
+  }
+
+  function enableField(id) {
+    var el = document.getElementById(id);
+    if (el) { el.style.opacity = '1'; el.style.pointerEvents = 'auto'; }
+  }
+
+  function disableField(id) {
+    var el = document.getElementById(id);
+    if (el) { el.style.opacity = '0.35'; el.style.pointerEvents = 'none'; }
+  }
+
+  function showScreen(id) {
+    document.querySelectorAll('.appt-screen').forEach(function(s) { s.classList.add('hidden'); });
+    var screen = document.getElementById(id);
+    screen.classList.remove('hidden');
+    screen.classList.add('screen-enter');
+    setTimeout(function() { screen.classList.remove('screen-enter'); }, 400);
+  }
+
+  function showSummary() {
+    var date = selectedDate;
+    document.getElementById('sum-date').textContent =
+      date.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
+    document.getElementById('sum-time').textContent = document.getElementById('hidden-time').value;
+    document.getElementById('sum-service').textContent = selectedServiceTitle;
+    document.getElementById('sum-duration').textContent = selectedDuration + ' min';
+    document.getElementById('sum-price').textContent = 'R$ ' + parseFloat(selectedServicePrice).toFixed(2).replace('.', ',');
+    showScreen('screen-summary');
+
+    document.getElementById('back-label').textContent = 'Voltar';
+  }
+
+  // Back button
+  document.getElementById('back-btn').addEventListener('click', function(e) {
+    e.preventDefault();
+    var summaryVisible = !document.getElementById('screen-summary').classList.contains('hidden');
+    if (summaryVisible) {
+      showScreen('screen-selection');
+      document.getElementById('back-label').textContent = 'Voltar';
+    } else {
+      window.location.href = '<%= car_wash_path(@car_wash) %>';
+    }
+  });
+
+  document.getElementById('btn-back-selection').addEventListener('click', function() {
+    showScreen('screen-selection');
+  });
+
+  // Service cards
+  document.querySelectorAll('.service-card').forEach(function(card) {
+    card.addEventListener('click', function() {
+      document.querySelectorAll('.service-card').forEach(function(c) { c.classList.remove('selected'); });
+      card.classList.add('selected');
+
+      selectedServiceId    = card.dataset.id;
+      selectedServiceTitle = card.dataset.title;
+      selectedServicePrice = card.dataset.price;
+      selectedDuration     = parseInt(card.dataset.duration);
+
+      document.getElementById('hidden-service-id').value = selectedServiceId;
+
+      // Resetar horários
+      document.getElementById('time-slots').innerHTML = '';
+      document.getElementById('time-error').style.display = 'none';
+      document.getElementById('hidden-time').value = '';
+      disableField('field-time');
+      setStep(3);
+
+      if (selectedDateStr) loadTimeSlots();
+    });
+  });
+
+  async function loadTimeSlots() {
+    if (!selectedDateStr || !selectedDuration) return;
+
+    var dayOfWeek = selectedDate.getDay();
+    var oh = (window.operatingHours || []).find(function(o) { return o.day_of_week === dayOfWeek; });
+
+    if (!oh) {
+      document.getElementById('time-error-msg').textContent = 'Lava-rápido fechado neste dia.';
+      document.getElementById('time-error').style.display = 'flex';
+      return;
+    }
+
+    document.getElementById('loading-indicator').style.display = 'flex';
+    document.getElementById('time-slots').innerHTML = '';
+    document.getElementById('time-error').style.display = 'none';
+
+    var appointments = [];
+    try {
+      var r = await fetch('/appointments.json?car_wash_id=' + window.carWashId + '&date=' + selectedDateStr, {
+        headers: {
+          'Accept': 'application/json',
+          'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+        }
+      });
+      var data = await r.json();
+      appointments = data.appointments || [];
+    } catch(e) { console.error(e); }
+
+    document.getElementById('loading-indicator').style.display = 'none';
+
+    var slots = [];
+    var cur = oh.opens_at;
+    var now = new Date();
+    var isToday = selectedDate.toDateString() === now.toDateString();
+    var nowMin = now.getHours() * 60 + now.getMinutes();
+
+    while (cur + selectedDuration <= oh.closes_at) {
+      if (!isToday || cur > nowMin) {
+        var used = appointments.filter(function(a) {
+          var t = a.start_time ? a.start_time.match(/T(\d{2}):(\d{2})/) : null;
+          if (!t) return false;
+          var m = parseInt(t[1]) * 60 + parseInt(t[2]);
+          return m < cur + selectedDuration && m + selectedDuration > cur;
+        }).length;
+        var cap = (window.capacityPerSlot || 1) - used;
+        if (cap > 0) {
+          var h = String(Math.floor(cur/60)).padStart(2,'0');
+          var m = String(cur%60).padStart(2,'0');
+          slots.push({ time: h + ':' + m });
+        }
+      }
+      cur += selectedDuration;
+    }
+
+    var container = document.getElementById('time-slots');
+
+    if (!slots.length) {
+      document.getElementById('time-error-msg').textContent = 'Nenhum horário disponível para este dia.';
+      document.getElementById('time-error').style.display = 'flex';
+      enableField('field-time');
+      return;
+    }
+
+    slots.forEach(function(s) {
+      var slotEl = document.createElement('div');
+      slotEl.className = 'time-slot';
+      slotEl.textContent = s.time;
+      slotEl.dataset.time = s.time;
+      slotEl.addEventListener('click', function() {
+        document.querySelectorAll('.time-slot').forEach(function(t) { t.classList.remove('selected'); });
+        slotEl.classList.add('selected');
+        document.getElementById('hidden-time').value = s.time;
+        document.getElementById('hidden-date').value = selectedDateStr;
+
+        // Transição para o resumo após breve delay
+        setTimeout(showSummary, 250);
+      });
+      container.appendChild(slotEl);
+    });
+
+    enableField('field-time');
+  }
+
+  function initFlatpickr() {
+    var el = document.getElementById('appointment-date');
+    if (!el || typeof flatpickr === 'undefined') { setTimeout(initFlatpickr, 50); return; }
+
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    var maxDate = new Date(today);
+    maxDate.setMonth(maxDate.getMonth() + 1);
+
+    flatpickr(el, {
+      dateFormat: "Y-m-d",
+      altInput: true,
+      altFormat: "d/m/Y",
+      minDate: today,
+      maxDate: maxDate,
+      showMonths: 1,
+      disableMobile: true,
+      locale: {
+        firstDayOfWeek: 0,
+        weekdays: {
+          shorthand: ["Dom","Seg","Ter","Qua","Qui","Sex","Sab"],
+          longhand: ["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"]
+        },
+        months: {
+          shorthand: ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"],
+          longhand: ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"]
+        }
+      },
+      onChange: function(selectedDates, dateStr) {
+        if (!selectedDates.length) return;
+
+        selectedDate    = selectedDates[0];
+        selectedDateStr = dateStr;
+        document.getElementById('hidden-date').value = dateStr;
+
+        var dayOfWeek = selectedDate.getDay();
+        var oh = (window.operatingHours || []).find(function(o) { return o.day_of_week === dayOfWeek; });
+
+        // Reset serviço e horário
+        document.querySelectorAll('.service-card').forEach(function(c) { c.classList.remove('selected'); });
+        selectedServiceId = null; selectedDuration = null;
+        document.getElementById('time-slots').innerHTML = '';
+        document.getElementById('time-error').style.display = 'none';
+        document.getElementById('hidden-time').value = '';
+        disableField('field-time');
+
+        if (!oh) {
+          disableField('field-service');
+          document.getElementById('time-error-msg').textContent = 'Lava-rápido fechado neste dia.';
+          document.getElementById('time-error').style.display = 'flex';
+          enableField('field-time');
+          setStep(1);
+          return;
+        }
+
+        enableField('field-service');
+        setStep(2);
+      }
+    });
+  }
+
+  initFlatpickr();
+</script>

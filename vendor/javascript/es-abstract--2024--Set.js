@@ -1,0 +1,4 @@
+// es-abstract/2024/Set@1.24.0 downloaded from https://ga.jspm.io/npm:es-abstract@1.24.0/2024/Set.js
+
+import*as t from"es-errors/type";import*as r from"es-object-atoms/isObject";import{_ as e}from"../_/zRQJhUWa.js";import a from"./SameValue.js";import"math-intrinsics/isNaN";var o=t;try{"default"in t&&(o=t.default)}catch(t){}var s=r;try{"default"in r&&(s=r.default)}catch(t){}var i={};var n=o;var f=s;var u=e;var l=a;var m=function(){try{delete[].length;return true}catch(t){return false}}();i=function(t,r,e,a){if(!f(t))throw new n("Assertion failed: `O` must be an Object");if(!u(r))throw new n("Assertion failed: `P` must be a Property Key");if(typeof a!=="boolean")throw new n("Assertion failed: `Throw` must be a Boolean");if(a){t[r]=e;if(m&&!l(t[r],e))throw new n("Attempted to assign to readonly property.");return true}try{t[r]=e;return!m||l(t[r],e)}catch(t){return false}};var c=i;export{c as default};
+

@@ -1,0 +1,318 @@
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --lime: #afff2d;
+    --lime-dim: #8fcc24;
+    --black: #000000;
+    --surface: #0a0a0a;
+    --surface-2: #111111;
+    --surface-3: #1a1a1a;
+    --border: #222222;
+    --text-muted: #666666;
+    --text-secondary: #999999;
+    --white: #ffffff;
+    --red: #ff4d4d;
+    --yellow: #ffaa00;
+    --green: #afff2d;
+  }
+
+  .fin-wrap { min-height: 100vh; background: var(--black); font-family: 'DM Sans', sans-serif; padding-top: 64px; padding-bottom: 4rem; }
+  .fin-inner { max-width: 1100px; margin: 0 auto; padding: 3rem 1.5rem; }
+
+  .fin-eyebrow { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.7rem; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; color: var(--lime); margin-bottom: 1rem; opacity: 0; animation: fadeUp 0.6s ease forwards 0.1s; }
+  .fin-eyebrow::before { content: ''; display: block; width: 24px; height: 1px; background: var(--lime); }
+  .fin-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(2.5rem, 8vw, 4.5rem); line-height: 1; color: var(--white); margin: 0 0 2.5rem 0; opacity: 0; animation: fadeUp 0.6s ease forwards 0.2s; }
+  .fin-title span { color: var(--lime); }
+
+  .flash-msg { display: flex; align-items: center; gap: 0.75rem; padding: 0.875rem 1.25rem; border-radius: 12px; font-size: 0.875rem; margin-bottom: 1rem; }
+  .flash-msg.success { background: rgba(175,255,45,0.08); border: 1px solid rgba(175,255,45,0.15); color: var(--lime); }
+  .flash-msg.error   { background: rgba(255,77,77,0.08);  border: 1px solid rgba(255,77,77,0.15);  color: var(--red); }
+
+  /* KPI */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-bottom: 1.5rem; opacity: 0; animation: fadeUp 0.6s ease forwards 0.3s; }
+  .kpi-card { background: var(--surface-2); padding: 1.5rem; display: flex; flex-direction: column; gap: 0.4rem; }
+  .kpi-label { font-size: 0.7rem; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; }
+  .kpi-value { font-family: 'Bebas Neue', sans-serif; font-size: 1.75rem; color: var(--white); line-height: 1; }
+  .kpi-value.lime { color: var(--lime); }
+  .kpi-value.red  { color: var(--red); }
+  .kpi-value.yellow { color: var(--yellow); }
+  .kpi-sub { font-size: 0.75rem; color: var(--text-muted); }
+
+  /* DRE TABLE */
+  .section-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; margin-bottom: 1.25rem; opacity: 0; animation: fadeUp 0.6s ease forwards; }
+  .section-header { padding: 1.25rem 1.75rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; }
+  .section-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; color: var(--lime); letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.5rem; }
+
+  .dre-table { width: 100%; border-collapse: collapse; }
+  .dre-table thead th { padding: 0.75rem 1.25rem; text-align: left; font-size: 0.7rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1px solid var(--border); background: var(--surface-3); white-space: nowrap; }
+  .dre-table tbody td { padding: 0.875rem 1.25rem; font-size: 0.875rem; color: var(--white); border-bottom: 1px solid var(--border); }
+  .dre-table tbody tr:last-child td { border-bottom: none; }
+  .dre-table tbody tr:hover td { background: rgba(255,255,255,0.02); }
+  .dre-table tbody tr.row-pending td { background: rgba(255,170,0,0.03); }
+  .dre-table tbody tr.row-pending:hover td { background: rgba(255,170,0,0.06); }
+
+  .td-mes { font-weight: 500; }
+  .td-value { font-family: 'Bebas Neue', sans-serif; font-size: 1rem; letter-spacing: 0.03em; }
+  .td-lime   { color: var(--lime); }
+  .td-red    { color: var(--red); }
+  .td-yellow { color: var(--yellow); }
+  .td-muted  { color: var(--text-muted); font-size: 0.8rem; }
+
+  .margin-pill { display: inline-flex; align-items: center; font-size: 0.72rem; font-weight: 600; padding: 0.2rem 0.6rem; border-radius: 100px; }
+  .margin-positive { background: rgba(175,255,45,0.1); color: var(--lime); border: 1px solid rgba(175,255,45,0.2); }
+  .margin-negative { background: rgba(255,77,77,0.1);  color: var(--red);  border: 1px solid rgba(255,77,77,0.2); }
+  .margin-neutral  { background: rgba(255,170,0,0.1);  color: var(--yellow); border: 1px solid rgba(255,170,0,0.2); }
+  .margin-empty    { background: rgba(255,255,255,0.04); color: var(--text-muted); border: 1px solid var(--border); }
+
+  .pending-badge { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.68rem; font-weight: 600; color: var(--yellow); background: rgba(255,170,0,0.08); border: 1px solid rgba(255,170,0,0.2); border-radius: 100px; padding: 0.2rem 0.6rem; white-space: nowrap; }
+  .no-cost-badge { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.65rem; color: var(--text-muted); border: 1px dashed var(--border); border-radius: 100px; padding: 0.2rem 0.6rem; }
+
+  /* LEGEND */
+  .legend-row { display: flex; gap: 1.5rem; padding: 0.875rem 1.75rem; border-top: 1px solid var(--border); flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.7rem; color: var(--text-muted); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* CHART */
+  .chart-wrap { padding: 1.5rem; }
+  .chart-inner { position: relative; height: 260px; }
+
+  /* BUTTONS */
+  .btn-lime { display: inline-flex; align-items: center; gap: 0.4rem; background: var(--lime); color: var(--black); border: none; border-radius: 100px; padding: 0.6rem 1.25rem; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; text-decoration: none; white-space: nowrap; }
+  .btn-lime:hover { background: var(--lime-dim); transform: translateY(-1px); }
+  .btn-ghost { display: inline-flex; align-items: center; gap: 0.4rem; background: transparent; color: var(--text-muted); border: 1px solid var(--border); border-radius: 100px; padding: 0.6rem 1.25rem; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; cursor: pointer; transition: all 0.2s ease; text-decoration: none; white-space: nowrap; }
+  .btn-ghost:hover { border-color: var(--lime); color: var(--lime); }
+  .btn-icon-danger { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--text-muted); cursor: pointer; transition: all 0.2s ease; font-size: 0.75rem; }
+  .btn-icon-danger:hover { border-color: var(--red); color: var(--red); }
+
+  .empty-state { text-align: center; padding: 3rem 1.5rem; color: var(--text-muted); }
+  .empty-icon  { font-size: 2rem; margin-bottom: 0.75rem; color: var(--border); }
+
+  @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+  @media (max-width: 768px) { .kpi-grid { grid-template-columns: repeat(2,1fr); } }
+  @media (max-width: 480px) { .kpi-grid { grid-template-columns: 1fr 1fr; } .fin-inner { padding: 2rem 1.25rem; } }
+</style>
+
+<div class="fin-wrap">
+  <div class="fin-inner">
+
+    <div class="fin-eyebrow">Gestão</div>
+    <h1 class="fin-title">Financeiro<span>.</span></h1>
+
+    <% if flash[:notice] %>
+    <div class="flash-msg success"><i class="fas fa-circle-check"></i> <%= flash[:notice] %></div>
+    <% end %>
+    <% if flash[:alert] %>
+    <div class="flash-msg error"><i class="fas fa-circle-exclamation"></i> <%= flash[:alert] %></div>
+    <% end %>
+
+    <%
+      current_dre      = @dre.last
+      avg_margin       = @dre.select { |d| d[:margem] }.map { |d| d[:margem] }.then { |ms| ms.any? ? (ms.sum / ms.size).round(1) : nil }
+      total_profit     = @dre.sum { |d| d[:lucro] }
+      months_with_cost = @dre.count { |d| d[:tem_custo] }
+      current_pending  = current_dre&.dig(:receita_aberto).to_f
+    %>
+
+    <!-- KPIs -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Faturamento Este Mês</div>
+        <div class="kpi-value lime">R$ <%= number_with_precision(current_dre&.dig(:faturamento).to_f, precision: 0, delimiter: '.') %></div>
+        <div class="kpi-sub">clientes que compareceram</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Em Aberto (agendados)</div>
+        <div class="kpi-value yellow">R$ <%= number_with_precision(current_pending, precision: 0, delimiter: '.') %></div>
+        <div class="kpi-sub">confirmados, ainda não realizados</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Lucro Este Mês</div>
+        <% if current_dre && current_dre[:tem_custo] %>
+          <div class="kpi-value <%= current_dre[:lucro] >= 0 ? 'lime' : 'red' %>">R$ <%= number_with_precision(current_dre[:lucro].abs, precision: 0, delimiter: '.') %></div>
+          <div class="kpi-sub"><%= current_dre[:lucro] >= 0 ? 'lucro líquido' : 'prejuízo' %></div>
+        <% else %>
+          <div class="kpi-value" style="color:var(--text-muted);">—</div>
+          <div class="kpi-sub">custos não cadastrados</div>
+        <% end %>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Margem Média 12m</div>
+        <% if avg_margin %>
+          <div class="kpi-value <%= avg_margin >= 20 ? 'lime' : avg_margin >= 0 ? '' : 'red' %>"><%= avg_margin %>%</div>
+          <div class="kpi-sub"><%= months_with_cost %> meses com dados</div>
+        <% else %>
+          <div class="kpi-value" style="color:var(--text-muted);">—</div>
+          <div class="kpi-sub">cadastre custos mensais</div>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- CHART DRE -->
+    <% if months_with_cost > 0 %>
+    <div class="section-card" style="animation-delay:0.35s;">
+      <div class="section-header">
+        <div class="section-title"><i class="fas fa-chart-bar"></i> Faturamento vs Custos vs Lucro</div>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-inner"><canvas id="dreChart"></canvas></div>
+      </div>
+    </div>
+    <% end %>
+
+    <!-- DRE TABLE -->
+    <div class="section-card" style="animation-delay:0.4s;">
+      <div class="section-header">
+        <div class="section-title"><i class="fas fa-table-list"></i> DRE Mensal</div>
+        <%= link_to edit_owner_monthly_costs_path(year: Date.current.year, month: Date.current.month), class: "btn-lime" do %>
+          <i class="fas fa-plus"></i> Lançar Custos
+        <% end %>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="dre-table">
+          <thead>
+            <tr>
+              <th>Mês</th>
+              <th>Faturamento Real</th>
+              <th>Em Aberto</th>
+              <th>Custos Fixos</th>
+              <th>Custos Variáveis</th>
+              <th>Total Custos</th>
+              <th>Lucro Líquido</th>
+              <th>Margem</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @dre.reverse.each do |d| %>
+            <%
+              is_current = d[:ano] == Date.current.year && d[:mes_num] == Date.current.month
+              has_pending = d[:receita_aberto].to_f > 0
+            %>
+            <tr class="<%= is_current && has_pending ? 'row-pending' : '' %>">
+              <td class="td-mes">
+                <%= d[:mes_label] %> <%= d[:ano] %>
+                <% if is_current %>
+                  <span style="font-size:0.6rem;color:var(--lime);margin-left:0.3rem;">● atual</span>
+                <% end %>
+              </td>
+
+              <%# Faturamento real (attended) %>
+              <td>
+                <span class="td-value td-lime">R$ <%= number_with_precision(d[:faturamento], precision: 2) %></span>
+              </td>
+
+              <%# Receita em aberto (confirmed futuros) — só faz sentido no mês atual %>
+              <td>
+                <% if is_current && has_pending %>
+                  <span class="pending-badge">
+                    <i class="fas fa-clock"></i>
+                    R$ <%= number_with_precision(d[:receita_aberto], precision: 2) %>
+                  </span>
+                <% else %>
+                  <span class="td-muted">—</span>
+                <% end %>
+              </td>
+
+              <% if d[:tem_custo] %>
+                <%
+                  cost = @car_wash.monthly_costs.find_by(year: d[:ano], month: d[:mes_num])
+                %>
+                <td class="td-muted">R$ <%= number_with_precision(cost&.total_fixed.to_f, precision: 2) %></td>
+                <td class="td-muted">R$ <%= number_with_precision(cost&.total_variable.to_f, precision: 2) %></td>
+                <td><span class="td-value" style="color:var(--yellow);">R$ <%= number_with_precision(d[:custos], precision: 2) %></span></td>
+                <td>
+                  <span class="td-value <%= d[:lucro] >= 0 ? 'td-lime' : 'td-red' %>">
+                    <%= d[:lucro] < 0 ? '▼ ' : '' %>R$ <%= number_with_precision(d[:lucro].abs, precision: 2) %>
+                  </span>
+                </td>
+                <td>
+                  <% if d[:margem] %>
+                    <span class="margin-pill <%= d[:margem] >= 20 ? 'margin-positive' : d[:margem] >= 0 ? 'margin-neutral' : 'margin-negative' %>">
+                      <%= d[:margem] %>%
+                    </span>
+                  <% end %>
+                </td>
+                <td>
+                  <div style="display:flex;gap:0.4rem;align-items:center;">
+                    <%= link_to edit_owner_monthly_costs_path(year: d[:ano], month: d[:mes_num]), class: "btn-icon-danger", style: "color:var(--text-muted);border-color:var(--border);" do %>
+                      <i class="fas fa-pen"></i>
+                    <% end %>
+                    <%= button_to owner_monthly_cost_path(cost), method: :delete, form: { style: "display:inline;" }, data: { confirm: "Remover custos de #{d[:mes_label]}?" }, class: "btn-icon-danger" do %>
+                      <i class="fas fa-trash-can"></i>
+                    <% end %>
+                  </div>
+                </td>
+              <% else %>
+                <td colspan="5">
+                  <span class="no-cost-badge"><i class="fas fa-circle-info"></i> Custos não lançados</span>
+                </td>
+                <td>
+                  <%= link_to edit_owner_monthly_costs_path(year: d[:ano], month: d[:mes_num]), class: "btn-ghost", style: "padding:0.3rem 0.75rem;font-size:0.75rem;" do %>
+                    <i class="fas fa-plus"></i> Lançar
+                  <% end %>
+                </td>
+              <% end %>
+            </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- LEGENDA -->
+      <div class="legend-row">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--lime);"></div> Faturamento Real = clientes que compareceram (attended)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--yellow);"></div> Em Aberto = agendamentos confirmados ainda não realizados</div>
+      </div>
+    </div>
+
+    <div style="opacity:0;animation:fadeUp 0.6s ease forwards 0.7s;">
+      <%= link_to owner_financial_tracking_path, class: "btn-ghost" do %>
+        <i class="fas fa-chart-line"></i> Ver Análise
+      <% end %>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var dreCtx = document.getElementById('dreChart');
+  if (!dreCtx) return;
+
+  var labels = <%= raw @dre.map { |d| d[:mes] }.to_json %>;
+  var fat    = <%= raw @dre.map { |d| d[:faturamento] }.to_json %>;
+  var costs  = <%= raw @dre.map { |d| d[:custos] }.to_json %>;
+  var profit = <%= raw @dre.map { |d| d[:lucro] }.to_json %>;
+
+  new Chart(dreCtx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: 'Faturamento Real', data: fat,    backgroundColor: 'rgba(175,255,45,0.5)', borderRadius: 4, order: 2 },
+        { label: 'Custos',          data: costs,  backgroundColor: 'rgba(255,77,77,0.4)',  borderRadius: 4, order: 2 },
+        { label: 'Lucro',           data: profit, type: 'line', borderColor: '#afff2d', backgroundColor: 'rgba(175,255,45,0.06)', borderWidth: 2, fill: true, tension: 0.4, pointBackgroundColor: '#afff2d', pointRadius: 4, order: 1 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { color: '#666', font: { family: 'DM Sans', size: 11 } } },
+        tooltip: {
+          backgroundColor: '#111', borderColor: '#222', borderWidth: 1,
+          titleColor: '#afff2d', bodyColor: '#fff', padding: 12,
+          callbacks: { label: function(c) { return ' ' + c.dataset.label + ': R$ ' + c.parsed.y.toFixed(2); } }
+        }
+      },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#666', font: { family: 'DM Sans', size: 11 } } },
+        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#666', font: { family: 'DM Sans', size: 11 }, callback: function(v) { return 'R$ ' + v.toLocaleString('pt-BR'); } } }
+      }
+    }
+  });
+});
+</script>

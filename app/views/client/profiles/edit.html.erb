@@ -1,0 +1,416 @@
+<% Rails.logger.info("Renderizando client/profiles/edit.html.erb") %>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --lime: #afff2d;
+    --black: #000000;
+    --surface: #0a0a0a;
+    --surface-2: #111111;
+    --surface-3: #1a1a1a;
+    --border: #222222;
+    --text-muted: #666666;
+    --text-secondary: #999999;
+    --white: #ffffff;
+  }
+
+  .profile-wrap {
+    min-height: 100vh;
+    background: var(--black);
+    font-family: 'DM Sans', sans-serif;
+    padding-top: 64px;
+    padding-bottom: 4rem;
+  }
+
+  .profile-inner {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem;
+  }
+
+  .profile-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--lime);
+    margin-bottom: 1rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.1s;
+  }
+  .profile-eyebrow::before {
+    content: '';
+    display: block;
+    width: 24px;
+    height: 1px;
+    background: var(--lime);
+  }
+
+  .profile-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.5rem, 8vw, 4rem);
+    line-height: 1;
+    color: var(--white);
+    margin: 0 0 0.5rem 0;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.2s;
+  }
+  .profile-title span { color: var(--lime); }
+
+  .profile-sub {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin-bottom: 2.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.3s;
+  }
+
+  .profile-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: var(--lime);
+    color: var(--black);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 2rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.25s;
+  }
+
+  .profile-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.35s;
+  }
+
+  .profile-section-title {
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .form-group { margin-bottom: 1.25rem; }
+
+  .form-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 0.4rem;
+    letter-spacing: 0.05em;
+  }
+  .form-label span {
+    color: var(--lime);
+    margin-left: 0.25rem;
+    font-size: 0.65rem;
+  }
+  .form-label span.optional {
+    color: var(--text-muted);
+  }
+
+  .form-input {
+    width: 100%;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    color: var(--white);
+    font-family: 'DM Sans', sans-serif;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    box-sizing: border-box;
+  }
+  .form-input:focus {
+    outline: none;
+    border-color: var(--lime);
+    box-shadow: 0 0 0 3px rgba(175, 255, 45, 0.08);
+  }
+  .form-input::placeholder { color: var(--text-muted); }
+  .form-input[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+  .form-input.error {
+    border-color: #ff4d4d;
+    box-shadow: 0 0 0 3px rgba(255, 77, 77, 0.08);
+  }
+
+  .field-error-msg {
+    font-size: 0.72rem;
+    color: #ff4d4d;
+    margin-top: 0.4rem;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    animation: fadeUp 0.2s ease forwards;
+  }
+
+  .form-hint {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 0.35rem;
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 1.75rem 0;
+  }
+
+  .btn-submit {
+    width: 100%;
+    background: var(--lime);
+    color: var(--black);
+    border: none;
+    border-radius: 10px;
+    padding: 0.9rem 1.5rem;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.15s ease;
+    margin-top: 1.5rem;
+  }
+  .btn-submit:hover { opacity: 0.88; transform: translateY(-1px); }
+
+  .toast-bar {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.85rem 1.5rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    z-index: 9999;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    animation: slideUp 0.3s ease forwards;
+    white-space: nowrap;
+  }
+  .toast-success {
+    background: rgba(175, 255, 45, 0.12);
+    border: 1px solid rgba(175, 255, 45, 0.3);
+    color: var(--lime);
+  }
+  .toast-error {
+    background: rgba(255, 77, 77, 0.12);
+    border: 1px solid rgba(255, 77, 77, 0.3);
+    color: #ff4d4d;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateX(-50%) translateY(16px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+
+  @media (max-width: 640px) {
+    .profile-card { padding: 1.25rem; }
+  }
+</style>
+
+<div class="profile-wrap">
+  <div class="profile-inner">
+
+    <div class="profile-eyebrow">Conta</div>
+    <h1 class="profile-title">Meu <span>Perfil</span></h1>
+    <p class="profile-sub">Mantenha seus dados atualizados para uma experiência melhor.</p>
+
+    <div class="profile-avatar"><%= current_user.initials %></div>
+
+    <% if notice %>
+      <div class="toast-bar toast-success">
+        <i class="fas fa-check-circle"></i> <%= notice %>
+      </div>
+    <% end %>
+
+    <% if flash[:errors] %>
+      <% flash[:errors].each do |msg| %>
+        <div class="toast-bar toast-error">
+          <i class="fas fa-circle-exclamation"></i> <%= msg %>
+        </div>
+      <% end %>
+    <% end %>
+
+    <%= form_with model: current_user, url: client_profile_path, method: :patch, data: { turbo: false } do |f| %>
+
+      <div class="profile-card">
+        <div class="profile-section-title">
+          <i class="fas fa-user" style="margin-right:0.4rem;"></i> Dados Pessoais
+        </div>
+
+        <div class="form-group">
+          <%= f.label :full_name, class: "form-label" do %>
+            Nome completo <span>obrigatório</span>
+          <% end %>
+          <%= f.text_field :full_name,
+              class: "form-input",
+              placeholder: "Seu nome completo",
+              id: "full_name_field" %>
+        </div>
+
+        <div class="form-group">
+          <%= f.label :email, class: "form-label" do %>
+            E-mail
+          <% end %>
+          <%= f.email_field :email,
+              class: "form-input",
+              disabled: true,
+              value: current_user.email %>
+          <div class="form-hint">O e-mail não pode ser alterado aqui.</div>
+        </div>
+
+        <div class="form-group">
+          <%= f.label :phone, class: "form-label" do %>
+            WhatsApp / Telefone <span>obrigatório</span>
+          <% end %>
+          <%= f.text_field :phone,
+              class: "form-input",
+              placeholder: "(11) 99999-9999",
+              id: "phone_field",
+              maxlength: 15 %>
+        </div>
+
+        <div class="form-group">
+          <%= f.label :cpf, class: "form-label" do %>
+            CPF <span class="optional">opcional</span>
+          <% end %>
+          <%= f.text_field :cpf,
+              class: "form-input",
+              placeholder: "000.000.000-00",
+              id: "cpf_field",
+              maxlength: 14 %>
+        </div>
+
+        <hr class="divider">
+
+        <div class="profile-section-title">
+          <i class="fas fa-car" style="margin-right:0.4rem;"></i> Veículo
+        </div>
+
+        <div class="form-group">
+          <%= f.label :vehicle_model, class: "form-label" do %>
+            Modelo do veículo <span class="optional">opcional</span>
+          <% end %>
+          <%= f.text_field :vehicle_model,
+              class: "form-input",
+              placeholder: "ex: Honda Civic Preto 2022" %>
+          <div class="form-hint">Ajuda o lava-rápido a identificar seu carro na fila.</div>
+        </div>
+
+        <%= f.submit "Salvar Perfil", class: "btn-submit" %>
+      </div>
+
+    <% end %>
+
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+  var nameField  = document.getElementById('full_name_field');
+  var phoneField = document.getElementById('phone_field');
+  var cpfField   = document.getElementById('cpf_field');
+
+  // Máscara telefone
+  if (phoneField) {
+    phoneField.addEventListener('input', function() {
+      var v = this.value.replace(/\D/g, '');
+      if (v.length <= 10) {
+        v = v.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+      } else {
+        v = v.replace(/^(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
+      }
+      this.value = v;
+      if (this.classList.contains('error')) validateField(this);
+    });
+    phoneField.addEventListener('blur', function() { validateField(this); });
+  }
+
+  // Máscara CPF
+  if (cpfField) {
+    cpfField.addEventListener('input', function() {
+      var v = this.value.replace(/\D/g, '');
+      v = v.replace(/^(\d{3})(\d{3})(\d{3})(\d{0,2})/, '$1.$2.$3-$4');
+      this.value = v;
+    });
+  }
+
+  // Validação nome
+  if (nameField) {
+    nameField.addEventListener('blur', function() { validateField(this); });
+    nameField.addEventListener('input', function() {
+      if (this.classList.contains('error')) validateField(this);
+    });
+  }
+
+  function validateField(field) {
+    var value = field.value.trim();
+    field.classList.remove('error');
+    var prev = field.parentElement.querySelector('.field-error-msg');
+    if (prev) prev.remove();
+
+    if (value === '') {
+      field.classList.add('error');
+      var msg = document.createElement('div');
+      msg.className = 'field-error-msg';
+      msg.innerHTML = '<i class="fas fa-circle-exclamation"></i> Campo obrigatório';
+      field.parentElement.appendChild(msg);
+      return false;
+    }
+    return true;
+  }
+
+  // Intercepta submit
+  var form = document.querySelector('form');
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      var valid = true;
+      var firstInvalid = null;
+
+      [nameField, phoneField].forEach(function(field) {
+        if (!field) return;
+        var ok = validateField(field);
+        if (!ok && !firstInvalid) firstInvalid = field;
+        if (!ok) valid = false;
+      });
+
+      if (!valid) {
+        e.preventDefault();
+        firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(function() { firstInvalid.focus(); }, 400);
+      }
+    });
+  }
+
+  // Auto-dismiss toast
+  document.querySelectorAll('.toast-bar').forEach(function(toast) {
+    setTimeout(function() {
+      toast.style.transition = 'opacity 0.5s ease';
+      toast.style.opacity = '0';
+      setTimeout(function() { toast.remove(); }, 500);
+    }, 3000);
+  });
+
+});
+</script>

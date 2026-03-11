@@ -1,0 +1,796 @@
+<% Rails.logger.info("Iniciando renderização do template car_washes/manage.html.erb") %>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --lime: #afff2d;
+    --lime-dim: #8fcc24;
+    --black: #000000;
+    --surface: #0a0a0a;
+    --surface-2: #111111;
+    --surface-3: #1a1a1a;
+    --border: #222222;
+    --text-muted: #666666;
+    --text-secondary: #999999;
+    --white: #ffffff;
+  }
+
+  .manage-wrap { min-height: 100vh; background: var(--black); font-family: 'DM Sans', sans-serif; padding-top: 64px; padding-bottom: 4rem; }
+  .manage-inner { max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem; }
+
+  .manage-eyebrow { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.7rem; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; color: var(--lime); margin-bottom: 1rem; opacity: 0; animation: fadeUp 0.6s ease forwards 0.1s; }
+  .manage-eyebrow::before { content: ''; display: block; width: 24px; height: 1px; background: var(--lime); }
+
+  .manage-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(2.5rem, 8vw, 4.5rem); line-height: 1; color: var(--white); margin: 0 0 2.5rem 0; opacity: 0; animation: fadeUp 0.6s ease forwards 0.2s; }
+  .manage-title span { color: var(--lime); }
+
+  .flash-wrap { margin-bottom: 1.5rem; }
+  .flash-msg { display: flex; align-items: center; gap: 0.75rem; padding: 0.875rem 1.25rem; border-radius: 12px; font-size: 0.875rem; margin-bottom: 0.75rem; }
+  .flash-msg.error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); color: #fca5a5; }
+  .flash-msg.success { background: rgba(175,255,45,0.08); border: 1px solid rgba(175,255,45,0.15); color: var(--lime); }
+
+  .form-errors { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; }
+  .form-errors h2 { font-size: 0.8rem; font-weight: 600; color: #fca5a5; margin: 0 0 0.4rem 0; text-transform: uppercase; letter-spacing: 0.05em; }
+  .form-errors ul { list-style: none; margin: 0; padding: 0; }
+  .form-errors ul li { font-size: 0.875rem; color: #fca5a5; padding: 0.2rem 0; }
+  .form-errors ul li::before { content: '· '; }
+
+  .form-section { background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; margin-bottom: 1.25rem; overflow: hidden; opacity: 0; animation: fadeUp 0.6s ease forwards; }
+  .form-section:nth-child(1) { animation-delay: 0.3s; }
+  .form-section:nth-child(2) { animation-delay: 0.4s; }
+  .form-section:nth-child(3) { animation-delay: 0.5s; }
+  .form-section:nth-child(4) { animation-delay: 0.6s; }
+
+  .section-header { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.75rem; cursor: pointer; user-select: none; transition: background 0.2s ease; }
+  .section-header:hover { background: rgba(255,255,255,0.02); }
+  .section-header-left { display: flex; align-items: center; gap: 0.6rem; font-family: 'Bebas Neue', sans-serif; font-size: 1.25rem; color: var(--lime); letter-spacing: 0.05em; }
+  .section-chevron { color: var(--text-muted); font-size: 0.8rem; transition: transform 0.25s ease; }
+  .section-chevron.open { transform: rotate(180deg); }
+  .section-body { max-height: 0; overflow: hidden; transition: max-height 0.35s ease; }
+  .section-body.open { max-height: 2000px; }
+  .section-body-inner { padding: 0 1.75rem 1.75rem; }
+
+  .form-field { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem; }
+  .form-field:last-child { margin-bottom: 0; }
+  .form-label { font-size: 0.8rem; font-weight: 500; color: var(--text-muted); letter-spacing: 0.05em; text-transform: uppercase; }
+
+  .form-input, .form-select, .form-textarea { background: var(--surface-3); border: 1px solid var(--border); border-radius: 10px; padding: 0.875rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.9375rem; color: var(--white); outline: none; transition: all 0.2s ease; width: 100%; }
+  .form-input::placeholder, .form-textarea::placeholder { color: var(--text-muted); }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--lime); box-shadow: 0 0 0 3px rgba(175,255,45,0.08); }
+  .form-select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 1rem center; cursor: pointer; }
+  .form-select option { background: var(--surface-3); }
+  .form-textarea { resize: vertical; min-height: 80px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+  .item-list { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem; }
+  .item-row { background: var(--surface-3); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; transition: border-color 0.2s ease; }
+  .item-row:hover { border-color: rgba(175,255,45,0.2); }
+  .item-row.highlight { border-color: var(--lime); }
+  .item-info { flex: 1; }
+  .item-title { font-size: 0.9375rem; font-weight: 500; color: var(--white); margin-bottom: 0.2rem; }
+  .item-sub { font-size: 0.8rem; color: var(--text-muted); }
+  .item-badge { display: inline-flex; align-items: center; font-size: 0.65rem; font-weight: 600; letter-spacing: 0.05em; background: rgba(175,255,45,0.08); color: var(--lime); border: 1px solid rgba(175,255,45,0.15); padding: 0.2rem 0.5rem; border-radius: 100px; margin-left: 0.4rem; }
+  .item-actions-wrap { display: flex; gap: 0.5rem; flex-shrink: 0; }
+
+  .edit-panel { display: none; background: var(--surface-2); border: 1px solid rgba(175,255,45,0.2); border-radius: 12px; padding: 1.25rem; margin-top: 0.5rem; animation: fadeUp 0.25s ease forwards; }
+  .edit-panel.open { display: block; }
+  .edit-panel-actions { display: flex; gap: 0.75rem; margin-top: 1rem; }
+
+  .add-panel { display: none; background: var(--surface-3); border: 1px dashed rgba(175,255,45,0.2); border-radius: 12px; padding: 1.25rem; margin-top: 0.75rem; animation: fadeUp 0.25s ease forwards; }
+  .add-panel.open { display: block; }
+  .add-panel-actions { display: flex; gap: 0.75rem; margin-top: 1rem; }
+
+  .day-buttons { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; margin-bottom: 1rem; }
+  .day-btn { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.25rem; font-family: 'DM Sans', sans-serif; font-size: 0.7rem; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: all 0.2s ease; text-align: center; text-transform: uppercase; user-select: none; }
+  .day-btn:hover { border-color: rgba(175,255,45,0.3); color: var(--white); }
+  .day-btn.active { background: rgba(175,255,45,0.1); border-color: var(--lime); color: var(--lime); }
+
+  .time-row { display: flex; align-items: center; gap: 0.75rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 0.5rem; }
+  .time-day-label { font-family: 'Bebas Neue', sans-serif; font-size: 1rem; color: var(--lime); min-width: 36px; letter-spacing: 0.05em; }
+  .time-select-wrap { display: flex; align-items: center; gap: 0.4rem; flex: 1; }
+  .time-label-small { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; white-space: nowrap; }
+  .time-sep { font-family: 'Bebas Neue', sans-serif; font-size: 1rem; color: var(--text-muted); }
+  .time-select { background: var(--surface-3); border: 1px solid var(--border); border-radius: 6px; padding: 0.4rem 0.6rem; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; color: var(--white); outline: none; cursor: pointer; appearance: none; text-align: center; transition: border-color 0.2s ease; }
+  .time-select:focus { border-color: var(--lime); }
+
+  .btn-lime { display: inline-flex; align-items: center; gap: 0.4rem; background: var(--lime); color: var(--black); border: none; border-radius: 100px; padding: 0.6rem 1.25rem; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
+  .btn-lime:hover { background: var(--lime-dim); transform: translateY(-1px); }
+
+  .btn-ghost { display: inline-flex; align-items: center; gap: 0.4rem; background: transparent; color: var(--text-muted); border: 1px solid var(--border); border-radius: 100px; padding: 0.6rem 1.25rem; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s ease; }
+  .btn-ghost:hover { border-color: var(--lime); color: var(--lime); }
+
+  .btn-danger { display: inline-flex; align-items: center; gap: 0.4rem; background: transparent; color: #ef4444; border: 1px solid rgba(239,68,68,0.3); border-radius: 100px; padding: 0.6rem 1.25rem; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s ease; }
+  .btn-danger:hover { background: rgba(239,68,68,0.08); border-color: #ef4444; }
+
+  .btn-icon { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--text-muted); cursor: pointer; transition: all 0.2s ease; font-size: 0.8rem; }
+  .btn-icon:hover { border-color: var(--lime); color: var(--lime); }
+  .btn-icon.danger:hover { border-color: #ef4444; color: #ef4444; }
+
+  .btn-add-row { display: inline-flex; align-items: center; gap: 0.5rem; background: transparent; color: var(--lime); border: 1px dashed rgba(175,255,45,0.3); border-radius: 10px; padding: 0.7rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s ease; width: 100%; justify-content: center; margin-top: 0.5rem; }
+  .btn-add-row:hover { border-color: var(--lime); background: rgba(175,255,45,0.04); }
+
+  .btn-submit { background: var(--lime); color: var(--black); border: none; border-radius: 100px; padding: 1rem 2rem; font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; width: 100%; opacity: 0; animation: fadeUp 0.6s ease forwards 0.7s; }
+  .btn-submit:hover { background: var(--lime-dim); transform: translateY(-2px); }
+
+  .form-actions { display: flex; gap: 0.75rem; margin-top: 0.5rem; opacity: 0; animation: fadeUp 0.6s ease forwards 0.75s; }
+
+  .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
+  .loading-spinner { width: 40px; height: 40px; border: 3px solid rgba(175,255,45,0.2); border-top-color: var(--lime); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  .loading-text { color: var(--lime); font-size: 0.875rem; margin-top: 1rem; letter-spacing: 0.1em; text-transform: uppercase; }
+
+  .field-error { font-size: 0.75rem; color: #fca5a5; margin-top: 0.25rem; display: none; }
+  .field-error.visible { display: block; }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 540px) {
+    .form-row { grid-template-columns: 1fr; }
+    .day-buttons { grid-template-columns: repeat(4, 1fr); }
+    .manage-inner { padding: 2rem 1.25rem; }
+    .time-row { flex-direction: column; align-items: flex-start; }
+    .time-select-wrap { width: 100%; }
+  }
+</style>
+
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-spinner"></div>
+  <p class="loading-text">Salvando...</p>
+</div>
+
+<div class="manage-wrap">
+  <div class="manage-inner">
+
+    <div class="manage-eyebrow">Gerenciar</div>
+    <h1 class="manage-title"><%= @car_wash.name.upcase.split(' ').first %><span>.</span></h1>
+
+    <div id="flash-messages">
+      <% if flash[:alert] %>
+      <div class="flash-msg error"><i class="fas fa-circle-exclamation"></i><span><%= flash[:alert] %></span></div>
+      <% end %>
+      <% if flash[:notice] %>
+      <div class="flash-msg success" id="success-message"><i class="fas fa-circle-check"></i><span><%= flash[:notice] %></span></div>
+      <% flash.discard(:notice) %>
+      <% end %>
+    </div>
+
+    <%= form_with model: @car_wash, url: car_wash_path(@car_wash), method: :patch, local: true, id: "car-wash-form" do |form| %>
+
+      <% if @car_wash.errors.any? %>
+      <div class="form-errors">
+        <h2><i class="fas fa-circle-exclamation"></i> Corrija os erros abaixo</h2>
+        <ul>
+          <% @car_wash.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+          <% end %>
+        </ul>
+      </div>
+      <% end %>
+
+      <!-- Informações Básicas -->
+      <div class="form-section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <div class="section-header-left"><i class="fas fa-store"></i> Informações Básicas</div>
+          <i class="fas fa-chevron-down section-chevron open"></i>
+        </div>
+        <div class="section-body open">
+          <div class="section-body-inner">
+
+            <div class="form-field">
+              <%= form.label :name, "Nome", class: "form-label" %>
+              <%= form.text_field :name, class: "form-input", placeholder: "Ex.: Meu Lava-Rápido" %>
+            </div>
+
+            <div class="form-row" style="grid-template-columns: 160px 1fr;">
+              <div class="form-field">
+                <%= form.label :cep, "CEP", class: "form-label" %>
+                <div style="position:relative;">
+                  <%= form.text_field :cep, class: "form-input", placeholder: "00000-000",
+                      id: "cep_field", maxlength: 9, style: "padding-right:2.5rem;" %>
+                  <div id="cep-spinner" style="display:none; position:absolute; right:0.75rem; top:50%; transform:translateY(-50%); color:#afff2d;">
+                    <i class="fas fa-circle-notch fa-spin"></i>
+                  </div>
+                </div>
+              </div>
+              <div class="form-field">
+                <%= form.label :logradouro, "Logradouro", class: "form-label" %>
+                <%= form.text_field :logradouro, class: "form-input", placeholder: "Rua / Avenida / número", id: "logradouro_field" %>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-field">
+                <%= form.label :bairro, "Bairro", class: "form-label" %>
+                <%= form.text_field :bairro, class: "form-input", placeholder: "Bairro", id: "bairro_field" %>
+              </div>
+              <div class="form-field">
+                <%= form.label :cidade, "Cidade", class: "form-label" %>
+                <%= form.text_field :cidade, class: "form-input", placeholder: "Cidade", id: "cidade_field" %>
+              </div>
+            </div>
+
+            <div class="form-row" style="grid-template-columns: 80px 1fr;">
+              <div class="form-field">
+                <%= form.label :uf, "UF", class: "form-label" %>
+                <%= form.text_field :uf, class: "form-input", placeholder: "SP", id: "uf_field", maxlength: 2 %>
+              </div>
+              <div class="form-field">
+                <%= form.label :address, "Endereço para mapa", class: "form-label" %>
+                <%= form.text_field :address, class: "form-input", placeholder: "Preenchido automaticamente pelo CEP", id: "address_field" %>
+              </div>
+            </div>
+
+            <div id="cep-error" style="display:none; font-size:0.775rem; color:#fca5a5; margin-top:-0.5rem;">
+              CEP não encontrado. Preencha o endereço manualmente.
+            </div>
+
+            <div class="form-field" style="margin-top:1rem;">
+              <%= form.label :capacity_per_slot, "Capacidade por Janela", class: "form-label" %>
+              <%= form.number_field :capacity_per_slot, class: "form-input", min: 1, placeholder: "Ex.: 2" %>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- Horários -->
+      <div class="form-section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <div class="section-header-left"><i class="fas fa-clock"></i> Horários de Funcionamento</div>
+          <i class="fas fa-chevron-down section-chevron"></i>
+        </div>
+        <div class="section-body">
+          <div class="section-body-inner">
+            <div class="item-list" id="operating_hours">
+              <%= form.fields_for :operating_hours do |oh_form| %>
+              <div class="item-row" data-id="<%= oh_form.object.id %>">
+                <div class="item-info">
+                  <div class="item-title"><%= oh_form.object.day_of_week_name %></div>
+                  <div class="item-sub view-times"><%= oh_form.object.opens_at&.strftime("%H:%M") %> — <%= oh_form.object.closes_at&.strftime("%H:%M") %></div>
+                </div>
+                <div class="item-actions-wrap">
+                  <%= oh_form.hidden_field :id %>
+                  <%= oh_form.hidden_field :day_of_week %>
+                  <%= oh_form.hidden_field :opens_at, class: "hidden-opens-at" %>
+                  <%= oh_form.hidden_field :closes_at, class: "hidden-closes-at" %>
+                  <%= oh_form.check_box :_destroy, class: "remove-checkbox", style: "display:none" %>
+                  <button type="button" class="btn-icon edit-hour" title="Editar"><i class="fas fa-pen"></i></button>
+                  <button type="button" class="btn-icon danger remove-hour" title="Remover"><i class="fas fa-trash-can"></i></button>
+                </div>
+              </div>
+              <div class="edit-panel" id="edit-hour-<%= oh_form.object.id %>">
+                <div class="form-row">
+                  <div class="form-field">
+                    <label class="form-label">Abre às</label>
+                    <input type="time" class="form-input edit-opens-at" value="<%= oh_form.object.opens_at&.strftime("%H:%M") %>">
+                  </div>
+                  <div class="form-field">
+                    <label class="form-label">Fecha às</label>
+                    <input type="time" class="form-input edit-closes-at" value="<%= oh_form.object.closes_at&.strftime("%H:%M") %>">
+                  </div>
+                </div>
+                <div class="edit-panel-actions">
+                  <button type="button" class="btn-lime confirm-edit-hour"><i class="fas fa-check"></i> Confirmar</button>
+                  <button type="button" class="btn-ghost cancel-edit-hour"><i class="fas fa-times"></i> Cancelar</button>
+                </div>
+              </div>
+              <% end %>
+            </div>
+
+            <button type="button" class="btn-add-row" id="toggle-add-hour">
+              <i class="fas fa-plus"></i> Adicionar Horário
+            </button>
+
+            <div class="add-panel" id="add-hour-panel">
+              <div class="day-buttons" id="add-hour-days">
+                <% [["Dom",0],["Seg",1],["Ter",2],["Qua",3],["Qui",4],["Sex",5],["Sáb",6]].each do |label, val| %>
+                <div class="day-btn" data-day="<%= val %>" onclick="toggleAddDay(<%= val %>, '<%= label %>')"><%= label %></div>
+                <% end %>
+              </div>
+              <div id="add-hour-times"></div>
+              <div id="add-hour-error" class="field-error"></div>
+              <div class="add-panel-actions">
+                <button type="button" class="btn-lime" id="confirm-add-hour"><i class="fas fa-check"></i> Confirmar</button>
+                <button type="button" class="btn-ghost" id="cancel-add-hour"><i class="fas fa-times"></i> Cancelar</button>
+              </div>
+            </div>
+            <div id="new-hour-hidden-inputs"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Serviços -->
+      <div class="form-section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <div class="section-header-left"><i class="fas fa-spray-can-sparkles"></i> Serviços</div>
+          <i class="fas fa-chevron-down section-chevron"></i>
+        </div>
+        <div class="section-body">
+          <div class="section-body-inner">
+            <div class="item-list" id="services">
+              <%= form.fields_for :services do |service_form| %>
+              <div class="item-row" data-id="<%= service_form.object.id %>">
+                <div class="item-info">
+                  <div class="item-title">
+                    <%= service_form.object.title %>
+                    <% if service_form.object.category.present? %>
+                    <span class="item-badge"><%= service_form.object.category %></span>
+                    <% end %>
+                  </div>
+                  <div class="item-sub">R$ <%= service_form.object.price %> · <%= service_form.object.duration %> min<% if service_form.object.description.present? %> · <%= service_form.object.description.truncate(40) %><% end %></div>
+                </div>
+                <div class="item-actions-wrap">
+                  <%= service_form.hidden_field :id %>
+                  <%= service_form.hidden_field :title, class: "hidden-title" %>
+                  <%= service_form.hidden_field :category, class: "hidden-category" %>
+                  <%= service_form.hidden_field :description, class: "hidden-description" %>
+                  <%= service_form.hidden_field :price, class: "hidden-price" %>
+                  <%= service_form.hidden_field :duration, class: "hidden-duration" %>
+                  <%= service_form.check_box :_destroy, class: "remove-checkbox", style: "display:none" %>
+                  <button type="button" class="btn-icon edit-service-btn" title="Editar"><i class="fas fa-pen"></i></button>
+                  <button type="button" class="btn-icon danger remove-service" title="Remover"><i class="fas fa-trash-can"></i></button>
+                </div>
+              </div>
+              <div class="edit-panel" id="edit-service-<%= service_form.object.id %>">
+                <div class="form-field">
+                  <label class="form-label">Categoria</label>
+                  <select class="form-select edit-category">
+                    <% %w[Lavagem Polimento Higienização Cristalização Outros].each do |cat| %>
+                    <option value="<%= cat %>" <%= 'selected' if service_form.object.title == cat %>><%= cat %></option>
+                    <% end %>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Descrição</label>
+                  <input type="text" class="form-input edit-description" value="<%= service_form.object.description %>" placeholder="Ex.: Lavagem com cera">
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <label class="form-label">Preço (R$)</label>
+                    <input type="number" step="0.01" min="0" class="form-input edit-price" value="<%= service_form.object.price %>">
+                  </div>
+                  <div class="form-field">
+                    <label class="form-label">Duração (min)</label>
+                    <input type="number" min="1" class="form-input edit-duration" value="<%= service_form.object.duration %>">
+                  </div>
+                </div>
+                <div class="edit-panel-actions">
+                  <button type="button" class="btn-lime confirm-edit-service"><i class="fas fa-check"></i> Confirmar</button>
+                  <button type="button" class="btn-ghost cancel-edit-service"><i class="fas fa-times"></i> Cancelar</button>
+                </div>
+              </div>
+              <% end %>
+            </div>
+
+            <button type="button" class="btn-add-row" id="toggle-add-service">
+              <i class="fas fa-plus"></i> Adicionar Serviço
+            </button>
+
+            <div class="add-panel" id="add-service-panel">
+              <div class="form-field">
+                <label class="form-label">Categoria</label>
+                <select class="form-select" id="new-service-category">
+                  <option value="">Selecione uma categoria</option>
+                  <% %w[Lavagem Polimento Higienização Cristalização Outros].each do |cat| %>
+                  <option value="<%= cat %>"><%= cat %></option>
+                  <% end %>
+                </select>
+                <span class="field-error" id="new-service-category-error"></span>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Descrição</label>
+                <input type="text" class="form-input" id="new-service-description" placeholder="Ex.: Lavagem com cera">
+              </div>
+              <div class="form-row">
+                <div class="form-field">
+                  <label class="form-label">Preço (R$)</label>
+                  <input type="number" step="0.01" min="0" class="form-input" id="new-service-price" placeholder="0,00">
+                  <span class="field-error" id="new-service-price-error"></span>
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Duração (min)</label>
+                  <input type="number" min="1" class="form-input" id="new-service-duration" placeholder="60">
+                  <span class="field-error" id="new-service-duration-error"></span>
+                </div>
+              </div>
+              <div class="add-panel-actions">
+                <button type="button" class="btn-lime" id="confirm-add-service"><i class="fas fa-check"></i> Confirmar</button>
+                <button type="button" class="btn-ghost" id="cancel-add-service"><i class="fas fa-times"></i> Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <%= link_to root_path, class: "btn-ghost", id: "cancel-button" do %>
+          <i class="fas fa-arrow-left"></i> Cancelar
+        <% end %>
+        <%= form.submit "Salvar Alterações", class: "btn-submit", data: { disable_with: "Salvando..." } %>
+      </div>
+
+    <% end %>
+  </div>
+</div>
+
+<script>
+var formChanged = false;
+var hourIndex   = Date.now();
+var serviceIndex = Date.now();
+var addDayTimes  = {};
+
+// SECTIONS
+function toggleSection(header) {
+  var body    = header.nextElementSibling;
+  var chevron = header.querySelector('.section-chevron');
+  var isOpen  = body.classList.contains('open');
+  body.classList.toggle('open');
+  chevron.classList.toggle('open', !isOpen);
+}
+
+// FLASH
+function showFlash(type, message) {
+  var container = document.getElementById('flash-messages');
+  var div = document.createElement('div');
+  div.className = 'flash-msg ' + type;
+  div.innerHTML = '<i class="fas fa-' + (type === 'error' ? 'circle-exclamation' : 'circle-check') + '"></i><span>' + message + '</span>';
+  container.appendChild(div);
+  setTimeout(function() {
+    div.style.transition = 'opacity 0.5s ease';
+    div.style.opacity = '0';
+    setTimeout(function() { div.remove(); }, 500);
+  }, 5000);
+}
+
+function showFieldError(id, msg) {
+  var el = document.getElementById(id + '-error');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('visible');
+  setTimeout(function() { el.classList.remove('visible'); }, 5000);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+
+  // ── CEP ────────────────────────────────────────────────────────
+  var cepField = document.getElementById('cep_field');
+  if (cepField) {
+    cepField.addEventListener('input', function() {
+      var raw = this.value.replace(/\D/g, '');
+      this.value = raw.length > 5 ? raw.slice(0,5) + '-' + raw.slice(5,8) : raw;
+    });
+    cepField.addEventListener('blur', function() {
+      var cep = this.value.replace(/\D/g, '');
+      if (cep.length !== 8) return;
+      document.getElementById('cep-spinner').style.display = 'block';
+      document.getElementById('cep-error').style.display   = 'none';
+      fetch('https://viacep.com.br/ws/' + cep + '/json/')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          document.getElementById('cep-spinner').style.display = 'none';
+          if (data.erro) { document.getElementById('cep-error').style.display = 'block'; return; }
+          document.getElementById('logradouro_field').value = data.logradouro || '';
+          document.getElementById('bairro_field').value     = data.bairro     || '';
+          document.getElementById('cidade_field').value     = data.localidade  || '';
+          document.getElementById('uf_field').value         = data.uf          || '';
+          var full = [data.logradouro, data.bairro, data.localidade, data.uf].filter(Boolean).join(', ');
+          document.getElementById('address_field').value = full;
+        })
+        .catch(function() {
+          document.getElementById('cep-spinner').style.display = 'none';
+          document.getElementById('cep-error').style.display   = 'block';
+        });
+    });
+  }
+
+  // ── HOURS EDIT/REMOVE ──────────────────────────────────────────
+  document.querySelectorAll('#operating_hours .item-row').forEach(function(row) {
+    attachHourEvents(row);
+  });
+
+  function attachHourEvents(row) {
+    var editBtn   = row.querySelector('.edit-hour');
+    var removeBtn = row.querySelector('.remove-hour');
+    var panel     = row.nextElementSibling;
+
+    if (editBtn) editBtn.onclick = function() {
+      document.querySelectorAll('.edit-panel.open').forEach(function(p) { p.classList.remove('open'); });
+      panel.classList.add('open');
+    };
+
+    if (removeBtn) removeBtn.onclick = function() {
+      if (!confirm('Remover este horário?')) return;
+      var cb = row.querySelector('.remove-checkbox');
+      if (cb) cb.checked = true;
+      row.style.opacity = '0'; row.style.transition = 'opacity 0.3s ease';
+      setTimeout(function() { row.style.display = 'none'; if (panel) panel.style.display = 'none'; }, 300);
+      showFlash('success', 'Horário marcado para remoção. Clique em Salvar para confirmar.');
+      formChanged = true;
+    };
+
+    var confirmBtn = panel ? panel.querySelector('.confirm-edit-hour') : null;
+    var cancelBtn  = panel ? panel.querySelector('.cancel-edit-hour')  : null;
+
+    if (confirmBtn) confirmBtn.onclick = function() {
+      var opensAt  = panel.querySelector('.edit-opens-at').value;
+      var closesAt = panel.querySelector('.edit-closes-at').value;
+      if (!opensAt || !closesAt) { showFlash('error', 'Preencha os dois horários.'); return; }
+      row.querySelector('.hidden-opens-at').value = opensAt;
+      row.querySelector('.hidden-closes-at').value = closesAt;
+      row.querySelector('.view-times').textContent = opensAt + ' — ' + closesAt;
+      panel.classList.remove('open');
+      showFlash('success', 'Horário atualizado. Clique em Salvar para confirmar.');
+      formChanged = true;
+    };
+
+    if (cancelBtn) cancelBtn.onclick = function() { panel.classList.remove('open'); };
+  }
+
+  // ── ADD HOUR ───────────────────────────────────────────────────
+  document.getElementById('toggle-add-hour').onclick = function() {
+    document.getElementById('add-hour-panel').classList.toggle('open');
+  };
+
+  document.getElementById('cancel-add-hour').onclick = function() {
+    document.getElementById('add-hour-panel').classList.remove('open');
+    resetAddHour();
+  };
+
+  function buildHourOptions(sel) {
+    var s = '';
+    for (var h = 0; h < 24; h++) {
+      var v = (h < 10 ? '0' : '') + h;
+      s += '<option value="' + v + '"' + (v === sel ? ' selected' : '') + '>' + v + '</option>';
+    }
+    return s;
+  }
+
+  function buildMinOptions(sel) {
+    var s = '';
+    ['00','15','30','45'].forEach(function(m) {
+      s += '<option value="' + m + '"' + (m === sel ? ' selected' : '') + '>' + m + '</option>';
+    });
+    return s;
+  }
+
+  window.toggleAddDay = function(day, label) {
+    var btn            = document.querySelector('#add-hour-days .day-btn[data-day="' + day + '"]');
+    var timesContainer = document.getElementById('add-hour-times');
+    if (addDayTimes[day]) {
+      delete addDayTimes[day];
+      btn.classList.remove('active');
+      var row = document.getElementById('add-time-row-' + day);
+      if (row) row.remove();
+    } else {
+      addDayTimes[day] = { h: '08', m: '00', ch: '18', cm: '00' };
+      btn.classList.add('active');
+      var html = '<div class="time-row" id="add-time-row-' + day + '">' +
+        '<div class="time-day-label">' + label + '</div>' +
+        '<div class="time-select-wrap"><span class="time-label-small">Abre</span>' +
+          '<select class="time-select" onchange="updateAddDay(' + day + ',\'h\',this.value)">' + buildHourOptions('08') + '</select>' +
+          '<span class="time-sep">:</span>' +
+          '<select class="time-select" onchange="updateAddDay(' + day + ',\'m\',this.value)">' + buildMinOptions('00') + '</select>' +
+        '</div>' +
+        '<div class="time-select-wrap"><span class="time-label-small">Fecha</span>' +
+          '<select class="time-select" onchange="updateAddDay(' + day + ',\'ch\',this.value)">' + buildHourOptions('18') + '</select>' +
+          '<span class="time-sep">:</span>' +
+          '<select class="time-select" onchange="updateAddDay(' + day + ',\'cm\',this.value)">' + buildMinOptions('00') + '</select>' +
+        '</div></div>';
+      var existing = timesContainer.querySelectorAll('.time-row');
+      var inserted = false;
+      for (var i = 0; i < existing.length; i++) {
+        if (day < parseInt(existing[i].id.replace('add-time-row-', ''))) {
+          existing[i].insertAdjacentHTML('beforebegin', html); inserted = true; break;
+        }
+      }
+      if (!inserted) timesContainer.insertAdjacentHTML('beforeend', html);
+    }
+  };
+
+  window.updateAddDay = function(day, key, val) {
+    if (addDayTimes[day]) addDayTimes[day][key] = val;
+  };
+
+  function getExistingDays() {
+    return Array.from(document.querySelectorAll('#operating_hours input[name*="[day_of_week]"]'))
+      .map(function(i) { return i.value; }).filter(function(v) { return v !== ''; });
+  }
+
+  document.getElementById('confirm-add-hour').onclick = function() {
+    var days = Object.keys(addDayTimes);
+    if (days.length === 0) { showFlash('error', 'Selecione pelo menos um dia.'); return; }
+    var existing  = getExistingDays();
+    var duplicate = days.find(function(d) { return existing.includes(d); });
+    if (duplicate) { showFlash('error', 'Um dos dias selecionados já existe.'); return; }
+
+    var container  = document.getElementById('operating_hours');
+    var fullNames  = ['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+    days.sort(function(a,b){return a-b;}).forEach(function(day) {
+      var d     = addDayTimes[day];
+      var opens  = d.h + ':' + d.m + ':00';
+      var closes = d.ch + ':' + d.cm + ':00';
+      var idx    = hourIndex++;
+      var row    = document.createElement('div');
+      row.className = 'item-row';
+      row.innerHTML = '<div class="item-info"><div class="item-title">' + fullNames[day] + '</div>' +
+        '<div class="item-sub view-times">' + d.h + ':' + d.m + ' — ' + d.ch + ':' + d.cm + '</div></div>' +
+        '<div class="item-actions-wrap">' +
+          '<input type="hidden" name="car_wash[operating_hours_attributes][' + idx + '][day_of_week]" value="' + day + '">' +
+          '<input type="hidden" name="car_wash[operating_hours_attributes][' + idx + '][opens_at]" class="hidden-opens-at" value="' + opens + '">' +
+          '<input type="hidden" name="car_wash[operating_hours_attributes][' + idx + '][closes_at]" class="hidden-closes-at" value="' + closes + '">' +
+          '<input type="checkbox" name="car_wash[operating_hours_attributes][' + idx + '][_destroy]" class="remove-checkbox" style="display:none">' +
+          '<button type="button" class="btn-icon edit-hour"><i class="fas fa-pen"></i></button>' +
+          '<button type="button" class="btn-icon danger remove-hour"><i class="fas fa-trash-can"></i></button>' +
+        '</div>';
+      var panel = document.createElement('div');
+      panel.className = 'edit-panel';
+      panel.innerHTML = '<div class="form-row">' +
+        '<div class="form-field"><label class="form-label">Abre às</label><input type="time" class="form-input edit-opens-at" value="' + d.h + ':' + d.m + '"></div>' +
+        '<div class="form-field"><label class="form-label">Fecha às</label><input type="time" class="form-input edit-closes-at" value="' + d.ch + ':' + d.cm + '"></div>' +
+        '</div><div class="edit-panel-actions">' +
+          '<button type="button" class="btn-lime confirm-edit-hour"><i class="fas fa-check"></i> Confirmar</button>' +
+          '<button type="button" class="btn-ghost cancel-edit-hour"><i class="fas fa-times"></i> Cancelar</button>' +
+        '</div>';
+      container.appendChild(row);
+      container.appendChild(panel);
+      attachHourEvents(row);
+    });
+
+    document.getElementById('add-hour-panel').classList.remove('open');
+    resetAddHour();
+    showFlash('success', 'Horário(s) adicionado(s). Clique em Salvar para confirmar.');
+    formChanged = true;
+  };
+
+  function resetAddHour() {
+    addDayTimes = {};
+    document.querySelectorAll('#add-hour-days .day-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.getElementById('add-hour-times').innerHTML = '';
+  }
+
+  // ── SERVICES EDIT/REMOVE ───────────────────────────────────────
+  document.querySelectorAll('#services .item-row').forEach(function(row) {
+    attachServiceEvents(row);
+  });
+
+  function attachServiceEvents(row) {
+    var editBtn   = row.querySelector('.edit-service-btn');
+    var removeBtn = row.querySelector('.remove-service');
+    var panel     = row.nextElementSibling;
+
+    if (editBtn) editBtn.onclick = function() {
+      document.querySelectorAll('.edit-panel.open').forEach(function(p) { p.classList.remove('open'); });
+      panel.classList.add('open');
+    };
+
+    if (removeBtn) removeBtn.onclick = function() {
+      if (!confirm('Remover este serviço?')) return;
+      var cb = row.querySelector('.remove-checkbox');
+      if (cb) cb.checked = true;
+      row.style.opacity = '0'; row.style.transition = 'opacity 0.3s ease';
+      setTimeout(function() { row.style.display = 'none'; if (panel) panel.style.display = 'none'; }, 300);
+      showFlash('success', 'Serviço marcado para remoção. Clique em Salvar para confirmar.');
+      formChanged = true;
+    };
+
+    var confirmBtn = panel ? panel.querySelector('.confirm-edit-service') : null;
+    var cancelBtn  = panel ? panel.querySelector('.cancel-edit-service')  : null;
+
+    if (confirmBtn) confirmBtn.onclick = function() {
+      var category    = panel.querySelector('.edit-category').value;
+      var description = panel.querySelector('.edit-description').value;
+      var price       = panel.querySelector('.edit-price').value;
+      var duration    = panel.querySelector('.edit-duration').value;
+      if (!category) { showFlash('error', 'Selecione uma categoria.'); return; }
+      if (!price || parseFloat(price) < 0) { showFlash('error', 'Preço inválido.'); return; }
+      if (!duration || parseInt(duration) < 1) { showFlash('error', 'Duração inválida.'); return; }
+      row.querySelector('.hidden-title').value       = category;
+      row.querySelector('.hidden-category').value    = category;
+      row.querySelector('.hidden-description').value = description;
+      row.querySelector('.hidden-price').value       = price;
+      row.querySelector('.hidden-duration').value    = duration;
+      var titleEl = row.querySelector('.item-title');
+      titleEl.innerHTML = category + '<span class="item-badge">' + category + '</span>';
+      row.querySelector('.item-sub').textContent = 'R$ ' + parseFloat(price).toFixed(2) + ' · ' + duration + ' min' + (description ? ' · ' + description.substring(0, 40) : '');
+      panel.classList.remove('open');
+      showFlash('success', 'Serviço atualizado. Clique em Salvar para confirmar.');
+      formChanged = true;
+    };
+
+    if (cancelBtn) cancelBtn.onclick = function() { panel.classList.remove('open'); };
+  }
+
+  // ── ADD SERVICE ────────────────────────────────────────────────
+  document.getElementById('toggle-add-service').onclick = function() {
+    document.getElementById('add-service-panel').classList.toggle('open');
+  };
+
+  document.getElementById('cancel-add-service').onclick = function() {
+    document.getElementById('add-service-panel').classList.remove('open');
+    resetAddService();
+  };
+
+  document.getElementById('confirm-add-service').onclick = function() {
+    var category    = document.getElementById('new-service-category').value;
+    var description = document.getElementById('new-service-description').value;
+    var price       = document.getElementById('new-service-price').value;
+    var duration    = document.getElementById('new-service-duration').value;
+    if (!category) { showFieldError('new-service-category', 'Selecione uma categoria.'); return; }
+    if (!price || parseFloat(price) < 0) { showFieldError('new-service-price', 'Preço inválido.'); return; }
+    if (!duration || parseInt(duration) < 1) { showFieldError('new-service-duration', 'Duração inválida.'); return; }
+
+    var idx       = serviceIndex++;
+    var container = document.getElementById('services');
+    var row       = document.createElement('div');
+    row.className = 'item-row';
+    row.innerHTML = '<div class="item-info"><div class="item-title">' + category + '<span class="item-badge">' + category + '</span></div>' +
+      '<div class="item-sub">R$ ' + parseFloat(price).toFixed(2) + ' · ' + duration + ' min' + (description ? ' · ' + description.substring(0,40) : '') + '</div></div>' +
+      '<div class="item-actions-wrap">' +
+        '<input type="hidden" name="car_wash[services_attributes][' + idx + '][title]" class="hidden-title" value="' + category + '">' +
+        '<input type="hidden" name="car_wash[services_attributes][' + idx + '][category]" class="hidden-category" value="' + category + '">' +
+        '<input type="hidden" name="car_wash[services_attributes][' + idx + '][description]" class="hidden-description" value="' + description + '">' +
+        '<input type="hidden" name="car_wash[services_attributes][' + idx + '][price]" class="hidden-price" value="' + price + '">' +
+        '<input type="hidden" name="car_wash[services_attributes][' + idx + '][duration]" class="hidden-duration" value="' + duration + '">' +
+        '<input type="checkbox" name="car_wash[services_attributes][' + idx + '][_destroy]" class="remove-checkbox" style="display:none">' +
+        '<button type="button" class="btn-icon edit-service-btn"><i class="fas fa-pen"></i></button>' +
+        '<button type="button" class="btn-icon danger remove-service"><i class="fas fa-trash-can"></i></button>' +
+      '</div>';
+    var panel = document.createElement('div');
+    panel.className = 'edit-panel';
+    panel.innerHTML = '<div class="form-field"><label class="form-label">Categoria</label>' +
+      '<select class="form-select edit-category">' +
+      ['Lavagem','Polimento','Higienização','Cristalização','Outros'].map(function(c) {
+        return '<option value="' + c + '"' + (c === category ? ' selected' : '') + '>' + c + '</option>';
+      }).join('') +
+      '</select></div>' +
+      '<div class="form-field"><label class="form-label">Descrição</label><input type="text" class="form-input edit-description" value="' + description + '" placeholder="Ex.: Lavagem com cera"></div>' +
+      '<div class="form-row">' +
+        '<div class="form-field"><label class="form-label">Preço (R$)</label><input type="number" step="0.01" min="0" class="form-input edit-price" value="' + price + '"></div>' +
+        '<div class="form-field"><label class="form-label">Duração (min)</label><input type="number" min="1" class="form-input edit-duration" value="' + duration + '"></div>' +
+      '</div>' +
+      '<div class="edit-panel-actions">' +
+        '<button type="button" class="btn-lime confirm-edit-service"><i class="fas fa-check"></i> Confirmar</button>' +
+        '<button type="button" class="btn-ghost cancel-edit-service"><i class="fas fa-times"></i> Cancelar</button>' +
+      '</div>';
+    container.appendChild(row);
+    container.appendChild(panel);
+    attachServiceEvents(row);
+    document.getElementById('add-service-panel').classList.remove('open');
+    resetAddService();
+    showFlash('success', 'Serviço adicionado. Clique em Salvar para confirmar.');
+    formChanged = true;
+  };
+
+  function resetAddService() {
+    document.getElementById('new-service-category').value  = '';
+    document.getElementById('new-service-description').value = '';
+    document.getElementById('new-service-price').value     = '';
+    document.getElementById('new-service-duration').value  = '';
+  }
+
+  // ── FORM ───────────────────────────────────────────────────────
+  var form = document.getElementById('car-wash-form');
+  if (form) {
+    form.addEventListener('input', function() { formChanged = true; });
+    form.addEventListener('submit', function() {
+      document.getElementById('loading-overlay').style.display = 'flex';
+    });
+  }
+
+  document.getElementById('cancel-button').addEventListener('click', function(e) {
+    if (formChanged && !confirm('Tem certeza? As alterações não salvas serão perdidas.')) e.preventDefault();
+  });
+
+  var successMsg = document.getElementById('success-message');
+  if (successMsg) {
+    setTimeout(function() {
+      successMsg.style.transition = 'opacity 0.5s ease';
+      successMsg.style.opacity = '0';
+      setTimeout(function() { successMsg.remove(); }, 500);
+    }, 8000);
+  }
+});
+</script>
+
+<% Rails.logger.info("Template car_washes/manage.html.erb renderizado com sucesso") %>

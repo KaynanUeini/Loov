@@ -1,0 +1,497 @@
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --lime: #afff2d;
+    --lime-dim: #8fcc24;
+    --black: #000000;
+    --surface: #0a0a0a;
+    --surface-2: #111111;
+    --surface-3: #1a1a1a;
+    --border: #222222;
+    --text-muted: #666666;
+    --text-secondary: #999999;
+    --white: #ffffff;
+  }
+
+  .auth-wrap {
+    min-height: 100vh;
+    background: var(--black);
+    font-family: 'DM Sans', sans-serif;
+    padding-top: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-bottom: 3rem;
+  }
+
+  .auth-card {
+    width: 100%;
+    max-width: 480px;
+    padding: 1.5rem;
+  }
+
+  .auth-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--lime);
+    margin-bottom: 1rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.1s;
+  }
+
+  .auth-eyebrow::before {
+    content: '';
+    display: block;
+    width: 24px;
+    height: 1px;
+    background: var(--lime);
+  }
+
+  .auth-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.5rem, 8vw, 4rem);
+    line-height: 1;
+    color: var(--white);
+    margin: 0 0 2rem 0;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.2s;
+  }
+
+  .auth-title span { color: var(--lime); }
+
+  /* ROLE SELECTION */
+  .role-screen {
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.3s;
+  }
+
+  .role-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  .role-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .role-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.75rem 1.25rem;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    user-select: none;
+  }
+
+  .role-card:hover {
+    border-color: rgba(175,255,45,0.3);
+    background: var(--surface-3);
+    transform: translateY(-3px);
+  }
+
+  .role-card.selected {
+    border-color: var(--lime);
+    background: var(--surface-3);
+    box-shadow: 0 0 0 1px var(--lime), 0 0 24px rgba(175,255,45,0.08);
+  }
+
+  .role-card-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    color: var(--text-muted);
+    transition: all 0.25s ease;
+  }
+
+  .role-card.selected .role-card-icon {
+    background: rgba(175,255,45,0.1);
+    border-color: rgba(175,255,45,0.3);
+    color: var(--lime);
+  }
+
+  .role-card-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.25rem;
+    color: var(--white);
+    letter-spacing: 0.05em;
+    line-height: 1;
+  }
+
+  .role-card-desc {
+    font-size: 0.775rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+  }
+
+  .role-card.selected .role-card-title { color: var(--lime); }
+
+  .role-next {
+    background: var(--lime);
+    color: var(--black);
+    border: none;
+    border-radius: 100px;
+    padding: 0.875rem 1.75rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
+  .role-next.active {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .role-next.active:hover {
+    background: var(--lime-dim);
+    transform: translateY(-2px);
+  }
+
+  /* FORM SCREEN */
+  .form-screen {
+    display: none;
+    opacity: 0;
+  }
+
+  .form-screen.visible {
+    display: block;
+    animation: slideIn 0.35s ease forwards;
+  }
+
+  .auth-form {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .auth-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .auth-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .auth-hint {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: -0.25rem;
+  }
+
+  .auth-input {
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.875rem 1rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9375rem;
+    color: var(--white);
+    outline: none;
+    transition: all 0.2s ease;
+    width: 100%;
+  }
+
+  .auth-input::placeholder { color: var(--text-muted); }
+  .auth-input:focus {
+    border-color: var(--lime);
+    box-shadow: 0 0 0 3px rgba(175,255,45,0.08);
+  }
+
+  .auth-submit {
+    background: var(--lime);
+    color: var(--black);
+    border: none;
+    border-radius: 100px;
+    padding: 0.875rem 1.75rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+    margin-top: 0.25rem;
+  }
+
+  .auth-submit:hover {
+    background: var(--lime-dim);
+    transform: translateY(-2px);
+  }
+
+  .auth-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    margin-bottom: 1.25rem;
+    transition: color 0.2s ease;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .auth-back:hover { color: var(--lime); }
+
+  .auth-errors {
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.2);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .auth-errors h2 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #fca5a5;
+    margin: 0 0 0.4rem 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .auth-errors ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .auth-errors ul li {
+    font-size: 0.875rem;
+    color: #fca5a5;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .auth-errors ul li::before {
+    content: '·';
+    font-size: 1.2rem;
+    line-height: 1;
+  }
+
+  .auth-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .auth-links a {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  .auth-links a:hover { color: var(--lime); }
+
+  .selected-role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: rgba(175,255,45,0.08);
+    color: var(--lime);
+    border: 1px solid rgba(175,255,45,0.2);
+    padding: 0.3rem 0.75rem;
+    border-radius: 100px;
+    margin-bottom: 1.25rem;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(24px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  @media (max-width: 480px) {
+    .role-cards { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div class="auth-wrap">
+  <div class="auth-card">
+
+    <div class="auth-eyebrow">Nova conta</div>
+    <h1 class="auth-title" id="auth-title">Quem é<span> você?</span></h1>
+
+    <!-- TELA 1: Seleção de perfil -->
+    <div class="role-screen" id="role-screen">
+      <p class="role-label">Escolha seu perfil</p>
+      <div class="role-cards">
+
+        <div class="role-card" id="card-client" onclick="selectRole('client')">
+          <div class="role-card-icon">
+            <i class="fas fa-user"></i>
+          </div>
+          <div class="role-card-title">Cliente</div>
+          <div class="role-card-desc">Quero agendar serviços de lava-rápido</div>
+        </div>
+
+        <div class="role-card" id="card-owner" onclick="selectRole('owner')">
+          <div class="role-card-icon">
+            <i class="fas fa-store"></i>
+          </div>
+          <div class="role-card-title">Parceiro</div>
+          <div class="role-card-desc">Tenho um lava-rápido e quero cadastrá-lo</div>
+        </div>
+
+      </div>
+      <button class="role-next" id="role-next" onclick="goToForm()">
+        Continuar <i class="fas fa-arrow-right" style="margin-left:0.4rem;"></i>
+      </button>
+    </div>
+
+    <!-- TELA 2: Formulário -->
+    <div class="form-screen" id="form-screen">
+
+      <button class="auth-back" onclick="goBack()">
+        <i class="fas fa-arrow-left"></i> Voltar
+      </button>
+
+      <div class="selected-role-badge" id="role-badge"></div>
+
+      <%= form_for(resource, as: resource_name, url: registration_path(resource_name), html: { class: "auth-form" }) do |f| %>
+
+        <%= render "devise/shared/error_messages", resource: resource %>
+
+        <%= f.hidden_field :role, id: "role-input" %>
+
+        <div class="auth-field">
+          <%= f.label :email, "E-mail", class: "auth-label" %>
+          <%= f.email_field :email, autofocus: true, autocomplete: "email",
+              class: "auth-input", placeholder: "seu@email.com" %>
+        </div>
+
+        <div class="auth-field">
+          <%= f.label :password, "Senha", class: "auth-label" %>
+          <% if @minimum_password_length %>
+            <span class="auth-hint">Mínimo de <%= @minimum_password_length %> caracteres</span>
+          <% end %>
+          <%= f.password_field :password, autocomplete: "new-password",
+              class: "auth-input", placeholder: "••••••••" %>
+        </div>
+
+        <div class="auth-field">
+          <%= f.label :password_confirmation, "Confirmar Senha", class: "auth-label" %>
+          <%= f.password_field :password_confirmation, autocomplete: "new-password",
+              class: "auth-input", placeholder: "••••••••" %>
+        </div>
+
+        <%= f.submit "Criar Conta", class: "auth-submit" %>
+
+      <% end %>
+
+    </div>
+
+    <div class="auth-links">
+      <%= render "devise/shared/links" %>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  var selectedRole = null;
+
+  // Se houve erro de validação, volta direto pro formulário com o role que estava
+  <% if resource.errors.any? %>
+    var savedRole = '<%= resource.role %>';
+    if (savedRole) {
+      selectedRole = savedRole;
+      showForm();
+    }
+  <% end %>
+
+  function selectRole(role) {
+    selectedRole = role;
+    document.querySelectorAll('.role-card').forEach(function(c) {
+      c.classList.remove('selected');
+    });
+    document.getElementById('card-' + role).classList.add('selected');
+    document.getElementById('role-next').classList.add('active');
+  }
+
+  function goToForm() {
+    if (!selectedRole) return;
+    showForm();
+  }
+
+  function showForm() {
+    document.getElementById('role-input').value = selectedRole;
+
+    var isOwner = selectedRole === 'owner';
+    document.getElementById('auth-title').innerHTML =
+      isOwner ? 'Seja bem-<span style="color:var(--lime)">vindo.</span>'
+              : 'Cadastre-<span style="color:var(--lime)">se.</span>';
+
+    document.getElementById('role-badge').innerHTML =
+      isOwner ? '<i class="fas fa-store"></i> Parceiro' : '<i class="fas fa-user"></i> Cliente';
+
+    document.getElementById('role-screen').style.display = 'none';
+    var formScreen = document.getElementById('form-screen');
+    formScreen.classList.add('visible');
+  }
+
+  function goBack() {
+    document.getElementById('form-screen').classList.remove('visible');
+    document.getElementById('form-screen').style.display = '';
+    document.getElementById('role-screen').style.display = '';
+    document.getElementById('auth-title').innerHTML =
+      'Quem é<span style="color:var(--lime)"> você?</span>';
+  }
+</script>

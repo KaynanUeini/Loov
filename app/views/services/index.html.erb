@@ -1,0 +1,20 @@
+<h1>Serviços do <%= @car_wash.name %></h1>
+
+<% if @services.any? %>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <% @services.each do |service| %>
+      <div class="border rounded-lg p-4 shadow">
+        <h3 class="text-lg font-semibold"><%= service.title %></h3>
+        <p><%= service.description %></p>
+        <p><strong>Preço:</strong> R$ <%= service.price %></p>
+        <p><strong>Duração:</strong> <%= service.duration %> minutos</p>
+        <%= link_to 'Editar', edit_car_wash_service_path(@car_wash, service), class: 'text-blue-500 hover:underline' %>
+      </div>
+    <% end %>
+  </div>
+<% else %>
+  <p>Nenhum serviço cadastrado.</p>
+<% end %>
+
+<%= link_to 'Adicionar novo serviço', new_car_wash_service_path(@car_wash), class: 'mt-4 inline-block bg-blue-500 text-white px-4 py-2 rounded' %>
+<%= link_to 'Voltar', car_wash_path(@car_wash), class: 'mt-4 inline-block text-blue-500 hover:underline' %>

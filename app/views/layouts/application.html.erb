@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html data-theme="dark">
+<head>
+  <title>CarWashApp</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <%= csrf_meta_tags %>
+  <%= csp_meta_tag %>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="/assets/tailwind.css">
+  <link rel="stylesheet" href="/assets/application.css">
+  <script src="https://js.stripe.com/v3/"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    #matter-wrap-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+      overflow: hidden;
+    }
+    #matter-wrap-container canvas {
+      display: block;
+      width: 100vw !important;
+      height: 100vh !important;
+    }
+  </style>
+</head>
+<body>
+  <% Rails.logger.info("Iniciando renderização do application.html.erb") %>
+  <% Rails.logger.info("Antes de renderizar a navbar: user_signed_in?=#{user_signed_in?}, current_user=#{current_user.inspect}") %>
+  <%= render 'layouts/navbar' %>
+  <% Rails.logger.info("Navbar renderizada com sucesso") %>
+  <main>
+    <%= yield %>
+  </main>
+  <footer class="footer">
+    <p>© 2025 Car Wash App. Todos os direitos reservados.</p>
+  </footer>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('.fade-in-card').forEach((card, index) => {
+        setTimeout(() => { card.style.opacity = '1'; card.style.transform = 'translateY(0)'; }, index * 150);
+      });
+      document.querySelectorAll('.fade-in-welcome').forEach((element, index) => {
+        setTimeout(() => { element.style.opacity = '1'; element.style.transform = 'translateY(0)'; }, index * 200);
+      });
+      const searchSection = document.querySelector('.fade-in-search');
+      if (searchSection) {
+        setTimeout(() => { searchSection.style.opacity = '1'; searchSection.style.transform = 'translateY(0)'; }, 400);
+      }
+      const placeholderText = "Buscar lava-rápido ou serviço...";
+      const searchInput = document.getElementById('search-input');
+      if (searchInput) {
+        searchInput.setAttribute('placeholder', '');
+        let i = 0;
+        function typeWriter() {
+          if (i < placeholderText.length) {
+            searchInput.setAttribute('placeholder', searchInput.getAttribute('placeholder') + placeholderText.charAt(i));
+            i++;
+            setTimeout(typeWriter, 50);
+          }
+        }
+        setTimeout(typeWriter, 600);
+      }
+      const findNearby = () => {
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const url = new URL(window.location);
+              url.searchParams.set('latitude', position.coords.latitude);
+              url.searchParams.set('longitude', position.coords.longitude);
+              window.location.href = url.toString();
+            },
+            (error) => { console.error('Erro ao obter localização:', error); },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+      };
+      const urlParams = new URLSearchParams(window.location.search);
+      <% if user_signed_in? && current_user.client? %>
+      var isProfilePage = window.location.pathname.includes('/client/profile');
+      if (!isProfilePage && (!urlParams.has('latitude') || !urlParams.has('longitude'))) {
+        findNearby();
+      }
+      <% end %>
+      <% if user_signed_in? && current_user.owner? %>
+      if (typeof Matter === 'undefined') { console.error("Matter.js não está carregado"); return; }
+      const { Engine, Render, World, Bodies, Body, Mouse, MouseConstraint, Events, Vector } = Matter;
+      const engine = Engine.create();
+      engine.world.gravity.y = 0;
+      const canvas = document.getElementById('matter-wrap-canvas');
+      if (!canvas) { console.error("Canvas não encontrado"); return; }
+      const W = window.innerWidth;
+      const H = window.innerHeight;
+      canvas.width  = W;
+      canvas.height = H;
+      const render = Render.create({
+        canvas, engine,
+        options: { width: W, height: H, wireframes: false, background: '#000000' }
+      });
+      window.addEventListener('resize', () => {
+        const nW = window.innerWidth;
+        const nH = window.innerHeight;
+        render.canvas.width   = nW;
+        render.canvas.height  = nH;
+        render.options.width  = nW;
+        render.options.height = nH;
+      });
+      const wallOptions = { isStatic: true, render: { fillStyle: '#0a0a0a' } };
+      const offset = 50;
+      World.add(engine.world, [
+        Bodies.rectangle(W / 2, -offset,     W + 2 * offset, offset * 2, wallOptions),
+        Bodies.rectangle(W / 2, H + offset,  W + 2 * offset, offset * 2, wallOptions),
+        Bodies.rectangle(-offset,    H / 2,  offset * 2, H + 2 * offset, wallOptions),
+        Bodies.rectangle(W + offset, H / 2,  offset * 2, H + 2 * offset, wallOptions)
+      ]);
+      const squareBodies = Array.from({ length: 10 }, () => {
+        const size = Math.random() * 16 + 10;
+        const body = Bodies.rectangle(
+          Math.random() * (W - 60) + 30,
+          Math.random() * (H - 60) + 30,
+          size, size,
+          { restitution: 0.6, friction: 0, frictionAir: 0.008, render: { fillStyle: '#ffffff' } }
+          );
+        Body.setVelocity(body, { x: (Math.random() - 0.5) * 2, y: (Math.random() - 0.5) * 2 });
+        return body;
+      });
+      const greenBalls = Array.from({ length: 8 }, () => {
+        const r = Math.random() * 14 + 10;
+        const ball = Bodies.circle(
+          Math.random() * (W - 60) + 30,
+          Math.random() * (H - 60) + 30,
+          r,
+          { restitution: 0.6, friction: 0, frictionAir: 0.008, render: { fillStyle: '#afff2d' } }
+          );
+        Body.setVelocity(ball, { x: (Math.random() - 0.5) * 2, y: (Math.random() - 0.5) * 2 });
+        return ball;
+      });
+      const darkDots = Array.from({ length: 6 }, () => {
+        const r = Math.random() * 8 + 5;
+        const dot = Bodies.circle(
+          Math.random() * (W - 60) + 30,
+          Math.random() * (H - 60) + 30,
+          r,
+          { restitution: 0.6, friction: 0, frictionAir: 0.008, render: { fillStyle: '#333333' } }
+          );
+        Body.setVelocity(dot, { x: (Math.random() - 0.5) * 2, y: (Math.random() - 0.5) * 2 });
+        return dot;
+      });
+      const allBodies = [...squareBodies, ...greenBalls, ...darkDots];
+      World.add(engine.world, allBodies);
+      const mouse = Mouse.create(render.canvas);
+      World.add(engine.world, MouseConstraint.create(engine, {
+        mouse, constraint: { stiffness: 0.2, render: { visible: false } }
+      }));
+      render.mouse = mouse;
+      Events.on(engine, 'beforeUpdate', () => {
+        allBodies.forEach(body => {
+          const vel   = body.velocity;
+          const speed = Vector.magnitude(vel);
+          if (speed < 0.8) {
+            Body.setVelocity(body, Vector.mult(
+              Vector.normalise(speed > 0 ? vel : { x: 1, y: 0 }), 0.8
+              ));
+          }
+          const dist = Vector.magnitude(Vector.sub(body.position, mouse.position));
+          if (dist < 120 && dist > 0) {
+            Body.applyForce(body, body.position,
+              Vector.mult(
+                Vector.normalise(Vector.sub(body.position, mouse.position)),
+                (1 - dist / 120) * 0.025
+                )
+              );
+          }
+        });
+      });
+      Engine.run(engine);
+      Render.run(render);
+      <% end %>
+    });
+  </script>
+  <% Rails.logger.info("Finalizando renderização do application.html.erb") %>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<h1>Editar Horário de Funcionamento</h1>
+
+<%= form_with(model: [@car_wash, @operating_hour], url: update_operating_hour_car_wash_path(@car_wash, @operating_hour), local: true) do |form| %>
+  <% if @operating_hour.errors.any? %>
+    <div class="alert alert-danger">
+      <h4><%= pluralize(@operating_hour.errors.count, "erro") %> impediu a atualização:</h4>
+      <ul>
+        <% @operating_hour.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="field">
+    <%= form.label :day_of_week, "Dia da Semana" %>
+    <%= form.select :day_of_week, options_for_select([
+      ["Domingo", 0],
+      ["Segunda-feira", 1],
+      ["Terça-feira", 2],
+      ["Quarta-feira", 3],
+      ["Quinta-feira", 4],
+      ["Sexta-feira", 5],
+      ["Sábado", 6]
+    ], @operating_hour.day_of_week), disabled: true %>
+  </div>
+
+  <div class="field">
+    <%= form.label :opens_at, "Horário de Abertura" %>
+    <%= form.time_field :opens_at, value: @operating_hour.opens_at.strftime('%H:%M') %>
+  </div>
+
+  <div class="field">
+    <%= form.label :closes_at, "Horário de Fechamento" %>
+    <%= form.time_field :closes_at, value: @operating_hour.closes_at.strftime('%H:%M') %>
+  </div>
+
+  <div class="actions">
+    <%= form.submit "Atualizar Horário" %>
+  </div>
+<% end %>
+
+<%= link_to 'Voltar', operating_hours_car_wash_path(@car_wash) %>

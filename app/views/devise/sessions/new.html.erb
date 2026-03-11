@@ -1,0 +1,208 @@
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --lime: #afff2d;
+    --lime-dim: #8fcc24;
+    --black: #000000;
+    --surface: #0a0a0a;
+    --surface-2: #111111;
+    --surface-3: #1a1a1a;
+    --border: #222222;
+    --text-muted: #666666;
+    --text-secondary: #999999;
+    --white: #ffffff;
+  }
+
+  .auth-wrap {
+    min-height: 100vh;
+    background: var(--black);
+    font-family: 'DM Sans', sans-serif;
+    padding-top: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .auth-card {
+    width: 100%;
+    max-width: 420px;
+    padding: 1.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.1s;
+  }
+
+  .auth-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--lime);
+    margin-bottom: 1rem;
+  }
+
+  .auth-eyebrow::before {
+    content: '';
+    display: block;
+    width: 24px;
+    height: 1px;
+    background: var(--lime);
+  }
+
+  .auth-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.5rem, 8vw, 4rem);
+    line-height: 1;
+    color: var(--white);
+    margin: 0 0 2rem 0;
+  }
+
+  .auth-title span { color: var(--lime); }
+
+  .auth-form {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .auth-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .auth-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .auth-input {
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.875rem 1rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9375rem;
+    color: var(--white);
+    outline: none;
+    transition: all 0.2s ease;
+    width: 100%;
+  }
+
+  .auth-input::placeholder { color: var(--text-muted); }
+
+  .auth-input:focus {
+    border-color: var(--lime);
+    box-shadow: 0 0 0 3px rgba(175,255,45,0.08);
+  }
+
+  .auth-remember {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .auth-remember input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--lime);
+    cursor: pointer;
+  }
+
+  .auth-submit {
+    background: var(--lime);
+    color: var(--black);
+    border: none;
+    border-radius: 100px;
+    padding: 0.875rem 1.75rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+    margin-top: 0.25rem;
+  }
+
+  .auth-submit:hover {
+    background: var(--lime-dim);
+    transform: translateY(-2px);
+  }
+
+  .auth-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .auth-links a {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .auth-links a:hover { color: var(--lime); }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+</style>
+
+<div class="auth-wrap">
+  <div class="auth-card">
+
+    <div class="auth-eyebrow">Área do cliente</div>
+    <h1 class="auth-title">Bem-vindo<span>.</span></h1>
+
+    <%= form_for(resource, as: resource_name, url: session_path(resource_name), html: { class: "auth-form" }) do |f| %>
+
+      <div class="auth-field">
+        <%= f.label :email, "E-mail", class: "auth-label" %>
+        <%= f.email_field :email, autofocus: true, autocomplete: "email",
+            class: "auth-input", placeholder: "seu@email.com" %>
+      </div>
+
+      <div class="auth-field">
+        <%= f.label :password, "Senha", class: "auth-label" %>
+        <%= f.password_field :password, autocomplete: "current-password",
+            class: "auth-input", placeholder: "••••••••" %>
+      </div>
+
+      <% if devise_mapping.rememberable? %>
+        <label class="auth-remember">
+          <%= f.check_box :remember_me %>
+          Lembrar de mim
+        </label>
+      <% end %>
+
+      <%= f.submit "Entrar", class: "auth-submit" %>
+
+    <% end %>
+
+    <div class="auth-links">
+      <%= render "devise/shared/links" %>
+    </div>
+
+  </div>
+</div>

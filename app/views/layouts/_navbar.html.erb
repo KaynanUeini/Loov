@@ -1,0 +1,122 @@
+<% Rails.logger.info("Renderizando navbar: user_signed_in?=#{user_signed_in?}, current_user=#{current_user.inspect}") %>
+<% if user_signed_in? && current_user %>
+<% Rails.logger.info("Atributos do current_user: #{current_user.attributes.inspect}") %>
+<% end %>
+
+<style>
+  .nav-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--lime, #afff2d);
+    color: #000;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    transition: opacity 0.2s ease, transform 0.15s ease;
+    flex-shrink: 0;
+  }
+  .nav-avatar:hover {
+    opacity: 0.85;
+    transform: scale(1.05);
+  }
+  .nav-avatar.incomplete {
+    background: transparent;
+    border: 2px solid #ffaa00;
+    color: #ffaa00;
+  }
+  .nav-avatar-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    position: relative;
+  }
+  .nav-avatar-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #ffaa00;
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    border: 1.5px solid #000;
+  }
+
+  .navbar .menu.menu-horizontal {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  .navbar .menu.menu-horizontal li {
+    display: flex;
+    align-items: center;
+  }
+</style>
+
+<nav class="navbar">
+  <div class="flex-1">
+    <a href="/">
+      <img src="/assets/Loov.png" alt="Logo Loov" class="navbar-logo" style="height: 40px; width: auto;">
+    </a>
+  </div>
+  <div class="flex-none">
+    <button class="menu-toggle" aria-label="Toggle menu">
+      <i class="fas fa-bars"></i>
+    </button>
+    <ul class="menu menu-horizontal">
+      <% if user_signed_in? %>
+        <% if current_user.client? %>
+          <li><%= link_to "Meus Agendamentos", appointments_path %></li>
+           <li>
+                       <div class="nav-avatar-wrap">
+                         <%= link_to edit_client_profile_path,
+                             class: "nav-avatar #{current_user.profile_complete? ? '' : 'incomplete'}",
+                             title: current_user.profile_complete? ? current_user.display_name : "Complete seu perfil" do %>
+                           <i class="fas fa-user" style="font-size:0.85rem;"></i>
+                         <% end %>
+                         <% unless current_user.profile_complete? %>
+                           <span class="nav-avatar-dot"></span>
+                         <% end %>
+                       </div>
+                     </li>
+          <li><%= link_to "Sair", destroy_user_session_path, method: :delete %></li>
+        <% elsif current_user.owner? %>
+          <% @car_wash = current_user.car_washes.first if @car_wash.nil? %>
+          <li>
+            <% if @car_wash&.persisted? %>
+              <%= link_to "Gerenciar Lava-Rápido", manage_car_wash_path(@car_wash) %>
+            <% else %>
+              <%= link_to "Cadastrar Lava-Rápido", new_car_wash_path, style: "color: var(--lime);" %>
+            <% end %>
+          </li>
+          <li><%= link_to "Agendamentos", owner_car_wash_appointments_path %></li>
+          <li><%= link_to "Financeiro", owner_monthly_costs_path %></li>
+          <li><%= link_to "Análise", owner_financial_tracking_path %></li>
+          <li><%= link_to "Sair", destroy_user_session_path, method: :delete %></li>
+        <% else %>
+          <li><%= link_to "Sair", destroy_user_session_path, method: :delete %></li>
+        <% end %>
+      <% else %>
+        <li><%= link_to "Entrar", new_user_session_path %></li>
+        <li><%= link_to "Cadastrar", new_user_registration_path %></li>
+      <% end %>
+    </ul>
+  </div>
+</nav>
+
+<script>
+  function initMenuToggle() {
+    const menuToggle = document.querySelector('.menu-toggle');
+    const menu = document.querySelector('.navbar .menu');
+    if (menuToggle && menu) {
+      menuToggle.addEventListener('click', () => {
+        menu.classList.toggle('active');
+      });
+    }
+  }
+  document.addEventListener('turbo:load', initMenuToggle);
+  document.addEventListener('DOMContentLoaded', initMenuToggle);
+</script>

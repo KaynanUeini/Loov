@@ -1,0 +1,4 @@
+// es-abstract/2024/TypedArrayElementSize@1.24.0 downloaded from https://ga.jspm.io/npm:es-abstract@1.24.0/2024/TypedArrayElementSize.js
+
+import*as r from"es-errors/syntax";import*as a from"es-errors/type";import*as t from"math-intrinsics/isInteger";import*as e from"which-typed-array";import{_ as i}from"../_/SvNCKA4G.js";var s=r;try{"default"in r&&(s=r.default)}catch(r){}var f=a;try{"default"in a&&(f=a.default)}catch(r){}var n=t;try{"default"in t&&(n=t.default)}catch(r){}var o=e;try{"default"in e&&(o=e.default)}catch(r){}var d={};var m=s;var v=f;var y=n;var u=o;var c=i;d=function(r){var a=u(r);if(!a)throw new v("Assertion failed: `O` must be a TypedArray");var t=c.size["$"+c.name["$"+a]];if(!y(t)||t<0)throw new m("Assertion failed: Unknown TypedArray type `"+a+"`");return t};var l=d;export{l as default};
+

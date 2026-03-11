@@ -1,0 +1,40 @@
+<h1>Novo Serviço</h1>
+
+<%= form_with(model: [@car_wash, @service], local: true) do |form| %>
+  <% if @service.errors.any? %>
+    <div class="alert alert-danger">
+      <h4><%= pluralize(@service.errors.count, "erro") %> impediu a criação:</h4>
+      <ul>
+        <% @service.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="field">
+    <%= form.label :title, "Título" %>
+    <%= form.text_field :title %>
+  </div>
+
+  <div class="field">
+    <%= form.label :description, "Descrição" %>
+    <%= form.text_area :description %>
+  </div>
+
+  <div class="field">
+    <%= form.label :price, "Preço" %>
+    <%= form.number_field :price, step: 0.01 %>
+  </div>
+
+  <div class="field">
+    <%= form.label :duration, "Duração (minutos)" %>
+    <%= form.number_field :duration %>
+  </div>
+
+  <div class="actions">
+    <%= form.submit "Criar Serviço" %>
+  </div>
+<% end %>
+
+<%= link_to 'Voltar', @car_wash %>

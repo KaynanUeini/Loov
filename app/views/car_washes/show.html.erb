@@ -1,0 +1,398 @@
+<% Rails.logger.info("Iniciando renderização do template car_washes/show.html.erb") %>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --lime: #afff2d;
+    --lime-dim: #8fcc24;
+    --black: #000000;
+    --surface: #0a0a0a;
+    --surface-2: #111111;
+    --surface-3: #1a1a1a;
+    --border: #222222;
+    --text-muted: #666666;
+    --text-secondary: #999999;
+    --white: #ffffff;
+  }
+
+  .show-wrap {
+    min-height: 100vh;
+    background: var(--black);
+    font-family: 'DM Sans', sans-serif;
+    padding-top: 64px;
+  }
+
+  /* BACK */
+  .show-back {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 0;
+    opacity: 0;
+    animation: fadeUp 0.5s ease forwards 0.1s;
+  }
+
+  .show-back a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+
+  .show-back a:hover { color: var(--lime); }
+
+  /* HEADER */
+  .show-header {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 2rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.2s;
+  }
+
+  .show-header-left { flex: 1; }
+
+  .show-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    color: var(--lime);
+    margin-bottom: 1.25rem;
+  }
+
+  .show-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2rem, 7vw, 4rem);
+    line-height: 0.95;
+    color: var(--white);
+    margin-bottom: 1rem;
+  }
+
+  .show-address {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+  }
+
+  .show-address i { color: var(--lime); font-size: 0.75rem; }
+
+  .show-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    flex-shrink: 0;
+  }
+
+  .btn-show {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.75rem;
+    border-radius: 100px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .btn-show-primary { background: var(--lime); color: var(--black); }
+  .btn-show-primary:hover { background: var(--lime-dim); transform: translateY(-2px); }
+  .btn-show-secondary { background: transparent; color: var(--white); border: 1px solid var(--border); }
+  .btn-show-secondary:hover { border-color: var(--lime); color: var(--lime); transform: translateY(-2px); }
+
+  /* DIVIDER */
+  .show-divider {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+  .show-divider-line { height: 1px; background: var(--border); }
+
+  /* CONTENT GRID */
+  .show-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.3s;
+  }
+
+  .show-panel {
+    background: var(--surface);
+    padding: 2rem;
+  }
+
+  .show-panel-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.25rem;
+    letter-spacing: 0.05em;
+    color: var(--white);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .show-panel-title i { color: var(--lime); font-size: 0.9rem; }
+
+  /* HOURS */
+  .show-hour-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .show-hour-item:last-child { border-bottom: none; }
+
+  .show-hour-day {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--white);
+  }
+
+  .show-hour-time {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* SERVICES */
+  .show-service-tabs {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.25rem;
+  }
+
+  .show-service-tab {
+    padding: 0.3rem 0.75rem;
+    border-radius: 100px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+  }
+
+  .show-service-tab:hover { border-color: var(--lime); color: var(--lime); }
+  .show-service-tab.active { background: var(--lime); color: var(--black); border-color: var(--lime); }
+
+  .show-service-list { display: flex; flex-direction: column; gap: 0.75rem; }
+
+  .show-service-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    background: var(--surface-2);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    transition: border-color 0.2s ease;
+  }
+
+  .show-service-item:hover { border-color: var(--border); }
+
+  .show-service-item[style*="display: none"] { display: none !important; }
+
+  .show-service-left { flex: 1; }
+
+  .show-service-name {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--white);
+    margin-bottom: 0.25rem;
+  }
+
+  .show-service-desc {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .show-service-right { text-align: right; flex-shrink: 0; margin-left: 1rem; }
+
+  .show-service-price {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.25rem;
+    color: var(--lime);
+    letter-spacing: 0.02em;
+  }
+
+  .show-service-duration {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  .show-empty-services {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    padding: 1rem 0;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 768px) {
+    .show-header { flex-direction: column; gap: 1.5rem; }
+    .show-actions { flex-direction: row; flex-wrap: wrap; }
+    .show-content { grid-template-columns: 1fr; }
+    .show-back, .show-header, .show-divider, .show-content { padding-left: 1.25rem; padding-right: 1.25rem; }
+  }
+</style>
+
+<div class="show-wrap">
+
+  <!-- Back -->
+  <div class="show-back">
+    <%= link_to car_washes_path do %>
+      <i class="fas fa-arrow-left"></i> Voltar
+    <% end %>
+  </div>
+
+  <!-- Header -->
+  <div class="show-header">
+    <div class="show-header-left">
+      <div class="show-avatar"><%= @car_wash.name.first(2).upcase %></div>
+      <h1 class="show-name"><%= @car_wash.name %></h1>
+      <div class="show-address">
+        <i class="fas fa-location-dot"></i>
+        <span><%= @car_wash.address || "Endereço não informado" %></span>
+      </div>
+    </div>
+    <div class="show-actions">
+      <% if user_signed_in? && current_user.client? %>
+        <%= link_to new_appointment_path(car_wash_id: @car_wash.id), class: "btn-show btn-show-primary" do %>
+          <i class="fas fa-calendar-plus"></i> Agendar
+        <% end %>
+      <% end %>
+      <% if user_signed_in? && current_user.owner? && @car_wash.user == current_user %>
+        <%= link_to manage_car_wash_path(@car_wash), class: "btn-show btn-show-secondary" do %>
+          <i class="fas fa-gear"></i> Gerenciar
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="show-divider"><div class="show-divider-line"></div></div>
+
+  <!-- Content -->
+  <div class="show-content">
+
+    <!-- Horários -->
+    <div class="show-panel">
+      <div class="show-panel-title">
+        <i class="fas fa-clock"></i> Horários
+      </div>
+      <% if @car_wash.operating_hours.any? %>
+        <% @car_wash.operating_hours.order(Arel.sql("CASE day_of_week WHEN 0 THEN 7 ELSE day_of_week END")).each do |hour| %>
+          <div class="show-hour-item">
+            <span class="show-hour-day">
+              <%= %w[Domingo Segunda Terça Quarta Quinta Sexta Sábado][hour.day_of_week] %>
+            </span>
+            <span class="show-hour-time">
+              <%= hour.opens_at.strftime("%H:%M") %> – <%= hour.closes_at.strftime("%H:%M") %>
+            </span>
+          </div>
+        <% end %>
+      <% else %>
+        <p class="show-empty-services">Horários não informados.</p>
+      <% end %>
+    </div>
+
+    <!-- Serviços -->
+    <div class="show-panel">
+      <div class="show-panel-title">
+        <i class="fas fa-list-check"></i> Serviços
+      </div>
+
+      <% categories = @car_wash.services.where.not(category: [nil, '']).pluck(:category).uniq %>
+      <% if categories.any? %>
+        <div class="show-service-tabs">
+          <button class="show-service-tab active" data-cat="all">Todos</button>
+          <% categories.each do |cat| %>
+            <button class="show-service-tab" data-cat="<%= cat %>"><%= cat %></button>
+          <% end %>
+        </div>
+      <% end %>
+
+      <% if @car_wash.services.any? %>
+        <div class="show-service-list">
+          <% @car_wash.services.each do |service| %>
+            <div class="show-service-item" data-category="<%= service.category %>">
+              <div class="show-service-left">
+                <div class="show-service-name"><%= service.title %></div>
+                <% if service.description.present? %>
+                  <div class="show-service-desc"><%= service.description %></div>
+                <% end %>
+              </div>
+              <div class="show-service-right">
+                <div class="show-service-price">R$ <%= number_with_precision(service.price, precision: 2, separator: ',') %></div>
+                <div class="show-service-duration"><%= service.duration %> min</div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <p class="show-empty-services">Nenhum serviço disponível.</p>
+      <% end %>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const tabs = document.querySelectorAll('.show-service-tab');
+    const items = document.querySelectorAll('.show-service-item');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const cat = tab.dataset.cat;
+        items.forEach(item => {
+          if (cat === 'all' || item.dataset.category === cat) {
+            item.style.display = 'flex';
+          } else {
+            item.style.display = 'none';
+          }
+        });
+      });
+    });
+  });
+</script>
+
+<% Rails.logger.info("Template car_washes/show.html.erb renderizado com sucesso") %>

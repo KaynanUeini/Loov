@@ -1,0 +1,562 @@
+<% Rails.logger.info("Renderizando appointments/index.html.erb") %>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --lime: #afff2d;
+    --lime-dim: #8fcc24;
+    --black: #000000;
+    --surface: #0a0a0a;
+    --surface-2: #111111;
+    --surface-3: #1a1a1a;
+    --border: #222222;
+    --text-muted: #666666;
+    --text-secondary: #999999;
+    --white: #ffffff;
+  }
+
+  .idx-wrap { min-height: 100vh; background: var(--black); font-family: 'DM Sans', sans-serif; padding-top: 64px; }
+
+  .idx-header {
+    max-width: 800px; margin: 0 auto; padding: 2.5rem 1.5rem 1.5rem;
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem;
+    opacity: 0; animation: fadeUp 0.6s ease forwards 0.1s;
+  }
+
+  .idx-eyebrow {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    font-size: 0.7rem; font-weight: 500; letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--lime); margin-bottom: 0.5rem;
+  }
+  .idx-eyebrow::before { content: ''; display: block; width: 24px; height: 1px; background: var(--lime); }
+
+  .idx-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(2rem, 6vw, 3.5rem); line-height: 0.95; color: var(--white); }
+
+  .btn-idx {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.75rem 1.5rem; border-radius: 100px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-weight: 500;
+    text-decoration: none; transition: all 0.2s ease; cursor: pointer;
+    border: none; white-space: nowrap; flex-shrink: 0;
+  }
+  .btn-idx-primary { background: var(--lime); color: var(--black); }
+  .btn-idx-primary:hover { background: var(--lime-dim); transform: translateY(-2px); }
+  .btn-idx-secondary { background: transparent; color: var(--white); border: 1px solid var(--border); }
+  .btn-idx-secondary:hover { border-color: var(--lime); color: var(--lime); }
+  .btn-idx-danger { background: transparent; color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+  .btn-idx-danger:hover { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.6); }
+
+  .idx-divider { max-width: 800px; margin: 0 auto; padding: 0 1.5rem; }
+  .idx-divider-line { height: 1px; background: var(--border); }
+  .idx-body { max-width: 800px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  .idx-flash-msg {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.875rem 1.25rem; border-radius: 12px; font-size: 0.875rem; margin-bottom: 1.5rem;
+  }
+  .idx-flash-msg.error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); color: #fca5a5; }
+  .idx-flash-msg.success { background: rgba(175,255,45,0.08); border: 1px solid rgba(175,255,45,0.15); color: var(--lime); }
+
+  /* NEXT CARD */
+  .next-card {
+    background: var(--surface-2); border: 1px solid var(--lime);
+    box-shadow: 0 0 0 1px var(--lime), 0 0 32px rgba(175,255,45,0.06);
+    border-radius: 20px; overflow: hidden; margin-bottom: 1rem;
+    opacity: 0; animation: fadeUp 0.6s ease forwards 0.2s;
+  }
+  .next-card-top { padding: 1.75rem 1.75rem 1.25rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+  .next-card-name { font-family: 'Bebas Neue', sans-serif; font-size: clamp(1.75rem, 5vw, 2.5rem); line-height: 0.95; color: var(--white); margin-bottom: 0.4rem; }
+  .next-card-address { font-size: 0.8125rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.4rem; }
+  .next-card-address i { color: var(--lime); font-size: 0.65rem; }
+  .next-card-datetime { text-align: right; flex-shrink: 0; }
+  .next-card-time { font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; color: var(--lime); line-height: 1; letter-spacing: 0.02em; }
+  .next-card-date { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem; }
+  .next-card-bottom { border-top: 1px solid var(--border); padding: 1.25rem 1.75rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+  .next-card-service { display: flex; align-items: center; gap: 0.75rem; }
+  .next-card-service-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--surface-3); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--lime); font-size: 0.75rem; flex-shrink: 0; }
+  .next-card-service-name { font-size: 0.9375rem; font-weight: 500; color: var(--white); }
+  .next-card-service-duration { font-size: 0.8rem; color: var(--text-muted); }
+  .next-card-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+  /* UPCOMING */
+  .upcoming-list { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 3rem; opacity: 0; animation: fadeUp 0.6s ease forwards 0.3s; }
+  .upcoming-item { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: border-color 0.2s ease; cursor: pointer; }
+  .upcoming-item:hover { border-color: rgba(175,255,45,0.3); }
+  .upcoming-item.expanded { border-color: rgba(175,255,45,0.4); }
+  .upcoming-item-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; gap: 1rem; user-select: none; }
+  .upcoming-item-left { flex: 1; min-width: 0; }
+  .upcoming-item-name { font-size: 0.9375rem; font-weight: 500; color: var(--white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .upcoming-item-meta { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+  .upcoming-item-meta i { color: var(--lime); font-size: 0.65rem; }
+  .upcoming-item-right { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
+  .upcoming-item-time { font-family: 'Bebas Neue', sans-serif; font-size: 1.25rem; color: var(--white); text-align: right; }
+  .upcoming-item-date { font-size: 0.75rem; color: var(--text-muted); text-align: right; }
+  .upcoming-item-chevron { color: var(--text-muted); font-size: 0.75rem; transition: transform 0.25s ease; flex-shrink: 0; }
+  .upcoming-item.expanded .upcoming-item-chevron { transform: rotate(180deg); }
+  .upcoming-item-details { max-height: 0; overflow: hidden; transition: max-height 0.35s ease; }
+  .upcoming-item-details.open { max-height: 400px; }
+  .upcoming-item-details-inner { border-top: 1px solid var(--border); padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; }
+  .detail-row { display: flex; align-items: center; justify-content: space-between; font-size: 0.875rem; gap: 1rem; }
+  .detail-label { color: var(--text-muted); font-size: 0.8125rem; }
+  .detail-value { color: var(--white); text-align: right; }
+  .upcoming-item-actions { display: flex; justify-content: flex-end; padding-top: 0.75rem; border-top: 1px solid var(--border); margin-top: 0.25rem; }
+
+  /* SECTION HEADER */
+  .idx-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+  .idx-section-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.25rem; letter-spacing: 0.05em; color: var(--white); }
+  .idx-section-count { font-size: 0.8rem; color: var(--text-muted); }
+
+  /* HISTÓRICO */
+  .history-list { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; opacity: 0; animation: fadeUp 0.6s ease forwards 0.4s; }
+  .history-item { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; background: var(--surface); border-bottom: 1px solid var(--border); gap: 1rem; }
+  .history-item:last-child { border-bottom: none; }
+  .history-item-left { flex: 1; min-width: 0; }
+  .history-item-name { font-size: 0.9rem; font-weight: 500; color: var(--white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .history-item-meta { font-size: 0.775rem; color: var(--text-muted); margin-top: 0.2rem; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+  .history-item-meta i { color: var(--lime); font-size: 0.6rem; }
+  .history-item-right { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
+  .history-item-date-main { font-size: 0.875rem; color: var(--text-secondary); text-align: right; }
+  .history-item-date-time { font-size: 0.75rem; color: var(--text-muted); text-align: right; }
+
+  .status-badge { font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.2rem 0.6rem; border-radius: 100px; }
+  .status-confirmed { background: rgba(175,255,45,0.1); color: var(--lime); border: 1px solid rgba(175,255,45,0.2); }
+  .status-cancelled { background: rgba(239,68,68,0.08); color: #fca5a5; border: 1px solid rgba(239,68,68,0.2); }
+  .status-pending { background: rgba(255,255,255,0.05); color: var(--text-secondary); border: 1px solid var(--border); }
+
+  /* REVIEW BUTTON */
+  .btn-review {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.3rem 0.75rem; border-radius: 100px;
+    font-size: 0.7rem; font-weight: 500; cursor: pointer;
+    background: transparent; color: #facc15;
+    border: 1px solid rgba(250,204,21,0.3);
+    transition: all 0.2s ease; white-space: nowrap;
+  }
+  .btn-review:hover { background: rgba(250,204,21,0.08); border-color: rgba(250,204,21,0.6); }
+
+  .reviewed-badge {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    font-size: 0.65rem; color: var(--text-muted);
+  }
+  .reviewed-badge i { color: #facc15; }
+
+  /* REVIEW MODAL */
+  .review-modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+    z-index: 1000; display: flex; align-items: center; justify-content: center;
+    padding: 1rem; opacity: 0; pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+  .review-modal-overlay.open { opacity: 1; pointer-events: all; }
+
+  .review-modal {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 20px; padding: 2rem; width: 100%; max-width: 460px;
+    transform: translateY(20px); transition: transform 0.25s ease;
+  }
+  .review-modal-overlay.open .review-modal { transform: translateY(0); }
+
+  .review-modal-title {
+    font-family: 'Bebas Neue', sans-serif; font-size: 1.75rem;
+    color: var(--white); margin-bottom: 0.25rem;
+  }
+  .review-modal-sub { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.5rem; }
+
+  /* STARS */
+  .stars-row { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
+  .star-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 1.75rem; color: var(--border);
+    transition: color 0.15s ease, transform 0.15s ease;
+    padding: 0;
+  }
+  .star-btn.active { color: #facc15; }
+  .star-btn:hover { transform: scale(1.15); }
+
+  /* TAGS */
+  .tags-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.25rem; }
+  .tag-btn {
+    padding: 0.35rem 0.85rem; border-radius: 100px;
+    font-size: 0.775rem; cursor: pointer;
+    background: var(--surface-3); color: var(--text-secondary);
+    border: 1px solid var(--border); transition: all 0.15s ease;
+  }
+  .tag-btn.selected {
+    background: rgba(175,255,45,0.1); color: var(--lime);
+    border-color: rgba(175,255,45,0.4);
+  }
+
+  /* COMMENT */
+  .review-textarea {
+    width: 100%; background: var(--surface-3); border: 1px solid var(--border);
+    border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.875rem;
+    color: var(--white); font-family: 'DM Sans', sans-serif;
+    resize: none; box-sizing: border-box; margin-bottom: 1.25rem;
+    transition: border-color 0.2s ease;
+  }
+  .review-textarea:focus { outline: none; border-color: var(--lime); }
+  .review-textarea::placeholder { color: var(--text-muted); }
+
+  .review-modal-actions { display: flex; gap: 0.75rem; }
+  .btn-modal-cancel {
+    flex: 1; padding: 0.75rem; border-radius: 10px;
+    background: transparent; color: var(--text-muted);
+    border: 1px solid var(--border); font-family: 'DM Sans', sans-serif;
+    font-size: 0.875rem; cursor: pointer; transition: all 0.2s ease;
+  }
+  .btn-modal-cancel:hover { border-color: var(--white); color: var(--white); }
+  .btn-modal-submit {
+    flex: 2; padding: 0.75rem; border-radius: 10px;
+    background: var(--lime); color: var(--black);
+    border: none; font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem; letter-spacing: 0.06em; cursor: pointer;
+    transition: opacity 0.2s ease;
+  }
+  .btn-modal-submit:hover { opacity: 0.85; }
+  .btn-modal-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* EMPTY */
+  .idx-empty { text-align: center; padding: 3rem 1.5rem; border: 1px solid var(--border); border-radius: 16px; background: var(--surface-2); }
+  .idx-empty-icon { font-size: 2rem; color: var(--border); margin-bottom: 1rem; }
+  .idx-empty-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; color: var(--white); margin-bottom: 0.5rem; }
+  .idx-empty-text { font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1.5rem; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 640px) {
+    .idx-header { flex-direction: column; align-items: flex-start; }
+    .next-card-top { flex-direction: column; }
+    .next-card-datetime { text-align: left; }
+    .idx-header, .idx-divider, .idx-body { padding-left: 1.25rem; padding-right: 1.25rem; }
+  }
+</style>
+
+<!-- REVIEW MODAL -->
+<div class="review-modal-overlay" id="review-overlay">
+  <div class="review-modal">
+    <div class="review-modal-title">Avaliar <span id="modal-car-wash-name" style="color:var(--lime);"></span></div>
+    <div class="review-modal-sub">Como foi sua experiência?</div>
+
+    <%= form_with url: client_reviews_path, method: :post, data: { turbo: false }, id: "review-form" do |f| %>
+      <%= f.hidden_field :appointment_id, id: "review-appointment-id" %>
+
+      <!-- Stars -->
+      <div class="stars-row" id="stars-row">
+        <% (1..5).each do |i| %>
+          <button type="button" class="star-btn" data-value="<%= i %>" onclick="setStar(<%= i %>)">
+            <i class="fas fa-star"></i>
+          </button>
+        <% end %>
+      </div>
+      <%= f.hidden_field :rating, id: "review-rating", value: "" %>
+
+      <!-- Tags -->
+      <div class="tags-row" id="tags-row">
+        <% Review::TAGS.each do |tag| %>
+          <button type="button" class="tag-btn" data-tag="<%= tag %>" onclick="toggleTag(this)">
+            <%= tag %>
+          </button>
+        <% end %>
+      </div>
+      <%= f.hidden_field :tags, id: "review-tags", value: "" %>
+
+      <!-- Comment -->
+      <%= f.text_area :comment,
+          class: "review-textarea",
+          rows: 3,
+          placeholder: "Comentário opcional..." %>
+
+      <div class="review-modal-actions">
+        <button type="button" class="btn-modal-cancel" onclick="closeReviewModal()">Cancelar</button>
+        <%= f.submit "Enviar Avaliação", class: "btn-modal-submit", id: "review-submit", disabled: true %>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<div class="idx-wrap">
+
+  <div class="idx-header">
+    <div>
+      <div class="idx-eyebrow">Área do Cliente</div>
+      <h1 class="idx-title">Meus Agendamentos</h1>
+    </div>
+    <%= link_to car_washes_path, class: "btn-idx btn-idx-primary" do %>
+      <i class="fas fa-plus"></i> Novo Agendamento
+    <% end %>
+  </div>
+
+  <div class="idx-divider"><div class="idx-divider-line"></div></div>
+
+  <div class="idx-body">
+
+    <% if flash[:alert] %>
+      <div class="idx-flash-msg error" id="flash-error">
+        <i class="fas fa-circle-exclamation"></i><span><%= flash[:alert] %></span>
+      </div>
+    <% end %>
+    <% if flash[:notice] %>
+      <div class="idx-flash-msg success" id="flash-notice">
+        <i class="fas fa-circle-check"></i><span><%= flash[:notice] %></span>
+      </div>
+    <% end %>
+
+    <% current_time = DateTime.now.in_time_zone("America/Sao_Paulo") %>
+
+    <% if @upcoming_appointments.empty? && @past_appointments.empty? %>
+      <div class="idx-empty">
+        <div class="idx-empty-icon"><i class="fas fa-calendar-xmark"></i></div>
+        <div class="idx-empty-title">Nenhum agendamento</div>
+        <p class="idx-empty-text">Você ainda não fez nenhum agendamento. Que tal começar agora?</p>
+        <%= link_to "Encontrar Lava-Rápido", car_washes_path, class: "btn-idx btn-idx-primary" %>
+      </div>
+
+    <% else %>
+
+      <% if @upcoming_appointments.any? %>
+        <% next_appt = @upcoming_appointments.first %>
+        <% next_is_ongoing = @ongoing_appointments.include?(next_appt.id) %>
+        <% next_minutes_until = ((next_appt.scheduled_at - current_time) / 60).to_i %>
+        <% next_can_cancel = !next_is_ongoing && next_minutes_until > 30 %>
+
+        <div class="next-card">
+          <div class="next-card-top">
+            <div>
+              <div class="next-card-name"><%= next_appt.car_wash.name %></div>
+              <div class="next-card-address">
+                <i class="fas fa-location-dot"></i>
+                <%= next_appt.car_wash.address %>
+              </div>
+            </div>
+            <div class="next-card-datetime">
+              <div class="next-card-time"><%= next_appt.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%H:%M") %></div>
+              <div class="next-card-date"><%= next_appt.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%d/%m/%Y") %></div>
+            </div>
+          </div>
+          <div class="next-card-bottom">
+            <div class="next-card-service">
+              <div class="next-card-service-icon"><i class="fas fa-wrench"></i></div>
+              <div>
+                <div class="next-card-service-name"><%= next_appt.service.title %></div>
+                <div class="next-card-service-duration">
+                  <%= next_appt.service.duration %> min · R$ <%= number_with_precision(next_appt.service.price, precision: 2, separator: ',') %>
+                </div>
+              </div>
+            </div>
+            <div class="next-card-actions">
+              <% if next_is_ongoing %>
+                <%= link_to help_appointment_path(next_appt), class: "btn-idx btn-idx-secondary" do %>
+                  <i class="fas fa-headset"></i> Ajuda
+                <% end %>
+              <% elsif next_can_cancel %>
+                <%= form_with url: cancel_appointment_path(next_appt), method: :delete, local: true, data: { turbo: false, confirm: "Tem certeza que deseja cancelar?" } do %>
+                  <%= submit_tag "Cancelar", class: "btn-idx btn-idx-danger" %>
+                <% end %>
+              <% end %>
+            </div>
+          </div>
+        </div>
+
+        <% other_upcoming = @upcoming_appointments[1..] %>
+        <% if other_upcoming.any? %>
+          <div class="upcoming-list">
+            <% other_upcoming.each do |appt| %>
+              <% is_ongoing = @ongoing_appointments.include?(appt.id) %>
+              <% minutes_until = ((appt.scheduled_at - current_time) / 60).to_i %>
+              <% can_cancel = !is_ongoing && minutes_until > 30 %>
+              <div class="upcoming-item" data-appt-id="<%= appt.id %>">
+                <div class="upcoming-item-header" onclick="toggleUpcoming(<%= appt.id %>)">
+                  <div class="upcoming-item-left">
+                    <div class="upcoming-item-name"><%= appt.car_wash.name %></div>
+                    <div class="upcoming-item-meta">
+                      <i class="fas fa-wrench"></i> <%= appt.service.title %>
+                      &middot;
+                      <i class="fas fa-location-dot"></i> <%= appt.car_wash.address.truncate(35) %>
+                    </div>
+                  </div>
+                  <div class="upcoming-item-right">
+                    <div>
+                      <div class="upcoming-item-time"><%= appt.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%H:%M") %></div>
+                      <div class="upcoming-item-date"><%= appt.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%d/%m/%Y") %></div>
+                    </div>
+                    <i class="fas fa-chevron-down upcoming-item-chevron"></i>
+                  </div>
+                </div>
+                <div class="upcoming-item-details" id="details-<%= appt.id %>">
+                  <div class="upcoming-item-details-inner">
+                    <div class="detail-row">
+                      <span class="detail-label">Lava-Rápido</span>
+                      <span class="detail-value"><%= appt.car_wash.name %></span>
+                    </div>
+                    <div class="detail-row">
+                      <span class="detail-label">Endereço</span>
+                      <span class="detail-value"><%= appt.car_wash.address %></span>
+                    </div>
+                    <div class="detail-row">
+                      <span class="detail-label">Serviço</span>
+                      <span class="detail-value"><%= appt.service.title %></span>
+                    </div>
+                    <div class="detail-row">
+                      <span class="detail-label">Duração</span>
+                      <span class="detail-value"><%= appt.service.duration %> min</span>
+                    </div>
+                    <div class="detail-row">
+                      <span class="detail-label">Valor</span>
+                      <span class="detail-value" style="color:var(--lime);font-family:'Bebas Neue',sans-serif;font-size:1.1rem;">
+                        R$ <%= number_with_precision(appt.service.price, precision: 2, separator: ',') %>
+                      </span>
+                    </div>
+                    <div class="upcoming-item-actions">
+                      <% if is_ongoing %>
+                        <%= link_to help_appointment_path(appt), class: "btn-idx btn-idx-secondary" do %>
+                          <i class="fas fa-headset"></i> Ajuda
+                        <% end %>
+                      <% elsif can_cancel %>
+                        <%= form_with url: cancel_appointment_path(appt), method: :delete, local: true, data: { turbo: false, confirm: "Tem certeza que deseja cancelar?" } do %>
+                          <%= submit_tag "Cancelar Agendamento", class: "btn-idx btn-idx-danger" %>
+                        <% end %>
+                      <% else %>
+                        <span style="font-size:0.8rem;color:var(--text-muted);">Cancelamento não disponível</span>
+                      <% end %>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+
+      <% else %>
+        <div class="idx-empty" style="margin-bottom: 2rem;">
+          <div class="idx-empty-icon"><i class="fas fa-calendar-check"></i></div>
+          <div class="idx-empty-title">Nenhum agendamento futuro</div>
+          <p class="idx-empty-text">Agende seu próximo serviço agora.</p>
+          <%= link_to "Agendar Agora", car_washes_path, class: "btn-idx btn-idx-primary" %>
+        </div>
+      <% end %>
+
+      <% if @past_appointments.any? %>
+        <div class="idx-section-header">
+          <div class="idx-section-title">Histórico</div>
+          <span class="idx-section-count"><%= @past_appointments.count %> agendamento<%= @past_appointments.count == 1 ? '' : 's' %></span>
+        </div>
+        <div class="history-list">
+          <% @past_appointments.each do |appt| %>
+            <div class="history-item">
+              <div class="history-item-left">
+                <div class="history-item-name"><%= appt.car_wash.name %></div>
+                <div class="history-item-meta">
+                  <i class="fas fa-wrench"></i> <%= appt.service.title %>
+                  &middot;
+                  <i class="fas fa-clock"></i> <%= appt.service.duration %> min
+                </div>
+              </div>
+              <div class="history-item-right">
+                <div>
+                  <div class="history-item-date-main"><%= appt.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%d/%m/%Y") %></div>
+                  <div class="history-item-date-time"><%= appt.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%H:%M") %></div>
+                </div>
+
+                <% if appt.reviewable? %>
+                  <button class="btn-review" onclick="openReviewModal(<%= appt.id %>, '<%= j appt.car_wash.name %>')">
+                    <i class="fas fa-star"></i> Avaliar
+                  </button>
+                <% elsif appt.review.present? %>
+                  <div class="reviewed-badge">
+                    <% appt.review.rating.times do %>
+                      <i class="fas fa-star"></i>
+                    <% end %>
+                  </div>
+                <% else %>
+                  <% status_class = case appt.status
+                    when 'confirmed' then 'status-confirmed'
+                    when 'cancelled' then 'status-cancelled'
+                    else 'status-pending'
+                  end %>
+                  <span class="status-badge <%= status_class %>">
+                    <%= appt.status == 'confirmed' ? 'Concluído' : appt.status == 'cancelled' ? 'Cancelado' : appt.status.capitalize %>
+                  </span>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+
+    <% end %>
+  </div>
+</div>
+
+<script>
+  // TOGGLE UPCOMING
+  function toggleUpcoming(id) {
+    var item = document.querySelector('[data-appt-id="' + id + '"]');
+    var details = document.getElementById('details-' + id);
+    var isOpen = item.classList.contains('expanded');
+    document.querySelectorAll('.upcoming-item').forEach(function(el) {
+      el.classList.remove('expanded');
+      var d = el.querySelector('.upcoming-item-details');
+      if (d) d.classList.remove('open');
+    });
+    if (!isOpen) {
+      item.classList.add('expanded');
+      details.classList.add('open');
+    }
+  }
+
+  // REVIEW MODAL
+  function openReviewModal(appointmentId, carWashName) {
+    document.getElementById('review-appointment-id').value = appointmentId;
+    document.getElementById('modal-car-wash-name').textContent = carWashName;
+    document.getElementById('review-rating').value = '';
+    document.getElementById('review-tags').value = '';
+    document.getElementById('review-submit').disabled = true;
+    document.querySelectorAll('.star-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.tag-btn').forEach(function(b) { b.classList.remove('selected'); });
+    var ta = document.querySelector('.review-textarea');
+    if (ta) ta.value = '';
+    document.getElementById('review-overlay').classList.add('open');
+  }
+
+  function closeReviewModal() {
+    document.getElementById('review-overlay').classList.remove('open');
+  }
+
+  // Fecha ao clicar fora
+  document.getElementById('review-overlay').addEventListener('click', function(e) {
+    if (e.target === this) closeReviewModal();
+  });
+
+  // STARS
+  function setStar(value) {
+    document.getElementById('review-rating').value = value;
+    document.getElementById('review-submit').disabled = false;
+    document.querySelectorAll('.star-btn').forEach(function(b) {
+      b.classList.toggle('active', parseInt(b.dataset.value) <= value);
+    });
+  }
+
+  // TAGS
+  function toggleTag(btn) {
+    btn.classList.toggle('selected');
+    var selected = Array.from(document.querySelectorAll('.tag-btn.selected')).map(function(b) { return b.dataset.tag; });
+    document.getElementById('review-tags').value = selected.join(',');
+  }
+
+  // FLASH AUTO-DISMISS
+  document.addEventListener('DOMContentLoaded', function() {
+    ['flash-notice', 'flash-error'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      setTimeout(function() {
+        el.style.transition = 'opacity 0.5s ease';
+        el.style.opacity = '0';
+        setTimeout(function() { el.style.display = 'none'; }, 500);
+      }, 8000);
+    });
+  });
+</script>

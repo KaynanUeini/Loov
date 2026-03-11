@@ -1,0 +1,318 @@
+<% Rails.logger.info("Renderizando owner/car_wash_appointments/show.html.erb: appointment=#{@appointment.inspect}") %>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --lime: #afff2d;
+    --lime-dim: #8fcc24;
+    --black: #000000;
+    --surface: #0a0a0a;
+    --surface-2: #111111;
+    --surface-3: #1a1a1a;
+    --border: #222222;
+    --text-muted: #666666;
+    --text-secondary: #999999;
+    --white: #ffffff;
+  }
+
+  .show-wrap {
+    min-height: 100vh;
+    background: var(--black);
+    font-family: 'DM Sans', sans-serif;
+    padding-top: 64px;
+    padding-bottom: 4rem;
+  }
+
+  .show-inner {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem;
+  }
+
+  .show-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--lime);
+    margin-bottom: 1rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.1s;
+  }
+
+  .show-eyebrow::before {
+    content: '';
+    display: block;
+    width: 24px;
+    height: 1px;
+    background: var(--lime);
+  }
+
+  .show-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.5rem, 8vw, 4.5rem);
+    line-height: 1;
+    color: var(--white);
+    margin: 0 0 2.5rem 0;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.2s;
+  }
+
+  .show-title span { color: var(--lime); }
+
+  .detail-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.3s;
+    margin-bottom: 1.25rem;
+  }
+
+  .detail-header {
+    padding: 1.25rem 1.75rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .detail-header-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem;
+    color: var(--lime);
+    letter-spacing: 0.1em;
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    padding: 0.3rem 0.75rem;
+    border-radius: 100px;
+  }
+
+  .status-badge.agendado {
+    background: rgba(175,255,45,0.08);
+    color: var(--lime);
+    border: 1px solid rgba(175,255,45,0.2);
+  }
+
+  .status-badge.concluido {
+    background: rgba(99,102,241,0.08);
+    color: #a5b4fc;
+    border: 1px solid rgba(99,102,241,0.2);
+  }
+
+  .status-badge.cancelado {
+    background: rgba(239,68,68,0.08);
+    color: #fca5a5;
+    border: 1px solid rgba(239,68,68,0.2);
+  }
+
+  .detail-rows { padding: 0.5rem 0; }
+
+  .detail-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.875rem 1.75rem;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s ease;
+  }
+
+  .detail-row:last-child { border-bottom: none; }
+  .detail-row:hover { background: rgba(255,255,255,0.02); }
+
+  .detail-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    color: var(--lime);
+    flex-shrink: 0;
+  }
+
+  .detail-content { flex: 1; }
+
+  .detail-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.15rem;
+  }
+
+  .detail-value {
+    font-size: 0.9375rem;
+    color: var(--white);
+    font-weight: 500;
+  }
+
+  .detail-value.highlight { color: var(--lime); font-family: 'Bebas Neue', sans-serif; font-size: 1.25rem; letter-spacing: 0.05em; }
+
+  .actions {
+    display: flex;
+    gap: 0.75rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.4s;
+  }
+
+  .btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 0.875rem 1.5rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+  }
+
+  .btn-back:hover { border-color: var(--lime); color: var(--lime); }
+
+  .btn-cancel {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: transparent;
+    color: #ef4444;
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 100px;
+    padding: 0.875rem 1.5rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+  }
+
+  .btn-cancel:hover { background: rgba(239,68,68,0.08); border-color: #ef4444; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 540px) {
+    .show-inner { padding: 2rem 1.25rem; }
+    .actions { flex-direction: column; }
+    .btn-back, .btn-cancel { justify-content: center; }
+  }
+</style>
+
+<div class="show-wrap">
+  <div class="show-inner">
+
+    <div class="show-eyebrow"><%= @appointment.car_wash.name %></div>
+    <h1 class="show-title">Detalhes do<br><span>Agendamento.</span></h1>
+
+    <div class="detail-card">
+      <div class="detail-header">
+        <span class="detail-header-title"><i class="fas fa-calendar-check" style="margin-right:0.4rem;"></i> Agendamento #<%= @appointment.id %></span>
+        <% status_class = @appointment.status.downcase.gsub('í','i').gsub('ú','u') %>
+        <span class="status-badge <%= status_class %>">
+          <i class="fas fa-circle" style="font-size:0.4rem;"></i>
+          <%= @appointment.status %>
+        </span>
+      </div>
+
+      <div class="detail-rows">
+        <div class="detail-row">
+          <div class="detail-icon"><i class="fas fa-calendar-day"></i></div>
+          <div class="detail-content">
+            <div class="detail-label">Data</div>
+            <div class="detail-value"><%= @appointment.scheduled_at.strftime("%d/%m/%Y") %></div>
+          </div>
+        </div>
+
+        <div class="detail-row">
+          <div class="detail-icon"><i class="fas fa-clock"></i></div>
+          <div class="detail-content">
+            <div class="detail-label">Horário</div>
+            <div class="detail-value highlight"><%= @appointment.scheduled_at.strftime("%H:%M") %></div>
+          </div>
+        </div>
+
+        <div class="detail-row">
+          <div class="detail-icon"><i class="fas fa-user"></i></div>
+          <div class="detail-content">
+            <div class="detail-label">Cliente</div>
+            <div class="detail-value"><%= @appointment.user.email.split('@').first.capitalize %></div>
+          </div>
+        </div>
+
+        <div class="detail-row">
+          <div class="detail-icon"><i class="fas fa-envelope"></i></div>
+          <div class="detail-content">
+            <div class="detail-label">E-mail</div>
+            <div class="detail-value"><%= @appointment.user.email %></div>
+          </div>
+        </div>
+
+        <div class="detail-row">
+          <div class="detail-icon"><i class="fas fa-spray-can-sparkles"></i></div>
+          <div class="detail-content">
+            <div class="detail-label">Serviço</div>
+            <div class="detail-value"><%= @appointment.service.title %></div>
+          </div>
+        </div>
+
+        <div class="detail-row">
+          <div class="detail-icon"><i class="fas fa-location-dot"></i></div>
+          <div class="detail-content">
+            <div class="detail-label">Endereço</div>
+            <div class="detail-value"><%= @appointment.car_wash.address %></div>
+          </div>
+        </div>
+
+        <% if @appointment.service.price.present? %>
+        <div class="detail-row">
+          <div class="detail-icon"><i class="fas fa-tag"></i></div>
+          <div class="detail-content">
+            <div class="detail-label">Preço</div>
+            <div class="detail-value">R$ <%= number_with_precision(@appointment.service.price, precision: 2) %></div>
+          </div>
+        </div>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="actions">
+      <%= link_to owner_car_wash_appointments_path, class: "btn-back" do %>
+        <i class="fas fa-arrow-left"></i> Voltar
+      <% end %>
+      <% if @appointment.status == "confirmed" && (@appointment.scheduled_at - Time.now) > 2.hours %>
+        <%= link_to cancel_appointment_path(@appointment),
+            method: :patch,
+            data: { confirm: "Deseja cancelar este agendamento?" },
+            class: "btn-cancel" do %>
+          <i class="fas fa-xmark"></i> Cancelar Agendamento
+        <% end %>
+      <% end %>
+    </div>
+
+  </div>
+</div>
+
+<% Rails.logger.info("Template owner/car_wash_appointments/show.html.erb renderizado com sucesso") %>

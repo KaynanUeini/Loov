@@ -1,0 +1,36 @@
+=> 
+[[32m#<Payment:0x00007f8d30a96978[0m
+  id: [34m[1m1[0m,
+  appointment_id: [34m[1m1[0m,
+  amount: [35m[1m0.5e2[0m,
+  stripe_payment_id: [31m[1m"[0m[31mpay_123[0m[31m[1m"[0m,
+  status: [31m[1m"[0m[31msucceeded[0m[31m[1m"[0m,
+  created_at: Tue, 06 May 2025 02:58:52.810326000 UTC +00:00,
+  updated_at: Tue, 06 May 2025 02:58:52.810326000 UTC +00:00[32m>[0m,
+ [32m#<Payment:0x00007f8d39d13ad0[0m
+  id: [34m[1m2[0m,
+  appointment_id: [34m[1m10[0m,
+  amount: [35m[1m0.8e2[0m,
+  stripe_payment_id:
+   [31m[1m"[0m[31mcs_test_a1wT1Key2WvM6T1AcudocF6j8NfUyebjuELtgZouhozpMWQiLPKCfdIDoE[0m[31m[1m"[0m,
+  status: [31m[1m"[0m[31msucceeded[0m[31m[1m"[0m,
+  created_at: Tue, 06 May 2025 18:11:52.128960000 UTC +00:00,
+  updated_at: Tue, 06 May 2025 18:13:39.458419000 UTC +00:00[32m>[0m,
+ [32m#<Payment:0x00007f8d39d13490[0m
+  id: [34m[1m3[0m,
+  appointment_id: [34m[1m16[0m,
+  amount: [35m[1m0.5e2[0m,
+  stripe_payment_id:
+   [31m[1m"[0m[31mcs_test_a1LTQPLyv4Ucefkac3YXqIwY3kAnMfG9KgjQZvWmkbvUCkutFVtuXbkg0l[0m[31m[1m"[0m,
+  status: [31m[1m"[0m[31msucceeded[0m[31m[1m"[0m,
+  created_at: Tue, 06 May 2025 18:15:16.912598000 UTC +00:00,
+  updated_at: Tue, 06 May 2025 18:15:40.855166000 UTC +00:00[32m>[0m,
+ [32m#<Payment:0x00007f8d39d13210[0m
+  id: [34m[1m4[0m,
+  appointment_id: [34m[1m4[0m,
+  amount: [35m[1m0.8e2[0m,
+  stripe_payment_id:
+   [31m[1m"[0m[31mcs_test_a1UtG01TqILNEWpVHaIgcxbNZMdptMyK9jvdivimwc76eGCUUPFTjNSfjO[0m[31m[1m"[0m,
+  status: [31m[1m"[0m[31msucceeded[0m[31m[1m"[0m,
+  created_at: Tue, 06 May 2025 18:18:05.975634000 UTC +00:00,
+  updated_at: Tue, 06 May 2025 18:18:30.283137000 UTC +00:00[32m>[0m]

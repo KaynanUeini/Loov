@@ -1,0 +1,63 @@
+<div class="max-w-4xl mx-auto mt-16 p-6">
+  <!-- Título da Página -->
+  <h1 class="text-3xl font-semibold text-center mb-8 gradient-text fade-in-welcome">
+    Detalhes do Agendamento
+  </h1>
+
+  <!-- Detalhes do Agendamento -->
+  <div class="appointment-card fade-in-section">
+    <h2 class="text-xl font-medium mb-4" style="color: #FFFFFF;">
+      Agendamento #<%= @appointment.id %>
+    </h2>
+    <p class="flex items-center mb-2" style="color: #B0B0B0;">
+      <i class="fas fa-car-wash mr-2 icon-hover" style="color: #6D54A9;"></i>
+      <strong style="color: #FFFFFF;">Lava-rápido:</strong> <span class="ml-1"><%= @appointment.car_wash.name %></span>
+    </p>
+    <p class="flex items-center mb-2" style="color: #B0B0B0;">
+      <i class="fas fa-tools mr-2 icon-hover" style="color: #6D54A9;"></i>
+      <strong style="color: #FFFFFF;">Serviço:</strong> <span class="ml-1"><%= @appointment.service.title %></span>
+    </p>
+    <p class="flex items-center mb-2" style="color: #B0B0B0;">
+      <i class="fas fa-clock mr-2 icon-hover" style="color: #6D54A9;"></i>
+      <strong style="color: #FFFFFF;">Data:</strong> <span class="ml-1"><%= @appointment.scheduled_at.strftime("%d/%m/%Y às %H:%M") %></span>
+    </p>
+    <p class="flex items-center mb-2" style="color: #B0B0B0;">
+      <i class="fas fa-money-bill-wave mr-2 icon-hover" style="color: #6D54A9;"></i>
+      <strong style="color: #FFFFFF;">Preço:</strong> <span class="ml-1">R$ <%= @appointment.service.price.to_f.round(2) %></span>
+    </p>
+    <p class="flex items-center mb-2" style="color: #B0B0B0;">
+      <i class="fas fa-info-circle mr-2 icon-hover" style="color: #6D54A9;"></i>
+      <strong style="color: #FFFFFF;">Status:</strong> <span class="ml-1"><%= @appointment.status.capitalize %></span>
+    </p>
+    <% if @appointment.status != 'cancelled' && @appointment.scheduled_at > DateTime.now %>
+      <div class="mt-6">
+        <%= button_to 'Cancelar Agendamento', cancel_appointment_path(@appointment), method: :delete, data: { confirm: 'Tem certeza que deseja cancelar este agendamento?' }, class: 'btn-outline w-full text-center' %>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Script para Animações -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Animação de fade-in para o título
+      const welcomeTitle = document.querySelector('h1.fade-in-welcome');
+      welcomeTitle.style.opacity = '0';
+      welcomeTitle.style.transform = 'translateY(20px)';
+      setTimeout(() => {
+        welcomeTitle.style.opacity = '1';
+        welcomeTitle.style.transform = 'translateY(0)';
+      }, 100);
+
+      // Animação de fade-in para as seções
+      const sections = document.querySelectorAll('.fade-in-section');
+      sections.forEach((section, index) => {
+        section.style.opacity = '0';
+        section.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+          section.style.opacity = '1';
+          section.style.transform = 'translateY(0)';
+        }, (index + 1) * 200);
+      });
+    });
+  </script>
+</div>

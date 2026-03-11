@@ -1,0 +1,1434 @@
+<% Rails.logger.info("Renderizando owner/financial_tracking/index.html.erb") %>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --lime: #afff2d;
+    --lime-dim: #8fcc24;
+    --black: #000000;
+    --surface: #0a0a0a;
+    --surface-2: #111111;
+    --surface-3: #1a1a1a;
+    --border: #222222;
+    --text-muted: #666666;
+    --text-secondary: #999999;
+    --white: #ffffff;
+  }
+
+  .fin-wrap {
+    min-height: 100vh;
+    background: var(--black);
+    font-family: 'DM Sans', sans-serif;
+    padding-top: 64px;
+    padding-bottom: 4rem;
+  }
+
+  .fin-inner {
+    max-width: 1060px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem;
+  }
+
+  .fin-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--lime);
+    margin-bottom: 1rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.1s;
+  }
+
+  .fin-eyebrow::before {
+    content: '';
+    display: block;
+    width: 24px;
+    height: 1px;
+    background: var(--lime);
+  }
+
+  .fin-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.5rem, 8vw, 4.5rem);
+    line-height: 1;
+    color: var(--white);
+    margin: 0 0 2.5rem 0;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.2s;
+  }
+
+  .fin-title span { color: var(--lime); }
+
+  .filter-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.3s;
+  }
+
+  .filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+    align-items: flex-end;
+  }
+
+  .filter-field { display: flex; flex-direction: column; gap: 0.4rem; }
+
+  .filter-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .filter-select, .filter-input {
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.875rem;
+    color: var(--white);
+    outline: none;
+    transition: all 0.2s ease;
+    width: 100%;
+  }
+
+  .filter-select:focus, .filter-input:focus {
+    border-color: var(--lime);
+    box-shadow: 0 0 0 3px rgba(175,255,45,0.08);
+  }
+
+  .filter-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    cursor: pointer;
+  }
+
+  .filter-select option { background: var(--surface-3); }
+
+  .custom-dates {
+    display: none;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .custom-dates.visible { display: grid; }
+
+  .btn-filter {
+    background: var(--lime);
+    color: var(--black);
+    border: none;
+    border-radius: 100px;
+    padding: 0.75rem 1.5rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+  }
+
+  .btn-filter:hover { background: var(--lime-dim); transform: translateY(-1px); }
+
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 1.25rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.35s;
+  }
+
+  .kpi-card {
+    background: var(--surface-2);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    transition: background 0.2s ease;
+  }
+
+  .kpi-card:hover { background: var(--surface-3); }
+
+  .kpi-label {
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .kpi-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.75rem;
+    color: var(--white);
+    line-height: 1;
+    letter-spacing: 0.02em;
+  }
+
+  .kpi-value.lime { color: var(--lime); }
+  .kpi-sub { font-size: 0.75rem; color: var(--text-muted); }
+
+  /* FLIP CARD */
+  .flip-wrap {
+    perspective: 1200px;
+    margin-bottom: 1.25rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards;
+  }
+
+  .flip-wrap:nth-child(5)  { animation-delay: 0.4s; }
+  .flip-wrap:nth-child(6)  { animation-delay: 0.45s; }
+  .flip-wrap:nth-child(7)  { animation-delay: 0.5s; }
+  .flip-wrap:nth-child(8)  { animation-delay: 0.55s; }
+  .flip-wrap:nth-child(9)  { animation-delay: 0.6s; }
+  .flip-wrap:nth-child(10) { animation-delay: 0.65s; }
+  .flip-wrap:nth-child(11) { animation-delay: 0.7s; }
+  .flip-wrap:nth-child(12) { animation-delay: 0.75s; }
+  .flip-wrap:nth-child(13) { animation-delay: 0.8s; }
+
+  .flip-inner {
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .flip-inner.flipped { transform: rotateY(180deg); }
+
+  .flip-front,
+  .flip-back {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 1.75rem;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  .flip-back {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    transform: rotateY(180deg);
+    background: var(--surface-3);
+    border-color: rgba(175,255,45,0.2);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    box-sizing: border-box;
+    overflow-y: scroll;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(175,255,45,0.3) transparent;
+    padding-bottom: 2rem;
+  }
+
+  .flip-back::-webkit-scrollbar { width: 4px; }
+  .flip-back::-webkit-scrollbar-track { background: transparent; }
+  .flip-back::-webkit-scrollbar-thumb { background: rgba(175,255,45,0.3); border-radius: 2px; }
+
+  .flip-btn {
+    position: absolute;
+    top: 1.25rem;
+    right: 1.25rem;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(175,255,45,0.1);
+    border: 1px solid rgba(175,255,45,0.3);
+    color: var(--lime);
+    font-size: 0.9rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    line-height: 1;
+    z-index: 2;
+  }
+
+  .flip-btn:hover { background: rgba(175,255,45,0.2); border-color: var(--lime); transform: scale(1.1); }
+
+  .insight-eyebrow {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--lime);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+  }
+
+  .insight-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(175,255,45,0.1);
+    flex-shrink: 0;
+  }
+
+  .insight-meta-date {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+  }
+
+  .insight-meta-date strong { color: var(--text-secondary); }
+
+  .btn-refresh {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 0.3rem 0.75rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn-refresh:hover { border-color: var(--lime); color: var(--lime); }
+  .btn-refresh:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .insight-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    color: var(--white);
+    line-height: 1.1;
+    margin-bottom: 1rem;
+    letter-spacing: 0.03em;
+    flex-shrink: 0;
+  }
+
+  .insight-body {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    line-height: 1.65;
+    margin-bottom: 1.25rem;
+  }
+
+  .insight-body strong { color: var(--white); }
+  .insight-body p { margin-bottom: 0.75rem; }
+  .insight-body p:last-child { margin-bottom: 0; }
+
+  .insight-tip {
+    background: rgba(175,255,45,0.06);
+    border: 1px solid rgba(175,255,45,0.15);
+    border-radius: 10px;
+    padding: 0.875rem 1rem;
+    font-size: 0.8rem;
+    color: var(--lime);
+    line-height: 1.6;
+    margin-bottom: 1rem;
+    flex-shrink: 0;
+  }
+
+  .insight-tip strong { color: var(--lime); font-weight: 600; }
+
+  .btn-flip-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 0.5rem 1rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    align-self: flex-start;
+    flex-shrink: 0;
+  }
+
+  .btn-flip-back:hover { border-color: var(--lime); color: var(--lime); }
+
+  /* AI LOADING */
+  .ai-loading {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    padding: 1rem 0;
+  }
+
+  .ai-loading span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--lime);
+    animation: aiPulse 1.2s ease-in-out infinite;
+  }
+
+  .ai-loading span:nth-child(1) { animation-delay: 0s; }
+  .ai-loading span:nth-child(2) { animation-delay: 0.2s; }
+  .ai-loading span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes aiPulse {
+    0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+    40%           { opacity: 1;   transform: scale(1); }
+  }
+
+  /* RETENÇÃO — tabela de clientes em risco */
+  .risk-table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
+
+  .risk-table th {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+  }
+
+  .risk-table td {
+    font-size: 0.8rem;
+    color: var(--white);
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .risk-table tr:last-child td { border-bottom: none; }
+
+  .risk-days {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.95rem;
+    letter-spacing: 0.05em;
+  }
+
+  .risk-days.high   { color: #ff4d4d; }
+  .risk-days.medium { color: #ffaa00; }
+  .risk-days.low    { color: var(--lime); }
+
+  /* CRESCIMENTO — mini gráfico de barras */
+  .growth-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.5rem;
+    height: 80px;
+    margin: 1rem 0;
+  }
+
+  .growth-bar-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    height: 100%;
+    justify-content: flex-end;
+  }
+
+  .growth-bar {
+    width: 100%;
+    border-radius: 4px 4px 0 0;
+    background: rgba(175,255,45,0.3);
+    transition: height 0.5s ease;
+    min-height: 4px;
+  }
+
+  .growth-bar.current { background: var(--lime); }
+
+  .growth-bar-label {
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .growth-bar-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.85rem;
+    color: var(--white);
+  }
+
+  .growth-kpis {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-top: 1rem;
+  }
+
+  .growth-kpi {
+    background: var(--surface-2);
+    padding: 0.875rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .growth-kpi-label { font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  .growth-kpi-value { font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; color: var(--lime); }
+
+  /* SECTION CARD */
+  .section-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 1.75rem;
+    margin-bottom: 1.25rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards;
+  }
+
+  .card-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    color: var(--lime);
+    letter-spacing: 0.05em;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .chart-wrap    { position: relative; height: 280px; }
+  .chart-wrap-sm { position: relative; height: 200px; }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .fin-table { width: 100%; border-collapse: collapse; }
+
+  .fin-table thead th {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-3);
+  }
+
+  .fin-table tbody td {
+    padding: 0.875rem 1rem;
+    font-size: 0.875rem;
+    color: var(--white);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .fin-table tbody tr:last-child td { border-bottom: none; }
+  .fin-table tbody tr:hover td { background: rgba(255,255,255,0.02); }
+  .fin-table tbody tr.hidden-row { display: none; }
+
+  .td-value { font-family: 'Bebas Neue', sans-serif; font-size: 1rem; color: var(--lime); letter-spacing: 0.05em; }
+  .td-muted { color: var(--text-muted); font-size: 0.8rem; }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    padding: 0.2rem 0.55rem;
+    border-radius: 100px;
+    white-space: nowrap;
+  }
+
+  .badge-lime { background: rgba(175,255,45,0.08); color: var(--lime); border: 1px solid rgba(175,255,45,0.15); }
+
+  .btn-ver-mais {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    width: 100%;
+    padding: 0.875rem;
+    background: transparent;
+    color: var(--text-muted);
+    border: none;
+    border-top: 1px solid var(--border);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn-ver-mais:hover { background: rgba(255,255,255,0.02); color: var(--lime); }
+
+  .donut-wrap { display: flex; align-items: center; gap: 2rem; }
+  .donut-chart { position: relative; width: 140px; height: 140px; flex-shrink: 0; }
+  .donut-legend { flex: 1; display: flex; flex-direction: column; gap: 0.75rem; }
+  .legend-item { display: flex; align-items: center; gap: 0.6rem; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .legend-text { font-size: 0.875rem; color: var(--white); }
+  .legend-sub { font-size: 0.75rem; color: var(--text-muted); }
+
+  .client-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .client-row:last-child { border-bottom: none; }
+  .client-name { font-size: 0.875rem; color: var(--white); font-weight: 500; }
+  .client-count { font-family: 'Bebas Neue', sans-serif; font-size: 1rem; color: var(--lime); letter-spacing: 0.05em; }
+
+  .btn-csv {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: transparent;
+    color: var(--lime);
+    border: 1px solid rgba(175,255,45,0.3);
+    border-radius: 100px;
+    padding: 0.6rem 1.25rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .btn-csv:hover { background: rgba(175,255,45,0.06); border-color: var(--lime); }
+
+  .btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 0.875rem 1.5rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.85s;
+  }
+
+  .btn-back:hover { border-color: var(--lime); color: var(--lime); }
+
+  .empty-state {
+    text-align: center;
+    padding: 4rem 1.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.3s;
+  }
+
+  .empty-icon  { font-size: 2.5rem; color: var(--border); margin-bottom: 1rem; }
+  .empty-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; color: var(--white); margin-bottom: 0.5rem; }
+  .empty-text  { font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1.5rem; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 768px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .two-col  { grid-template-columns: 1fr; }
+    .filter-grid { grid-template-columns: 1fr 1fr; }
+    .growth-kpis { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 480px) {
+    .kpi-grid    { grid-template-columns: 1fr 1fr; }
+    .filter-grid { grid-template-columns: 1fr; }
+    .fin-inner   { padding: 2rem 1.25rem; }
+    .donut-wrap  { flex-direction: column; }
+  }
+</style>
+
+<div class="fin-wrap">
+  <div class="fin-inner">
+
+    <div class="fin-eyebrow">Gestão Financeira</div>
+    <h1 class="fin-title">Financeiro<span>.</span></h1>
+
+    <%= form_with url: owner_financial_tracking_path, method: :get, local: true do %>
+    <div class="filter-card">
+      <div class="filter-grid">
+        <div class="filter-field">
+          <label class="filter-label">Período</label>
+          <%= select_tag :period, options_for_select([
+            ["Hoje","day"],["Esta Semana","week"],["Este Mês","month"],
+            ["Este Ano","year"],["Tudo","all"],["Personalizado","custom"]
+          ], params[:period]), include_blank: "Selecione", class: "filter-select", id: "period_select" %>
+        </div>
+        <div class="filter-field">
+          <label class="filter-label">Serviço</label>
+          <%= select_tag :service_filter,
+              options_for_select(@service_options.map { |s| [s, s] }, params[:service_filter]),
+              include_blank: "Todos", class: "filter-select" %>
+        </div>
+        <div class="filter-field">
+          <%= submit_tag "Filtrar", class: "btn-filter" %>
+        </div>
+      </div>
+      <div class="custom-dates <%= params[:period] == 'custom' ? 'visible' : '' %>" id="custom-dates">
+        <div class="filter-field">
+          <label class="filter-label">Data Inicial</label>
+          <%= date_field_tag :start_date, params[:start_date] || @start_date, class: "filter-input" %>
+        </div>
+        <div class="filter-field">
+          <label class="filter-label">Data Final</label>
+          <%= date_field_tag :end_date, params[:end_date] || @end_date, class: "filter-input" %>
+        </div>
+      </div>
+    </div>
+    <% end %>
+
+    <%
+      is_empty = (@sales_by_day.empty? && !@is_year_filter && !@is_all_filter && !@is_custom_filter) ||
+                 (@is_year_filter   && @sales_by_month.all? { |m| m.total_value.zero? }) ||
+                 (@is_all_filter    && @sales_by_year.all?  { |y| y.total_value.zero? }) ||
+                 (@is_custom_filter && @sales_by_month.all? { |m| m.total_value.zero? })
+    %>
+
+    <% if is_empty %>
+    <div class="empty-state">
+      <div class="empty-icon"><i class="fas fa-chart-line"></i></div>
+      <div class="empty-title">Sem dados</div>
+      <p class="empty-text">Nenhum agendamento concluído encontrado para o período selecionado.</p>
+      <%= link_to "Ver Tudo", owner_financial_tracking_path, class: "btn-back" %>
+    </div>
+    <% else %>
+
+    <!-- KPI -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Faturamento</div>
+        <div class="kpi-value lime">R$ <%= number_with_precision(@total_sales, precision: 2) %></div>
+        <div class="kpi-sub"><%= @start_date.strftime("%d/%m") %> – <%= @end_date.strftime("%d/%m/%Y") %></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Agendamentos</div>
+        <div class="kpi-value"><%= @total_appointments %></div>
+        <div class="kpi-sub">concluídos no período</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Ticket Médio</div>
+        <div class="kpi-value">R$ <%= number_with_precision(@total_appointments > 0 ? @total_sales / @total_appointments : 0, precision: 2) %></div>
+        <div class="kpi-sub">por agendamento</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label"><%= @average_label %></div>
+        <div class="kpi-value">R$ <%= number_with_precision(@average_value, precision: 2) %></div>
+        <div class="kpi-sub">média do período</div>
+      </div>
+    </div>
+
+    <!-- FLIP: EVOLUÇÃO DE VENDAS -->
+    <div class="flip-wrap" id="flip-sales">
+      <div class="flip-inner" id="flip-inner-sales">
+        <div class="flip-front">
+          <button class="flip-btn" onclick="doFlip('sales')" title="Análise com IA">+</button>
+          <div class="card-title"><i class="fas fa-chart-line"></i> Evolução de Vendas</div>
+          <div class="chart-wrap"><canvas id="salesChart"></canvas></div>
+        </div>
+        <div class="flip-back">
+          <div class="insight-eyebrow"><i class="fas fa-microchip"></i> Análise de IA</div>
+          <div class="insight-meta" id="insight-meta-sales" style="display:none;"></div>
+          <div class="insight-title">Vendas & Faturamento</div>
+          <div class="insight-body" id="insight-body-sales">
+            <div class="ai-loading"><span></span><span></span><span></span> Aguardando análise...</div>
+          </div>
+          <div class="insight-tip" id="insight-tip-sales" style="display:none;"></div>
+          <button class="btn-flip-back" onclick="doFlip('sales')"><i class="fas fa-arrow-left"></i> Voltar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- DOIS GRÁFICOS: SERVIÇOS + CLIENTES -->
+    <div class="two-col">
+
+      <!-- FLIP: SERVIÇOS -->
+      <div class="flip-wrap" id="flip-services" style="margin-bottom:0;">
+        <div class="flip-inner" id="flip-inner-services">
+          <div class="flip-front">
+            <button class="flip-btn" onclick="doFlip('services')" title="Análise com IA">+</button>
+            <div class="card-title"><i class="fas fa-spray-can-sparkles"></i> Serviços — Receita vs Volume</div>
+            <div class="chart-wrap-sm"><canvas id="servicesChart"></canvas></div>
+          </div>
+          <div class="flip-back">
+            <div class="insight-eyebrow"><i class="fas fa-microchip"></i> Análise de IA</div>
+            <div class="insight-meta" id="insight-meta-services" style="display:none;"></div>
+            <div class="insight-title">Mix de Serviços</div>
+            <div class="insight-body" id="insight-body-services">
+              <div class="ai-loading"><span></span><span></span><span></span> Aguardando análise...</div>
+            </div>
+            <div class="insight-tip" id="insight-tip-services" style="display:none;"></div>
+            <button class="btn-flip-back" onclick="doFlip('services')"><i class="fas fa-arrow-left"></i> Voltar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- FLIP: CLIENTES -->
+      <div class="flip-wrap" id="flip-clients" style="margin-bottom:0;">
+        <div class="flip-inner" id="flip-inner-clients">
+          <div class="flip-front">
+            <button class="flip-btn" onclick="doFlip('clients')" title="Análise com IA">+</button>
+            <div class="card-title"><i class="fas fa-users"></i> Clientes</div>
+            <div class="donut-wrap">
+              <div class="donut-chart"><canvas id="clientsChart"></canvas></div>
+              <div class="donut-legend">
+                <div class="legend-item">
+                  <div class="legend-dot" style="background:#afff2d;"></div>
+                  <div>
+                    <div class="legend-text">Recorrentes</div>
+                    <div class="legend-sub"><%= @recurring_clients %> clientes (<%= @total_clients > 0 ? ((@recurring_clients.to_f / @total_clients) * 100).round : 0 %>%)</div>
+                  </div>
+                </div>
+                <div class="legend-item">
+                  <div class="legend-dot" style="background:#444;"></div>
+                  <div>
+                    <div class="legend-text">Novos</div>
+                    <div class="legend-sub"><%= @new_clients %> clientes (<%= @total_clients > 0 ? ((@new_clients.to_f / @total_clients) * 100).round : 0 %>%)</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <% if @top_clients.any? %>
+            <div style="margin-top:1.25rem; padding-top:1rem; border-top:1px solid var(--border);">
+              <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.75rem;">Top Clientes</div>
+              <% @top_clients.each do |c| %>
+              <div class="client-row">
+                <span class="client-name"><%= c[:email] %></span>
+                <span class="client-count"><%= c[:count] %>x</span>
+              </div>
+              <% end %>
+            </div>
+            <% end %>
+          </div>
+          <div class="flip-back">
+            <div class="insight-eyebrow"><i class="fas fa-microchip"></i> Análise de IA</div>
+            <div class="insight-meta" id="insight-meta-clients" style="display:none;"></div>
+            <div class="insight-title">Retenção & Fidelização</div>
+            <div class="insight-body" id="insight-body-clients">
+              <div class="ai-loading"><span></span><span></span><span></span> Aguardando análise...</div>
+            </div>
+            <div class="insight-tip" id="insight-tip-clients" style="display:none;"></div>
+            <button class="btn-flip-back" onclick="doFlip('clients')"><i class="fas fa-arrow-left"></i> Voltar</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- FLIP: DEMANDA -->
+    <div class="flip-wrap" id="flip-demand">
+      <div class="flip-inner" id="flip-inner-demand">
+        <div class="flip-front">
+          <button class="flip-btn" onclick="doFlip('demand')" title="Análise com IA">+</button>
+          <div class="card-title"><i class="fas fa-calendar-week"></i> Demanda por Dia da Semana</div>
+          <div class="chart-wrap-sm"><canvas id="demandChart"></canvas></div>
+        </div>
+        <div class="flip-back">
+          <div class="insight-eyebrow"><i class="fas fa-microchip"></i> Análise de IA</div>
+          <div class="insight-meta" id="insight-meta-demand" style="display:none;"></div>
+          <div class="insight-title">Demanda & Precificação</div>
+          <div class="insight-body" id="insight-body-demand">
+            <div class="ai-loading"><span></span><span></span><span></span> Aguardando análise...</div>
+          </div>
+          <div class="insight-tip" id="insight-tip-demand" style="display:none;"></div>
+          <button class="btn-flip-back" onclick="doFlip('demand')"><i class="fas fa-arrow-left"></i> Voltar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- DOIS CARDS: RETENÇÃO + CRESCIMENTO -->
+    <div class="two-col">
+
+      <!-- FLIP: RETENÇÃO -->
+      <div class="flip-wrap" id="flip-retention" style="margin-bottom:0;">
+        <div class="flip-inner" id="flip-inner-retention">
+          <div class="flip-front">
+            <button class="flip-btn" onclick="doFlip('retention')" title="Análise com IA">+</button>
+            <div class="card-title"><i class="fas fa-user-clock"></i> Retenção</div>
+            <% if @at_risk_clients.any? %>
+            <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.75rem;">
+              Clientes sem visita há 30–90 dias
+            </div>
+            <table class="risk-table">
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th>Última visita</th>
+                  <th>Ausente</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% @at_risk_clients.first(5).each do |c| %>
+                <tr>
+                  <td><%= c[:cliente] %></td>
+                  <td style="color:var(--text-muted);font-size:0.75rem;"><%= c[:ultima_visita] %></td>
+                  <td>
+                    <span class="risk-days <%= c[:dias_ausente] > 60 ? 'high' : c[:dias_ausente] > 45 ? 'medium' : 'low' %>">
+                      <%= c[:dias_ausente] %>d
+                    </span>
+                  </td>
+                </tr>
+                <% end %>
+              </tbody>
+            </table>
+            <% if @lost_clients > 0 %>
+            <div style="margin-top:1rem; padding-top:0.75rem; border-top:1px solid var(--border); font-size:0.75rem; color:var(--text-muted);">
+              + <strong style="color:#ff4d4d;"><%= @lost_clients %></strong> clientes perdidos (90+ dias sem visita)
+            </div>
+            <% end %>
+            <% else %>
+            <div style="padding:2rem 0; text-align:center; color:var(--text-muted); font-size:0.875rem;">
+              <i class="fas fa-check-circle" style="color:var(--lime); font-size:1.5rem; display:block; margin-bottom:0.5rem;"></i>
+              Nenhum cliente em risco no momento
+            </div>
+            <% end %>
+          </div>
+          <div class="flip-back">
+            <div class="insight-eyebrow"><i class="fas fa-microchip"></i> Análise de IA</div>
+            <div class="insight-meta" id="insight-meta-retention" style="display:none;"></div>
+            <div class="insight-title">Clientes em Risco</div>
+            <div class="insight-body" id="insight-body-retention">
+              <div class="ai-loading"><span></span><span></span><span></span> Aguardando análise...</div>
+            </div>
+            <div class="insight-tip" id="insight-tip-retention" style="display:none;"></div>
+            <button class="btn-flip-back" onclick="doFlip('retention')"><i class="fas fa-arrow-left"></i> Voltar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- FLIP: CRESCIMENTO DE BASE -->
+      <div class="flip-wrap" id="flip-growth" style="margin-bottom:0;">
+        <div class="flip-inner" id="flip-inner-growth">
+          <div class="flip-front">
+            <button class="flip-btn" onclick="doFlip('growth')" title="Análise com IA">+</button>
+            <div class="card-title"><i class="fas fa-seedling"></i> Crescimento de Base</div>
+            <% if @new_clients_by_month.any? %>
+            <%
+              max_new = @new_clients_by_month.map { |e| e[:novos_clientes] }.max.to_f
+              max_new = 1 if max_new.zero?
+              month_names = { "01" => "Jan","02" => "Fev","03" => "Mar","04" => "Abr","05" => "Mai","06" => "Jun","07" => "Jul","08" => "Ago","09" => "Set","10" => "Out","11" => "Nov","12" => "Dez" }
+            %>
+            <div class="growth-bars">
+              <% @new_clients_by_month.each_with_index do |e, i| %>
+              <%
+                pct    = [(e[:novos_clientes].to_f / max_new * 100).round, 4].max
+                label  = month_names[e[:mes].split("-").last] || e[:mes].split("-").last
+                is_cur = (i == @new_clients_by_month.length - 1)
+              %>
+              <div class="growth-bar-wrap">
+                <div class="growth-bar-value" style="font-size:0.7rem;"><%= e[:novos_clientes] %></div>
+                <div class="growth-bar <%= is_cur ? 'current' : '' %>" style="height:<%= pct %>%;"></div>
+                <div class="growth-bar-label"><%= label %></div>
+              </div>
+              <% end %>
+            </div>
+            <div class="growth-kpis">
+              <div class="growth-kpi">
+                <div class="growth-kpi-label">Este mês</div>
+                <div class="growth-kpi-value"><%= @this_month_new %></div>
+              </div>
+              <div class="growth-kpi">
+                <div class="growth-kpi-label">Mês anterior</div>
+                <div class="growth-kpi-value"><%= @prev_month_new %></div>
+              </div>
+              <div class="growth-kpi">
+                <div class="growth-kpi-label">Variação</div>
+                <div class="growth-kpi-value" style="color:<%= @growth_rate && @growth_rate >= 0 ? '#afff2d' : '#ff4d4d' %>;">
+                  <%= @growth_rate ? "#{@growth_rate > 0 ? '+' : ''}#{@growth_rate}%" : "—" %>
+                </div>
+              </div>
+            </div>
+            <% else %>
+            <div style="padding:2rem 0; text-align:center; color:var(--text-muted); font-size:0.875rem;">
+              Dados insuficientes para análise de crescimento
+            </div>
+            <% end %>
+          </div>
+          <div class="flip-back">
+            <div class="insight-eyebrow"><i class="fas fa-microchip"></i> Análise de IA</div>
+            <div class="insight-meta" id="insight-meta-growth" style="display:none;"></div>
+            <div class="insight-title">Aquisição & Crescimento</div>
+            <div class="insight-body" id="insight-body-growth">
+              <div class="ai-loading"><span></span><span></span><span></span> Aguardando análise...</div>
+            </div>
+            <div class="insight-tip" id="insight-tip-growth" style="display:none;"></div>
+            <button class="btn-flip-back" onclick="doFlip('growth')"><i class="fas fa-arrow-left"></i> Voltar</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- TABELA DE TRANSAÇÕES -->
+    <div class="section-card" style="padding:0; overflow:hidden; animation-delay:0.75s;">
+      <div style="padding:1.25rem 1.75rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.75rem;">
+        <div class="card-title" style="margin-bottom:0;"><i class="fas fa-list-ul"></i> Transações</div>
+        <%= link_to owner_financial_tracking_path(request.query_parameters.merge(format: "csv")), class: "btn-csv" do %>
+          <i class="fas fa-download"></i> Exportar CSV
+        <% end %>
+      </div>
+      <% if @transactions.any? %>
+      <div style="overflow-x:auto;">
+        <table class="fin-table">
+          <thead>
+            <tr><th>Data</th><th>Horário</th><th>Cliente</th><th>Serviço</th><th>Valor</th></tr>
+          </thead>
+          <tbody>
+            <% @transactions.each_with_index do |t, i| %>
+            <tr class="<%= i >= 10 ? 'hidden-row txn-extra' : '' %>">
+              <td class="td-muted"><%= t.scheduled_at.strftime("%d/%m/%Y") %></td>
+              <td><span class="badge badge-lime"><%= t.scheduled_at.strftime("%H:%M") %></span></td>
+              <td><%= t.user_email.split("@").first.capitalize %></td>
+              <td><%= t.service_title %></td>
+              <td class="td-value">R$ <%= number_with_precision(t.service_price.to_f, precision: 2) %></td>
+            </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+      <% if @transactions.count > 10 %>
+      <button class="btn-ver-mais" id="btn-ver-mais-txn" onclick="verMais('txn')">
+        <i class="fas fa-chevron-down"></i> Ver mais <%= @transactions.count - 10 %> transações
+      </button>
+      <% end %>
+      <% else %>
+      <div style="padding:2rem; text-align:center; color:var(--text-muted); font-size:0.875rem;">Nenhuma transação encontrada.</div>
+      <% end %>
+    </div>
+
+    <!-- TABELA AGRUPADA -->
+    <div class="section-card" style="padding:0; overflow:hidden; animation-delay:0.8s;">
+      <div style="padding:1.25rem 1.75rem; border-bottom:1px solid var(--border);">
+        <div class="card-title" style="margin-bottom:0;">
+          <i class="fas fa-table-list"></i>
+          <% if @is_all_filter %>Vendas por Ano
+          <% elsif @is_year_filter || @is_custom_filter %>Vendas por Mês
+          <% else %>Vendas por Dia
+          <% end %>
+        </div>
+      </div>
+      <table class="fin-table">
+        <thead>
+          <tr>
+            <th><% if @is_all_filter %>Ano<% elsif @is_year_filter || @is_custom_filter %>Mês<% else %>Data<% end %></th>
+            <th>Agendamentos</th>
+            <th>Faturamento</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if @is_all_filter %>
+            <% @sales_by_year.each do |e| %>
+            <tr>
+              <td><%= e.period_start.strftime("%Y") %></td>
+              <td><%= e.appointment_count %></td>
+              <td class="td-value">R$ <%= number_with_precision(e.total_value, precision: 2) %></td>
+            </tr>
+            <% end %>
+          <% elsif @is_year_filter || @is_custom_filter %>
+            <% @sales_by_month.each do |e| %>
+            <tr>
+              <td><%= I18n.l(e.period_start, format: "%B/%Y", locale: :"pt-BR") rescue e.period_start.strftime("%m/%Y") %></td>
+              <td><%= e.appointment_count %></td>
+              <td class="td-value">R$ <%= number_with_precision(e.total_value, precision: 2) %></td>
+            </tr>
+            <% end %>
+          <% else %>
+            <% @sales_by_day.each_with_index do |e, i| %>
+            <tr class="<%= i >= 10 ? 'hidden-row day-extra' : '' %>">
+              <td class="td-muted"><%= e.sale_date.strftime("%d/%m/%Y") %></td>
+              <td><%= e.appointment_count %></td>
+              <td class="td-value">R$ <%= number_with_precision(e.total_value, precision: 2) %></td>
+            </tr>
+            <% end %>
+            <% if @sales_by_day.count > 10 %>
+            <tr>
+              <td colspan="3" style="padding:0;">
+                <button class="btn-ver-mais" id="btn-ver-mais-day" onclick="verMais('day')">
+                  <i class="fas fa-chevron-down"></i> Ver mais <%= @sales_by_day.count - 10 %> dias
+                </button>
+              </td>
+            </tr>
+            <% end %>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+
+    <% end %>
+
+    <%= link_to owner_car_wash_appointments_path, class: "btn-back" do %>
+      <i class="fas fa-arrow-left"></i> Agendamentos
+    <% end %>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+  var periodSelect = document.getElementById('period_select');
+  var customDates  = document.getElementById('custom-dates');
+  if (periodSelect) {
+    periodSelect.addEventListener('change', function() {
+      customDates.classList.toggle('visible', this.value === 'custom');
+    });
+  }
+
+  var chartDefaults = { color: '#666666', font: { family: 'DM Sans', size: 11 } };
+
+  var salesLabels = <%= raw json_escape(@chart_data.map { |d| d[:date] }.to_json) %>;
+  var salesValues = <%= raw json_escape(@chart_data.map { |d| d[:value] }.to_json) %>;
+  var svcData     = <%= raw json_escape(@services_performance.to_json) %>;
+  var demandData  = <%= raw json_escape(@demand_by_dow.to_json) %>;
+  var heatmapData = <%= raw json_escape(@heatmap.to_json) %>;
+
+  function fmtBRL(v) {
+    return 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
+
+  function peakHoursForDow(dow) {
+    var hours = heatmapData
+      .filter(function(d) { return d.dow === dow; })
+      .sort(function(a, b) { return b.count - a.count; });
+    if (hours.length === 0) return null;
+    var topCount = hours[0].count;
+    var top = hours
+      .filter(function(h) { return h.count >= topCount * 0.7; })
+      .map(function(h) { return h.hour; })
+      .sort(function(a, b) { return a - b; });
+    if (top.length === 0) return null;
+    var min = top[0];
+    var max = top[top.length - 1];
+    return min === max ? min + 'h' : min + 'h\u2013' + (max + 1) + 'h';
+  }
+
+  // GRÁFICO VENDAS
+  var salesCtx = document.getElementById('salesChart');
+  if (salesCtx) {
+    new Chart(salesCtx, {
+      type: 'line',
+      data: {
+        labels: salesLabels,
+        datasets: [{
+          label: 'Faturamento (R$)',
+          data: salesValues,
+          borderColor: '#afff2d',
+          backgroundColor: 'rgba(175,255,45,0.06)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.4,
+          pointBackgroundColor: '#afff2d',
+          pointBorderColor: '#000',
+          pointBorderWidth: 2,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { intersect: false, mode: 'index' },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#111', borderColor: '#222', borderWidth: 1,
+            titleColor: '#afff2d', bodyColor: '#fff', padding: 12,
+            callbacks: { label: function(c) { return ' R$ ' + c.parsed.y.toFixed(2); } }
+          }
+        },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: chartDefaults },
+          y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.04)' },
+               ticks: { ...chartDefaults, callback: function(v) { return fmtBRL(v); } } }
+        }
+      }
+    });
+  }
+
+  // GRÁFICO SERVIÇOS
+  var servicesCtx = document.getElementById('servicesChart');
+  if (servicesCtx && svcData.length > 0) {
+    new Chart(servicesCtx, {
+      type: 'bar',
+      data: {
+        labels: svcData.map(function(s) { return s.title; }),
+        datasets: [
+          { label: 'Receita (R$)', data: svcData.map(function(s) { return s.revenue; }),
+            backgroundColor: 'rgba(175,255,45,0.7)', borderRadius: 6, yAxisID: 'y' },
+          { label: 'Volume', data: svcData.map(function(s) { return s.count; }),
+            backgroundColor: 'rgba(175,255,45,0.2)', borderRadius: 6, yAxisID: 'y1' }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { color: '#666', font: { family: 'DM Sans', size: 11 } } },
+          tooltip: {
+            backgroundColor: '#111', borderColor: '#222', borderWidth: 1,
+            titleColor: '#afff2d', bodyColor: '#fff', padding: 10,
+            callbacks: {
+              label: function(c) {
+                if (c.dataset.yAxisID === 'y') return ' Receita: ' + fmtBRL(c.parsed.y);
+                return ' Volume: ' + c.parsed.y + ' servi\u00e7os';
+              }
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: chartDefaults },
+          y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.04)' },
+               ticks: { ...chartDefaults, callback: function(v) { return fmtBRL(v); } } },
+          y1: { beginAtZero: true, position: 'right', grid: { display: false }, ticks: chartDefaults }
+        }
+      }
+    });
+  }
+
+  // DONUT CLIENTES
+  var clientsCtx = document.getElementById('clientsChart');
+  if (clientsCtx) {
+    new Chart(clientsCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Recorrentes', 'Novos'],
+        datasets: [{
+          data: [<%= @recurring_clients %>, <%= @new_clients %>],
+          backgroundColor: ['#afff2d', '#333'],
+          borderColor: ['#afff2d', '#444'],
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '72%',
+        plugins: {
+          legend: { display: false },
+          tooltip: { backgroundColor: '#111', borderColor: '#222', borderWidth: 1,
+                     titleColor: '#afff2d', bodyColor: '#fff', padding: 10 }
+        }
+      }
+    });
+  }
+
+  // DEMANDA POR DIA
+  var demandCtx = document.getElementById('demandChart');
+  if (demandCtx && demandData.length > 0) {
+    var dayNames     = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'S\u00e1b'];
+    var demandCounts = [0,0,0,0,0,0,0];
+    demandData.forEach(function(d) { demandCounts[d.dow] = d.count; });
+    var maxVal = Math.max.apply(null, demandCounts);
+    new Chart(demandCtx, {
+      type: 'bar',
+      data: {
+        labels: dayNames,
+        datasets: [{
+          label: 'Agendamentos',
+          data: demandCounts,
+          backgroundColor: demandCounts.map(function(v) {
+            return v === maxVal && maxVal > 0 ? '#afff2d' : 'rgba(175,255,45,0.25)';
+          }),
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#111', borderColor: '#222', borderWidth: 1,
+            titleColor: '#afff2d', bodyColor: '#fff', padding: 12,
+            callbacks: {
+              title: function(items) { return dayNames[items[0].dataIndex]; },
+              label: function(c) {
+                var lines = [' ' + c.parsed.y + ' agendamentos'];
+                var peak  = peakHoursForDow(c.dataIndex);
+                if (peak) lines.push(' \u23f0 Pico: ' + peak);
+                return lines;
+              }
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: chartDefaults },
+          y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: chartDefaults }
+        }
+      }
+    });
+  }
+});
+
+// FLIP com AI e cache de 15 dias
+var insightCache = {};
+
+function doFlip(id) {
+  var inner     = document.getElementById('flip-inner-' + id);
+  var wrap      = document.getElementById('flip-' + id);
+  var isFlipped = inner.classList.toggle('flipped');
+
+  if (isFlipped) {
+    var frontH = inner.querySelector('.flip-front').offsetHeight;
+    var back   = inner.querySelector('.flip-back');
+    back.style.height = frontH + 'px';
+    wrap.style.height = frontH + 'px';
+    loadInsight(id, false);
+  } else {
+    wrap.style.height = '';
+    inner.querySelector('.flip-back').scrollTop = 0;
+  }
+}
+
+function loadInsight(type, force) {
+  var bodyEl = document.getElementById('insight-body-' + type);
+  var tipEl  = document.getElementById('insight-tip-' + type);
+  var metaEl = document.getElementById('insight-meta-' + type);
+
+  if (insightCache[type] && !force) {
+    renderInsight(type, insightCache[type]);
+    return;
+  }
+
+  bodyEl.innerHTML     = '<div class="ai-loading"><span></span><span></span><span></span> Analisando ' + getLabel(type) + '...</div>';
+  tipEl.style.display  = 'none';
+  metaEl.style.display = 'none';
+
+  fetch('/owner/ai_insights', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    },
+    body: JSON.stringify({ type: type, force: force ? 'true' : 'false' })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.insight) {
+      insightCache[type] = data;
+      renderInsight(type, data);
+    } else {
+      bodyEl.innerHTML = '<p>N\u00e3o foi poss\u00edvel gerar o insight agora.</p>';
+    }
+  })
+  .catch(function() {
+    bodyEl.innerHTML = '<p>Erro de conex\u00e3o. Tente novamente.</p>';
+  });
+}
+
+function renderInsight(type, data) {
+  var bodyEl = document.getElementById('insight-body-' + type);
+  var tipEl  = document.getElementById('insight-tip-' + type);
+  var metaEl = document.getElementById('insight-meta-' + type);
+
+  var text     = typeof data === 'string' ? data : data.insight;
+  var genDate  = data.generated_at   || null;
+  var nextDate = data.next_refresh   || null;
+  var daysLeft = data.days_remaining || null;
+
+  var paragraphs      = text.split('\n').filter(function(p) { return p.trim().length > 0; });
+  var bodyParagraphs  = paragraphs.length > 1 ? paragraphs.slice(0, -1) : paragraphs;
+  var actionParagraph = paragraphs.length > 1 ? paragraphs[paragraphs.length - 1] : null;
+
+  bodyEl.innerHTML = bodyParagraphs.map(function(p) {
+    var h = p.replace(/R\$\s?[\d.,]+/g, '<strong>$&</strong>')
+              .replace(/\d+[\.,]\d+%/g, '<strong>$&</strong>')
+              .replace(/\d+%/g, '<strong>$&</strong>');
+    return '<p>' + h + '</p>';
+  }).join('');
+
+  if (actionParagraph) {
+    tipEl.innerHTML     = '<strong>\ud83d\udca1 A\u00e7\u00e3o desta semana:</strong> ' + actionParagraph;
+    tipEl.style.display = 'block';
+  } else {
+    tipEl.style.display = 'none';
+  }
+
+  if (genDate && nextDate) {
+    var refreshBtn = (daysLeft !== null && daysLeft > 0)
+      ? '<button class="btn-refresh" disabled>\u23f3 Nova em ' + daysLeft + ' dias</button>'
+      : '<button class="btn-refresh" onclick="forceRefresh(\'' + type + '\')">\u21bb Gerar nova an\u00e1lise</button>';
+    metaEl.innerHTML     = '<span class="insight-meta-date">Gerado em <strong>' + genDate + '</strong> &middot; pr\u00f3xima em <strong>' + nextDate + '</strong></span>' + refreshBtn;
+    metaEl.style.display = 'flex';
+  }
+
+  // Ajusta altura: usa o maior entre o front e o conteúdo do back
+  setTimeout(function() {
+    var inner  = document.getElementById('flip-inner-' + type);
+    var wrap   = document.getElementById('flip-' + type);
+    if (!inner || !wrap) return;
+    var frontH = inner.querySelector('.flip-front').offsetHeight;
+    var back   = inner.querySelector('.flip-back');
+    // Reseta height para medir o scrollHeight real
+    back.style.height = frontH + 'px';
+    wrap.style.height = frontH + 'px';
+    // Scroll para o topo — usuário vê do início e rola para baixo naturalmente
+    back.scrollTop = 0;
+  }, 60);
+}
+
+function forceRefresh(type) {
+  insightCache[type] = null;
+  loadInsight(type, true);
+}
+
+function getLabel(type) {
+  var labels = {
+    sales:     'vendas',
+    services:  'servi\u00e7os',
+    clients:   'clientes',
+    demand:    'demanda',
+    retention: 'reten\u00e7\u00e3o',
+    growth:    'crescimento'
+  };
+  return labels[type] || 'dados';
+}
+
+function verMais(type) {
+  var selector = type === 'txn' ? '.txn-extra' : '.day-extra';
+  document.querySelectorAll(selector).forEach(function(row) { row.classList.remove('hidden-row'); });
+  var btn = document.getElementById('btn-ver-mais-' + type);
+  if (btn) btn.style.display = 'none';
+}
+</script>
+
+<% Rails.logger.info("Template owner/financial_tracking/index.html.erb renderizado com sucesso") %>

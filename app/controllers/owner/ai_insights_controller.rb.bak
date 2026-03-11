@@ -1,0 +1,280 @@
+module Owner
+  class AiInsightsController < ApplicationController
+    before_action :authenticate_user!
+    before_action :ensure_owner
+
+    def analyze
+      car_wash = current_user.car_washes.first
+      return render json: { error: "Lava-rápido não encontrado." }, status: :not_found if car_wash.nil?
+
+      type     = params[:type]
+      force    = params[:force] == "true"
+      existing = AiInsight.current_for(car_wash, type)
+
+      if existing && !existing.expired? && !force
+        return render json: {
+          insight:        existing.content,
+          generated_at:   existing.generated_at.strftime("%d/%m/%Y"),
+          next_refresh:   existing.next_refresh,
+          days_remaining: existing.days_remaining,
+          cached:         true
+        }
+      end
+
+      context = build_context(car_wash, type)
+      prompt  = build_prompt(type, context)
+
+      begin
+        response = call_claude(prompt)
+
+        if existing
+          existing.update!(content: response, generated_at: Time.current)
+        else
+          existing = AiInsight.create!(
+            car_wash:     car_wash,
+            insight_type: type,
+            content:      response,
+            generated_at: Time.current
+          )
+        end
+
+        render json: {
+          insight:        response,
+          generated_at:   existing.generated_at.strftime("%d/%m/%Y"),
+          next_refresh:   existing.next_refresh,
+          days_remaining: existing.days_remaining,
+          cached:         false
+        }
+      rescue => e
+        Rails.logger.error("AI Insights error: #{e.message}")
+        render json: { error: "Não foi possível gerar o insight agora." }, status: :unprocessable_entity
+      end
+    end
+
+    private
+
+    def ensure_owner
+      unless current_user&.owner?
+        render json: { error: "Acesso negado." }, status: :forbidden
+      end
+    end
+
+    def build_context(car_wash, type)
+      base = car_wash.appointments.where(status: "confirmed").joins(:service)
+
+      total_sales        = base.sum("services.price").to_f
+      total_appointments = base.count
+      ticket_medio       = total_appointments > 0 ? (total_sales / total_appointments).round(2) : 0
+
+      last_month         = base.where(scheduled_at: 30.days.ago..Time.current)
+      last_month_revenue = last_month.sum("services.price").to_f
+      last_month_count   = last_month.count
+
+      prev_month         = base.where(scheduled_at: 60.days.ago..30.days.ago)
+      prev_month_revenue = prev_month.sum("services.price").to_f
+      prev_month_count   = prev_month.count
+
+      revenue_growth = prev_month_revenue > 0 ? (((last_month_revenue / prev_month_revenue) - 1) * 100).round(1) : nil
+
+      day_names = %w[Domingo Segunda Terça Quarta Quinta Sexta Sábado]
+      demand_by_dow = base
+        .group(Arel.sql("EXTRACT(DOW FROM scheduled_at)::int"))
+        .order(Arel.sql("EXTRACT(DOW FROM scheduled_at)::int"))
+        .count
+        .map { |dow, count| { dia: day_names[dow], agendamentos: count } }
+
+      best_day  = demand_by_dow.max_by { |d| d[:agendamentos] }
+      worst_day = demand_by_dow.min_by { |d| d[:agendamentos] }
+
+      peak_hours = base
+        .group(Arel.sql("EXTRACT(HOUR FROM scheduled_at)::int"))
+        .order(Arel.sql("count_all DESC"))
+        .limit(3)
+        .count
+        .map { |hour, count| "#{hour}h (#{count} agendamentos)" }
+
+      services_perf = base
+        .group("services.title")
+        .select("services.title, COUNT(*) AS total_count, SUM(services.price) AS total_revenue")
+        .order(Arel.sql("total_revenue DESC"))
+        .map { |s| { servico: s.title, volume: s.total_count.to_i, receita: s.total_revenue.to_f.round(2), ticket: s.total_count > 0 ? (s.total_revenue.to_f / s.total_count).round(2) : 0 } }
+
+      client_counts     = base.group(:user_id).count
+      recurring_clients = client_counts.count { |_, c| c > 1 }
+      new_clients_count = client_counts.count { |_, c| c == 1 }
+      total_clients     = client_counts.size
+      retention_rate    = total_clients > 0 ? ((recurring_clients.to_f / total_clients) * 100).round(1) : 0
+
+      avg_visits_recurring = recurring_clients > 0 ? (client_counts.select { |_, c| c > 1 }.values.sum.to_f / recurring_clients).round(1) : 0
+
+      top_clients = base
+        .joins(:user)
+        .group("users.email")
+        .order(Arel.sql("count_all DESC"))
+        .limit(5)
+        .count
+        .map { |email, count| { cliente: email.split("@").first.capitalize, visitas: count } }
+
+      all_client_last_visit = car_wash.appointments
+        .where(status: "confirmed")
+        .joins(:user)
+        .group("users.email")
+        .maximum(:scheduled_at)
+
+      at_risk_clients = all_client_last_visit
+        .select { |_, last| last < 30.days.ago && last > 90.days.ago }
+        .sort_by { |_, last| last }
+        .first(10)
+        .map { |email, last| { cliente: email.split("@").first.capitalize, dias_ausente: (Time.current - last).to_i / 1.day } }
+
+      lost_clients = all_client_last_visit.count { |_, last| last < 90.days.ago }
+
+      first_visits = car_wash.appointments
+        .where(status: "confirmed")
+        .joins(:user)
+        .group("users.id")
+        .minimum(:scheduled_at)
+
+      new_clients_by_month = first_visits
+        .group_by { |_, d| d.strftime("%Y-%m") }
+        .map { |month, entries| { mes: month, novos_clientes: entries.count } }
+        .sort_by { |e| e[:mes] }
+        .last(6)
+
+      prev_month_new = first_visits.count { |_, d| d >= 60.days.ago && d < 30.days.ago }
+      this_month_new = first_visits.count { |_, d| d >= 30.days.ago }
+      growth_rate    = prev_month_new > 0 ? ((( this_month_new.to_f / prev_month_new) - 1) * 100).round(1) : nil
+
+      {
+        nome_estabelecimento:        car_wash.name,
+        faturamento_total:           total_sales.round(2),
+        faturamento_ultimos_30_dias: last_month_revenue.round(2),
+        faturamento_30_60_dias:      prev_month_revenue.round(2),
+        crescimento_receita_mensal:  revenue_growth ? "#{revenue_growth}%" : "sem dados",
+        agendamentos_30_dias:        last_month_count,
+        agendamentos_30_60_dias:     prev_month_count,
+        total_agendamentos_historico: total_appointments,
+        ticket_medio:                ticket_medio,
+        taxa_retencao:               "#{retention_rate}%",
+        media_visitas_cliente_fiel:  avg_visits_recurring,
+        total_clientes:              total_clients,
+        clientes_recorrentes:        recurring_clients,
+        clientes_unica_visita:       new_clients_count,
+        melhor_dia:                  best_day,
+        pior_dia:                    worst_day,
+        horarios_pico:               peak_hours,
+        demanda_por_dia:             demand_by_dow,
+        performance_servicos:        services_perf,
+        top_5_clientes:              top_clients,
+        clientes_em_risco_30_90_dias: at_risk_clients,
+        clientes_perdidos_90_dias:   lost_clients,
+        novos_clientes_este_mes:     this_month_new,
+        novos_clientes_mes_anterior: prev_month_new,
+        variacao_novos_clientes:     growth_rate ? "#{growth_rate}%" : "sem dados",
+        historico_novos_por_mes:     new_clients_by_month
+      }
+    end
+
+    def build_prompt(type, ctx)
+      base_question = case type
+      when "sales"
+        <<~Q
+          Analise o faturamento e a evolução de vendas deste lava-rápido com olhar de especialista em crescimento de receita.
+          Cruze os dados: crescimento mensal, ticket médio, volume de agendamentos e sazonalidade.
+          Identifique se o negócio está crescendo, estagnado ou em queda, e por quê — baseado nos números.
+          Aponte a alavanca de maior impacto imediato para aumentar o faturamento: precificação, volume, mix de serviços ou frequência.
+        Q
+      when "services"
+        <<~Q
+          Analise o portfólio de serviços deste lava-rápido como um consultor de precificação e mix de produtos.
+          Para cada serviço, cruze receita total, volume e ticket médio unitário.
+          Identifique: qual serviço tem a melhor margem relativa, qual está subprecificado, qual tem potencial de combo ou upsell imediato.
+          Pense em estratégias de ancoragem de preço, bundling e apresentação no momento do check-in que funcionam no contexto de lava-rápido informal brasileiro.
+        Q
+      when "clients"
+        <<~Q
+          Analise a base de clientes deste lava-rápido com foco em LTV, retenção e monetização.
+          Cruze taxa de retenção, média de visitas dos clientes fiéis e comportamento dos top 5.
+          Calcule o LTV implícito: se o ticket médio é X e o cliente fiel visita Y vezes por ano, qual o valor anual de cada cliente recorrente?
+          Proponha uma estratégia de fidelização realista para lava-rápido informal — sem app, sem CRM caro — que o dono possa executar com WhatsApp e caderninho se necessário.
+        Q
+      when "demand"
+        <<~Q
+          Analise o padrão de demanda por dia da semana e horários de pico com olhar de gestão de capacidade e precificação dinâmica.
+          Identifique a diferença percentual entre o melhor e pior dia, e o que isso significa em receita perdida por ociosidade.
+          Proponha uma estratégia de yield management adaptada à realidade de lava-rápido informal: como cobrar mais nos picos sem perder cliente, e como preencher os dias fracos sem destruir margem.
+          Inspire-se em como Uber, hotéis e salões de beleza premium resolvem esse problema — e adapte para o contexto.
+        Q
+      when "retention"
+        <<~Q
+          Analise os clientes em risco de abandono com urgência cirúrgica.
+          Para cada cliente listado, calcule quanto ele já gastou historicamente (use o ticket médio como proxy) e quanto vale recuperá-lo vs deixá-lo ir.
+          Proponha uma sequência de reativação específica: o que falar, quando falar, qual oferta fazer para cada perfil (ausente há 30 dias vs 60 dias vs 80 dias).
+          Seja direto: dê o script da mensagem de WhatsApp que o dono pode mandar hoje mesmo para os 3 primeiros clientes da lista.
+        Q
+      when "growth"
+        <<~Q
+          Analise o crescimento da base de clientes mês a mês com olhar de growth hacking para pequeno negócio.
+          Identifique se a curva de aquisição é saudável, estagnada ou preocupante.
+          Proponha 3 estratégias de aquisição de novos clientes viáveis para lava-rápido informal no Brasil — sem budget de marketing, usando o que o dono já tem: localização, clientes atuais, redes sociais e boca a boca estruturado.
+          Inspire-se em táticas que funcionaram para barbearias, salões e serviços locais que escalaram sem franquia.
+        Q
+      else
+        "Faça uma análise geral do negócio e aponte as 3 maiores oportunidades de melhoria com ações específicas."
+      end
+
+      <<~PROMPT
+        #{base_question}
+
+        DADOS REAIS DO NEGÓCIO — #{ctx[:nome_estabelecimento]}:
+        #{ctx.to_json}
+
+        REGRAS DE RESPOSTA:
+        - Use os números reais nos seus argumentos — nunca fale em abstrato
+        - Seja específico ao ponto de incomodar: se o pior dia tem 40% menos movimento que o melhor, diga isso e diga quanto dinheiro está sendo deixado na mesa por semana
+        - Escreva em português brasileiro direto, como um mentor de negócios falando olho no olho com o dono
+        - Máximo 4 parágrafos densos de análise
+        - O último parágrafo deve ser EXCLUSIVAMENTE a ação da semana: uma única ação, concreta, executável em até 3 dias, com detalhe suficiente para o dono não precisar pensar — só executar
+        - Não use markdown, bullets ou títulos — só texto corrido
+        - NUNCA corte a resposta no meio de uma frase — conclua cada pensamento antes de parar
+      PROMPT
+    end
+
+    def call_claude(prompt)
+      require "net/http"
+      require "json"
+
+      uri  = URI("https://api.anthropic.com/v1/messages")
+      http = Net::HTTP.new(uri.host, uri.port)
+      http.use_ssl      = true
+      http.read_timeout = 90
+
+      request = Net::HTTP::Post.new(uri)
+      request["Content-Type"]      = "application/json"
+      request["x-api-key"]         = ENV["ANTHROPIC_API_KEY"]
+      request["anthropic-version"] = "2023-06-01"
+
+      request.body = {
+        model:      "claude-sonnet-4-6",
+        max_tokens: 1400,
+        system: <<~SYSTEM,
+          Você é Renato Cunha — um consultor de negócios que passou 15 anos na linha de frente de pequenas empresas de serviços no Brasil antes de se tornar mentor.
+          Você já ajudou dezenas de lava-rápidos, barbearias e salões a triplicar faturamento sem abrir franquia e sem contratar gerente.
+          Seu método combina: pricing psychology (ancoragem, decoy pricing, bundling), gestão de capacidade ociosa, LTV de cliente em negócio de recorrência, e growth de boca a boca estruturado.
+          Você conhece a realidade do lava-rápido informal brasileiro: dono que trabalha junto com a equipe, sem sistema de CRM, sem budget de marketing, com margem apertada e concorrência na esquina.
+          Você não dá conselho genérico. Você lê os números, encontra a brecha específica, e diz exatamente o que fazer — como um amigo que é especialista, não como um consultor que precisa parecer sofisticado.
+          Suas referências incluem: Alex Hormozi ($100M Offers), Chet Holmes (The Ultimate Sales Machine), os estudos de retenção do Harvard Business Review sobre serviços de recorrência, e os cases reais de barbearias e salões brasileiros que escalaram via Instagram e WhatsApp.
+          Você escreve em português brasileiro direto. Sem rodeios. Sem elogios ao negócio. Só análise e ação.
+        SYSTEM
+        messages: [{ role: "user", content: prompt }]
+      }.to_json
+
+      response = http.request(request)
+      body     = JSON.parse(response.body)
+
+      raise "API error: #{body['error']&.dig('message')}" if body["error"]
+
+      body.dig("content", 0, "text") || "Não foi possível gerar o insight."
+    end
+  end
+end

@@ -1,0 +1,23 @@
+pt-BR:
+  date:
+    day_names: [Domingo, Segunda-feira, Terça-feira, Quarta-feira, Quinta-feira, Sexta-feira, Sábado]
+    abbr_day_names: [Dom, Seg, Ter, Qua, Qui, Sex, Sáb]
+    formats:
+      default: "%d/%m/%Y"
+      order:
+        - :day
+        - :month
+        - :year
+  time:
+    formats:
+      default: "%d/%m/%Y %H:%M"
+  number:
+    human:
+      format:
+        precision: 2
+  activerecord:
+    models:
+      car_wash: "Lava-rápido"
+      service: "Serviço"
+      appointment: "Agendamento"
+      operating_hour: "Horário de Funcionamento"

@@ -1,0 +1,22 @@
+class AiInsight < ApplicationRecord
+  belongs_to :car_wash
+
+  REFRESH_DAYS = 15
+
+  def self.current_for(car_wash, type)
+    find_by(car_wash: car_wash, insight_type: type)
+  end
+
+  def expired?
+    generated_at < REFRESH_DAYS.days.ago
+  end
+
+  def next_refresh
+    (generated_at + REFRESH_DAYS.days).strftime("%d/%m/%Y")
+  end
+
+  def days_remaining
+    days = ((generated_at + REFRESH_DAYS.days) - Time.current) / 1.day
+    [days.ceil, 0].max
+  end
+end
