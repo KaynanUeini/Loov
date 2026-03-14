@@ -7,7 +7,7 @@ gem 'rails', '~> 7.1.5.1'
 gem 'pg', '~> 1.5'
 gem 'puma', '~> 6.4.2' # Atualizado para a última versão estável
 gem 'importmap-rails'
-gem 'turbo-rails'
+gem 'turbo-rails', '~> 1.5', '~> 1.5'
 gem 'stimulus-rails'
 gem 'jbuilder'
 gem 'redis', '~> 5.0'
@@ -39,3 +39,5 @@ end
 
 
 gem "faker", "~> 3.6"
+
+gem "resend", "~> 1.0"

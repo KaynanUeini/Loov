@@ -1,0 +1,15 @@
+Agendamento confirmado — <%= @car_wash.name %>
+
+Olá, <%= @user.display_name.split(' ').first %>!
+
+Seu agendamento está confirmado. Veja os detalhes:
+
+Lava-rápido: <%= @car_wash.name %>
+Serviço: <%= @service.title %>
+Data: <%= @appointment.scheduled_at.strftime("%d/%m/%Y") %>
+Horário: <%= @appointment.scheduled_at.strftime("%H:%M") %>
+<% if @car_wash.address.present? %>Endereço: <%= @car_wash.address %><% end %>
+
+Acesse seus agendamentos em: <%= appointments_url %>
+
+— Loov

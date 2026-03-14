@@ -23,13 +23,13 @@ class AppointmentsController < ApplicationController
         current_time = DateTime.now.in_time_zone("America/Sao_Paulo")
 
         @upcoming_appointments = all_appointments
-          .where(status: ['pending', 'confirmed'])
-          .select { |a| (a.scheduled_at + a.service.duration.minutes) >= current_time }
-          .sort_by(&:scheduled_at)
+        .where(status: ['pending', 'confirmed'])
+        .select { |a| (a.scheduled_at + a.service.duration.minutes) >= current_time }
+        .sort_by(&:scheduled_at)
 
         @past_appointments = all_appointments
-          .select { |a| (a.scheduled_at + a.service.duration.minutes) < current_time || a.status == 'cancelled' }
-          .sort_by(&:scheduled_at).reverse
+        .select { |a| (a.scheduled_at + a.service.duration.minutes) < current_time || a.status == 'cancelled' }
+        .sort_by(&:scheduled_at).reverse
 
         @ongoing_appointments = @upcoming_appointments.select do |a|
           current_time.between?(a.scheduled_at, a.scheduled_at + a.service.duration.minutes)
@@ -59,9 +59,9 @@ class AppointmentsController < ApplicationController
           start_date = Date.parse(params[:date]).beginning_of_day
           end_date   = start_date.end_of_day
           appointments = car_wash.appointments
-            .where(scheduled_at: start_date..end_date)
-            .where(status: ['pending', 'confirmed'])
-            .includes(:service)
+          .where(scheduled_at: start_date..end_date)
+          .where(status: ['pending', 'confirmed'])
+          .includes(:service)
           render json: { appointments: appointments.as_json(include: :service) }
         rescue ArgumentError, TypeError => e
           render json: { error: "Formato de data inválido." }, status: :bad_request
@@ -92,7 +92,7 @@ class AppointmentsController < ApplicationController
       @appointment.scheduled_at = DateTime.new(
         date_parts[0], date_parts[1], date_parts[2],
         time_parts[0], time_parts[1], 0, '-03:00'
-      )
+        )
     rescue => e
       redirect_to new_appointment_path(car_wash_id: @car_wash&.id), alert: "Data ou horário inválidos."
       return
@@ -133,10 +133,10 @@ class AppointmentsController < ApplicationController
     end
 
     overlapping = Appointment
-      .where(car_wash_id: @car_wash.id)
-      .where(status: ['pending', 'confirmed'])
-      .where("scheduled_at < ? AND scheduled_at >= ?", end_time, start_time - service.duration.minutes)
-      .count
+    .where(car_wash_id: @car_wash.id)
+    .where(status: ['pending', 'confirmed'])
+    .where("scheduled_at < ? AND scheduled_at >= ?", end_time, start_time - service.duration.minutes)
+    .count
 
     if overlapping >= @car_wash.capacity_per_slot
       redirect_to new_appointment_path(car_wash_id: @car_wash&.id), alert: "Horário indisponível. Por favor, escolha outro."
@@ -147,6 +147,7 @@ class AppointmentsController < ApplicationController
 
     if @appointment.save
       Rails.logger.info("Agendamento ##{@appointment.id} criado com sucesso")
+      AppointmentMailer.confirmation(@appointment).deliver_now
       redirect_to appointments_path, notice: "Agendamento criado com sucesso!"
     else
       Rails.logger.error("Erro ao salvar: #{@appointment.errors.full_messages.join(', ')}")

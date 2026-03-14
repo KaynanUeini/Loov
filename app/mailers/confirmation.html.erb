@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { margin: 0; padding: 0; background: #0a0a0a; font-family: 'DM Sans', Arial, sans-serif; }
+    .wrap { max-width: 560px; margin: 0 auto; padding: 40px 24px; }
+    .logo { font-size: 2rem; font-weight: 900; color: #afff2d; letter-spacing: -0.02em; margin-bottom: 32px; }
+    .card { background: #111111; border: 1px solid #222222; border-radius: 16px; padding: 32px; }
+    .title { font-size: 1.25rem; font-weight: 600; color: #ffffff; margin: 0 0 8px; }
+    .subtitle { font-size: 0.875rem; color: #666666; margin: 0 0 28px; }
+    .divider { height: 1px; background: #222222; margin: 24px 0; }
+    .row { display: flex; justify-content: space-between; margin-bottom: 12px; }
+    .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: #555555; }
+    .value { font-size: 0.875rem; color: #ffffff; font-weight: 500; }
+    .badge { display: inline-block; background: rgba(175,255,45,0.1); color: #afff2d; border: 1px solid rgba(175,255,45,0.2); border-radius: 100px; padding: 6px 16px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; margin-bottom: 24px; }
+    .btn { display: block; background: #afff2d; color: #000000; text-decoration: none; text-align: center; padding: 14px 24px; border-radius: 100px; font-weight: 600; font-size: 0.875rem; margin-top: 28px; }
+    .footer { text-align: center; font-size: 0.75rem; color: #444444; margin-top: 32px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="logo">loov</div>
+    <div class="card">
+      <div class="badge">✅ Confirmado</div>
+      <p class="title">Seu agendamento está confirmado!</p>
+      <p class="subtitle">Olá, <%= @user.display_name.split(' ').first %>. Veja os detalhes abaixo.</p>
+
+      <div class="divider"></div>
+
+      <div class="row">
+        <span class="label">Lava-rápido</span>
+        <span class="value"><%= @car_wash.name %></span>
+      </div>
+      <div class="row">
+        <span class="label">Serviço</span>
+        <span class="value"><%= @service.title %></span>
+      </div>
+      <div class="row">
+        <span class="label">Data</span>
+        <span class="value"><%= @appointment.scheduled_at.strftime("%d/%m/%Y") %></span>
+      </div>
+      <div class="row">
+        <span class="label">Horário</span>
+        <span class="value"><%= @appointment.scheduled_at.strftime("%H:%M") %></span>
+      </div>
+      <% if @car_wash.address.present? %>
+      <div class="row">
+        <span class="label">Endereço</span>
+        <span class="value"><%= @car_wash.address %></span>
+      </div>
+      <% end %>
+
+      <div class="divider"></div>
+
+      <a href="<%= appointments_url %>" class="btn">Ver meus agendamentos</a>
+    </div>
+    <div class="footer">
+      Loov — plataforma de agendamento para lava-rápidos<br>
+      Se não foi você, ignore este e-mail.
+    </div>
+  </div>
+</body>
+</html>

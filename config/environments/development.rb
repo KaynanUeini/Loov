@@ -82,10 +82,11 @@ Rails.application.configure do
   config.action_controller.raise_on_missing_callback_actions = true
 
   # Configurações adicionais para o Action Mailer
-  config.action_mailer.delivery_method = :letter_opener
+  config.action_mailer.delivery_method = :smtp
+  config.action_mailer.smtp_settings = { address: "smtp.resend.com", port: 587, user_name: "resend", password: ENV["RESEND_API_KEY"], authentication: :plain, enable_starttls_auto: true }
   config.action_mailer.perform_deliveries = true
   config.action_mailer.default_url_options = { host: 'localhost', port: 3000 }
 
   # Desativar Turbo globalmente (Alternativa 5)
-  config.action_view.turbo_enabled = false
 end
+

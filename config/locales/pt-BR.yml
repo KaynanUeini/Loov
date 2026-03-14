@@ -21,3 +21,16 @@ pt-BR:
       service: "Serviço"
       appointment: "Agendamento"
       operating_hour: "Horário de Funcionamento"
+pt-BR:
+  errors:
+    messages:
+      not_saved:
+        one: "Não foi possível salvar: %{count} erro encontrado"
+        other: "Não foi possível salvar: %{count} erros encontrados"
+  activerecord:
+    attributes:
+      user:
+        full_name: "Nome completo"
+        phone: "Telefone"
+        email: "E-mail"
+        password: "Senha"

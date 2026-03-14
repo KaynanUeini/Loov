@@ -65,7 +65,6 @@
 
   .auth-title span { color: var(--lime); }
 
-  /* ROLE SELECTION */
   .role-screen {
     opacity: 0;
     animation: fadeUp 0.6s ease forwards 0.3s;
@@ -165,26 +164,11 @@
     pointer-events: none;
   }
 
-  .role-next.active {
-    opacity: 1;
-    pointer-events: all;
-  }
+  .role-next.active { opacity: 1; pointer-events: all; }
+  .role-next.active:hover { background: var(--lime-dim); transform: translateY(-2px); }
 
-  .role-next.active:hover {
-    background: var(--lime-dim);
-    transform: translateY(-2px);
-  }
-
-  /* FORM SCREEN */
-  .form-screen {
-    display: none;
-    opacity: 0;
-  }
-
-  .form-screen.visible {
-    display: block;
-    animation: slideIn 0.35s ease forwards;
-  }
+  .form-screen { display: none; opacity: 0; }
+  .form-screen.visible { display: block; animation: slideIn 0.35s ease forwards; }
 
   .auth-form {
     background: var(--surface-2);
@@ -210,11 +194,7 @@
     text-transform: uppercase;
   }
 
-  .auth-hint {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    margin-top: -0.25rem;
-  }
+  .auth-hint { font-size: 0.75rem; color: var(--text-muted); margin-top: -0.25rem; }
 
   .auth-input {
     background: var(--surface-3);
@@ -250,10 +230,7 @@
     margin-top: 0.25rem;
   }
 
-  .auth-submit:hover {
-    background: var(--lime-dim);
-    transform: translateY(-2px);
-  }
+  .auth-submit:hover { background: var(--lime-dim); transform: translateY(-2px); }
 
   .auth-back {
     display: inline-flex;
@@ -291,14 +268,7 @@
     letter-spacing: 0.05em;
   }
 
-  .auth-errors ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-  }
+  .auth-errors ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.25rem; }
 
   .auth-errors ul li {
     font-size: 0.875rem;
@@ -308,11 +278,7 @@
     gap: 0.4rem;
   }
 
-  .auth-errors ul li::before {
-    content: '·';
-    font-size: 1.2rem;
-    line-height: 1;
-  }
+  .auth-errors ul li::before { content: '·'; font-size: 1.2rem; line-height: 1; }
 
   .auth-links {
     display: flex;
@@ -323,13 +289,7 @@
     border-top: 1px solid var(--border);
   }
 
-  .auth-links a {
-    font-size: 0.875rem;
-    color: var(--text-muted);
-    text-decoration: none;
-    transition: color 0.2s ease;
-  }
-
+  .auth-links a { font-size: 0.875rem; color: var(--text-muted); text-decoration: none; transition: color 0.2s ease; }
   .auth-links a:hover { color: var(--lime); }
 
   .selected-role-badge {
@@ -348,19 +308,10 @@
     margin-bottom: 1.25rem;
   }
 
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(16px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
 
-  @keyframes slideIn {
-    from { opacity: 0; transform: translateX(24px); }
-    to   { opacity: 1; transform: translateX(0); }
-  }
-
-  @media (max-width: 480px) {
-    .role-cards { grid-template-columns: 1fr; }
-  }
+  @media (max-width: 480px) { .role-cards { grid-template-columns: 1fr; } }
 </style>
 
 <div class="auth-wrap">
@@ -373,23 +324,16 @@
     <div class="role-screen" id="role-screen">
       <p class="role-label">Escolha seu perfil</p>
       <div class="role-cards">
-
         <div class="role-card" id="card-client" onclick="selectRole('client')">
-          <div class="role-card-icon">
-            <i class="fas fa-user"></i>
-          </div>
+          <div class="role-card-icon"><i class="fas fa-user"></i></div>
           <div class="role-card-title">Cliente</div>
           <div class="role-card-desc">Quero agendar serviços de lava-rápido</div>
         </div>
-
         <div class="role-card" id="card-owner" onclick="selectRole('owner')">
-          <div class="role-card-icon">
-            <i class="fas fa-store"></i>
-          </div>
+          <div class="role-card-icon"><i class="fas fa-store"></i></div>
           <div class="role-card-title">Parceiro</div>
           <div class="role-card-desc">Tenho um lava-rápido e quero cadastrá-lo</div>
         </div>
-
       </div>
       <button class="role-next" id="role-next" onclick="goToForm()">
         Continuar <i class="fas fa-arrow-right" style="margin-left:0.4rem;"></i>
@@ -410,6 +354,18 @@
         <%= render "devise/shared/error_messages", resource: resource %>
 
         <%= f.hidden_field :role, id: "role-input" %>
+
+        <div class="auth-field" id="field-full-name" style="display:none;">
+          <%= f.label :full_name, "Nome completo", class: "auth-label" %>
+          <%= f.text_field :full_name, class: "auth-input", placeholder: "João Silva",
+              value: resource.full_name %>
+        </div>
+
+        <div class="auth-field" id="field-phone" style="display:none;">
+          <%= f.label :phone, "Telefone", class: "auth-label" %>
+          <%= f.text_field :phone, class: "auth-input", placeholder: "(11) 99999-9999",
+              value: resource.phone, id: "phone-field" %>
+        </div>
 
         <div class="auth-field">
           <%= f.label :email, "E-mail", class: "auth-label" %>
@@ -448,20 +404,9 @@
 <script>
   var selectedRole = null;
 
-  // Se houve erro de validação, volta direto pro formulário com o role que estava
-  <% if resource.errors.any? %>
-    var savedRole = '<%= resource.role %>';
-    if (savedRole) {
-      selectedRole = savedRole;
-      showForm();
-    }
-  <% end %>
-
   function selectRole(role) {
     selectedRole = role;
-    document.querySelectorAll('.role-card').forEach(function(c) {
-      c.classList.remove('selected');
-    });
+    document.querySelectorAll('.role-card').forEach(function(c) { c.classList.remove('selected'); });
     document.getElementById('card-' + role).classList.add('selected');
     document.getElementById('role-next').classList.add('active');
   }
@@ -475,6 +420,7 @@
     document.getElementById('role-input').value = selectedRole;
 
     var isOwner = selectedRole === 'owner';
+
     document.getElementById('auth-title').innerHTML =
       isOwner ? 'Seja bem-<span style="color:var(--lime)">vindo.</span>'
               : 'Cadastre-<span style="color:var(--lime)">se.</span>';
@@ -482,16 +428,42 @@
     document.getElementById('role-badge').innerHTML =
       isOwner ? '<i class="fas fa-store"></i> Parceiro' : '<i class="fas fa-user"></i> Cliente';
 
+    var display = isOwner ? 'none' : 'flex';
+    document.getElementById('field-full-name').style.display = display;
+    document.getElementById('field-phone').style.display = display;
+
     document.getElementById('role-screen').style.display = 'none';
     var formScreen = document.getElementById('form-screen');
     formScreen.classList.add('visible');
+
+    var phoneField = document.getElementById('phone-field');
+    if (phoneField) {
+      phoneField.addEventListener('input', function(e) {
+        var v = e.target.value.replace(/\D/g, '').slice(0, 11);
+        if (v.length <= 10) {
+          v = v.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+        } else {
+          v = v.replace(/^(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
+        }
+        e.target.value = v;
+      });
+    }
   }
 
   function goBack() {
     document.getElementById('form-screen').classList.remove('visible');
     document.getElementById('form-screen').style.display = '';
     document.getElementById('role-screen').style.display = '';
-    document.getElementById('auth-title').innerHTML =
-      'Quem é<span style="color:var(--lime)"> você?</span>';
+    document.getElementById('auth-title').innerHTML = 'Quem é<span style="color:var(--lime)"> você?</span>';
   }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    <% if resource.errors.any? %>
+      var savedRole = '<%= resource.role %>';
+      if (savedRole) {
+        selectedRole = savedRole;
+        showForm();
+      }
+    <% end %>
+  });
 </script>
