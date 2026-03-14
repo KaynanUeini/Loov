@@ -1,0 +1,523 @@
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
+  :root {
+    --lime: #afff2d; --lime-dim: #8fcc24; --black: #000;
+    --surface-2: #111; --surface-3: #1a1a1a; --border: #222;
+    --text-muted: #666; --white: #fff;
+  }
+  * { box-sizing: border-box; }
+  .wiz-wrap { min-height: 100vh; background: var(--black); font-family: 'DM Sans', sans-serif; padding-top: 64px; padding-bottom: 4rem; }
+  .wiz-inner { max-width: 640px; margin: 0 auto; padding: 3rem 1.5rem; }
+
+  .wiz-progress { display: flex; align-items: center; margin-bottom: 3rem; }
+  .wiz-step { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; flex: 1; }
+  .wiz-step-circle { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--border); background: var(--surface-2); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); transition: all 0.3s ease; z-index: 1; }
+  .wiz-step.active .wiz-step-circle { border-color: var(--lime); background: rgba(175,255,45,0.1); color: var(--lime); }
+  .wiz-step.done .wiz-step-circle { border-color: var(--lime); background: var(--lime); color: var(--black); }
+  .wiz-step-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); white-space: nowrap; }
+  .wiz-step.active .wiz-step-label { color: var(--lime); }
+  .wiz-step.done .wiz-step-label { color: var(--white); }
+  .wiz-connector { flex: 1; height: 1px; background: var(--border); margin-top: -1.5rem; transition: background 0.3s ease; }
+  .wiz-connector.done { background: var(--lime); }
+
+  .wiz-eyebrow { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.7rem; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; color: var(--lime); margin-bottom: 0.75rem; }
+  .wiz-eyebrow::before { content: ''; display: block; width: 24px; height: 1px; background: var(--lime); }
+  .wiz-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(2rem, 7vw, 3.5rem); line-height: 1; color: var(--white); margin: 0 0 0.5rem 0; }
+  .wiz-title span { color: var(--lime); }
+  .wiz-subtitle { font-size: 0.9rem; color: var(--text-muted); margin: 0 0 2rem 0; }
+
+  .wiz-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; padding: 2rem; animation: fadeUp 0.4s ease forwards; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+  .form-field { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem; }
+  .form-field:last-child { margin-bottom: 0; }
+  .form-label { font-size: 0.78rem; font-weight: 500; color: var(--text-muted); letter-spacing: 0.05em; text-transform: uppercase; }
+  .form-input { background: var(--surface-3); border: 1px solid var(--border); border-radius: 10px; padding: 0.875rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.9375rem; color: var(--white); outline: none; transition: all 0.2s ease; width: 100%; }
+  .form-input::placeholder { color: var(--text-muted); }
+  .form-input:focus { border-color: var(--lime); box-shadow: 0 0 0 3px rgba(175,255,45,0.08); }
+  .form-select { background: var(--surface-3); border: 1px solid var(--border); border-radius: 10px; padding: 0.875rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.9375rem; color: var(--white); outline: none; transition: all 0.2s ease; width: 100%; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 1rem center; cursor: pointer; }
+  .form-select:focus { border-color: var(--lime); box-shadow: 0 0 0 3px rgba(175,255,45,0.08); }
+  .form-select option { background: var(--surface-3); }
+  .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+  .form-row-cep { display: grid; grid-template-columns: 140px 1fr 100px; gap: 1rem; margin-bottom: 1rem; }
+  .form-row-uf { display: grid; grid-template-columns: 80px 1fr 1fr; gap: 1rem; }
+  .hint { font-size: 0.72rem; color: var(--text-muted); }
+
+  .day-buttons { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; margin-bottom: 1.25rem; }
+  .day-btn { background: var(--surface-3); border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.25rem; font-size: 0.7rem; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: all 0.2s ease; text-align: center; text-transform: uppercase; user-select: none; }
+  .day-btn:hover { border-color: rgba(175,255,45,0.3); color: var(--white); }
+  .day-btn.active { background: rgba(175,255,45,0.1); border-color: var(--lime); color: var(--lime); }
+  .day-time-rows { display: flex; flex-direction: column; gap: 0.75rem; }
+  .day-time-row { display: none; align-items: center; gap: 1rem; background: var(--surface-3); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem; }
+  .day-time-row.visible { display: flex; }
+  .day-time-label { font-family: 'Bebas Neue', sans-serif; font-size: 1rem; color: var(--lime); min-width: 36px; }
+  .time-select-wrap { display: flex; align-items: center; gap: 0.5rem; flex: 1; }
+  .time-label-small { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; white-space: nowrap; }
+  .time-select { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.75rem; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; color: var(--white); outline: none; cursor: pointer; appearance: none; text-align: center; transition: border-color 0.2s; }
+  .time-select:focus { border-color: var(--lime); }
+  .time-sep { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; color: var(--text-muted); }
+
+  .service-card { background: var(--surface-3); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem; margin-bottom: 0.75rem; position: relative; }
+  .service-remove { position: absolute; top: 1rem; right: 1rem; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.875rem; transition: color 0.2s; padding: 0; }
+  .service-remove:hover { color: #ef4444; }
+  .btn-add { display: inline-flex; align-items: center; gap: 0.5rem; background: transparent; color: var(--lime); border: 1px dashed rgba(175,255,45,0.3); border-radius: 10px; padding: 0.75rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s; width: 100%; justify-content: center; margin-top: 0.75rem; }
+  .btn-add:hover { border-color: var(--lime); background: rgba(175,255,45,0.04); }
+
+  .wiz-actions { display: flex; gap: 1rem; margin-top: 1.5rem; }
+  .btn-next { background: var(--lime); color: var(--black); border: none; border-radius: 100px; padding: 0.875rem 2rem; font-family: 'DM Sans', sans-serif; font-size: 0.9375rem; font-weight: 600; cursor: pointer; transition: all 0.2s; flex: 1; }
+  .btn-next:hover { background: var(--lime-dim); transform: translateY(-2px); }
+  .btn-next:disabled { opacity: 0.5; pointer-events: none; }
+  .btn-back { background: transparent; color: var(--text-muted); border: 1px solid var(--border); border-radius: 100px; padding: 0.875rem 1.5rem; font-family: 'DM Sans', sans-serif; font-size: 0.9375rem; cursor: pointer; transition: all 0.2s; }
+  .btn-back:hover { border-color: var(--white); color: var(--white); }
+
+  .wiz-success { text-align: center; padding: 3rem 1.5rem; }
+  .wiz-success-icon { width: 80px; height: 80px; border-radius: 50%; background: rgba(175,255,45,0.1); border: 2px solid var(--lime); display: flex; align-items: center; justify-content: center; font-size: 2rem; color: var(--lime); margin: 0 auto 1.5rem; }
+  .wiz-success-title { font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; color: var(--white); margin: 0 0 0.5rem; }
+  .wiz-success-title span { color: var(--lime); }
+  .wiz-success-desc { font-size: 0.9375rem; color: var(--text-muted); margin: 0 0 2rem; }
+  .btn-dashboard { display: inline-flex; align-items: center; gap: 0.5rem; background: var(--lime); color: var(--black); border: none; border-radius: 100px; padding: 0.875rem 2rem; font-family: 'DM Sans', sans-serif; font-size: 0.9375rem; font-weight: 600; cursor: pointer; text-decoration: none; transition: all 0.2s; }
+  .btn-dashboard:hover { background: var(--lime-dim); transform: translateY(-2px); }
+
+  .cep-error { font-size: 0.775rem; color: #fca5a5; display: none; }
+  .days-hint { font-size: 0.8rem; color: var(--text-muted); margin: 0.75rem 0 0; }
+
+  @media (max-width: 580px) {
+    .day-buttons { grid-template-columns: repeat(4, 1fr); }
+    .form-row-2, .form-row-cep, .form-row-uf { grid-template-columns: 1fr; }
+    .day-time-row { flex-direction: column; align-items: flex-start; }
+    .time-select-wrap { width: 100%; }
+    .wiz-inner { padding: 2rem 1rem; }
+  }
+</style>
+
+<div class="wiz-wrap">
+  <div class="wiz-inner">
+
+    <div class="wiz-progress">
+      <div class="wiz-step active" id="step-ind-1">
+        <div class="wiz-step-circle" id="circle-1">1</div>
+        <span class="wiz-step-label">Lava-rápido</span>
+      </div>
+      <div class="wiz-connector" id="conn-1"></div>
+      <div class="wiz-step" id="step-ind-2">
+        <div class="wiz-step-circle" id="circle-2">2</div>
+        <span class="wiz-step-label">Horários</span>
+      </div>
+      <div class="wiz-connector" id="conn-2"></div>
+      <div class="wiz-step" id="step-ind-3">
+        <div class="wiz-step-circle" id="circle-3">3</div>
+        <span class="wiz-step-label">Serviços</span>
+      </div>
+      <div class="wiz-connector" id="conn-3"></div>
+      <div class="wiz-step" id="step-ind-4">
+        <div class="wiz-step-circle" id="circle-4"><i class="fas fa-check" style="font-size:0.7rem;"></i></div>
+        <span class="wiz-step-label">Pronto!</span>
+      </div>
+    </div>
+
+    <!-- PASSO 1 -->
+    <div id="step-1">
+      <div class="wiz-eyebrow">Passo 1 de 3</div>
+      <h1 class="wiz-title">Seu <span>Lava-Rápido</span></h1>
+      <p class="wiz-subtitle">Comece com as informações básicas do seu estabelecimento.</p>
+
+      <div class="wiz-card">
+        <div class="form-field">
+          <label class="form-label">Nome do Lava-Rápido</label>
+          <input type="text" class="form-input" id="s1-name" placeholder="Ex.: Lava Car Premium">
+        </div>
+
+        <div class="form-row-cep">
+          <div class="form-field" style="margin-bottom:0;">
+            <label class="form-label">CEP</label>
+            <div style="position:relative;">
+              <input type="text" class="form-input" id="s1-cep" placeholder="00000-000" maxlength="9" style="padding-right:2.5rem;">
+              <div id="cep-spinner" style="display:none;position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);color:var(--lime);">
+                <i class="fas fa-circle-notch fa-spin"></i>
+              </div>
+            </div>
+            <span class="cep-error" id="cep-error">CEP não encontrado.</span>
+          </div>
+          <div class="form-field" style="margin-bottom:0;">
+            <label class="form-label">Logradouro</label>
+            <input type="text" class="form-input" id="s1-logradouro" placeholder="Rua / Avenida">
+          </div>
+          <div class="form-field" style="margin-bottom:0;">
+            <label class="form-label">Número</label>
+            <input type="text" class="form-input" id="s1-numero" placeholder="123">
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-field" style="margin-bottom:0;">
+            <label class="form-label">Bairro</label>
+            <input type="text" class="form-input" id="s1-bairro" placeholder="Bairro">
+          </div>
+          <div class="form-field" style="margin-bottom:0;">
+            <label class="form-label">Cidade</label>
+            <input type="text" class="form-input" id="s1-cidade" placeholder="Cidade">
+          </div>
+        </div>
+
+        <div class="form-row-uf" style="margin-top:1rem;">
+          <div class="form-field" style="margin-bottom:0;">
+            <label class="form-label">UF</label>
+            <input type="text" class="form-input" id="s1-uf" placeholder="SP" maxlength="2">
+          </div>
+          <div class="form-field" style="margin-bottom:0;">
+            <label class="form-label">Capacidade simultânea</label>
+            <input type="number" class="form-input" id="s1-capacity" placeholder="2" min="1" value="1">
+            <span class="hint">Atendimentos ao mesmo tempo</span>
+          </div>
+          <div class="form-field" style="margin-bottom:0;">
+            <label class="form-label">Nº de funcionários</label>
+            <input type="number" class="form-input" id="s1-employees" placeholder="3" min="1" value="1">
+          </div>
+        </div>
+      </div>
+
+      <div class="wiz-actions">
+        <button class="btn-next" id="btn-next-1" onclick="saveStep1()">
+          Continuar <i class="fas fa-arrow-right" style="margin-left:0.4rem;"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- PASSO 2 -->
+    <div id="step-2" style="display:none;">
+      <div class="wiz-eyebrow">Passo 2 de 3</div>
+      <h1 class="wiz-title">Horários de <span>Funcionamento</span></h1>
+      <p class="wiz-subtitle">Selecione os dias e configure o horário de cada um.</p>
+
+      <div class="wiz-card">
+        <div class="day-buttons">
+          <% [["Dom",0],["Seg",1],["Ter",2],["Qua",3],["Qui",4],["Sex",5],["Sáb",6]].each do |label, val| %>
+          <div class="day-btn" data-day="<%= val %>" onclick="toggleDay(<%= val %>, '<%= label %>')"><%= label %></div>
+          <% end %>
+        </div>
+        <div class="day-time-rows" id="day-time-rows"></div>
+        <p class="days-hint" id="days-hint">Selecione pelo menos um dia.</p>
+      </div>
+
+      <div class="wiz-actions">
+        <button class="btn-back" onclick="goToStep(1)"><i class="fas fa-arrow-left"></i></button>
+        <button class="btn-next" onclick="saveStep2()">
+          Continuar <i class="fas fa-arrow-right" style="margin-left:0.4rem;"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- PASSO 3 -->
+    <div id="step-3" style="display:none;">
+      <div class="wiz-eyebrow">Passo 3 de 3</div>
+      <h1 class="wiz-title">Seus <span>Serviços</span></h1>
+      <p class="wiz-subtitle">Adicione pelo menos um serviço com preço e duração.</p>
+
+      <div class="wiz-card">
+        <div id="services-list"></div>
+        <button class="btn-add" onclick="addService()">
+          <i class="fas fa-plus"></i> Adicionar Serviço
+        </button>
+      </div>
+
+      <div class="wiz-actions">
+        <button class="btn-back" onclick="goToStep(2)"><i class="fas fa-arrow-left"></i></button>
+        <button class="btn-next" id="btn-finish" onclick="saveStep3()">
+          Finalizar <i class="fas fa-check" style="margin-left:0.4rem;"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- PASSO 4 -->
+    <div id="step-4" style="display:none;">
+      <div class="wiz-card wiz-success">
+        <div class="wiz-success-icon"><i class="fas fa-check"></i></div>
+        <h2 class="wiz-success-title">Tudo <span>pronto!</span></h2>
+        <p class="wiz-success-desc">Seu lava-rápido está cadastrado e pronto para receber agendamentos.</p>
+        <a href="/" class="btn-dashboard">
+          <i class="fas fa-gauge-high"></i> Ir para o painel
+        </a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  var carWashId = null;
+  var activeDays = {};
+  var serviceCount = 0;
+
+  var ALL_CATEGORIES = [
+    "Lavagem", "Polimento", "Higienização", "Cristalização", "Vitrificação",
+    "Enceramento", "Hidratação de Couro", "Limpeza de Motor",
+    "Revitalização de Plásticos", "Polimento de Faróis",
+    "Impermeabilização", "Oxi-sanitização", "Outros"
+  ];
+
+  function toTitleCase(str) {
+    return str.replace(/\w\S*/g, function(word) {
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    });
+  }
+
+  function applyTitleCase(input) {
+    input.addEventListener('blur', function() {
+      if (this.value.trim()) this.value = toTitleCase(this.value.trim());
+    });
+  }
+
+  function goToStep(n) {
+    [1,2,3,4].forEach(function(i) {
+      document.getElementById('step-' + i).style.display = i === n ? 'block' : 'none';
+    });
+    updateProgress(n);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function updateProgress(current) {
+    [1,2,3,4].forEach(function(i) {
+      var ind = document.getElementById('step-ind-' + i);
+      var circle = document.getElementById('circle-' + i);
+      ind.className = 'wiz-step';
+      if (i < current) {
+        ind.classList.add('done');
+        circle.innerHTML = '<i class="fas fa-check" style="font-size:0.7rem;"></i>';
+      } else if (i === current) {
+        ind.classList.add('active');
+        if (i < 4) circle.innerHTML = i;
+      } else {
+        if (i < 4) circle.innerHTML = i;
+      }
+      if (i < 4) {
+        var conn = document.getElementById('conn-' + i);
+        conn.className = 'wiz-connector' + (i < current ? ' done' : '');
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    var cep = document.getElementById('s1-cep');
+    cep.addEventListener('input', function() {
+      var raw = this.value.replace(/\D/g, '');
+      this.value = raw.length > 5 ? raw.slice(0,5) + '-' + raw.slice(5,8) : raw;
+    });
+    cep.addEventListener('blur', function() {
+      var raw = this.value.replace(/\D/g, '');
+      if (raw.length !== 8) return;
+      document.getElementById('cep-spinner').style.display = 'block';
+      document.getElementById('cep-error').style.display = 'none';
+      fetch('https://viacep.com.br/ws/' + raw + '/json/')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          document.getElementById('cep-spinner').style.display = 'none';
+          if (data.erro) { document.getElementById('cep-error').style.display = 'block'; return; }
+          document.getElementById('s1-logradouro').value = data.logradouro || '';
+          document.getElementById('s1-bairro').value = data.bairro || '';
+          document.getElementById('s1-cidade').value = data.localidade || '';
+          document.getElementById('s1-uf').value = data.uf || '';
+          document.getElementById('s1-numero').focus();
+        })
+        .catch(function() {
+          document.getElementById('cep-spinner').style.display = 'none';
+          document.getElementById('cep-error').style.display = 'block';
+        });
+    });
+
+    addService();
+  });
+
+  function saveStep1() {
+    var name = document.getElementById('s1-name').value.trim();
+    var logradouro = document.getElementById('s1-logradouro').value.trim();
+    var cidade = document.getElementById('s1-cidade').value.trim();
+    if (!name || !logradouro || !cidade) {
+      alert('Preencha nome, logradouro e cidade para continuar.');
+      return;
+    }
+    var btn = document.getElementById('btn-next-1');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Salvando...';
+    fetch('<%= owner_onboarding_car_wash_path %>', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content },
+      body: JSON.stringify({ car_wash: {
+        name: name,
+        cep: document.getElementById('s1-cep').value.trim(),
+        logradouro: logradouro,
+        numero: document.getElementById('s1-numero').value.trim(),
+        bairro: document.getElementById('s1-bairro').value.trim(),
+        cidade: cidade,
+        uf: document.getElementById('s1-uf').value.trim(),
+        capacity_per_slot: document.getElementById('s1-capacity').value || 1,
+        num_employees: document.getElementById('s1-employees').value || 1
+      }})
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      btn.disabled = false;
+      btn.innerHTML = 'Continuar <i class="fas fa-arrow-right" style="margin-left:0.4rem;"></i>';
+      if (data.success) { carWashId = data.car_wash_id; goToStep(2); }
+      else { alert('Erro: ' + (data.errors || []).join(', ')); }
+    })
+    .catch(function() {
+      btn.disabled = false;
+      btn.innerHTML = 'Continuar <i class="fas fa-arrow-right" style="margin-left:0.4rem;"></i>';
+      alert('Erro ao salvar. Tente novamente.');
+    });
+  }
+
+  function buildHourOptions(sel) {
+    var o = '';
+    for (var h = 0; h < 24; h++) { var v = (h<10?'0':'')+h; o += '<option value="'+v+'"'+(sel===v?' selected':'')+'>'+v+'</option>'; }
+    return o;
+  }
+  function buildMinOptions(sel) {
+    var o = '';
+    ['00','15','30','45'].forEach(function(m) { o += '<option value="'+m+'"'+(sel===m?' selected':'')+'>'+m+'</option>'; });
+    return o;
+  }
+
+  function toggleDay(day, label) {
+    var btn = document.querySelector('.day-btn[data-day="'+day+'"]');
+    if (activeDays[day]) {
+      delete activeDays[day];
+      btn.classList.remove('active');
+      var row = document.getElementById('day-row-'+day);
+      if (row) row.remove();
+    } else {
+      activeDays[day] = { oh: '08', om: '00', ch: '18', cm: '00' };
+      btn.classList.add('active');
+      var html = '<div class="day-time-row visible" id="day-row-'+day+'">'+
+        '<div class="day-time-label">'+label+'</div>'+
+        '<div class="time-select-wrap"><span class="time-label-small">Abre</span>'+
+        '<select class="time-select" onchange="updateTime('+day+',\'oh\',this.value)">'+buildHourOptions('08')+'</select>'+
+        '<span class="time-sep">:</span>'+
+        '<select class="time-select" onchange="updateTime('+day+',\'om\',this.value)">'+buildMinOptions('00')+'</select></div>'+
+        '<div class="time-select-wrap"><span class="time-label-small">Fecha</span>'+
+        '<select class="time-select" onchange="updateTime('+day+',\'ch\',this.value)">'+buildHourOptions('18')+'</select>'+
+        '<span class="time-sep">:</span>'+
+        '<select class="time-select" onchange="updateTime('+day+',\'cm\',this.value)">'+buildMinOptions('00')+'</select></div>'+
+        '</div>';
+      var rows = document.getElementById('day-time-rows');
+      var existing = rows.querySelectorAll('.day-time-row');
+      var inserted = false;
+      for (var i = 0; i < existing.length; i++) {
+        if (day < parseInt(existing[i].id.replace('day-row-',''))) {
+          var tmp = document.createElement('div'); tmp.innerHTML = html;
+          rows.insertBefore(tmp.firstElementChild, existing[i]);
+          inserted = true; break;
+        }
+      }
+      if (!inserted) rows.insertAdjacentHTML('beforeend', html);
+    }
+    document.getElementById('days-hint').style.display = Object.keys(activeDays).length > 0 ? 'none' : 'block';
+  }
+
+  function updateTime(day, key, value) {
+    if (activeDays[day]) activeDays[day][key] = value;
+  }
+
+  function saveStep2() {
+    if (Object.keys(activeDays).length === 0) {
+      alert('Selecione pelo menos um dia de funcionamento.');
+      return;
+    }
+    var hoursData = {};
+    Object.keys(activeDays).forEach(function(day) {
+      var d = activeDays[day];
+      hoursData[day] = { enabled: '1', opens_at: d.oh+':'+d.om, closes_at: d.ch+':'+d.cm };
+    });
+    fetch('<%= owner_onboarding_hours_path %>', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content },
+      body: JSON.stringify({ car_wash_id: carWashId, hours: hoursData })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) { goToStep(3); }
+      else { alert('Erro: ' + (data.errors || []).join(', ')); }
+    });
+  }
+
+  function addService() {
+    var idx = serviceCount++;
+    var categoryOptions = ALL_CATEGORIES.map(function(c) {
+      return '<option value="'+c+'">'+c+'</option>';
+    }).join('');
+
+    var html = '<div class="service-card" id="service-'+idx+'">'+
+      '<button class="service-remove" onclick="removeService('+idx+')" title="Remover"><i class="fas fa-times"></i></button>'+
+      '<div class="form-row-2" style="margin-bottom:1rem;">'+
+        '<div class="form-field" style="margin-bottom:0;">'+
+          '<label class="form-label">Categoria</label>'+
+          '<select class="form-select service-category" data-idx="'+idx+'">'+
+            '<option value="">Selecione</option>'+categoryOptions+
+          '</select>'+
+        '</div>'+
+        '<div class="form-field" style="margin-bottom:0;">'+
+          '<label class="form-label">Serviço</label>'+
+          '<input type="text" class="form-input service-title" placeholder="Ex.: Lavagem Simples" data-idx="'+idx+'">'+
+        '</div>'+
+      '</div>'+
+      '<div class="form-row-2">'+
+        '<div class="form-field" style="margin-bottom:0;">'+
+          '<label class="form-label">Preço (R$)</label>'+
+          '<input type="number" step="0.01" min="0" class="form-input service-price" placeholder="0,00" data-idx="'+idx+'">'+
+        '</div>'+
+        '<div class="form-field" style="margin-bottom:0;">'+
+          '<label class="form-label">Duração (min)</label>'+
+          '<input type="number" min="1" class="form-input service-duration" placeholder="60" data-idx="'+idx+'">'+
+        '</div>'+
+      '</div>'+
+      '</div>';
+
+    document.getElementById('services-list').insertAdjacentHTML('beforeend', html);
+
+    var titleInput = document.querySelector('#service-'+idx+' .service-title');
+    if (titleInput) applyTitleCase(titleInput);
+  }
+
+  function removeService(idx) {
+    var el = document.getElementById('service-'+idx);
+    if (el) el.remove();
+  }
+
+  function saveStep3() {
+    var cards = document.querySelectorAll('.service-card');
+    var services = {};
+    var valid = true;
+
+    cards.forEach(function(card) {
+      var idx = card.id.replace('service-', '');
+      var category = card.querySelector('.service-category').value;
+      var title = card.querySelector('.service-title').value.trim();
+      var price = card.querySelector('.service-price').value;
+      var duration = card.querySelector('.service-duration').value;
+      if (!category || !title || !price || !duration) { valid = false; return; }
+      services[idx] = { title: toTitleCase(title), category: category, price: price, duration: duration };
+    });
+
+    if (!valid || Object.keys(services).length === 0) {
+      alert('Preencha categoria, serviço, preço e duração de todos os itens.');
+      return;
+    }
+
+    var btn = document.getElementById('btn-finish');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Salvando...';
+
+    fetch('<%= owner_onboarding_services_path %>', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content },
+      body: JSON.stringify({ car_wash_id: carWashId, services: services })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      btn.disabled = false;
+      btn.innerHTML = 'Finalizar <i class="fas fa-check" style="margin-left:0.4rem;"></i>';
+      if (data.success) { goToStep(4); }
+      else { alert('Erro: ' + (data.errors || []).join(', ')); }
+    });
+  }
+</script>

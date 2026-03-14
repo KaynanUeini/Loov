@@ -97,11 +97,8 @@
   .btn-lime { display: inline-flex; align-items: center; gap: 0.4rem; background: var(--lime); color: var(--black); border: none; border-radius: 100px; padding: 0.6rem 1.25rem; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
   .btn-lime:hover { background: var(--lime-dim); transform: translateY(-1px); }
 
-  .btn-ghost { display: inline-flex; align-items: center; gap: 0.4rem; background: transparent; color: var(--text-muted); border: 1px solid var(--border); border-radius: 100px; padding: 0.6rem 1.25rem; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s ease; }
+  .btn-ghost { display: inline-flex; align-items: center; gap: 0.4rem; background: transparent; color: var(--text-muted); border: 1px solid var(--border); border-radius: 100px; padding: 0.6rem 1.25rem; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s ease; text-decoration: none; }
   .btn-ghost:hover { border-color: var(--lime); color: var(--lime); }
-
-  .btn-danger { display: inline-flex; align-items: center; gap: 0.4rem; background: transparent; color: #ef4444; border: 1px solid rgba(239,68,68,0.3); border-radius: 100px; padding: 0.6rem 1.25rem; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s ease; }
-  .btn-danger:hover { background: rgba(239,68,68,0.08); border-color: #ef4444; }
 
   .btn-icon { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--text-muted); cursor: pointer; transition: all 0.2s ease; font-size: 0.8rem; }
   .btn-icon:hover { border-color: var(--lime); color: var(--lime); }
@@ -333,17 +330,23 @@
                 </div>
               </div>
               <div class="edit-panel" id="edit-service-<%= service_form.object.id %>">
-                <div class="form-field">
-                  <label class="form-label">Categoria</label>
-                  <select class="form-select edit-category">
-                    <% %w[Lavagem Polimento Higienização Cristalização Outros].each do |cat| %>
-                    <option value="<%= cat %>" <%= 'selected' if service_form.object.title == cat %>><%= cat %></option>
-                    <% end %>
-                  </select>
+                <div class="form-row" style="margin-bottom:0;">
+                  <div class="form-field">
+                    <label class="form-label">Categoria</label>
+                    <select class="form-select edit-category">
+                      <% %w[Lavagem Polimento Higienização Cristalização Outros].each do |cat| %>
+                      <option value="<%= cat %>" <%= 'selected' if service_form.object.category == cat %>><%= cat %></option>
+                      <% end %>
+                    </select>
+                  </div>
+                  <div class="form-field">
+                    <label class="form-label">Nome do Serviço</label>
+                    <input type="text" class="form-input edit-title" value="<%= service_form.object.title %>" placeholder="Ex.: Lavagem Completa">
+                  </div>
                 </div>
                 <div class="form-field">
-                  <label class="form-label">Descrição</label>
-                  <input type="text" class="form-input edit-description" value="<%= service_form.object.description %>" placeholder="Ex.: Lavagem com cera">
+                  <label class="form-label">Descrição (opcional)</label>
+                  <input type="text" class="form-input edit-description" value="<%= service_form.object.description %>" placeholder="Ex.: Inclui aspiração e perfume">
                 </div>
                 <div class="form-row">
                   <div class="form-field">
@@ -368,19 +371,26 @@
             </button>
 
             <div class="add-panel" id="add-service-panel">
-              <div class="form-field">
-                <label class="form-label">Categoria</label>
-                <select class="form-select" id="new-service-category">
-                  <option value="">Selecione uma categoria</option>
-                  <% %w[Lavagem Polimento Higienização Cristalização Outros].each do |cat| %>
-                  <option value="<%= cat %>"><%= cat %></option>
-                  <% end %>
-                </select>
-                <span class="field-error" id="new-service-category-error"></span>
+              <div class="form-row" style="margin-bottom:0;">
+                <div class="form-field">
+                  <label class="form-label">Categoria</label>
+                  <select class="form-select" id="new-service-category">
+                    <option value="">Selecione uma categoria</option>
+                    <% %w[Lavagem Polimento Higienização Cristalização Outros].each do |cat| %>
+                    <option value="<%= cat %>"><%= cat %></option>
+                    <% end %>
+                  </select>
+                  <span class="field-error" id="new-service-category-error"></span>
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Nome do Serviço</label>
+                  <input type="text" class="form-input" id="new-service-title" placeholder="Ex.: Lavagem Completa">
+                  <span class="field-error" id="new-service-title-error"></span>
+                </div>
               </div>
               <div class="form-field">
-                <label class="form-label">Descrição</label>
-                <input type="text" class="form-input" id="new-service-description" placeholder="Ex.: Lavagem com cera">
+                <label class="form-label">Descrição (opcional)</label>
+                <input type="text" class="form-input" id="new-service-description" placeholder="Ex.: Inclui aspiração e perfume">
               </div>
               <div class="form-row">
                 <div class="form-field">
@@ -420,7 +430,6 @@ var hourIndex   = Date.now();
 var serviceIndex = Date.now();
 var addDayTimes  = {};
 
-// SECTIONS
 function toggleSection(header) {
   var body    = header.nextElementSibling;
   var chevron = header.querySelector('.section-chevron');
@@ -429,7 +438,6 @@ function toggleSection(header) {
   chevron.classList.toggle('open', !isOpen);
 }
 
-// FLASH
 function showFlash(type, message) {
   var container = document.getElementById('flash-messages');
   var div = document.createElement('div');
@@ -679,19 +687,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (confirmBtn) confirmBtn.onclick = function() {
       var category    = panel.querySelector('.edit-category').value;
+      var title       = panel.querySelector('.edit-title').value.trim();
       var description = panel.querySelector('.edit-description').value;
       var price       = panel.querySelector('.edit-price').value;
       var duration    = panel.querySelector('.edit-duration').value;
       if (!category) { showFlash('error', 'Selecione uma categoria.'); return; }
+      if (!title) { showFlash('error', 'Informe o nome do serviço.'); return; }
       if (!price || parseFloat(price) < 0) { showFlash('error', 'Preço inválido.'); return; }
       if (!duration || parseInt(duration) < 1) { showFlash('error', 'Duração inválida.'); return; }
-      row.querySelector('.hidden-title').value       = category;
+      row.querySelector('.hidden-title').value       = title;
       row.querySelector('.hidden-category').value    = category;
       row.querySelector('.hidden-description').value = description;
       row.querySelector('.hidden-price').value       = price;
       row.querySelector('.hidden-duration').value    = duration;
       var titleEl = row.querySelector('.item-title');
-      titleEl.innerHTML = category + '<span class="item-badge">' + category + '</span>';
+      titleEl.innerHTML = title + '<span class="item-badge">' + category + '</span>';
       row.querySelector('.item-sub').textContent = 'R$ ' + parseFloat(price).toFixed(2) + ' · ' + duration + ' min' + (description ? ' · ' + description.substring(0, 40) : '');
       panel.classList.remove('open');
       showFlash('success', 'Serviço atualizado. Clique em Salvar para confirmar.');
@@ -713,10 +723,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
   document.getElementById('confirm-add-service').onclick = function() {
     var category    = document.getElementById('new-service-category').value;
+    var title       = document.getElementById('new-service-title').value.trim();
     var description = document.getElementById('new-service-description').value;
     var price       = document.getElementById('new-service-price').value;
     var duration    = document.getElementById('new-service-duration').value;
     if (!category) { showFieldError('new-service-category', 'Selecione uma categoria.'); return; }
+    if (!title) { showFieldError('new-service-title', 'Informe o nome do serviço.'); return; }
     if (!price || parseFloat(price) < 0) { showFieldError('new-service-price', 'Preço inválido.'); return; }
     if (!duration || parseInt(duration) < 1) { showFieldError('new-service-duration', 'Duração inválida.'); return; }
 
@@ -724,10 +736,10 @@ document.addEventListener('DOMContentLoaded', function() {
     var container = document.getElementById('services');
     var row       = document.createElement('div');
     row.className = 'item-row';
-    row.innerHTML = '<div class="item-info"><div class="item-title">' + category + '<span class="item-badge">' + category + '</span></div>' +
+    row.innerHTML = '<div class="item-info"><div class="item-title">' + title + '<span class="item-badge">' + category + '</span></div>' +
       '<div class="item-sub">R$ ' + parseFloat(price).toFixed(2) + ' · ' + duration + ' min' + (description ? ' · ' + description.substring(0,40) : '') + '</div></div>' +
       '<div class="item-actions-wrap">' +
-        '<input type="hidden" name="car_wash[services_attributes][' + idx + '][title]" class="hidden-title" value="' + category + '">' +
+        '<input type="hidden" name="car_wash[services_attributes][' + idx + '][title]" class="hidden-title" value="' + title + '">' +
         '<input type="hidden" name="car_wash[services_attributes][' + idx + '][category]" class="hidden-category" value="' + category + '">' +
         '<input type="hidden" name="car_wash[services_attributes][' + idx + '][description]" class="hidden-description" value="' + description + '">' +
         '<input type="hidden" name="car_wash[services_attributes][' + idx + '][price]" class="hidden-price" value="' + price + '">' +
@@ -738,13 +750,18 @@ document.addEventListener('DOMContentLoaded', function() {
       '</div>';
     var panel = document.createElement('div');
     panel.className = 'edit-panel';
-    panel.innerHTML = '<div class="form-field"><label class="form-label">Categoria</label>' +
-      '<select class="form-select edit-category">' +
-      ['Lavagem','Polimento','Higienização','Cristalização','Outros'].map(function(c) {
-        return '<option value="' + c + '"' + (c === category ? ' selected' : '') + '>' + c + '</option>';
-      }).join('') +
-      '</select></div>' +
-      '<div class="form-field"><label class="form-label">Descrição</label><input type="text" class="form-input edit-description" value="' + description + '" placeholder="Ex.: Lavagem com cera"></div>' +
+    panel.innerHTML =
+      '<div class="form-row" style="margin-bottom:0;">' +
+        '<div class="form-field"><label class="form-label">Categoria</label>' +
+        '<select class="form-select edit-category">' +
+        ['Lavagem','Polimento','Higienização','Cristalização','Outros'].map(function(c) {
+          return '<option value="' + c + '"' + (c === category ? ' selected' : '') + '>' + c + '</option>';
+        }).join('') +
+        '</select></div>' +
+        '<div class="form-field"><label class="form-label">Nome do Serviço</label>' +
+        '<input type="text" class="form-input edit-title" value="' + title + '" placeholder="Ex.: Lavagem Completa"></div>' +
+      '</div>' +
+      '<div class="form-field"><label class="form-label">Descrição (opcional)</label><input type="text" class="form-input edit-description" value="' + description + '" placeholder="Ex.: Inclui aspiração e perfume"></div>' +
       '<div class="form-row">' +
         '<div class="form-field"><label class="form-label">Preço (R$)</label><input type="number" step="0.01" min="0" class="form-input edit-price" value="' + price + '"></div>' +
         '<div class="form-field"><label class="form-label">Duração (min)</label><input type="number" min="1" class="form-input edit-duration" value="' + duration + '"></div>' +
@@ -764,6 +781,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   function resetAddService() {
     document.getElementById('new-service-category').value  = '';
+    document.getElementById('new-service-title').value     = '';
     document.getElementById('new-service-description').value = '';
     document.getElementById('new-service-price').value     = '';
     document.getElementById('new-service-duration').value  = '';

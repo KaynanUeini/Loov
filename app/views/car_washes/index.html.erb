@@ -1,491 +1,46 @@
-<% if user_signed_in? && current_user.owner? %>
-
-<div id="matter-wrap-container" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;overflow:hidden;">
-  <canvas id="matter-wrap-canvas"></canvas>
-</div>
-
 <style>
-  body { background: #000; }
-
-  .checkin-overlay {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    z-index: 10;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 80px 24px 24px;
-    pointer-events: none;
-  }
-
-  .checkin-panel {
-    width: 100%;
-    max-width: 480px;
-    max-height: calc(100vh - 120px);
-    background: rgba(8,8,8,0.88);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid #1e1e1e;
-    border-radius: 20px;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    pointer-events: all;
-    box-shadow: 0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.03);
-  }
-
-  .checkin-header {
-    padding: 20px 20px 16px;
-    border-bottom: 1px solid #161616;
-    flex-shrink: 0;
-  }
-
-  .checkin-header-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 14px;
-  }
-
-  .checkin-title {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: #afff2d;
-  }
-
-  .checkin-date { font-size: 0.7rem; color: #444; }
-
-  .checkin-kpis {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 6px;
-  }
-
-  .kpi-box {
-    background: #0d0d0d;
-    border: 1px solid #181818;
-    border-radius: 10px;
-    padding: 10px 6px;
-    text-align: center;
-  }
-
-  .kpi-value {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: #fff;
-    line-height: 1;
-    margin-bottom: 4px;
-  }
-
-  .kpi-value.green  { color: #afff2d; }
-  .kpi-value.yellow { color: #fbbf24; }
-  .kpi-value.red    { color: #f87171; }
-
-  .kpi-label {
-    font-size: 0.58rem;
-    color: #444;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
-
-  .checkin-list {
-    overflow-y: auto;
-    flex: 1;
-    padding: 6px 10px;
-  }
-
-  .checkin-list::-webkit-scrollbar { width: 3px; }
-  .checkin-list::-webkit-scrollbar-track { background: transparent; }
-  .checkin-list::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 99px; }
-
-  .checkin-empty {
-    padding: 36px 16px;
-    text-align: center;
-    color: #333;
-    font-size: 0.8rem;
-  }
-
-  .checkin-empty i { font-size: 1.4rem; margin-bottom: 8px; display: block; }
-
-  .appt-card {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    padding: 9px 8px;
-    border-radius: 10px;
-    margin-bottom: 3px;
-    transition: background 0.15s;
-    border: 1px solid transparent;
-  }
-
-  .appt-card:hover { background: #0e0e0e; border-color: #1a1a1a; }
-  .appt-card.is-attended { opacity: 0.55; }
-  .appt-card.is-no_show  { opacity: 0.35; }
-
-  .appt-time {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 0.76rem;
-    font-weight: 700;
-    color: #fff;
-    min-width: 36px;
-    flex-shrink: 0;
-  }
-
-  .appt-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
-  .appt-dot.yellow { background: #fbbf24; }
-  .appt-dot.green  { background: #afff2d; }
-  .appt-dot.red    { background: #f87171; }
-  .appt-dot.gray   { background: #333; }
-
-  .appt-info { flex: 1; min-width: 0; }
-
-  .appt-client {
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: #e0e0e0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    line-height: 1.3;
-  }
-
-  .appt-service {
-    font-size: 0.7rem;
-    color: #444;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .appt-price {
-    font-size: 0.72rem;
-    font-weight: 600;
-    color: #555;
-    flex-shrink: 0;
-    min-width: 44px;
-    text-align: right;
-  }
-
-  .appt-actions { display: flex; gap: 4px; flex-shrink: 0; }
-
-  .appt-btn {
-    width: 26px; height: 26px;
-    border-radius: 7px;
-    border: 1px solid #1e1e1e;
-    background: #0a0a0a;
-    color: #444;
-    font-size: 0.65rem;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
-    transition: all 0.15s;
-    flex-shrink: 0;
-  }
-
-  .appt-btn:hover.attend-btn { background: rgba(175,255,45,0.12); border-color: #afff2d; color: #afff2d; }
-  .appt-btn:hover.noshow-btn { background: rgba(248,113,113,0.12); border-color: #f87171; color: #f87171; }
-  .appt-btn:hover.revert-btn { background: rgba(251,191,36,0.12); border-color: #fbbf24; color: #fbbf24; }
-  .appt-btn:hover.edit-btn   { background: rgba(255,255,255,0.06); border-color: #333; color: #aaa; }
-
-  .checkin-footer {
-    padding: 10px 20px 14px;
-    border-top: 1px solid #161616;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .upcoming-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 0.68rem; color: #444;
-  }
-  .upcoming-badge span { color: #afff2d; font-weight: 600; }
-  .car-wash-name { font-size: 0.68rem; color: #333; font-style: italic; }
-
-  .loading-state { padding: 24px; text-align: center; color: #333; font-size: 0.78rem; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .spin { animation: spin 1s linear infinite; display: inline-block; }
-
-  @media (max-width: 600px) {
-    .checkin-overlay { padding: 68px 12px 12px; align-items: flex-end; }
-    .checkin-panel { max-width: 100%; max-height: 60vh; border-radius: 16px; }
-  }
-</style>
-
-<div class="checkin-overlay">
-  <div class="checkin-panel">
-    <div class="checkin-header">
-      <div class="checkin-header-top">
-        <span class="checkin-title">Painel do Dia</span>
-        <span class="checkin-date" id="checkin-date"></span>
-      </div>
-      <div class="checkin-kpis">
-        <div class="kpi-box">
-          <div class="kpi-value" id="kpi-total"><%= @today_total || 0 %></div>
-          <div class="kpi-label">Total</div>
-        </div>
-        <div class="kpi-box">
-          <div class="kpi-value yellow" id="kpi-pending"><%= @today_pending || 0 %></div>
-          <div class="kpi-label">Aguard.</div>
-        </div>
-        <div class="kpi-box">
-          <div class="kpi-value green" id="kpi-attended"><%= @today_attended || 0 %></div>
-          <div class="kpi-label">Vieram</div>
-        </div>
-        <div class="kpi-box">
-          <div class="kpi-value green" id="kpi-revenue">R$&nbsp;<%= number_with_precision(@today_revenue || 0, precision: 0, delimiter: '.') %></div>
-          <div class="kpi-label">Caixa</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="checkin-list" id="checkin-list">
-      <div class="loading-state"><i class="fas fa-circle-notch spin"></i><br>Carregando agenda...</div>
-    </div>
-
-    <div class="checkin-footer">
-      <div class="upcoming-badge">
-        <i class="fas fa-calendar-days"></i>
-        Próx. 7 dias: <span><%= @upcoming_count || 0 %> agend.</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span class="car-wash-name"><%= @car_wash&.name %></span>
-        <button id="btn-walk-in" title="Registrar serviço avulso"
-          style="background:#afff2d;border:none;border-radius:7px;color:#000;width:26px;height:26px;font-size:0.7rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;pointer-events:all;">
-          <i class="fas fa-plus"></i>
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<script>
-(function() {
-  const CSRF       = document.querySelector('meta[name="csrf-token"]')?.content;
-  const list       = document.getElementById('checkin-list');
-  const kpiTotal   = document.getElementById('kpi-total');
-  const kpiPending = document.getElementById('kpi-pending');
-  const kpiAttend  = document.getElementById('kpi-attended');
-  const kpiRevenue = document.getElementById('kpi-revenue');
-  const dateEl     = document.getElementById('checkin-date');
-
-  const now = new Date();
-  dateEl.textContent = now.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
-
-  let allServices = [];
-
-  async function patch(url, body = {}) {
-    const res = await fetch(url, {
-      method: 'PATCH',
-      headers: { 'X-CSRF-Token': CSRF, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    return res.json();
-  }
-
-  async function post(url, body = {}) {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'X-CSRF-Token': CSRF, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    return res.json();
-  }
-
-  function showEditModal(a) {
-    document.getElementById('edit-modal')?.remove();
-    const modal = document.createElement('div');
-    modal.id = 'edit-modal';
-    modal.style.cssText = `position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);padding:24px;`;
-    const options = allServices.map(s =>
-      `<option value="${s.id}" data-price="${s.price}" ${s.id === a.service_id ? 'selected' : ''}>${s.title} — R$ ${s.price.toFixed(0)}</option>`
-    ).join('');
-    modal.innerHTML = `
-      <div style="background:#0f0f0f;border:1px solid #222;border-radius:16px;padding:24px;width:100%;max-width:360px;font-family:'Montserrat',sans-serif;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-          <span style="font-size:0.7rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:#afff2d;">Editar Serviço</span>
-          <button id="edit-close" style="background:none;border:none;color:#555;font-size:1rem;cursor:pointer;"><i class="fas fa-xmark"></i></button>
-        </div>
-        <div style="font-size:0.78rem;color:#888;margin-bottom:16px;">${a.client} · ${a.time}</div>
-        <label style="font-size:0.65rem;color:#555;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:6px;">Serviço</label>
-        <select id="edit-service" style="width:100%;background:#1a1a1a;border:1px solid #222;border-radius:8px;color:#fff;padding:10px 12px;font-size:0.82rem;margin-bottom:14px;outline:none;">${options}</select>
-        <label style="font-size:0.65rem;color:#555;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:6px;">Valor cobrado (deixe vazio para usar o padrão)</label>
-        <input id="edit-price" type="number" step="0.01" min="0"
-          placeholder="R$ ${a.price.toFixed(2)}"
-          value="${a.price_overridden ? a.price.toFixed(2) : ''}"
-          style="width:100%;background:#1a1a1a;border:1px solid #222;border-radius:8px;color:#fff;padding:10px 12px;font-size:0.82rem;margin-bottom:20px;outline:none;">
-        <div style="display:flex;gap:8px;">
-          <button id="edit-cancel" style="flex:1;background:transparent;border:1px solid #222;border-radius:8px;color:#666;padding:10px;font-size:0.8rem;cursor:pointer;">Cancelar</button>
-          <button id="edit-save" style="flex:2;background:#afff2d;border:none;border-radius:8px;color:#000;padding:10px;font-size:0.8rem;font-weight:700;cursor:pointer;">Salvar</button>
-        </div>
-      </div>`;
-    document.body.appendChild(modal);
-    const serviceSelect = modal.querySelector('#edit-service');
-    const priceInput    = modal.querySelector('#edit-price');
-    serviceSelect.addEventListener('change', () => {
-      const selected = allServices.find(s => s.id == serviceSelect.value);
-      if (selected) priceInput.placeholder = `R$ ${selected.price.toFixed(2)}`;
-    });
-    modal.querySelector('#edit-close').addEventListener('click',  () => modal.remove());
-    modal.querySelector('#edit-cancel').addEventListener('click', () => modal.remove());
-    modal.querySelector('#edit-save').addEventListener('click', async () => {
-      const serviceId     = serviceSelect.value;
-      const priceOverride = priceInput.value.trim();
-      const btn = modal.querySelector('#edit-save');
-      btn.textContent = '...'; btn.disabled = true;
-      const data = await patch(`/owner/checkins/${a.id}/update_service`, { service_id: serviceId, price_override: priceOverride || null });
-      modal.remove();
-      if (data.ok) loadToday();
-    });
-  }
-
-  function showWalkInModal() {
-    document.getElementById('walkin-modal')?.remove();
-    const modal = document.createElement('div');
-    modal.id = 'walkin-modal';
-    modal.style.cssText = `position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);padding:24px;`;
-    const options = allServices.map(s =>
-      `<option value="${s.id}" data-price="${s.price}">${s.title} — R$ ${s.price.toFixed(0)}</option>`
-    ).join('');
-    const nowTime = new Date().toTimeString().slice(0,5);
-    modal.innerHTML = `
-      <div style="background:#0f0f0f;border:1px solid #222;border-radius:16px;padding:24px;width:100%;max-width:360px;font-family:'Montserrat',sans-serif;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-          <span style="font-size:0.7rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:#afff2d;">+ Serviço Avulso</span>
-          <button id="wi-close" style="background:none;border:none;color:#555;font-size:1rem;cursor:pointer;"><i class="fas fa-xmark"></i></button>
-        </div>
-        <label style="font-size:0.65rem;color:#555;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:6px;">Nome do cliente</label>
-        <input id="wi-name" type="text" placeholder="Ex: João Silva" style="width:100%;background:#1a1a1a;border:1px solid #222;border-radius:8px;color:#fff;padding:10px 12px;font-size:0.82rem;margin-bottom:14px;outline:none;">
-        <label style="font-size:0.65rem;color:#555;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:6px;">Horário</label>
-        <input id="wi-time" type="time" value="${nowTime}" style="width:100%;background:#1a1a1a;border:1px solid #222;border-radius:8px;color:#fff;padding:10px 12px;font-size:0.82rem;margin-bottom:14px;outline:none;">
-        <label style="font-size:0.65rem;color:#555;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:6px;">Serviço</label>
-        <select id="wi-service" style="width:100%;background:#1a1a1a;border:1px solid #222;border-radius:8px;color:#fff;padding:10px 12px;font-size:0.82rem;margin-bottom:14px;outline:none;">${options}</select>
-        <label style="font-size:0.65rem;color:#555;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:6px;">Valor cobrado (opcional)</label>
-        <input id="wi-price" type="number" step="0.01" min="0" placeholder="Usa o preço do serviço" style="width:100%;background:#1a1a1a;border:1px solid #222;border-radius:8px;color:#fff;padding:10px 12px;font-size:0.82rem;margin-bottom:20px;outline:none;">
-        <div id="wi-error" style="color:#f87171;font-size:0.72rem;margin-bottom:10px;display:none;"></div>
-        <div style="display:flex;gap:8px;">
-          <button id="wi-cancel" style="flex:1;background:transparent;border:1px solid #222;border-radius:8px;color:#666;padding:10px;font-size:0.8rem;cursor:pointer;">Cancelar</button>
-          <button id="wi-save" style="flex:2;background:#afff2d;border:none;border-radius:8px;color:#000;padding:10px;font-size:0.8rem;font-weight:700;cursor:pointer;">Registrar</button>
-        </div>
-      </div>`;
-    document.body.appendChild(modal);
-    modal.querySelector('#wi-close').addEventListener('click',  () => modal.remove());
-    modal.querySelector('#wi-cancel').addEventListener('click', () => modal.remove());
-    modal.querySelector('#wi-save').addEventListener('click', async () => {
-      const name    = modal.querySelector('#wi-name').value.trim();
-      const time    = modal.querySelector('#wi-time').value;
-      const service = modal.querySelector('#wi-service').value;
-      const price   = modal.querySelector('#wi-price').value.trim();
-      const errEl   = modal.querySelector('#wi-error');
-      const btn     = modal.querySelector('#wi-save');
-      if (!name) { errEl.textContent = 'Informe o nome do cliente.'; errEl.style.display = 'block'; return; }
-      errEl.style.display = 'none';
-      btn.textContent = '...'; btn.disabled = true;
-      const data = await post('/owner/checkins/walk_in', { walk_in_name: name, scheduled_at: time, service_id: service, price_override: price || null });
-      if (data.ok) { modal.remove(); loadToday(); }
-      else { errEl.textContent = data.error || 'Erro ao registrar.'; errEl.style.display = 'block'; btn.textContent = 'Registrar'; btn.disabled = false; }
-    });
-  }
-
-  function renderCard(a) {
-    const settled = a.status === 'attended' || a.status === 'no_show';
-    const card    = document.createElement('div');
-    card.className = `appt-card${a.status === 'attended' ? ' is-attended' : a.status === 'no_show' ? ' is-no_show' : ''}`;
-    card.dataset.id = a.id;
-    const walkInTag = a.walk_in ? `<span style="font-size:0.58rem;color:#555;background:#111;border:1px solid #222;border-radius:4px;padding:1px 5px;margin-left:4px;">avulso</span>` : '';
-    const priceTag  = a.price_overridden ? `<span style="font-size:0.58rem;color:#fbbf24;margin-left:2px;">★</span>` : '';
-    card.innerHTML = `
-      <span class="appt-time">${a.time}</span>
-      <span class="appt-dot ${a.status_color}"></span>
-      <div class="appt-info">
-        <div class="appt-client">${a.client}${walkInTag}</div>
-        <div class="appt-service">${a.service}</div>
-      </div>
-      <span class="appt-price">R$ ${a.price.toFixed(0)}${priceTag}</span>
-      <div class="appt-actions">
-        <button class="appt-btn edit-btn" data-action="edit" title="Editar serviço/valor"><i class="fas fa-pen"></i></button>
-        ${settled
-          ? `<button class="appt-btn revert-btn" data-action="revert" title="Desfazer"><i class="fas fa-rotate-left"></i></button>`
-          : `<button class="appt-btn attend-btn" data-action="attend" title="Compareceu"><i class="fas fa-check"></i></button>
-             <button class="appt-btn noshow-btn" data-action="noshow" title="Não veio"><i class="fas fa-xmark"></i></button>`}
-      </div>`;
-    card.querySelectorAll('.appt-btn').forEach(btn => {
-      btn.addEventListener('click', async e => {
-        e.stopPropagation();
-        if (btn.dataset.action === 'edit') { showEditModal(a); return; }
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-circle-notch spin"></i>';
-        const urls = { attend: `/owner/checkins/${a.id}/attend`, noshow: `/owner/checkins/${a.id}/no_show`, revert: `/owner/checkins/${a.id}/revert` };
-        const data = await patch(urls[btn.dataset.action]);
-        if (data.ok) loadToday();
-      });
-    });
-    return card;
-  }
-
-  async function loadToday() {
-    const res  = await fetch('/owner/checkins/today', { headers: { Accept: 'application/json' } });
-    const data = await res.json();
-    const appts   = data.appointments || [];
-    const summary = data.summary      || {};
-    allServices   = data.services     || [];
-    kpiTotal.textContent   = summary.total    || 0;
-    kpiPending.textContent = summary.pending  || 0;
-    kpiAttend.textContent  = summary.attended || 0;
-    kpiRevenue.textContent = `R$ ${(summary.revenue_today || 0).toFixed(0)}`;
-    list.innerHTML = '';
-    if (!appts.length) {
-      list.innerHTML = '<div class="checkin-empty"><i class="fas fa-calendar-xmark"></i>Nenhum agendamento hoje</div>';
-    } else {
-      appts.forEach(a => list.appendChild(renderCard(a)));
-    }
-  }
-
-  document.addEventListener('DOMContentLoaded', () => {
-    loadToday();
-    document.getElementById('btn-walk-in')?.addEventListener('click', showWalkInModal);
-  });
-})();
-</script>
-
-<% else %>
-
-<%# ── VIEW CLIENTE / VISITANTE ─────────────────────────────────────────────── %>
-<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
   :root { --lime:#afff2d;--lime-dim:#8fcc24;--black:#000;--surface:#0a0a0a;--surface-2:#111;--surface-3:#1a1a1a;--border:#222;--text-muted:#666;--text-secondary:#999;--white:#fff; }
-  .home-wrap*{box-sizing:border-box}
-  .home-wrap{min-height:100vh;background:var(--black);font-family:'DM Sans',sans-serif;padding-top:64px}
-  .hero-section{padding:4rem 1.5rem 3rem;max-width:1200px;margin:0 auto}
-  .hero-eyebrow{display:inline-flex;align-items:center;gap:.5rem;font-size:.7rem;font-weight:500;letter-spacing:.2em;text-transform:uppercase;color:var(--lime);margin-bottom:1.5rem;opacity:0;animation:fadeUp .6s ease forwards .1s}
-  .hero-eyebrow::before{content:'';display:block;width:24px;height:1px;background:var(--lime)}
-  .hero-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(3.5rem,12vw,8rem);line-height:1;color:var(--white);margin:0 0 2rem;opacity:0;animation:fadeUp .7s ease forwards .2s}
-  .hero-title div{font-family:'Bebas Neue',sans-serif;font-size:clamp(3.5rem,12vw,8rem);line-height:1;display:block;color:var(--white)}
-  .hero-title div:last-child{color:var(--lime)}
-  .hero-subtitle{font-size:1rem;color:var(--text-secondary);font-weight:300;max-width:400px;line-height:1.6;margin:0 0 2.5rem;opacity:0;animation:fadeUp .7s ease forwards .3s;display:block}
-  .hero-actions{display:flex;gap:.75rem;flex-wrap:wrap;opacity:0;animation:fadeUp .7s ease forwards .4s}
-  .btn-hero{display:inline-flex;align-items:center;gap:.5rem;padding:.875rem 1.75rem;border-radius:100px;font-family:'DM Sans',sans-serif;font-size:.875rem;font-weight:500;text-decoration:none;transition:all .2s ease;cursor:pointer;border:none}
-  .btn-hero-primary{background:var(--lime);color:var(--black)}
-  .btn-hero-primary:hover{background:var(--lime-dim);transform:translateY(-2px)}
-  .btn-hero-secondary{background:transparent;color:var(--white);border:1px solid var(--border)}
-  .btn-hero-secondary:hover{border-color:var(--lime);color:var(--lime);transform:translateY(-2px)}
-  .search-wrap{max-width:1200px;margin:0 auto;padding:0 1.5rem 3rem;opacity:0;animation:fadeUp .7s ease forwards .5s}
+  *{box-sizing:border-box}
+  .list-wrap{min-height:100vh;background:var(--black);font-family:'DM Sans',sans-serif;padding-top:64px;padding-bottom:4rem;}
+  .list-inner{max-width:1200px;margin:0 auto;padding:3rem 1.5rem 0;}
+
+  .list-eyebrow{display:inline-flex;align-items:center;gap:.5rem;font-size:.7rem;font-weight:500;letter-spacing:.2em;text-transform:uppercase;color:var(--lime);margin-bottom:1rem;opacity:0;animation:fadeUp .6s ease forwards .1s}
+  .list-eyebrow::before{content:'';display:block;width:24px;height:1px;background:var(--lime)}
+  .list-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.5rem,8vw,5rem);line-height:1;color:var(--white);margin:0 0 2rem;opacity:0;animation:fadeUp .6s ease forwards .2s}
+  .list-title span{color:var(--lime)}
+
+  .search-wrap{margin-bottom:1.5rem;opacity:0;animation:fadeUp .6s ease forwards .3s}
   .search-inner{position:relative;display:flex;align-items:center}
   .search-icon{position:absolute;left:1.25rem;color:var(--text-muted);font-size:.9rem;pointer-events:none}
-  .search-input{width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:100px;padding:1rem 1rem 1rem 3rem;font-family:'DM Sans',sans-serif;font-size:.9375rem;color:var(--white);transition:all .2s ease;outline:none}
+  .search-input{width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:100px;padding:1rem 1rem 1rem 3rem;font-family:'DM Sans',sans-serif;font-size:.9375rem;color:var(--white);outline:none;transition:all .2s ease}
   .search-input::placeholder{color:var(--text-muted)}
   .search-input:focus{border-color:var(--lime);box-shadow:0 0 0 3px rgba(175,255,45,.08)}
-  .search-submit{position:absolute;right:.375rem;background:var(--lime);color:var(--black);border:none;border-radius:100px;width:42px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.8rem;transition:all .2s ease;flex-shrink:0}
+  .search-submit{position:absolute;right:.375rem;background:var(--lime);color:var(--black);border:none;border-radius:100px;width:42px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.8rem;transition:all .2s ease}
   .search-submit:hover{background:var(--lime-dim)}
-  .section-header{max-width:1200px;margin:0 auto;padding:0 1.5rem 1.5rem;display:flex;align-items:flex-end;justify-content:space-between;gap:1rem}
-  .section-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(1.75rem,5vw,2.5rem);letter-spacing:.02em;color:var(--white);line-height:1;margin:0;font-weight:400}
-  .section-count{font-size:.8rem;color:var(--text-muted);white-space:nowrap;padding-bottom:.25rem}
-  .divider{max-width:1200px;margin:0 auto 2rem;padding:0 1.5rem}
-  .divider-line{height:1px;background:var(--border)}
-  .cards-grid{max-width:1200px;margin:0 auto;padding:0 1.5rem 4rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);border-radius:16px;overflow:hidden}
+
+  .groups-wrap{margin-bottom:1rem;opacity:0;animation:fadeUp .6s ease forwards .4s}
+  .groups-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);margin-bottom:.75rem;}
+  .groups-row{display:flex;gap:.5rem;flex-wrap:wrap;}
+  .group-btn{display:inline-flex;align-items:center;gap:.5rem;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:.6rem 1.1rem;font-family:'DM Sans',sans-serif;font-size:.875rem;font-weight:500;color:var(--text-muted);cursor:pointer;text-decoration:none;transition:all .2s ease;}
+  .group-btn:hover{border-color:rgba(175,255,45,.3);color:var(--white)}
+  .group-btn.active{background:rgba(175,255,45,.1);border-color:var(--lime);color:var(--lime)}
+  .group-btn i{font-size:.8rem;}
+
+  .subcats-wrap{display:none;margin-bottom:1.5rem;padding:1rem 1.25rem;background:var(--surface-2);border:1px solid var(--border);border-radius:14px;animation:fadeUp .3s ease forwards;}
+  .subcats-wrap.visible{display:block;}
+  .subcats-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);margin-bottom:.75rem;}
+  .subcats-row{display:flex;gap:.4rem;flex-wrap:wrap;}
+  .subcat-btn{display:inline-flex;align-items:center;background:var(--surface-3);border:1px solid var(--border);border-radius:100px;padding:.4rem .9rem;font-family:'DM Sans',sans-serif;font-size:.8rem;font-weight:500;color:var(--text-muted);cursor:pointer;text-decoration:none;transition:all .2s ease;}
+  .subcat-btn:hover{border-color:rgba(175,255,45,.3);color:var(--white)}
+  .subcat-btn.active{background:rgba(175,255,45,.08);border-color:var(--lime);color:var(--lime)}
+
+  .section-header{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;margin-bottom:1rem;}
+  .section-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(1.5rem,4vw,2rem);color:var(--white);margin:0;font-weight:400}
+  .section-count{font-size:.8rem;color:var(--text-muted);white-space:nowrap;padding-bottom:.2rem}
+  .divider-line{height:1px;background:var(--border);margin-bottom:2rem}
+
+  .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);border-radius:16px;overflow:hidden}
   .car-wash-card{background:var(--surface);padding:1.75rem;display:flex;flex-direction:column;gap:1rem;text-decoration:none;transition:background .2s ease;opacity:0;transform:translateY(12px);animation:fadeUp .5s ease forwards}
   .car-wash-card:hover{background:var(--surface-2)}
   .car-wash-card:hover .card-arrow{transform:translate(3px,-3px);color:var(--lime)}
@@ -496,103 +51,177 @@
   .card-meta{display:flex;flex-direction:column;gap:.4rem}
   .card-meta-item{display:flex;align-items:center;gap:.5rem;font-size:.8125rem;color:var(--text-muted);margin:0}
   .card-meta-item i{color:var(--lime);font-size:.7rem;width:12px;flex-shrink:0}
+  .card-services{display:flex;gap:.35rem;flex-wrap:wrap;margin-top:.25rem}
+  .card-service-tag{font-size:.65rem;background:var(--surface-3);border:1px solid var(--border);color:var(--text-muted);padding:.2rem .5rem;border-radius:100px;}
   .card-badge{display:inline-flex;align-items:center;gap:.35rem;background:rgba(175,255,45,.08);color:var(--lime);font-size:.7rem;font-weight:500;letter-spacing:.05em;padding:.3rem .6rem;border-radius:100px;border:1px solid rgba(175,255,45,.15);width:fit-content;margin-top:auto}
-  .empty-state{max-width:1200px;margin:0 auto;padding:4rem 1.5rem;text-align:center}
+
+  .empty-state{padding:4rem 0;text-align:center}
   .empty-icon{font-size:2.5rem;color:var(--border);margin-bottom:1rem}
   .empty-title{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--white);margin-bottom:.5rem}
   .empty-text{font-size:.875rem;color:var(--text-muted);margin-bottom:1.5rem}
   .empty-actions{display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap}
-  .flash-wrap{max-width:1200px;margin:0 auto;padding:1.5rem 1.5rem 0}
-  .flash-msg{display:flex;align-items:center;gap:.75rem;padding:.875rem 1.25rem;border-radius:12px;font-size:.875rem;margin-bottom:.75rem}
-  .flash-msg.error{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#fca5a5}
-  .flash-msg.success{background:rgba(175,255,45,.08);border:1px solid rgba(175,255,45,.15);color:var(--lime)}
+  .btn-secondary{display:inline-flex;align-items:center;gap:.5rem;padding:.75rem 1.5rem;border-radius:100px;font-family:'DM Sans',sans-serif;font-size:.875rem;font-weight:500;text-decoration:none;background:transparent;color:var(--white);border:1px solid var(--border);transition:all .2s ease}
+  .btn-secondary:hover{border-color:var(--lime);color:var(--lime)}
+  .btn-primary{display:inline-flex;align-items:center;gap:.5rem;padding:.75rem 1.5rem;border-radius:100px;font-family:'DM Sans',sans-serif;font-size:.875rem;font-weight:500;text-decoration:none;background:var(--lime);color:var(--black);border:none;transition:all .2s ease}
+  .btn-primary:hover{background:var(--lime-dim)}
+  .back-link{display:inline-flex;align-items:center;gap:.4rem;font-size:.8rem;color:var(--text-muted);text-decoration:none;margin-bottom:2rem;transition:color .2s ease}
+  .back-link:hover{color:var(--lime)}
+
   @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-  @media(max-width:640px){.hero-section{padding:3rem 1.25rem 2rem}.search-wrap{padding:0 1.25rem 2.5rem}.section-header{padding:0 1.25rem 1.25rem}.divider{padding:0 1.25rem}.cards-grid{padding:0;margin:0 1.25rem 3rem;grid-template-columns:1fr}}
+  @media(max-width:640px){.list-inner{padding:2rem 1.25rem 0}.groups-row{gap:.35rem}.cards-grid{grid-template-columns:1fr}}
   @media(min-width:768px){.cards-grid{grid-template-columns:repeat(2,1fr)}}
   @media(min-width:1024px){.cards-grid{grid-template-columns:repeat(3,1fr)}}
 </style>
 
-<div class="home-wrap">
-  <% if flash[:alert] || flash[:notice] %>
-  <div class="flash-wrap">
-    <% if flash[:alert] %><div class="flash-msg error"><i class="fas fa-circle-exclamation"></i><span><%= flash[:alert] %></span></div><% end %>
-    <% if flash[:notice] %><div class="flash-msg success"><i class="fas fa-circle-check"></i><span><%= flash[:notice] %></span></div><% flash.discard(:notice) %><% end %>
-  </div>
-  <% end %>
+<div class="list-wrap">
+  <div class="list-inner">
 
-  <section class="hero-section">
-    <div class="hero-eyebrow"><span>Lava-rápidos perto de você</span></div>
-    <div class="hero-title">
-      <% if user_signed_in? %><div>Olá,</div><div><%= current_user.display_name %>.</div>
-      <% else %><div>Seu carro</div><div>merece mais.</div><% end %>
-    </div>
-    <p class="hero-subtitle">Encontre o lava-rápido perfeito e agende em segundos.</p>
-    <div class="hero-actions">
-      <%= link_to car_washes_path, class: "btn-hero btn-hero-primary" do %><i class="fas fa-car"></i> Ver Lava-Rápidos<% end %>
-      <% unless user_signed_in? %><%= link_to new_user_session_path, class: "btn-hero btn-hero-secondary" do %>Entrar<% end %><% end %>
-    </div>
-  </section>
-
-  <div class="search-wrap">
-    <%= form_with url: root_path, method: :get, local: true do %>
-    <div class="search-inner">
-      <i class="fas fa-magnifying-glass search-icon"></i>
-      <%= text_field_tag :search, params[:search], placeholder: "Buscar lava-rápido ou endereço...", class: "search-input", id: "search-input", autocomplete: "off" %>
-      <button type="submit" class="search-submit"><i class="fas fa-arrow-right"></i></button>
-    </div>
+    <%= link_to root_path, class: "back-link" do %>
+      <i class="fas fa-arrow-left"></i> Voltar
     <% end %>
-  </div>
 
-  <div class="section-header">
-    <h2 class="section-title"><% if params[:latitude].present? %>Próximos a você<% elsif params[:search].present? %>Resultados<% else %>Lava-rápidos<% end %></h2>
-    <span class="section-count"><%= @car_washes.count %> encontrado<%= @car_washes.count == 1 ? '' : 's' %></span>
-  </div>
-  <div class="divider"><div class="divider-line"></div></div>
+    <div class="list-eyebrow">Lava-rápidos</div>
+    <h1 class="list-title">Encontre o <span>seu.</span></h1>
 
-  <% if @car_washes.empty? %>
-  <div class="empty-state">
-    <div class="empty-icon"><i class="fas fa-car-wash"></i></div>
-    <h3 class="empty-title">Nenhum resultado</h3>
-    <p class="empty-text">Tente buscar por outro nome ou endereço.</p>
-    <div class="empty-actions">
-      <% if params[:search].present? || params[:latitude].present? %><%= link_to "Limpar Filtros", root_path, class: "btn-hero btn-hero-secondary" %><% end %>
-      <%= link_to "Ver Todos", root_path, class: "btn-hero btn-hero-primary" %>
-    </div>
-  </div>
-  <% else %>
-  <div class="cards-grid">
-    <% @car_washes.each_with_index do |cw, i| %>
-    <%= link_to car_wash_path(cw), class: "car-wash-card", style: "animation-delay:#{0.05*i}s" do %>
-    <div class="card-top">
-      <div class="card-avatar"><%= cw.name.first(2).upcase %></div>
-      <i class="fas fa-arrow-up-right card-arrow"></i>
-    </div>
-    <div class="card-name"><%= cw.name %></div>
-    <div class="card-meta">
-      <div class="card-meta-item"><i class="fas fa-location-dot"></i><span><%= cw.address || "Endereço não informado" %></span></div>
-      <% if params[:latitude].present? && params[:longitude].present? && cw.latitude && cw.longitude %>
-      <% dist = cw.distance_to([params[:latitude].to_f, params[:longitude].to_f], :km) %>
-      <div class="card-meta-item"><i class="fas fa-route"></i><span><%= number_with_precision(dist, precision: 2) %> km</span></div>
-      <% end %>
-      <% reviews = cw.reviews %>
-      <% if reviews.any? %>
-        <div class="card-meta-item">
-          <i class="fas fa-star" style="color:#facc15;font-size:.7rem;width:12px;flex-shrink:0;"></i>
-          <span style="color:#fff;font-weight:500;"><%= sprintf('%.1f', reviews.average(:rating).to_f) %></span>
-          <span>(<%= reviews.count %>)</span>
-        </div>
-      <% else %>
-        <div class="card-meta-item">
-          <i class="fas fa-star"></i>
-          <span>Sem avaliações</span>
+    <div class="search-wrap">
+      <%= form_with url: car_washes_path, method: :get, local: true do %>
+        <%= hidden_field_tag :latitude, params[:latitude] if params[:latitude].present? %>
+        <%= hidden_field_tag :longitude, params[:longitude] if params[:longitude].present? %>
+        <div class="search-inner">
+          <i class="fas fa-magnifying-glass search-icon"></i>
+          <%= text_field_tag :search, params[:search], placeholder: "Buscar por nome ou endereço...", class: "search-input", autocomplete: "off" %>
+          <button type="submit" class="search-submit"><i class="fas fa-arrow-right"></i></button>
         </div>
       <% end %>
     </div>
-    <div class="card-badge"><i class="fas fa-circle" style="font-size:.4rem"></i> Disponível</div>
+
+    <!-- Grupos principais -->
+    <div class="groups-wrap">
+      <div class="groups-label">O que você precisa?</div>
+      <div class="groups-row">
+        <%= link_to car_washes_path(search: params[:search], latitude: params[:latitude], longitude: params[:longitude]),
+            class: "group-btn #{@selected_group.blank? ? 'active' : ''}" do %>
+          <i class="fas fa-border-all"></i> Todos
+        <% end %>
+        <% icons = { "Lavagem" => "fa-droplet", "Estética" => "fa-spray-can-sparkles", "Higiene" => "fa-pump-soap", "Especiais" => "fa-wrench", "Outros" => "fa-ellipsis" } %>
+        <% @groups.each do |group, _cats| %>
+          <%= link_to car_washes_path(group: group, search: params[:search], latitude: params[:latitude], longitude: params[:longitude]),
+              class: "group-btn #{@selected_group == group ? 'active' : ''}" do %>
+            <i class="fas <%= icons[group] %>"></i> <%= group %>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Subcategorias -->
+    <% if @selected_group.present? && @subcategories.any? %>
+    <div class="subcats-wrap visible">
+      <div class="subcats-label">
+        <% if @selected_group == "Lavagem" %>
+          Tipo de lavagem
+        <% else %>
+          Especialidade
+        <% end %>
+      </div>
+      <div class="subcats-row">
+        <!-- Botão "Todos" -->
+        <%= link_to car_washes_path(group: @selected_group, search: params[:search], latitude: params[:latitude], longitude: params[:longitude]),
+            class: "subcat-btn #{@selected_category.blank? && @selected_service_title.blank? ? 'active' : ''}" do %>
+          Todos em <%= @selected_group %>
+        <% end %>
+
+        <% if @selected_group == "Lavagem" %>
+          <% @subcategories.each do |title| %>
+            <%= link_to car_washes_path(group: @selected_group, service_title: title, search: params[:search], latitude: params[:latitude], longitude: params[:longitude]),
+                class: "subcat-btn #{@selected_service_title == title ? 'active' : ''}" do %>
+              <%= title %>
+            <% end %>
+          <% end %>
+        <% else %>
+          <% @subcategories.each do |cat| %>
+            <%= link_to car_washes_path(group: @selected_group, category: cat, search: params[:search], latitude: params[:latitude], longitude: params[:longitude]),
+                class: "subcat-btn #{@selected_category == cat ? 'active' : ''}" do %>
+              <%= cat %>
+            <% end %>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
     <% end %>
+
+    <!-- Header da listagem -->
+    <div class="section-header">
+      <h2 class="section-title">
+        <% if @selected_service_title.present? %>
+          <%= @selected_service_title %>
+        <% elsif @selected_category.present? %>
+          <%= @selected_category %>
+        <% elsif @selected_group.present? %>
+          <%= @selected_group %>
+        <% elsif params[:latitude].present? %>
+          Próximos a você
+        <% elsif params[:search].present? %>
+          Resultados
+        <% else %>
+          Todos
+        <% end %>
+      </h2>
+      <span class="section-count"><%= @car_washes.count %> encontrado<%= @car_washes.count == 1 ? '' : 's' %></span>
+    </div>
+    <div class="divider-line"></div>
+
+    <% if @car_washes.empty? %>
+      <div class="empty-state">
+        <div class="empty-icon"><i class="fas fa-car-wash"></i></div>
+        <h3 class="empty-title">Nenhum resultado</h3>
+        <p class="empty-text">Nenhum lava-rápido oferece esse serviço na sua região ainda.</p>
+        <div class="empty-actions">
+          <%= link_to car_washes_path, class: "btn-secondary" do %>Limpar filtros<% end %>
+          <%= link_to root_path, class: "btn-primary" do %>Voltar ao início<% end %>
+        </div>
+      </div>
+    <% else %>
+      <div class="cards-grid">
+        <% @car_washes.each_with_index do |cw, i| %>
+          <%= link_to car_wash_path(cw), class: "car-wash-card", style: "animation-delay:#{0.05*i}s" do %>
+            <div class="card-top">
+              <div class="card-avatar"><%= cw.name.first(2).upcase %></div>
+              <i class="fas fa-arrow-up-right card-arrow"></i>
+            </div>
+            <div class="card-name"><%= cw.name %></div>
+            <div class="card-meta">
+              <div class="card-meta-item">
+                <i class="fas fa-location-dot"></i>
+                <span><%= [cw.bairro, cw.cidade].select(&:present?).join(", ").presence || cw.address || "Endereço não informado" %></span>
+              </div>
+              <% if params[:latitude].present? && params[:longitude].present? && cw.latitude && cw.longitude %>
+                <% dist = cw.distance_to([params[:latitude].to_f, params[:longitude].to_f], :km) %>
+                <div class="card-meta-item"><i class="fas fa-route"></i><span><%= number_with_precision(dist, precision: 1) %> km</span></div>
+              <% end %>
+              <% reviews = cw.reviews %>
+              <% if reviews.any? %>
+                <div class="card-meta-item">
+                  <i class="fas fa-star" style="color:#facc15;"></i>
+                  <span style="color:#fff;font-weight:500;"><%= sprintf('%.1f', reviews.average(:rating).to_f) %></span>
+                  <span>(<%= reviews.count %>)</span>
+                </div>
+              <% else %>
+                <div class="card-meta-item"><i class="fas fa-star"></i><span>Sem avaliações</span></div>
+              <% end %>
+            </div>
+            <% service_titles = cw.services.limit(3).pluck(:title) %>
+            <% if service_titles.any? %>
+              <div class="card-services">
+                <% service_titles.each do |t| %>
+                  <span class="card-service-tag"><%= t %></span>
+                <% end %>
+              </div>
+            <% end %>
+            <div class="card-badge"><i class="fas fa-circle" style="font-size:.4rem"></i> Disponível</div>
+          <% end %>
+        <% end %>
+      </div>
     <% end %>
+
   </div>
-  <% end %>
 </div>
-
-<% end %>

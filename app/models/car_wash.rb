@@ -13,8 +13,17 @@ class CarWash < ApplicationRecord
   validates :address, presence: true
   validates :capacity_per_slot, presence: true, numericality: { greater_than: 0 }
 
-  geocoded_by :address
+  geocoded_by :geocoding_address
   after_validation :geocode, if: :address_changed?
+
+  def geocoding_address
+    parts = []
+    parts << logradouro if logradouro.present?
+    parts << cidade     if cidade.present?
+    parts << uf         if uf.present?
+    parts << "Brasil"
+    parts.join(", ")
+  end
 
   def has_valid_coordinates?
     latitude.present? && longitude.present? && latitude != 0.0 && longitude != 0.0

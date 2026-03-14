@@ -23,17 +23,24 @@ Rails.application.routes.draw do
   end
 
   namespace :owner do
+    get  'onboarding',          to: 'onboarding#show',         as: :onboarding
+    post 'onboarding/car_wash', to: 'onboarding#save_car_wash', as: :onboarding_car_wash
+    post 'onboarding/hours',    to: 'onboarding#save_hours',    as: :onboarding_hours
+    post 'onboarding/services', to: 'onboarding#save_services', as: :onboarding_services
+
     resources :car_wash_appointments, only: [:index, :show]
     get  'financial_tracking', to: 'financial_tracking#index'
     get  'ai_insights',        to: 'ai_insights#show'
     post 'ai_insights',        to: 'ai_insights#analyze'
     post 'ai_insights/input',  to: 'ai_insights#owner_input'
+
     resources :monthly_costs, only: [:index, :destroy] do
       collection do
         get  :edit
         post :upsert
       end
     end
+
     get   'checkins/today',              to: 'checkins#today',          as: :checkins_today
     post  'checkins/walk_in',            to: 'checkins#walk_in',        as: :checkin_walk_in
     patch 'checkins/:id/attend',         to: 'checkins#attend',         as: :checkin_attend
