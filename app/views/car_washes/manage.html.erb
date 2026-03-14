@@ -334,13 +334,13 @@
                   <div class="form-field">
                     <label class="form-label">Categoria</label>
                     <select class="form-select edit-category">
-                      <% %w[Lavagem Polimento Higienização Cristalização Outros].each do |cat| %>
+                      <% Service::CATEGORIES.each do |cat| %>
                       <option value="<%= cat %>" <%= 'selected' if service_form.object.category == cat %>><%= cat %></option>
                       <% end %>
                     </select>
                   </div>
                   <div class="form-field">
-                    <label class="form-label">Nome do Serviço</label>
+                    <label class="form-label">Serviço</label>
                     <input type="text" class="form-input edit-title" value="<%= service_form.object.title %>" placeholder="Ex.: Lavagem Completa">
                   </div>
                 </div>
@@ -376,14 +376,14 @@
                   <label class="form-label">Categoria</label>
                   <select class="form-select" id="new-service-category">
                     <option value="">Selecione uma categoria</option>
-                    <% %w[Lavagem Polimento Higienização Cristalização Outros].each do |cat| %>
+                    <% Service::CATEGORIES.each do |cat| %>
                     <option value="<%= cat %>"><%= cat %></option>
                     <% end %>
                   </select>
                   <span class="field-error" id="new-service-category-error"></span>
                 </div>
                 <div class="form-field">
-                  <label class="form-label">Nome do Serviço</label>
+                  <label class="form-label">Serviço</label>
                   <input type="text" class="form-input" id="new-service-title" placeholder="Ex.: Lavagem Completa">
                   <span class="field-error" id="new-service-title-error"></span>
                 </div>
@@ -429,6 +429,13 @@ var formChanged = false;
 var hourIndex   = Date.now();
 var serviceIndex = Date.now();
 var addDayTimes  = {};
+
+var ALL_CATEGORIES = [
+  'Lavagem', 'Polimento', 'Higienização', 'Cristalização', 'Vitrificação',
+  'Enceramento', 'Hidratação de Couro', 'Limpeza de Motor',
+  'Revitalização de Plásticos', 'Polimento de Faróis',
+  'Impermeabilização', 'Oxi-sanitização', 'Outros'
+];
 
 function toggleSection(header) {
   var body    = header.nextElementSibling;
@@ -754,11 +761,11 @@ document.addEventListener('DOMContentLoaded', function() {
       '<div class="form-row" style="margin-bottom:0;">' +
         '<div class="form-field"><label class="form-label">Categoria</label>' +
         '<select class="form-select edit-category">' +
-        ['Lavagem','Polimento','Higienização','Cristalização','Outros'].map(function(c) {
+        ALL_CATEGORIES.map(function(c) {
           return '<option value="' + c + '"' + (c === category ? ' selected' : '') + '>' + c + '</option>';
         }).join('') +
         '</select></div>' +
-        '<div class="form-field"><label class="form-label">Nome do Serviço</label>' +
+        '<div class="form-field"><label class="form-label">Serviço</label>' +
         '<input type="text" class="form-input edit-title" value="' + title + '" placeholder="Ex.: Lavagem Completa"></div>' +
       '</div>' +
       '<div class="form-field"><label class="form-label">Descrição (opcional)</label><input type="text" class="form-input edit-description" value="' + description + '" placeholder="Ex.: Inclui aspiração e perfume"></div>' +
