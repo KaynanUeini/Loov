@@ -1,0 +1,263 @@
+<div id="loov-cursor"></div>
+<div id="loov-cursor-trail"></div>
+<div id="page-transition"></div>
+
+<style>
+  :root {
+    --lime:#afff2d;--lime-dim:#8fcc24;--black:#000;--surface:#0a0a0a;
+    --surface-2:#0d0d0d;--surface-3:#141414;--border:#1a1a1a;--border-soft:#222;
+    --text-muted:#444;--text-secondary:#777;--white:#fff;
+  }
+  #loov-cursor{position:fixed;width:8px;height:8px;background:var(--lime);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .18s,height .18s;mix-blend-mode:difference;}
+  #loov-cursor-trail{position:fixed;width:38px;height:38px;border:1px solid rgba(175,255,45,0.25);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:width .25s,height .25s,border-color .25s;}
+  body.cursor-hover #loov-cursor{width:14px;height:14px;}
+  body.cursor-hover #loov-cursor-trail{width:58px;height:58px;border-color:rgba(175,255,45,0.45);}
+  @media(hover:none){#loov-cursor,#loov-cursor-trail{display:none;}}
+  #page-transition{position:fixed;inset:0;z-index:10000;background:#000;transform:translateY(100%);pointer-events:none;}
+  #page-transition.enter{animation:pgEnter .42s cubic-bezier(.76,0,.24,1) forwards;}
+  #page-transition.exit{animation:pgExit .42s cubic-bezier(.76,0,.24,1) forwards;}
+  @keyframes pgEnter{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  @keyframes pgExit{from{transform:translateY(0)}to{transform:translateY(-100%)}}
+  *{box-sizing:border-box;}body{cursor:none;}
+
+  .disp-wrap{min-height:100vh;background:var(--black);font-family:'DM Sans',sans-serif;padding-top:60px;}
+
+  /* ── HEADER ── */
+  .disp-header{max-width:900px;margin:0 auto;padding:3rem 1.5rem 1.5rem;opacity:0;animation:revealUp .8s cubic-bezier(.16,1,.3,1) forwards .1s;}
+  .disp-eyebrow{display:inline-flex;align-items:center;gap:.6rem;font-size:.68rem;font-weight:500;letter-spacing:.25em;text-transform:uppercase;color:var(--lime);margin-bottom:.875rem;}
+  .disp-eyebrow::before{content:'';display:block;width:28px;height:1px;background:var(--lime);}
+  .disp-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.5rem,8vw,5rem);line-height:.92;color:var(--white);margin:0;}
+  .disp-title span{color:var(--lime);}
+  .disp-sub{font-size:.9375rem;color:var(--text-secondary);font-weight:300;margin-top:.5rem;}
+
+  /* ── COMO FUNCIONA ── */
+  .how-row{max-width:900px;margin:1.5rem auto 0;padding:0 1.5rem;display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;opacity:0;animation:revealUp .8s cubic-bezier(.16,1,.3,1) forwards .2s;}
+  .how-card{background:var(--surface-2);border:1px solid var(--border);border-radius:14px;padding:1rem 1.125rem;position:relative;overflow:hidden;}
+  .how-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--lime);opacity:.4;}
+  .how-num{font-family:'Bebas Neue',sans-serif;font-size:2rem;color:rgba(175,255,45,0.2);line-height:1;margin-bottom:.25rem;}
+  .how-text{font-size:.78rem;color:var(--text-muted);line-height:1.5;}
+  .how-text strong{color:var(--white);}
+
+  /* ── DIVIDER ── */
+  .disp-divider{max-width:900px;margin:1.5rem auto 0;padding:0 1.5rem;}
+  .disp-divider-line{height:1px;background:var(--border);}
+
+  /* ── LISTAGEM ── */
+  .disp-body{max-width:900px;margin:0 auto;padding:1.5rem 1.5rem 5rem;}
+
+  /* ── CARD DE VAGA ── */
+  .slot-group{margin-bottom:1.5rem;opacity:0;animation:revealUp .7s cubic-bezier(.16,1,.3,1) forwards;}
+
+  .slot-carwash-header{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:.75rem;}
+  .slot-carwash-name{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--white);letter-spacing:.02em;line-height:1;}
+  .slot-carwash-meta{font-size:.78rem;color:var(--text-muted);margin-top:.2rem;}
+  .slot-price-from{font-size:.78rem;color:var(--lime);}
+
+  .slot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.625rem;}
+
+  .slot-card{
+    background:var(--surface-2);border:1px solid var(--border);border-radius:16px;
+    padding:1.125rem;cursor:none;transition:all .2s ease;
+    position:relative;overflow:hidden;text-decoration:none;display:block;
+  }
+  .slot-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--lime);transform:scaleY(0);transform-origin:bottom;transition:transform .3s cubic-bezier(.16,1,.3,1);}
+  .slot-card:hover{background:var(--surface-3);border-color:rgba(175,255,45,.15);}
+  .slot-card:hover::before{transform:scaleY(1);}
+
+  .slot-time{font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--lime);line-height:1;letter-spacing:.04em;}
+  .slot-today{font-size:.65rem;color:var(--text-muted);margin-top:.1rem;letter-spacing:.05em;}
+
+  .slot-services{margin-top:.75rem;display:flex;flex-direction:column;gap:.375rem;}
+  .slot-svc{display:flex;align-items:center;justify-content:space-between;gap:.5rem;}
+  .slot-svc-name{font-size:.82rem;color:var(--white);font-weight:500;}
+  .slot-svc-meta{display:flex;align-items:center;gap:.5rem;}
+  .slot-svc-dur{font-size:.7rem;color:var(--text-muted);}
+  .slot-svc-price{font-family:'Bebas Neue',sans-serif;font-size:.9rem;color:var(--text-secondary);letter-spacing:.02em;}
+
+  .slot-cta{margin-top:.875rem;display:flex;align-items:center;justify-content:space-between;}
+  .slot-prepay-tag{font-size:.68rem;color:rgba(175,255,45,.5);letter-spacing:.04em;}
+  .slot-cta-btn{display:inline-flex;align-items:center;gap:.3rem;background:var(--lime);color:var(--black);border:none;border-radius:100px;padding:.45rem 1rem;font-family:'DM Sans',sans-serif;font-size:.75rem;font-weight:700;cursor:none;transition:all .2s;}
+  .slot-cta-btn:hover{background:var(--lime-dim);transform:translateY(-1px);}
+
+  /* ── SELECIONAR SERVIÇO INLINE ── */
+  .svc-select-overlay{display:none;margin-top:.875rem;padding-top:.875rem;border-top:1px solid var(--border);}
+  .svc-select-overlay.open{display:block;}
+  .svc-select-label{font-size:.62rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:.5rem;}
+  .svc-btn{display:flex;align-items:center;justify-content:space-between;width:100%;padding:.625rem .875rem;background:var(--surface-3);border:1px solid var(--border);border-radius:10px;margin-bottom:.375rem;cursor:none;transition:all .15s;text-align:left;}
+  .svc-btn:hover{border-color:var(--lime);background:rgba(175,255,45,.04);}
+  .svc-btn-name{font-size:.82rem;color:var(--white);}
+  .svc-btn-right{display:flex;align-items:center;gap:.625rem;}
+  .svc-btn-dur{font-size:.7rem;color:var(--text-muted);}
+  .svc-btn-price{font-family:'Bebas Neue',sans-serif;font-size:.9rem;color:var(--lime);letter-spacing:.02em;}
+
+  /* ── EMPTY ── */
+  .empty-state{text-align:center;padding:5rem 1.5rem;opacity:0;animation:revealUp .8s cubic-bezier(.16,1,.3,1) forwards .3s;}
+  .empty-icon{font-size:2.5rem;color:#1a1a1a;margin-bottom:1rem;}
+  .empty-title{font-family:'Bebas Neue',sans-serif;font-size:1.875rem;color:var(--white);margin-bottom:.5rem;}
+  .empty-text{font-size:.875rem;color:var(--text-muted);max-width:360px;margin:0 auto 1.5rem;line-height:1.65;}
+
+  .btn-primary{display:inline-flex;align-items:center;gap:.4rem;background:var(--lime);color:var(--black);border:none;border-radius:100px;padding:.875rem 1.75rem;font-family:'DM Sans',sans-serif;font-size:.875rem;font-weight:600;cursor:none;transition:all .22s;text-decoration:none;}
+  .btn-primary:hover{background:var(--lime-dim);transform:translateY(-2px);}
+
+  /* ── GEOLOCATION PROMPT ── */
+  .geo-banner{max-width:900px;margin:1rem auto 0;padding:0 1.5rem;opacity:0;animation:revealUp .6s cubic-bezier(.16,1,.3,1) forwards .15s;}
+  .geo-inner{background:rgba(175,255,45,.04);border:1px solid rgba(175,255,45,.12);border-radius:12px;padding:.75rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;}
+  .geo-text{font-size:.8rem;color:var(--text-secondary);}
+  .geo-btn{background:rgba(175,255,45,.1);border:1px solid rgba(175,255,45,.25);border-radius:100px;padding:.375rem .875rem;font-size:.75rem;font-weight:600;color:var(--lime);cursor:none;transition:all .15s;}
+  .geo-btn:hover{background:rgba(175,255,45,.18);}
+
+  @keyframes revealUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+  @media(max-width:600px){
+    .how-row{grid-template-columns:1fr;}
+    .disp-header,.disp-divider,.disp-body,.geo-banner{padding-left:1.25rem;padding-right:1.25rem;}
+  }
+</style>
+
+<div class="disp-wrap">
+
+  <div class="disp-header">
+    <div class="disp-eyebrow">Vagas agora</div>
+    <h1 class="disp-title">Disponíveis<span>.</span></h1>
+    <p class="disp-sub">Lava-rápidos com vagas nos próximos 120 minutos. Reserve em segundos.</p>
+  </div>
+
+  <!-- Como funciona -->
+  <div class="how-row">
+    <div class="how-card">
+      <div class="how-num">01</div>
+      <div class="how-text"><strong>Escolha o slot</strong><br>Veja vagas abertas perto de você agora.</div>
+    </div>
+    <div class="how-card">
+      <div class="how-num">02</div>
+      <div class="how-text"><strong>Pague 35% agora</strong><br>Garante sua vaga. O dono tem 3 min para confirmar.</div>
+    </div>
+    <div class="how-card">
+      <div class="how-num">03</div>
+      <div class="how-text"><strong>Vá ao lava-rápido</strong><br>Pague o restante (65%) no local.</div>
+    </div>
+  </div>
+
+  <% unless @lat %>
+  <div class="geo-banner">
+    <div class="geo-inner">
+      <span class="geo-text"><i class="fas fa-location-dot" style="color:var(--lime);margin-right:.4rem;"></i>Permita sua localização para ver vagas mais próximas.</span>
+      <button class="geo-btn" onclick="requestGeo()">Usar minha localização</button>
+    </div>
+  </div>
+  <% end %>
+
+  <div class="disp-divider"><div class="disp-divider-line"></div></div>
+
+  <div class="disp-body">
+
+    <% if @available_slots.empty? %>
+    <div class="empty-state">
+      <div class="empty-icon"><i class="fas fa-car-wash"></i></div>
+      <h3 class="empty-title">Nenhuma vaga agora</h3>
+      <p class="empty-text">Não encontramos lava-rápidos com vagas disponíveis nos próximos 120 minutos. Tente o agendamento normal ou volte em alguns minutos.</p>
+      <%= link_to car_washes_path, class: "btn-primary" do %>
+        <i class="fas fa-calendar"></i> Ver agendamentos
+      <% end %>
+    </div>
+
+    <% else %>
+
+    <% @available_slots.each_with_index do |slot_data, idx| %>
+    <div class="slot-group" style="animation-delay:<%= 0.3 + idx * 0.08 %>s">
+
+      <div class="slot-carwash-header">
+        <div>
+          <div class="slot-carwash-name"><%= slot_data[:car_wash].name %></div>
+          <div class="slot-carwash-meta">
+            <i class="fas fa-location-dot" style="color:var(--lime);font-size:.62rem;"></i>
+            <%= slot_data[:car_wash].address %>
+            <% if @lat && @lon && slot_data[:car_wash].latitude %>
+              <% dist = slot_data[:car_wash].distance_to([@lat, @lon], :km) %>
+              · <%= number_with_precision(dist, precision: 1) %> km
+            <% end %>
+          </div>
+        </div>
+        <span class="slot-price-from">A partir de R$ <%= number_with_precision(slot_data[:min_price], precision: 0) %></span>
+      </div>
+
+      <div class="slot-grid">
+        <% slot_data[:slots].first(4).each do |slot_time| %>
+        <div class="slot-card" data-cw="<%= slot_data[:car_wash].id %>" data-slot="<%= slot_time.iso8601 %>">
+          <div class="slot-time"><%= slot_time.strftime("%H:%M") %></div>
+          <div class="slot-today">Hoje · <%= slot_time.strftime("%d/%m") %></div>
+
+          <!-- Serviços disponíveis neste slot -->
+          <div class="slot-services">
+            <% slot_data[:services].first(3).each do |svc| %>
+            <div class="slot-svc">
+              <span class="slot-svc-name"><%= svc.title %></span>
+              <div class="slot-svc-meta">
+                <span class="slot-svc-dur"><%= svc.duration %>min</span>
+                <span class="slot-svc-price">R$<%= number_with_precision(svc.price, precision: 0) %></span>
+              </div>
+            </div>
+            <% end %>
+          </div>
+
+          <div class="slot-cta">
+            <span class="slot-prepay-tag">35% agora · resto no local</span>
+            <button class="slot-cta-btn" onclick="openServiceSelect(this)" data-cw="<%= slot_data[:car_wash].id %>" data-slot="<%= slot_time.iso8601 %>">
+              Reservar <i class="fas fa-arrow-right"></i>
+            </button>
+          </div>
+
+          <!-- Seleção de serviço inline -->
+          <div class="svc-select-overlay">
+            <div class="svc-select-label">Escolha o serviço</div>
+            <% slot_data[:services].each do |svc| %>
+            <%= link_to disponivel_checkout_path(car_wash_id: slot_data[:car_wash].id, service_id: svc.id, slot: slot_time.iso8601), class: "svc-btn" do %>
+              <span class="svc-btn-name"><%= svc.title %></span>
+              <div class="svc-btn-right">
+                <span class="svc-btn-dur"><%= svc.duration %>min</span>
+                <span class="svc-btn-price">R$<%= number_with_precision(svc.price, precision: 0) %></span>
+              </div>
+            <% end %>
+            <% end %>
+          </div>
+
+        </div>
+        <% end %>
+      </div>
+
+    </div>
+    <% end %>
+
+    <% end %>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  const cursor=document.getElementById('loov-cursor'),trail=document.getElementById('loov-cursor-trail');
+  if(cursor&&trail){let mx=-100,my=-100,tx=-100,ty=-100;document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cursor.style.left=mx+'px';cursor.style.top=my+'px';});(function anim(){tx+=(mx-tx)*0.12;ty+=(my-ty)*0.12;trail.style.left=tx+'px';trail.style.top=ty+'px';requestAnimationFrame(anim);})();document.addEventListener('mouseover',e=>{if(e.target.closest('a,button,input,select,textarea'))document.body.classList.add('cursor-hover');});document.addEventListener('mouseout',e=>{if(e.target.closest('a,button,input,select,textarea'))document.body.classList.remove('cursor-hover');});document.addEventListener('mouseleave',()=>{cursor.style.opacity='0';trail.style.opacity='0';});document.addEventListener('mouseenter',()=>{cursor.style.opacity='1';trail.style.opacity='1';});}
+  const pt=document.getElementById('page-transition');
+  if(pt){document.addEventListener('click',e=>{const link=e.target.closest('a[href]');if(!link)return;const href=link.getAttribute('href');if(!href||href.startsWith('#')||href.startsWith('mailto')||link.target==='_blank')return;if(href.startsWith('http')&&!href.includes(window.location.hostname))return;e.preventDefault();pt.classList.add('enter');setTimeout(()=>window.location.href=href,400);});window.addEventListener('pageshow',()=>{pt.classList.remove('enter');pt.classList.add('exit');setTimeout(()=>pt.classList.remove('exit'),440);});}
+})();
+
+function openServiceSelect(btn) {
+  const card    = btn.closest('.slot-card');
+  const overlay = card.querySelector('.svc-select-overlay');
+  const isOpen  = overlay.classList.contains('open');
+  // Fecha todos os outros
+  document.querySelectorAll('.svc-select-overlay.open').forEach(o => o.classList.remove('open'));
+  if (!isOpen) overlay.classList.add('open');
+}
+
+function requestGeo() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(pos => {
+    const url = new URL(window.location);
+    url.searchParams.set('latitude',  pos.coords.latitude);
+    url.searchParams.set('longitude', pos.coords.longitude);
+    window.location.href = url.toString();
+  }, () => {
+    alert('Não foi possível obter sua localização.');
+  });
+}
+</script>

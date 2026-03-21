@@ -1,7 +1,8 @@
 class CarWashesController < ApplicationController
   before_action :authenticate_user!, except: [:index, :show]
   before_action :set_car_wash, only: %i[show manage update available_times]
-  before_action :ensure_owner, only: %i[manage update]
+  before_action :ensure_owner_or_attendant, only: [:manage]
+  before_action :ensure_owner, only: [:update]
 
   def index
     @car_washes = CarWash.all
@@ -14,7 +15,6 @@ class CarWashesController < ApplicationController
       group_categories = Service::GROUPS[params[:group]]
 
       if params[:service_title].present?
-        # Filtro por título específico de serviço (apenas para grupo Lavagem)
         @car_washes = @car_washes.joins(:services).where(services: { title: params[:service_title] }).distinct
       elsif params[:category].present? && group_categories.include?(params[:category])
         @car_washes = @car_washes.joins(:services).where(services: { category: params[:category] }).distinct
@@ -36,11 +36,10 @@ class CarWashesController < ApplicationController
     end
 
     @groups = Service::GROUPS
-    @selected_group    = params[:group]
-    @selected_category = params[:category]
+    @selected_group         = params[:group]
+    @selected_category      = params[:category]
     @selected_service_title = params[:service_title]
 
-    # Para o grupo Lavagem, subcategorias são os títulos dos serviços disponíveis
     if @selected_group == "Lavagem"
       @subcategories = Service.where(category: "Lavagem").distinct.pluck(:title).compact.sort
     elsif @selected_group.present? && Service::GROUPS[@selected_group]
@@ -51,7 +50,7 @@ class CarWashesController < ApplicationController
   end
 
   def show
-    @services = @car_wash.services
+    @services    = @car_wash.services
     @appointment = Appointment.new(car_wash_id: @car_wash.id)
   end
 
@@ -63,7 +62,7 @@ class CarWashesController < ApplicationController
   end
 
   def create
-    @car_wash = CarWash.new(car_wash_params)
+    @car_wash      = CarWash.new(car_wash_params)
     @car_wash.user = current_user
     if @car_wash.save
       redirect_to @car_wash, notice: "Lava-rápido criado com sucesso!"
@@ -73,6 +72,30 @@ class CarWashesController < ApplicationController
   end
 
   def update
+    # Atendente: cria pending change em vez de salvar direto
+    if current_user.attendant?
+      raw = params.require(:car_wash).permit(
+        :name, :address, :cep, :logradouro, :bairro, :cidade, :uf,
+        :latitude, :longitude, :capacity_per_slot,
+        operating_hours_attributes: [:id, :day_of_week, :opens_at, :closes_at, :_destroy],
+        services_attributes: [:id, :title, :description, :price, :duration, :category, :_destroy]
+      ).to_h
+
+      PendingChange.create!(
+        car_wash:    @car_wash,
+        attendant:   current_user,
+        change_type: "manage_car_wash",
+        status:      "pending",
+        description: "Alterações no gerenciamento do lava-rápido",
+        payload:     { car_wash_params: raw }.to_json
+      )
+
+      redirect_to manage_car_wash_path(@car_wash),
+        notice: "✅ Alterações enviadas para aprovação do proprietário."
+      return
+    end
+
+    # Owner: salva direto
     update_params = params.require(:car_wash).permit(
       :name, :address, :cep, :logradouro, :bairro, :cidade, :uf,
       :latitude, :longitude, :capacity_per_slot,
@@ -108,6 +131,8 @@ class CarWashesController < ApplicationController
   end
 
   def manage
+    @is_attendant    = current_user.attendant?
+    @pending_changes = @car_wash.pending_changes.pending if current_user.owner?
     @car_wash.operating_hours.build if @car_wash.operating_hours.empty?
     @car_wash.services.build if @car_wash.services.empty?
   end
@@ -126,8 +151,8 @@ class CarWashesController < ApplicationController
         render json: [], status: :not_found and return
       end
 
-      duration       = params[:duration].to_i
-      operating_hour = @car_wash.operating_hours.find_by(day_of_week: date.wday)
+      duration        = params[:duration].to_i
+      operating_hour  = @car_wash.operating_hours.find_by(day_of_week: date.wday)
       available_times = []
 
       if operating_hour
@@ -168,6 +193,16 @@ class CarWashesController < ApplicationController
 
   def ensure_owner
     unless current_user.owner? && @car_wash.user == current_user
+      redirect_to root_path, alert: "Acesso não autorizado." unless current_user.attendant?
+    end
+  end
+
+  def ensure_owner_or_attendant
+    if current_user.owner?
+      redirect_to root_path, alert: "Acesso não autorizado." unless @car_wash.user == current_user
+    elsif current_user.attendant?
+      redirect_to root_path, alert: "Acesso não autorizado." unless current_car_wash&.id == @car_wash.id
+    else
       redirect_to root_path, alert: "Acesso não autorizado."
     end
   end

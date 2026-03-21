@@ -1,76 +1,260 @@
+<div id="loov-cursor"></div>
+<div id="loov-cursor-trail"></div>
+<div id="page-transition"></div>
+
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
-  :root { --lime:#afff2d;--lime-dim:#8fcc24;--black:#000;--surface:#0a0a0a;--surface-2:#111;--surface-3:#1a1a1a;--border:#222;--text-muted:#666;--text-secondary:#999;--white:#fff; }
-  *{box-sizing:border-box}
-  .list-wrap{min-height:100vh;background:var(--black);font-family:'DM Sans',sans-serif;padding-top:64px;padding-bottom:4rem;}
-  .list-inner{max-width:1200px;margin:0 auto;padding:3rem 1.5rem 0;}
+  :root {
+    --lime: #afff2d;
+    --lime-dim: #8fcc24;
+    --black: #000;
+    --surface: #0a0a0a;
+    --surface-2: #0d0d0d;
+    --surface-3: #141414;
+    --border: #1a1a1a;
+    --border-soft: #222;
+    --text-muted: #444;
+    --text-secondary: #777;
+    --white: #fff;
+  }
 
-  .list-eyebrow{display:inline-flex;align-items:center;gap:.5rem;font-size:.7rem;font-weight:500;letter-spacing:.2em;text-transform:uppercase;color:var(--lime);margin-bottom:1rem;opacity:0;animation:fadeUp .6s ease forwards .1s}
-  .list-eyebrow::before{content:'';display:block;width:24px;height:1px;background:var(--lime)}
-  .list-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.5rem,8vw,5rem);line-height:1;color:var(--white);margin:0 0 2rem;opacity:0;animation:fadeUp .6s ease forwards .2s}
-  .list-title span{color:var(--lime)}
+  /* ── CURSOR ─────────────────────────────────────────── */
+  #loov-cursor { position:fixed;width:8px;height:8px;background:var(--lime);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .18s ease,height .18s ease;mix-blend-mode:difference; }
+  #loov-cursor-trail { position:fixed;width:38px;height:38px;border:1px solid rgba(175,255,45,0.25);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:width .25s ease,height .25s ease,border-color .25s ease; }
+  body.cursor-hover #loov-cursor { width:14px;height:14px; }
+  body.cursor-hover #loov-cursor-trail { width:58px;height:58px;border-color:rgba(175,255,45,0.45); }
+  @media(hover:none){#loov-cursor,#loov-cursor-trail{display:none;}}
 
-  .search-wrap{margin-bottom:1.5rem;opacity:0;animation:fadeUp .6s ease forwards .3s}
-  .search-inner{position:relative;display:flex;align-items:center}
-  .search-icon{position:absolute;left:1.25rem;color:var(--text-muted);font-size:.9rem;pointer-events:none}
-  .search-input{width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:100px;padding:1rem 1rem 1rem 3rem;font-family:'DM Sans',sans-serif;font-size:.9375rem;color:var(--white);outline:none;transition:all .2s ease}
-  .search-input::placeholder{color:var(--text-muted)}
-  .search-input:focus{border-color:var(--lime);box-shadow:0 0 0 3px rgba(175,255,45,.08)}
-  .search-submit{position:absolute;right:.375rem;background:var(--lime);color:var(--black);border:none;border-radius:100px;width:42px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.8rem;transition:all .2s ease}
-  .search-submit:hover{background:var(--lime-dim)}
+  /* ── PAGE TRANSITION ─────────────────────────────────── */
+  #page-transition { position:fixed;inset:0;z-index:10000;background:#000;transform:translateY(100%);pointer-events:none; }
+  #page-transition.enter { animation:pgEnter .42s cubic-bezier(.76,0,.24,1) forwards; }
+  #page-transition.exit  { animation:pgExit  .42s cubic-bezier(.76,0,.24,1) forwards; }
+  @keyframes pgEnter { from{transform:translateY(100%)}to{transform:translateY(0)} }
+  @keyframes pgExit  { from{transform:translateY(0)}to{transform:translateY(-100%)} }
 
-  .groups-wrap{margin-bottom:1rem;opacity:0;animation:fadeUp .6s ease forwards .4s}
-  .groups-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);margin-bottom:.75rem;}
-  .groups-row{display:flex;gap:.5rem;flex-wrap:wrap;}
-  .group-btn{display:inline-flex;align-items:center;gap:.5rem;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:.6rem 1.1rem;font-family:'DM Sans',sans-serif;font-size:.875rem;font-weight:500;color:var(--text-muted);cursor:pointer;text-decoration:none;transition:all .2s ease;}
-  .group-btn:hover{border-color:rgba(175,255,45,.3);color:var(--white)}
-  .group-btn.active{background:rgba(175,255,45,.1);border-color:var(--lime);color:var(--lime)}
-  .group-btn i{font-size:.8rem;}
+  /* ── BASE ────────────────────────────────────────────── */
+  * { box-sizing: border-box; }
+  body { cursor: none; }
 
-  .subcats-wrap{display:none;margin-bottom:1.5rem;padding:1rem 1.25rem;background:var(--surface-2);border:1px solid var(--border);border-radius:14px;animation:fadeUp .3s ease forwards;}
-  .subcats-wrap.visible{display:block;}
-  .subcats-label{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);margin-bottom:.75rem;}
-  .subcats-row{display:flex;gap:.4rem;flex-wrap:wrap;}
-  .subcat-btn{display:inline-flex;align-items:center;background:var(--surface-3);border:1px solid var(--border);border-radius:100px;padding:.4rem .9rem;font-family:'DM Sans',sans-serif;font-size:.8rem;font-weight:500;color:var(--text-muted);cursor:pointer;text-decoration:none;transition:all .2s ease;}
-  .subcat-btn:hover{border-color:rgba(175,255,45,.3);color:var(--white)}
-  .subcat-btn.active{background:rgba(175,255,45,.08);border-color:var(--lime);color:var(--lime)}
+  .list-wrap {
+    min-height: 100vh; background: var(--black);
+    font-family: 'DM Sans', sans-serif;
+    padding-top: 60px; padding-bottom: 5rem;
+  }
 
-  .section-header{display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;margin-bottom:1rem;}
-  .section-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(1.5rem,4vw,2rem);color:var(--white);margin:0;font-weight:400}
-  .section-count{font-size:.8rem;color:var(--text-muted);white-space:nowrap;padding-bottom:.2rem}
-  .divider-line{height:1px;background:var(--border);margin-bottom:2rem}
+  .list-inner { max-width: 1200px; margin: 0 auto; padding: 3.5rem 1.5rem 0; }
 
-  .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);border-radius:16px;overflow:hidden}
-  .car-wash-card{background:var(--surface);padding:1.75rem;display:flex;flex-direction:column;gap:1rem;text-decoration:none;transition:background .2s ease;opacity:0;transform:translateY(12px);animation:fadeUp .5s ease forwards}
-  .car-wash-card:hover{background:var(--surface-2)}
-  .car-wash-card:hover .card-arrow{transform:translate(3px,-3px);color:var(--lime)}
-  .card-top{display:flex;align-items:center;justify-content:space-between}
-  .card-avatar{width:48px;height:48px;border-radius:12px;background:var(--surface-3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--lime);letter-spacing:.05em;flex-shrink:0}
-  .card-arrow{color:var(--text-muted);font-size:1rem;transition:all .2s ease}
-  .card-name{font-size:1.0625rem;font-weight:500;color:var(--white);line-height:1.3;margin:0}
-  .card-meta{display:flex;flex-direction:column;gap:.4rem}
-  .card-meta-item{display:flex;align-items:center;gap:.5rem;font-size:.8125rem;color:var(--text-muted);margin:0}
-  .card-meta-item i{color:var(--lime);font-size:.7rem;width:12px;flex-shrink:0}
-  .card-services{display:flex;gap:.35rem;flex-wrap:wrap;margin-top:.25rem}
-  .card-service-tag{font-size:.65rem;background:var(--surface-3);border:1px solid var(--border);color:var(--text-muted);padding:.2rem .5rem;border-radius:100px;}
-  .card-badge{display:inline-flex;align-items:center;gap:.35rem;background:rgba(175,255,45,.08);color:var(--lime);font-size:.7rem;font-weight:500;letter-spacing:.05em;padding:.3rem .6rem;border-radius:100px;border:1px solid rgba(175,255,45,.15);width:fit-content;margin-top:auto}
+  /* ── BACK ────────────────────────────────────────────── */
+  .back-link {
+    display: inline-flex; align-items: center; gap: .45rem;
+    font-size: .8rem; color: var(--text-muted); text-decoration: none;
+    transition: color .2s ease; margin-bottom: 2.5rem; cursor: none;
+  }
+  .back-link:hover { color: var(--lime); }
 
-  .empty-state{padding:4rem 0;text-align:center}
-  .empty-icon{font-size:2.5rem;color:var(--border);margin-bottom:1rem}
-  .empty-title{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--white);margin-bottom:.5rem}
-  .empty-text{font-size:.875rem;color:var(--text-muted);margin-bottom:1.5rem}
-  .empty-actions{display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap}
-  .btn-secondary{display:inline-flex;align-items:center;gap:.5rem;padding:.75rem 1.5rem;border-radius:100px;font-family:'DM Sans',sans-serif;font-size:.875rem;font-weight:500;text-decoration:none;background:transparent;color:var(--white);border:1px solid var(--border);transition:all .2s ease}
-  .btn-secondary:hover{border-color:var(--lime);color:var(--lime)}
-  .btn-primary{display:inline-flex;align-items:center;gap:.5rem;padding:.75rem 1.5rem;border-radius:100px;font-family:'DM Sans',sans-serif;font-size:.875rem;font-weight:500;text-decoration:none;background:var(--lime);color:var(--black);border:none;transition:all .2s ease}
-  .btn-primary:hover{background:var(--lime-dim)}
-  .back-link{display:inline-flex;align-items:center;gap:.4rem;font-size:.8rem;color:var(--text-muted);text-decoration:none;margin-bottom:2rem;transition:color .2s ease}
-  .back-link:hover{color:var(--lime)}
+  /* ── HEADER ──────────────────────────────────────────── */
+  .list-eyebrow {
+    display: inline-flex; align-items: center; gap: .6rem;
+    font-size: .68rem; font-weight: 500; letter-spacing: .25em;
+    text-transform: uppercase; color: var(--lime); margin-bottom: .875rem;
+    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards .1s;
+  }
+  .list-eyebrow::before { content:''; display:block; width:28px; height:1px; background:var(--lime); }
 
-  @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-  @media(max-width:640px){.list-inner{padding:2rem 1.25rem 0}.groups-row{gap:.35rem}.cards-grid{grid-template-columns:1fr}}
-  @media(min-width:768px){.cards-grid{grid-template-columns:repeat(2,1fr)}}
-  @media(min-width:1024px){.cards-grid{grid-template-columns:repeat(3,1fr)}}
+  .list-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(3rem, 9vw, 6rem);
+    line-height: .92; color: var(--white); margin: 0 0 2.5rem;
+    opacity: 0; animation: revealUp .9s cubic-bezier(.16,1,.3,1) forwards .2s;
+  }
+  .list-title span { color: var(--lime); }
+
+  /* ── SEARCH ──────────────────────────────────────────── */
+  .search-wrap {
+    margin-bottom: 1.5rem;
+    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards .3s;
+  }
+  .search-inner { position: relative; display: flex; align-items: center; }
+  .search-icon { position: absolute; left: 1.25rem; color: var(--text-muted); font-size: .875rem; pointer-events: none; }
+  .search-input {
+    width: 100%; background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 100px; padding: 1.05rem 1rem 1.05rem 3rem;
+    font-family: 'DM Sans', sans-serif; font-size: .9375rem; color: var(--white);
+    outline: none; transition: all .25s ease; cursor: none;
+  }
+  .search-input::placeholder { color: var(--text-muted); }
+  .search-input:focus { border-color: var(--lime); box-shadow: 0 0 0 3px rgba(175,255,45,.07); }
+  .search-submit {
+    position: absolute; right: .375rem; background: var(--lime); color: var(--black);
+    border: none; border-radius: 100px; width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: none; font-size: .8rem; transition: all .2s ease; flex-shrink: 0;
+  }
+  .search-submit:hover { background: var(--lime-dim); transform: scale(1.05); }
+
+  /* ── FILTROS ─────────────────────────────────────────── */
+  .groups-wrap {
+    margin-bottom: 1.25rem;
+    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards .4s;
+  }
+  .groups-label { font-size: .65rem; text-transform: uppercase; letter-spacing: .12em; color: var(--text-muted); margin-bottom: .75rem; }
+  .groups-row { display: flex; gap: .5rem; flex-wrap: wrap; }
+
+  .group-btn {
+    display: inline-flex; align-items: center; gap: .45rem;
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 10px; padding: .55rem 1rem;
+    font-family: 'DM Sans', sans-serif; font-size: .8rem; font-weight: 500;
+    color: var(--text-muted); cursor: none; text-decoration: none; transition: all .2s ease;
+  }
+  .group-btn i { font-size: .75rem; }
+  .group-btn:hover { border-color: rgba(175,255,45,.25); color: var(--white); }
+  .group-btn.active { background: rgba(175,255,45,.08); border-color: rgba(175,255,45,.35); color: var(--lime); }
+
+  .subcats-wrap {
+    display: none; margin-bottom: 1.75rem;
+    padding: 1rem 1.25rem; background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: 14px;
+    animation: revealUp .3s cubic-bezier(.16,1,.3,1) forwards;
+  }
+  .subcats-wrap.visible { display: block; }
+  .subcats-label { font-size: .65rem; text-transform: uppercase; letter-spacing: .12em; color: var(--text-muted); margin-bottom: .75rem; }
+  .subcats-row { display: flex; gap: .4rem; flex-wrap: wrap; }
+
+  .subcat-btn {
+    display: inline-flex; align-items: center;
+    background: var(--surface-3); border: 1px solid var(--border);
+    border-radius: 100px; padding: .4rem .9rem;
+    font-family: 'DM Sans', sans-serif; font-size: .78rem; font-weight: 500;
+    color: var(--text-muted); cursor: none; text-decoration: none; transition: all .2s ease;
+  }
+  .subcat-btn:hover { border-color: rgba(175,255,45,.25); color: var(--white); }
+  .subcat-btn.active { background: rgba(175,255,45,.08); border-color: rgba(175,255,45,.35); color: var(--lime); }
+
+  /* ── SECTION HEADER ──────────────────────────────────── */
+  .section-header {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 1rem; margin-bottom: 1rem;
+  }
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(1.5rem, 4vw, 2.25rem);
+    color: var(--white); margin: 0; font-weight: 400;
+  }
+  .section-count { font-size: .78rem; color: var(--text-muted); white-space: nowrap; padding-bottom: .2rem; }
+  .divider-line { height: 1px; background: var(--border); margin-bottom: 2.5rem; }
+
+  /* ── CARDS ───────────────────────────────────────────── */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1px; background: var(--border);
+    border: 1px solid var(--border); border-radius: 16px; overflow: hidden;
+  }
+
+  .car-wash-card {
+    background: var(--surface); padding: 0;
+    display: flex; flex-direction: column;
+    text-decoration: none; cursor: none;
+    position: relative; overflow: hidden;
+    opacity: 0; transform: translateY(20px);
+  }
+
+  .car-wash-card.revealed {
+    transition: background .2s ease, opacity .6s cubic-bezier(.16,1,.3,1), transform .6s cubic-bezier(.16,1,.3,1);
+    opacity: 1; transform: translateY(0);
+  }
+
+  .car-wash-card:hover { background: var(--surface-2); }
+
+  .car-wash-card::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 2px; background: var(--lime);
+    transform: scaleY(0); transform-origin: bottom;
+    transition: transform .3s cubic-bezier(.16,1,.3,1);
+  }
+  .car-wash-card:hover::before { transform: scaleY(1); }
+  .car-wash-card:hover .card-arrow { transform: translate(4px,-4px); color: var(--lime); }
+
+  .card-body { padding: 1.75rem 1.75rem 1.25rem; flex: 1; display: flex; flex-direction: column; gap: .875rem; }
+
+  .card-avatar {
+    width: 44px; height: 44px; border-radius: 10px;
+    background: linear-gradient(135deg, #141414, #1e1e1e);
+    border: 1px solid var(--border-soft);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Bebas Neue', sans-serif; font-size: 1rem;
+    color: var(--lime); letter-spacing: .06em; flex-shrink: 0;
+  }
+
+  .card-top { display: flex; align-items: flex-start; justify-content: space-between; }
+  .card-arrow { color: #2a2a2a; font-size: .9rem; transition: all .25s ease; margin-top: 2px; }
+
+  .card-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.6rem; letter-spacing: .02em;
+    color: var(--white); line-height: 1; margin: 0;
+  }
+
+  .card-meta { display: flex; flex-direction: column; gap: .375rem; }
+  .card-meta-item { display: flex; align-items: center; gap: .5rem; font-size: .8rem; color: var(--text-muted); }
+  .card-meta-item i { color: var(--lime); font-size: .65rem; width: 12px; flex-shrink: 0; }
+
+  .card-footer {
+    padding: .875rem 1.75rem;
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+  }
+
+  .card-price {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem; letter-spacing: .02em; color: var(--text-secondary);
+  }
+  .card-price strong { color: var(--lime); }
+
+  .card-status {
+    display: inline-flex; align-items: center; gap: .35rem;
+    font-size: .68rem; font-weight: 500; letter-spacing: .06em;
+    padding: .25rem .625rem; border-radius: 100px;
+  }
+  .card-status.open   { color: var(--lime); background: rgba(175,255,45,.07); border: 1px solid rgba(175,255,45,.15); }
+  .card-status.closed { color: #333; background: transparent; border: 1px solid #1e1e1e; }
+  .card-status-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+  /* ── EMPTY ───────────────────────────────────────────── */
+  .empty-state { padding: 5rem 0; text-align: center; }
+  .empty-icon { font-size: 2.5rem; color: #1a1a1a; margin-bottom: 1rem; }
+  .empty-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.75rem; color: var(--white); margin-bottom: .5rem; }
+  .empty-text { font-size: .875rem; color: var(--text-muted); margin-bottom: 1.75rem; line-height: 1.6; }
+  .empty-actions { display: flex; gap: .75rem; justify-content: center; flex-wrap: wrap; }
+
+  .btn-ghost {
+    display: inline-flex; align-items: center; gap: .5rem;
+    padding: .75rem 1.5rem; border-radius: 100px;
+    font-family: 'DM Sans', sans-serif; font-size: .875rem; font-weight: 500;
+    text-decoration: none; background: transparent; color: var(--white);
+    border: 1px solid var(--border-soft); transition: all .22s ease; cursor: none;
+  }
+  .btn-ghost:hover { border-color: var(--lime); color: var(--lime); }
+
+  .btn-lime {
+    display: inline-flex; align-items: center; gap: .5rem;
+    padding: .75rem 1.5rem; border-radius: 100px;
+    font-family: 'DM Sans', sans-serif; font-size: .875rem; font-weight: 500;
+    text-decoration: none; background: var(--lime); color: var(--black);
+    border: none; transition: all .22s ease; cursor: none;
+  }
+  .btn-lime:hover { background: var(--lime-dim); transform: translateY(-2px); }
+
+  /* ── ANIMAÇÕES ───────────────────────────────────────── */
+  @keyframes revealUp { from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)} }
+
+  /* ── RESPONSIVE ──────────────────────────────────────── */
+  @media(max-width:640px) {
+    .list-inner { padding: 2.5rem 1.25rem 0; }
+    .cards-grid { grid-template-columns: 1fr; }
+  }
+  @media(min-width:768px)  { .cards-grid { grid-template-columns: repeat(2,1fr); } }
+  @media(min-width:1024px) { .cards-grid { grid-template-columns: repeat(3,1fr); } }
 </style>
 
 <div class="list-wrap">
@@ -85,7 +269,7 @@
 
     <div class="search-wrap">
       <%= form_with url: car_washes_path, method: :get, local: true do %>
-        <%= hidden_field_tag :latitude, params[:latitude] if params[:latitude].present? %>
+        <%= hidden_field_tag :latitude,  params[:latitude]  if params[:latitude].present? %>
         <%= hidden_field_tag :longitude, params[:longitude] if params[:longitude].present? %>
         <div class="search-inner">
           <i class="fas fa-magnifying-glass search-icon"></i>
@@ -95,7 +279,6 @@
       <% end %>
     </div>
 
-    <!-- Grupos principais -->
     <div class="groups-wrap">
       <div class="groups-label">O que você precisa?</div>
       <div class="groups-row">
@@ -107,29 +290,22 @@
         <% @groups.each do |group, _cats| %>
           <%= link_to car_washes_path(group: group, search: params[:search], latitude: params[:latitude], longitude: params[:longitude]),
               class: "group-btn #{@selected_group == group ? 'active' : ''}" do %>
-            <i class="fas <%= icons[group] %>"></i> <%= group %>
+            <i class="fas <%= icons[group] || 'fa-tag' %>"></i> <%= group %>
           <% end %>
         <% end %>
       </div>
     </div>
 
-    <!-- Subcategorias -->
     <% if @selected_group.present? && @subcategories.any? %>
     <div class="subcats-wrap visible">
       <div class="subcats-label">
-        <% if @selected_group == "Lavagem" %>
-          Tipo de lavagem
-        <% else %>
-          Especialidade
-        <% end %>
+        <%= @selected_group == "Lavagem" ? "Tipo de lavagem" : "Especialidade" %>
       </div>
       <div class="subcats-row">
-        <!-- Botão "Todos" -->
         <%= link_to car_washes_path(group: @selected_group, search: params[:search], latitude: params[:latitude], longitude: params[:longitude]),
             class: "subcat-btn #{@selected_category.blank? && @selected_service_title.blank? ? 'active' : ''}" do %>
           Todos em <%= @selected_group %>
         <% end %>
-
         <% if @selected_group == "Lavagem" %>
           <% @subcategories.each do |title| %>
             <%= link_to car_washes_path(group: @selected_group, service_title: title, search: params[:search], latitude: params[:latitude], longitude: params[:longitude]),
@@ -149,21 +325,14 @@
     </div>
     <% end %>
 
-    <!-- Header da listagem -->
     <div class="section-header">
       <h2 class="section-title">
-        <% if @selected_service_title.present? %>
-          <%= @selected_service_title %>
-        <% elsif @selected_category.present? %>
-          <%= @selected_category %>
-        <% elsif @selected_group.present? %>
-          <%= @selected_group %>
-        <% elsif params[:latitude].present? %>
-          Próximos a você
-        <% elsif params[:search].present? %>
-          Resultados
-        <% else %>
-          Todos
+        <% if @selected_service_title.present? %><%= @selected_service_title %>
+        <% elsif @selected_category.present? %><%= @selected_category %>
+        <% elsif @selected_group.present? %><%= @selected_group %>
+        <% elsif params[:latitude].present? %>Próximos a você
+        <% elsif params[:search].present? %>Resultados
+        <% else %>Todos
         <% end %>
       </h2>
       <span class="section-count"><%= @car_washes.count %> encontrado<%= @car_washes.count == 1 ? '' : 's' %></span>
@@ -173,51 +342,78 @@
     <% if @car_washes.empty? %>
       <div class="empty-state">
         <div class="empty-icon"><i class="fas fa-car-wash"></i></div>
-        <h3 class="empty-title">Nenhum resultado</h3>
-        <p class="empty-text">Nenhum lava-rápido oferece esse serviço na sua região ainda.</p>
+        <div class="empty-title">Nenhum resultado</div>
+        <p class="empty-text">Nenhum lava-rápido encontrado com esse filtro.<br>Tente buscar por outro nome.</p>
         <div class="empty-actions">
-          <%= link_to car_washes_path, class: "btn-secondary" do %>Limpar filtros<% end %>
-          <%= link_to root_path, class: "btn-primary" do %>Voltar ao início<% end %>
+          <%= link_to car_washes_path, class: "btn-ghost" do %>Limpar filtros<% end %>
+          <%= link_to root_path, class: "btn-lime" do %>Voltar ao início<% end %>
         </div>
       </div>
     <% else %>
       <div class="cards-grid">
         <% @car_washes.each_with_index do |cw, i| %>
-          <%= link_to car_wash_path(cw), class: "car-wash-card", style: "animation-delay:#{0.05*i}s" do %>
-            <div class="card-top">
-              <div class="card-avatar"><%= cw.name.first(2).upcase %></div>
-              <i class="fas fa-arrow-up-right card-arrow"></i>
-            </div>
-            <div class="card-name"><%= cw.name %></div>
-            <div class="card-meta">
-              <div class="card-meta-item">
-                <i class="fas fa-location-dot"></i>
-                <span><%= [cw.bairro, cw.cidade].select(&:present?).join(", ").presence || cw.address || "Endereço não informado" %></span>
+          <%
+            min_price   = cw.services.minimum(:price)
+            reviews     = cw.reviews
+            avg_rating  = reviews.any? ? reviews.average(:rating).to_f : nil
+            today_dow   = Date.current.wday
+            is_open     = cw.operating_hours.exists?(day_of_week: today_dow)
+            opens_today = cw.operating_hours.find_by(day_of_week: today_dow)
+          %>
+          <%= link_to car_wash_path(cw, latitude: params[:latitude], longitude: params[:longitude]),
+              class: "car-wash-card", data: { index: i } do %>
+
+            <div class="card-body">
+              <div class="card-top">
+                <div class="card-avatar"><%= cw.name.first(2).upcase %></div>
+                <i class="fas fa-arrow-up-right card-arrow"></i>
               </div>
-              <% if params[:latitude].present? && params[:longitude].present? && cw.latitude && cw.longitude %>
-                <% dist = cw.distance_to([params[:latitude].to_f, params[:longitude].to_f], :km) %>
-                <div class="card-meta-item"><i class="fas fa-route"></i><span><%= number_with_precision(dist, precision: 1) %> km</span></div>
-              <% end %>
-              <% reviews = cw.reviews %>
-              <% if reviews.any? %>
+
+              <div class="card-name"><%= cw.name %></div>
+
+              <div class="card-meta">
                 <div class="card-meta-item">
-                  <i class="fas fa-star" style="color:#facc15;"></i>
-                  <span style="color:#fff;font-weight:500;"><%= sprintf('%.1f', reviews.average(:rating).to_f) %></span>
-                  <span>(<%= reviews.count %>)</span>
+                  <i class="fas fa-location-dot"></i>
+                  <span><%= [cw.bairro, cw.cidade].select(&:present?).join(", ").presence || cw.address || "Endereço não informado" %></span>
                 </div>
-              <% else %>
-                <div class="card-meta-item"><i class="fas fa-star"></i><span>Sem avaliações</span></div>
-              <% end %>
-            </div>
-            <% service_titles = cw.services.limit(3).pluck(:title) %>
-            <% if service_titles.any? %>
-              <div class="card-services">
-                <% service_titles.each do |t| %>
-                  <span class="card-service-tag"><%= t %></span>
+                <% if params[:latitude].present? && params[:longitude].present? && cw.latitude && cw.longitude %>
+                  <% dist = cw.distance_to([params[:latitude].to_f, params[:longitude].to_f], :km) %>
+                  <div class="card-meta-item">
+                    <i class="fas fa-route"></i>
+                    <span><%= number_with_precision(dist, precision: 1) %> km de você</span>
+                  </div>
+                <% end %>
+                <% if avg_rating %>
+                  <div class="card-meta-item">
+                    <i class="fas fa-star" style="color:var(--lime);"></i>
+                    <span style="color:#fff;font-weight:500;"><%= sprintf('%.1f', avg_rating) %></span>
+                    <span>(<%= reviews.count %>)</span>
+                  </div>
+                <% else %>
+                  <div class="card-meta-item">
+                    <i class="fas fa-star"></i>
+                    <span>Seja o primeiro a avaliar</span>
+                  </div>
                 <% end %>
               </div>
-            <% end %>
-            <div class="card-badge"><i class="fas fa-circle" style="font-size:.4rem"></i> Disponível</div>
+            </div>
+
+            <div class="card-footer">
+              <% if min_price %>
+                <div class="card-price">A partir de <strong>R$ <%= number_with_precision(min_price, precision: 0) %></strong></div>
+              <% else %>
+                <div class="card-price" style="color:var(--text-muted);">Consulte serviços</div>
+              <% end %>
+
+              <% if is_open %>
+                <div class="card-status open"><span class="card-status-dot"></span> Aberto agora</div>
+              <% elsif opens_today %>
+                <div class="card-status closed">Abre às <%= opens_today.opens_at.strftime("%H:%M") %></div>
+              <% else %>
+                <div class="card-status closed">Fechado hoje</div>
+              <% end %>
+            </div>
+
           <% end %>
         <% end %>
       </div>
@@ -225,3 +421,49 @@
 
   </div>
 </div>
+
+<script>
+(function() {
+  // CURSOR
+  const cursor = document.getElementById('loov-cursor');
+  const trail  = document.getElementById('loov-cursor-trail');
+  if (cursor && trail) {
+    let mx=-100,my=-100,tx=-100,ty=-100;
+    document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cursor.style.left=mx+'px';cursor.style.top=my+'px';});
+    (function anim(){tx+=(mx-tx)*0.12;ty+=(my-ty)*0.12;trail.style.left=tx+'px';trail.style.top=ty+'px';requestAnimationFrame(anim);})();
+    document.addEventListener('mouseover',e=>{if(e.target.closest('a,button,input,select,textarea'))document.body.classList.add('cursor-hover');});
+    document.addEventListener('mouseout', e=>{if(e.target.closest('a,button,input,select,textarea'))document.body.classList.remove('cursor-hover');});
+    document.addEventListener('mouseleave',()=>{cursor.style.opacity='0';trail.style.opacity='0';});
+    document.addEventListener('mouseenter',()=>{cursor.style.opacity='1';trail.style.opacity='1';});
+  }
+
+  // PAGE TRANSITION
+  const pt = document.getElementById('page-transition');
+  if (pt) {
+    document.addEventListener('click',e=>{
+      const link=e.target.closest('a[href]');if(!link)return;
+      const href=link.getAttribute('href');
+      if(!href||href.startsWith('#')||href.startsWith('mailto')||link.target==='_blank')return;
+      if(href.startsWith('http')&&!href.includes(window.location.hostname))return;
+      e.preventDefault();pt.classList.add('enter');
+      setTimeout(()=>window.location.href=href,400);
+    });
+    window.addEventListener('pageshow',()=>{pt.classList.remove('enter');pt.classList.add('exit');setTimeout(()=>pt.classList.remove('exit'),440);});
+  }
+
+  // SCROLL-DRIVEN CARDS
+  const cards = document.querySelectorAll('.car-wash-card');
+  if (cards.length) {
+    const obs = new IntersectionObserver(entries=>{
+      entries.forEach(e=>{
+        if(e.isIntersecting){
+          const idx=parseInt(e.target.dataset.index||0);
+          setTimeout(()=>e.target.classList.add('revealed'),idx*55);
+          obs.unobserve(e.target);
+        }
+      });
+    },{threshold:.08,rootMargin:'0px 0px -32px 0px'});
+    cards.forEach(c=>obs.observe(c));
+  }
+})();
+</script>

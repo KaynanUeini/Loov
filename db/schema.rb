@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_03_14_025048) do
+ActiveRecord::Schema[7.1].define(version: 2026_03_20_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -40,9 +40,28 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_14_025048) do
     t.decimal "price_override", precision: 10, scale: 2
     t.boolean "walk_in", default: false, null: false
     t.string "walk_in_name"
+    t.string "appointment_type", default: "regular", null: false
+    t.datetime "acceptance_expires_at"
+    t.decimal "prepayment_amount", precision: 10, scale: 2
+    t.string "stripe_payment_intent_id"
+    t.decimal "commission_amount", precision: 10, scale: 2
+    t.index ["acceptance_expires_at"], name: "index_appointments_on_acceptance_expires_at"
+    t.index ["appointment_type"], name: "index_appointments_on_appointment_type"
     t.index ["car_wash_id"], name: "index_appointments_on_car_wash_id"
     t.index ["service_id"], name: "index_appointments_on_service_id"
+    t.index ["stripe_payment_intent_id"], name: "index_appointments_on_stripe_payment_intent_id", unique: true, where: "(stripe_payment_intent_id IS NOT NULL)"
     t.index ["user_id"], name: "index_appointments_on_user_id"
+  end
+
+  create_table "attendant_invitations", force: :cascade do |t|
+    t.integer "car_wash_id"
+    t.integer "inviter_id"
+    t.integer "attendant_id"
+    t.string "email"
+    t.string "token"
+    t.string "status"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "car_washes", force: :cascade do |t|
@@ -102,6 +121,17 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_14_025048) do
     t.index ["appointment_id"], name: "index_payments_on_appointment_id"
   end
 
+  create_table "pending_changes", force: :cascade do |t|
+    t.integer "car_wash_id"
+    t.integer "attendant_id"
+    t.string "change_type"
+    t.text "payload"
+    t.string "status"
+    t.string "description"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
   create_table "reviews", force: :cascade do |t|
     t.bigint "appointment_id", null: false
     t.bigint "car_wash_id", null: false
@@ -141,8 +171,13 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_14_025048) do
     t.string "phone"
     t.string "cpf"
     t.string "vehicle_model"
+    t.string "stripe_customer_id"
+    t.string "stripe_payment_method_id"
+    t.string "stripe_card_last4"
+    t.string "stripe_card_brand"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
+    t.index ["stripe_customer_id"], name: "index_users_on_stripe_customer_id", unique: true, where: "(stripe_customer_id IS NOT NULL)"
   end
 
   add_foreign_key "ai_insights", "car_washes"

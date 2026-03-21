@@ -47,8 +47,11 @@ class AiInsight < ApplicationRecord
     nil
   end
 
+  # Suporta tanto o campo novo (decisao_prioritaria) quanto o legado (action_of_the_week)
+  # para manter compatibilidade com análises já geradas anteriormente
   def action_of_the_week
-    JSON.parse(content)["action_of_the_week"]
+    parsed = JSON.parse(content)
+    parsed["decisao_prioritaria"] || parsed["action_of_the_week"]
   rescue
     nil
   end

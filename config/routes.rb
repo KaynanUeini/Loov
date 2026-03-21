@@ -17,16 +17,49 @@ Rails.application.routes.draw do
     end
   end
 
+  # ── ABA DISPONÍVEIS ───────────────────────────────────────────────────────
+  resources :disponivel, only: [:index, :create, :show] do
+    member do
+      get :confirmacao
+    end
+    collection do
+      get :checkout
+    end
+  end
+
+  # ── STRIPE WEBHOOK ────────────────────────────────────────────────────────
+  post 'webhooks/stripe', to: 'webhooks#stripe', as: :stripe_webhook
+
   namespace :client do
-    resource  :profile, only: [:show, :edit, :update]
-    resources :reviews,  only: [:create]
+    resource :profile, only: [:show, :edit, :update] do
+      collection do
+        post   :attach_payment_method
+        delete :remove_payment_method
+      end
+    end
+    resources :reviews,       only: [:create]
+    resources :notifications, only: [:index]
   end
 
   namespace :owner do
-    get  'onboarding',          to: 'onboarding#show',         as: :onboarding
+    get  'onboarding',          to: 'onboarding#show',          as: :onboarding
     post 'onboarding/car_wash', to: 'onboarding#save_car_wash', as: :onboarding_car_wash
     post 'onboarding/hours',    to: 'onboarding#save_hours',    as: :onboarding_hours
     post 'onboarding/services', to: 'onboarding#save_services', as: :onboarding_services
+
+    resources :attendant_invitations, only: [:index, :create, :destroy] do
+      collection do
+        get  ':token/accept', to: 'attendant_invitations#accept',    as: :accept
+        post ':token/accept', to: 'attendant_invitations#do_accept', as: :do_accept
+      end
+    end
+
+    resources :pending_changes, only: [:index] do
+      member do
+        patch :approve
+        patch :reject
+      end
+    end
 
     resources :car_wash_appointments, only: [:index, :show]
     get  'financial_tracking', to: 'financial_tracking#index'
@@ -47,5 +80,12 @@ Rails.application.routes.draw do
     patch 'checkins/:id/no_show',        to: 'checkins#no_show',        as: :checkin_no_show
     patch 'checkins/:id/revert',         to: 'checkins#revert',         as: :checkin_revert
     patch 'checkins/:id/update_service', to: 'checkins#update_service', as: :checkin_update_service
+
+    resources :disponivel_acceptance, only: [:index, :show] do
+      member do
+        patch :accept
+        patch :reject
+      end
+    end
   end
 end

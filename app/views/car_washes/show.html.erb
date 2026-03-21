@@ -1,305 +1,403 @@
 <% Rails.logger.info("Iniciando renderização do template car_washes/show.html.erb") %>
 
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
+<div id="loov-cursor"></div>
+<div id="loov-cursor-trail"></div>
+<div id="page-transition"></div>
 
+<style>
   :root {
     --lime: #afff2d;
     --lime-dim: #8fcc24;
-    --black: #000000;
+    --black: #000;
     --surface: #0a0a0a;
-    --surface-2: #111111;
-    --surface-3: #1a1a1a;
-    --border: #222222;
-    --text-muted: #666666;
-    --text-secondary: #999999;
-    --white: #ffffff;
+    --surface-2: #0d0d0d;
+    --surface-3: #141414;
+    --border: #1a1a1a;
+    --border-soft: #222;
+    --text-muted: #444;
+    --text-secondary: #777;
+    --white: #fff;
   }
+
+  /* ── CURSOR ─────────────────────────────────────────── */
+  #loov-cursor { position:fixed;width:8px;height:8px;background:var(--lime);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .18s ease,height .18s ease;mix-blend-mode:difference; }
+  #loov-cursor-trail { position:fixed;width:38px;height:38px;border:1px solid rgba(175,255,45,0.25);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:width .25s ease,height .25s ease,border-color .25s ease; }
+  body.cursor-hover #loov-cursor { width:14px;height:14px; }
+  body.cursor-hover #loov-cursor-trail { width:58px;height:58px;border-color:rgba(175,255,45,0.45); }
+  @media(hover:none){#loov-cursor,#loov-cursor-trail{display:none;}}
+
+  /* ── PAGE TRANSITION ─────────────────────────────────── */
+  #page-transition { position:fixed;inset:0;z-index:10000;background:#000;transform:translateY(100%);pointer-events:none; }
+  #page-transition.enter { animation:pgEnter .42s cubic-bezier(.76,0,.24,1) forwards; }
+  #page-transition.exit  { animation:pgExit  .42s cubic-bezier(.76,0,.24,1) forwards; }
+  @keyframes pgEnter { from{transform:translateY(100%)}to{transform:translateY(0)} }
+  @keyframes pgExit  { from{transform:translateY(0)}to{transform:translateY(-100%)} }
+
+  /* ── BASE ────────────────────────────────────────────── */
+  * { box-sizing: border-box; }
+  body { cursor: none; }
 
   .show-wrap {
-    min-height: 100vh;
-    background: var(--black);
+    min-height: 100vh; background: var(--black);
     font-family: 'DM Sans', sans-serif;
-    padding-top: 64px;
+    padding-top: 60px; padding-bottom: 6rem;
   }
 
-  /* BACK */
+  /* ── BACK ────────────────────────────────────────────── */
   .show-back {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 2rem 1.5rem 0;
-    opacity: 0;
-    animation: fadeUp 0.5s ease forwards 0.1s;
+    max-width: 1200px; margin: 0 auto;
+    padding: 2.5rem 1.5rem 0;
+    opacity: 0; animation: revealUp .6s cubic-bezier(.16,1,.3,1) forwards .05s;
   }
-
   .show-back a {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.8125rem;
-    color: var(--text-muted);
-    text-decoration: none;
-    transition: color 0.2s ease;
+    display: inline-flex; align-items: center; gap: .45rem;
+    font-size: .8rem; color: var(--text-muted); text-decoration: none;
+    transition: color .2s ease; cursor: none;
   }
-
   .show-back a:hover { color: var(--lime); }
 
-  /* HEADER */
-  .show-header {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 2rem 1.5rem;
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 2rem;
-    opacity: 0;
-    animation: fadeUp 0.6s ease forwards 0.2s;
+  /* ── HERO HEADER ─────────────────────────────────────── */
+  .show-hero {
+    max-width: 1200px; margin: 0 auto;
+    padding: 2.5rem 1.5rem 2rem;
+    display: flex; align-items: flex-end;
+    justify-content: space-between; gap: 2rem;
+    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards .15s;
   }
 
-  .show-header-left { flex: 1; }
+  .show-hero-left { flex: 1; }
+
+  .show-eyebrow {
+    display: inline-flex; align-items: center; gap: .5rem;
+    font-size: .65rem; font-weight: 500; letter-spacing: .22em;
+    text-transform: uppercase; color: var(--lime); margin-bottom: .875rem;
+  }
+  .show-eyebrow::before { content:''; display:block; width:20px; height:1px; background:var(--lime); }
 
   .show-avatar {
-    width: 64px;
-    height: 64px;
-    border-radius: 16px;
-    background: var(--surface-3);
-    border: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.4rem;
-    color: var(--lime);
-    margin-bottom: 1.25rem;
+    width: 60px; height: 60px; border-radius: 14px;
+    background: linear-gradient(135deg, #141414, #1e1e1e);
+    border: 1px solid rgba(175,255,45,0.15);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem;
+    color: var(--lime); margin-bottom: 1.25rem;
   }
 
   .show-name {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(2rem, 7vw, 4rem);
-    line-height: 0.95;
-    color: var(--white);
-    margin-bottom: 1rem;
+    font-size: clamp(2.5rem, 8vw, 5.5rem);
+    line-height: .9; color: var(--white); margin: 0 0 1rem;
   }
 
-  .show-address {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.875rem;
-    color: var(--text-muted);
+  .show-meta { display: flex; flex-direction: column; gap: .45rem; }
+
+  .show-meta-item {
+    display: flex; align-items: center; gap: .5rem;
+    font-size: .875rem; color: var(--text-muted);
   }
+  .show-meta-item i { color: var(--lime); font-size: .7rem; width: 14px; flex-shrink: 0; }
+  .show-meta-item strong { color: var(--white); }
 
-  .show-address i { color: var(--lime); font-size: 0.75rem; }
-
+  /* ── ACTIONS ─────────────────────────────────────────── */
   .show-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    flex-shrink: 0;
+    display: flex; flex-direction: column; gap: .75rem; flex-shrink: 0;
   }
 
   .btn-show {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    padding: 0.875rem 1.75rem;
-    border-radius: 100px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.875rem;
-    font-weight: 500;
-    text-decoration: none;
-    transition: all 0.2s ease;
-    border: none;
-    cursor: pointer;
-    white-space: nowrap;
+    display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+    padding: .9rem 1.875rem; border-radius: 100px;
+    font-family: 'DM Sans', sans-serif; font-size: .875rem; font-weight: 500;
+    text-decoration: none; transition: all .25s ease; border: none;
+    cursor: none; white-space: nowrap;
   }
+  .btn-lime  { background: var(--lime); color: var(--black); }
+  .btn-lime:hover  { background: var(--lime-dim); transform: translateY(-2px); box-shadow: 0 12px 32px rgba(175,255,45,0.2); }
+  .btn-ghost { background: transparent; color: var(--white); border: 1px solid var(--border-soft); }
+  .btn-ghost:hover { border-color: var(--lime); color: var(--lime); transform: translateY(-2px); }
 
-  .btn-show-primary { background: var(--lime); color: var(--black); }
-  .btn-show-primary:hover { background: var(--lime-dim); transform: translateY(-2px); }
-  .btn-show-secondary { background: transparent; color: var(--white); border: 1px solid var(--border); }
-  .btn-show-secondary:hover { border-color: var(--lime); color: var(--lime); transform: translateY(-2px); }
-
-  /* DIVIDER */
-  .show-divider {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 1.5rem;
-  }
+  /* ── DIVIDER ─────────────────────────────────────────── */
+  .show-divider { max-width: 1200px; margin: 0 auto; padding: 0 1.5rem; }
   .show-divider-line { height: 1px; background: var(--border); }
 
-  /* CONTENT GRID */
+  /* ── CONTEÚDO PRINCIPAL ──────────────────────────────── */
   .show-content {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 2rem 1.5rem 4rem;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1px;
-    background: var(--border);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    overflow: hidden;
-    opacity: 0;
-    animation: fadeUp 0.6s ease forwards 0.3s;
+    max-width: 1200px; margin: 0 auto;
+    padding: 2.5rem 1.5rem 0;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards .3s;
   }
 
   .show-panel {
-    background: var(--surface);
-    padding: 2rem;
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 20px; overflow: hidden;
+    position: relative;
+  }
+
+  /* Linha lime lateral sutil */
+  .show-panel::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 2px; background: linear-gradient(to bottom, transparent, rgba(175,255,45,0.3), transparent);
+  }
+
+  .show-panel-header {
+    padding: 1.5rem 1.5rem 1.25rem 1.75rem;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: .5rem;
   }
 
   .show-panel-title {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.25rem;
-    letter-spacing: 0.05em;
-    color: var(--white);
-    margin-bottom: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    font-size: 1.1rem; letter-spacing: .06em; color: var(--white);
   }
 
-  .show-panel-title i { color: var(--lime); font-size: 0.9rem; }
+  .show-panel-title-icon { color: var(--lime); font-size: .8rem; }
 
-  /* HOURS */
-  .show-hour-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.75rem 0;
-    border-bottom: 1px solid var(--border);
+  .show-panel-body { padding: 1.25rem 1.5rem 1.5rem 1.75rem; }
+
+  /* ── HORÁRIOS ────────────────────────────────────────── */
+  .hour-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: .625rem 0; border-bottom: 1px solid var(--border);
   }
+  .hour-item:last-child { border-bottom: none; }
+  .hour-day { font-size: .875rem; font-weight: 500; color: var(--white); }
+  .hour-time { font-size: .8rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 
-  .show-hour-item:last-child { border-bottom: none; }
-
-  .show-hour-day {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--white);
+  /* ── SERVIÇOS ────────────────────────────────────────── */
+  .service-tabs {
+    display: flex; gap: .4rem; flex-wrap: wrap; margin-bottom: 1.125rem;
   }
-
-  .show-hour-time {
-    font-size: 0.8125rem;
-    color: var(--text-muted);
-    font-variant-numeric: tabular-nums;
+  .service-tab {
+    padding: .3rem .75rem; border-radius: 100px; font-size: .72rem; font-weight: 500;
+    cursor: none; border: 1px solid var(--border); background: var(--surface-3);
+    color: var(--text-muted); transition: all .2s ease;
   }
+  .service-tab:hover { border-color: rgba(175,255,45,.25); color: var(--white); }
+  .service-tab.active { background: var(--lime); color: var(--black); border-color: var(--lime); }
 
-  /* SERVICES */
-  .show-service-tabs {
-    display: flex;
-    gap: 0.4rem;
-    flex-wrap: wrap;
-    margin-bottom: 1.25rem;
+  .service-list { display: flex; flex-direction: column; gap: .625rem; }
+
+  .service-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: .875rem 1rem; background: var(--surface-3);
+    border-radius: 12px; border: 1px solid var(--border);
+    transition: border-color .2s ease;
   }
+  .service-item:hover { border-color: rgba(175,255,45,.15); }
 
-  .show-service-tab {
-    padding: 0.3rem 0.75rem;
-    border-radius: 100px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    cursor: pointer;
-    border: 1px solid var(--border);
-    background: var(--surface-2);
-    color: var(--text-secondary);
-    transition: all 0.2s ease;
-  }
+  .service-left { flex: 1; }
+  .service-name { font-size: .9375rem; font-weight: 500; color: var(--white); margin-bottom: .2rem; }
+  .service-desc { font-size: .78rem; color: var(--text-muted); }
 
-  .show-service-tab:hover { border-color: var(--lime); color: var(--lime); }
-  .show-service-tab.active { background: var(--lime); color: var(--black); border-color: var(--lime); }
-
-  .show-service-list { display: flex; flex-direction: column; gap: 0.75rem; }
-
-  .show-service-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1rem;
-    background: var(--surface-2);
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    transition: border-color 0.2s ease;
-  }
-
-  .show-service-item:hover { border-color: var(--border); }
-
-  .show-service-item[style*="display: none"] { display: none !important; }
-
-  .show-service-left { flex: 1; }
-
-  .show-service-name {
-    font-size: 0.9375rem;
-    font-weight: 500;
-    color: var(--white);
-    margin-bottom: 0.25rem;
-  }
-
-  .show-service-desc {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-  }
-
-  .show-service-right { text-align: right; flex-shrink: 0; margin-left: 1rem; }
-
-  .show-service-price {
+  .service-right { text-align: right; flex-shrink: 0; margin-left: 1rem; }
+  .service-price {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.25rem;
-    color: var(--lime);
-    letter-spacing: 0.02em;
+    font-size: 1.25rem; color: var(--lime); letter-spacing: .02em;
+  }
+  .service-duration { font-size: .72rem; color: var(--text-muted); margin-top: .1rem; }
+
+  .empty-panel { font-size: .875rem; color: var(--text-muted); padding: .5rem 0; }
+
+  /* ── AVALIAÇÕES ──────────────────────────────────────── */
+  .show-reviews {
+    max-width: 1200px; margin: 1rem auto 0;
+    padding: 0 1.5rem;
+    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards .45s;
   }
 
-  .show-service-duration {
-    font-size: 0.75rem;
-    color: var(--text-muted);
+  .reviews-card {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 20px; overflow: hidden; position: relative;
   }
 
-  .show-empty-services {
-    font-size: 0.875rem;
-    color: var(--text-muted);
-    padding: 1rem 0;
+  .reviews-card::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 2px; background: linear-gradient(to bottom, transparent, rgba(175,255,45,0.3), transparent);
   }
 
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(16px); }
-    to   { opacity: 1; transform: translateY(0); }
+  .reviews-header {
+    padding: 1.5rem 1.5rem 1.25rem 1.75rem;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 1rem;
   }
 
-  @media (max-width: 768px) {
-    .show-header { flex-direction: column; gap: 1.5rem; }
+  .reviews-header-left { display: flex; align-items: center; gap: .5rem; }
+  .reviews-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; letter-spacing: .06em; color: var(--white); }
+  .reviews-title-icon { color: var(--lime); font-size: .8rem; }
+
+  .reviews-summary { display: flex; align-items: center; gap: 1.25rem; }
+
+  .reviews-avg {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.75rem; color: var(--lime); line-height: 1; letter-spacing: .02em;
+  }
+
+  .reviews-avg-detail { display: flex; flex-direction: column; gap: 3px; }
+  .reviews-stars { color: var(--lime); font-size: .8rem; letter-spacing: .06em; }
+  .reviews-count { font-size: .72rem; color: var(--text-muted); }
+
+  .rating-bars { display: flex; flex-direction: column; gap: 5px; min-width: 140px; }
+  .rating-bar-row { display: flex; align-items: center; gap: 7px; font-size: .68rem; color: var(--text-muted); }
+  .rating-bar-track { flex: 1; height: 3px; background: var(--surface-3); border-radius: 99px; overflow: hidden; }
+  .rating-bar-fill { height: 100%; background: var(--lime); border-radius: 99px; }
+  .rating-bar-count { min-width: 14px; text-align: right; }
+
+  .reviews-body { padding: 1.5rem 1.5rem 1.5rem 1.75rem; }
+
+  .reviews-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+
+  .review-card {
+    background: var(--surface-3); border: 1px solid var(--border);
+    border-radius: 14px; padding: 1.125rem;
+    display: flex; flex-direction: column; gap: .75rem;
+    transition: border-color .2s ease;
+  }
+  .review-card:hover { border-color: var(--border-soft); }
+
+  .review-top { display: flex; align-items: center; justify-content: space-between; }
+
+  .review-user { display: flex; align-items: center; gap: .6rem; }
+  .review-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: linear-gradient(135deg, #141414, #222);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Bebas Neue', sans-serif; font-size: .85rem; color: var(--lime); flex-shrink: 0;
+  }
+  .review-user-name { font-size: .875rem; font-weight: 500; color: var(--white); }
+  .review-date { font-size: .7rem; color: var(--text-muted); }
+
+  .review-stars { display: flex; gap: 2px; }
+  .review-star { font-size: .72rem; color: var(--border); }
+  .review-star.filled { color: var(--lime); }
+
+  .review-tags { display: flex; flex-wrap: wrap; gap: .35rem; }
+  .review-tag {
+    font-size: .65rem; font-weight: 500; color: var(--lime);
+    background: rgba(175,255,45,.07); border: 1px solid rgba(175,255,45,.15);
+    border-radius: 100px; padding: .2rem .55rem;
+  }
+
+  .review-comment {
+    font-size: .875rem; color: var(--text-secondary);
+    line-height: 1.6; font-style: italic;
+  }
+  .review-comment::before { content: '"'; color: var(--lime); font-style: normal; }
+  .review-comment::after  { content: '"'; color: var(--lime); font-style: normal; }
+
+  .reviews-empty {
+    text-align: center; padding: 2.5rem 0;
+    display: flex; flex-direction: column; align-items: center; gap: .75rem;
+  }
+  .reviews-empty-icon {
+    width: 48px; height: 48px; border-radius: 14px;
+    background: var(--surface-3); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; color: #222;
+  }
+  .reviews-empty-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; color: var(--white); }
+  .reviews-empty-sub { font-size: .8rem; color: var(--text-muted); }
+
+  /* ── MOBILE CTA ──────────────────────────────────────── */
+  .mobile-cta {
+    display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+    padding: 12px 20px;
+    background: rgba(0,0,0,0.92); backdrop-filter: blur(16px);
+    border-top: 1px solid var(--border);
+  }
+  .mobile-cta-inner {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem; max-width: 640px; margin: 0 auto;
+  }
+  .mobile-cta-info { display: flex; flex-direction: column; gap: 1px; }
+  .mobile-cta-label { font-size: .62rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .1em; }
+  .mobile-cta-name { font-family: 'Bebas Neue', sans-serif; font-size: 1rem; color: var(--white); letter-spacing: .03em; line-height: 1; }
+  .mobile-cta-btn {
+    display: inline-flex; align-items: center; gap: .5rem;
+    background: var(--lime); color: var(--black); border: none; border-radius: 100px;
+    padding: .75rem 1.5rem; font-family: 'DM Sans', sans-serif; font-size: .875rem;
+    font-weight: 600; text-decoration: none; cursor: none; transition: background .2s ease; white-space: nowrap; flex-shrink: 0;
+  }
+  .mobile-cta-btn:hover { background: var(--lime-dim); }
+
+  /* ── ANIMAÇÕES ───────────────────────────────────────── */
+  @keyframes revealUp { from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)} }
+
+  /* ── RESPONSIVE ──────────────────────────────────────── */
+  @media(max-width:768px) {
+    .show-hero { flex-direction: column; gap: 1.5rem; }
     .show-actions { flex-direction: row; flex-wrap: wrap; }
-    .show-content { grid-template-columns: 1fr; }
-    .show-back, .show-header, .show-divider, .show-content { padding-left: 1.25rem; padding-right: 1.25rem; }
+    .show-content { grid-template-columns: 1fr; padding-top: 2rem; }
+    .show-back, .show-hero, .show-divider, .show-content, .show-reviews { padding-left: 1.25rem; padding-right: 1.25rem; }
+    .mobile-cta { display: block; }
+    .show-wrap { padding-bottom: 90px; }
+    .rating-bars { display: none; }
+    .reviews-grid { grid-template-columns: 1fr; }
   }
 </style>
 
+<%
+  reviews      = @car_wash.reviews.includes(:user).order(created_at: :desc)
+  avg_rating   = reviews.any? ? reviews.average(:rating).to_f.round(1) : nil
+  review_count = reviews.count
+  counts_by_star = (1..5).map { |s| [s, reviews.where(rating: s).count] }.to_h
+  today_dow    = Date.current.wday
+  is_open      = @car_wash.operating_hours.exists?(day_of_week: today_dow)
+  opens_today  = @car_wash.operating_hours.find_by(day_of_week: today_dow)
+%>
+
 <div class="show-wrap">
 
-  <!-- Back -->
+  <!-- BACK -->
   <div class="show-back">
-    <%= link_to car_washes_path do %>
+    <%= link_to :back do %>
       <i class="fas fa-arrow-left"></i> Voltar
     <% end %>
   </div>
 
-  <!-- Header -->
-  <div class="show-header">
-    <div class="show-header-left">
+  <!-- HERO -->
+  <div class="show-hero">
+    <div class="show-hero-left">
+      <div class="show-eyebrow">Lava-rápido</div>
       <div class="show-avatar"><%= @car_wash.name.first(2).upcase %></div>
       <h1 class="show-name"><%= @car_wash.name %></h1>
-      <div class="show-address">
-        <i class="fas fa-location-dot"></i>
-        <span><%= @car_wash.address || "Endereço não informado" %></span>
+      <div class="show-meta">
+        <div class="show-meta-item">
+          <i class="fas fa-location-dot"></i>
+          <span><%= @car_wash.address || "Endereço não informado" %></span>
+        </div>
+        <% if avg_rating %>
+        <div class="show-meta-item">
+          <i class="fas fa-star" style="color:var(--lime);"></i>
+          <strong><%= sprintf('%.1f', avg_rating) %></strong>
+          <span style="color:var(--text-muted);">(<%= review_count %> <%= review_count == 1 ? 'avaliação' : 'avaliações' %>)</span>
+        </div>
+        <% end %>
+        <div class="show-meta-item">
+          <% if is_open %>
+            <i class="fas fa-circle" style="color:var(--lime);font-size:.5rem;"></i>
+            <strong style="color:var(--lime);">Aberto agora</strong>
+            <% if opens_today %><span>· até <%= opens_today.closes_at.strftime("%H:%M") %></span><% end %>
+          <% elsif opens_today %>
+            <i class="fas fa-circle" style="color:#333;font-size:.5rem;"></i>
+            <span>Abre às <%= opens_today.opens_at.strftime("%H:%M") %></span>
+          <% else %>
+            <i class="fas fa-circle" style="color:#333;font-size:.5rem;"></i>
+            <span>Fechado hoje</span>
+          <% end %>
+        </div>
       </div>
     </div>
+
     <div class="show-actions">
       <% if user_signed_in? && current_user.client? %>
-        <%= link_to new_appointment_path(car_wash_id: @car_wash.id), class: "btn-show btn-show-primary" do %>
+        <%= link_to new_appointment_path(car_wash_id: @car_wash.id), class: "btn-show btn-lime" do %>
           <i class="fas fa-calendar-plus"></i> Agendar
         <% end %>
       <% end %>
       <% if user_signed_in? && current_user.owner? && @car_wash.user == current_user %>
-        <%= link_to manage_car_wash_path(@car_wash), class: "btn-show btn-show-secondary" do %>
+        <%= link_to manage_car_wash_path(@car_wash), class: "btn-show btn-ghost" do %>
           <i class="fas fa-gear"></i> Gerenciar
         <% end %>
       <% end %>
@@ -308,91 +406,220 @@
 
   <div class="show-divider"><div class="show-divider-line"></div></div>
 
-  <!-- Content -->
+  <!-- HORÁRIOS + SERVIÇOS -->
   <div class="show-content">
 
-    <!-- Horários -->
+    <!-- HORÁRIOS -->
     <div class="show-panel">
-      <div class="show-panel-title">
-        <i class="fas fa-clock"></i> Horários
+      <div class="show-panel-header">
+        <i class="fas fa-clock show-panel-title-icon"></i>
+        <span class="show-panel-title">Horários</span>
       </div>
-      <% if @car_wash.operating_hours.any? %>
-        <% @car_wash.operating_hours.order(Arel.sql("CASE day_of_week WHEN 0 THEN 7 ELSE day_of_week END")).each do |hour| %>
-          <div class="show-hour-item">
-            <span class="show-hour-day">
-              <%= %w[Domingo Segunda Terça Quarta Quinta Sexta Sábado][hour.day_of_week] %>
-            </span>
-            <span class="show-hour-time">
-              <%= hour.opens_at.strftime("%H:%M") %> – <%= hour.closes_at.strftime("%H:%M") %>
-            </span>
-          </div>
-        <% end %>
-      <% else %>
-        <p class="show-empty-services">Horários não informados.</p>
-      <% end %>
-    </div>
-
-    <!-- Serviços -->
-    <div class="show-panel">
-      <div class="show-panel-title">
-        <i class="fas fa-list-check"></i> Serviços
-      </div>
-
-      <% categories = @car_wash.services.where.not(category: [nil, '']).pluck(:category).uniq %>
-      <% if categories.any? %>
-        <div class="show-service-tabs">
-          <button class="show-service-tab active" data-cat="all">Todos</button>
-          <% categories.each do |cat| %>
-            <button class="show-service-tab" data-cat="<%= cat %>"><%= cat %></button>
-          <% end %>
-        </div>
-      <% end %>
-
-      <% if @car_wash.services.any? %>
-        <div class="show-service-list">
-          <% @car_wash.services.each do |service| %>
-            <div class="show-service-item" data-category="<%= service.category %>">
-              <div class="show-service-left">
-                <div class="show-service-name"><%= service.title %></div>
-                <% if service.description.present? %>
-                  <div class="show-service-desc"><%= service.description %></div>
-                <% end %>
-              </div>
-              <div class="show-service-right">
-                <div class="show-service-price">R$ <%= number_with_precision(service.price, precision: 2, separator: ',') %></div>
-                <div class="show-service-duration"><%= service.duration %> min</div>
-              </div>
+      <div class="show-panel-body">
+        <% if @car_wash.operating_hours.any? %>
+          <% @car_wash.operating_hours.order(Arel.sql("CASE day_of_week WHEN 0 THEN 7 ELSE day_of_week END")).each do |hour| %>
+            <% day_name = %w[Domingo Segunda Terça Quarta Quinta Sexta Sábado][hour.day_of_week] %>
+            <% is_today = hour.day_of_week == today_dow %>
+            <div class="hour-item" style="<%= is_today ? 'border-color:rgba(175,255,45,0.15);' : '' %>">
+              <span class="hour-day" style="<%= is_today ? 'color:var(--lime);' : '' %>"><%= day_name %><%= is_today ? ' ·' : '' %></span>
+              <span class="hour-time" style="<%= is_today ? 'color:var(--white);' : '' %>"><%= hour.opens_at.strftime("%H:%M") %> – <%= hour.closes_at.strftime("%H:%M") %></span>
             </div>
           <% end %>
-        </div>
-      <% else %>
-        <p class="show-empty-services">Nenhum serviço disponível.</p>
-      <% end %>
+        <% else %>
+          <p class="empty-panel">Horários não informados.</p>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- SERVIÇOS -->
+    <div class="show-panel">
+      <div class="show-panel-header">
+        <i class="fas fa-list-check show-panel-title-icon"></i>
+        <span class="show-panel-title">Serviços</span>
+      </div>
+      <div class="show-panel-body">
+        <% categories = @car_wash.services.where.not(category: [nil, '']).pluck(:category).uniq %>
+        <% if categories.any? %>
+          <div class="service-tabs">
+            <button class="service-tab active" data-cat="all">Todos</button>
+            <% categories.each do |cat| %>
+              <button class="service-tab" data-cat="<%= cat %>"><%= cat %></button>
+            <% end %>
+          </div>
+        <% end %>
+
+        <% if @car_wash.services.any? %>
+          <div class="service-list">
+            <% @car_wash.services.each do |service| %>
+              <div class="service-item" data-category="<%= service.category %>">
+                <div class="service-left">
+                  <div class="service-name"><%= service.title %></div>
+                  <% if service.description.present? %>
+                    <div class="service-desc"><%= service.description %></div>
+                  <% end %>
+                </div>
+                <div class="service-right">
+                  <div class="service-price">R$ <%= number_with_precision(service.price, precision: 2, separator: ',') %></div>
+                  <div class="service-duration"><%= service.duration %> min</div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <p class="empty-panel">Nenhum serviço disponível.</p>
+        <% end %>
+      </div>
     </div>
 
   </div>
+
+  <!-- AVALIAÇÕES -->
+  <div class="show-reviews">
+    <div class="reviews-card">
+      <div class="reviews-header">
+        <div class="reviews-header-left">
+          <i class="fas fa-star reviews-title-icon"></i>
+          <span class="reviews-title">Avaliações</span>
+        </div>
+        <% if avg_rating %>
+        <div class="reviews-summary">
+          <div>
+            <div class="reviews-avg"><%= sprintf('%.1f', avg_rating) %></div>
+            <div class="reviews-avg-detail">
+              <div class="reviews-stars">
+                <% 5.times do |i| %><%= i < avg_rating.round ? '★' : '☆' %><% end %>
+              </div>
+              <div class="reviews-count"><%= review_count %> <%= review_count == 1 ? 'avaliação' : 'avaliações' %></div>
+            </div>
+          </div>
+          <div class="rating-bars">
+            <% [5,4,3,2,1].each do |star| %>
+              <% count = counts_by_star[star] || 0 %>
+              <% pct = review_count > 0 ? (count.to_f / review_count * 100).round : 0 %>
+              <div class="rating-bar-row">
+                <span><%= star %>★</span>
+                <div class="rating-bar-track">
+                  <div class="rating-bar-fill" style="width:<%= pct %>%"></div>
+                </div>
+                <span class="rating-bar-count"><%= count %></span>
+              </div>
+            <% end %>
+          </div>
+        </div>
+        <% end %>
+      </div>
+
+      <div class="reviews-body">
+        <% if reviews.any? %>
+          <div class="reviews-grid">
+            <% reviews.each do |review| %>
+              <div class="review-card">
+                <div class="review-top">
+                  <div class="review-user">
+                    <div class="review-avatar"><%= review.user.display_name.first.upcase %></div>
+                    <div>
+                      <div class="review-user-name"><%= review.user.display_name.split(' ').first %></div>
+                      <div class="review-date"><%= review.created_at.strftime("%d/%m/%Y") %></div>
+                    </div>
+                  </div>
+                  <div class="review-stars">
+                    <% 5.times do |i| %>
+                      <span class="review-star <%= i < review.rating ? 'filled' : '' %>">★</span>
+                    <% end %>
+                  </div>
+                </div>
+                <% if review.tags_list.any? %>
+                  <div class="review-tags">
+                    <% review.tags_list.each do |tag| %>
+                      <span class="review-tag"><%= tag %></span>
+                    <% end %>
+                  </div>
+                <% end %>
+                <% if review.comment.present? %>
+                  <div class="review-comment"><%= review.comment %></div>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <div class="reviews-empty">
+            <div class="reviews-empty-icon"><i class="fas fa-star"></i></div>
+            <div class="reviews-empty-title">Nenhuma avaliação ainda</div>
+            <div class="reviews-empty-sub">Seja o primeiro a avaliar este lava-rápido.</div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
 </div>
 
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const tabs = document.querySelectorAll('.show-service-tab');
-    const items = document.querySelectorAll('.show-service-item');
+<!-- MOBILE CTA -->
+<% if user_signed_in? && current_user.client? %>
+<div class="mobile-cta">
+  <div class="mobile-cta-inner">
+    <div class="mobile-cta-info">
+      <span class="mobile-cta-label">Agendar em</span>
+      <span class="mobile-cta-name"><%= @car_wash.name %></span>
+    </div>
+    <%= link_to new_appointment_path(car_wash_id: @car_wash.id), class: "mobile-cta-btn" do %>
+      <i class="fas fa-calendar-plus"></i> Agendar
+    <% end %>
+  </div>
+</div>
+<% end %>
 
+<script>
+  window.carWashId = <%= @car_wash.id %>;
+  window.operatingHours = <%= @car_wash.operating_hours.map { |oh| { day_of_week: oh.day_of_week, opens_at: (oh.opens_at.hour * 60 + oh.opens_at.min), closes_at: (oh.closes_at.hour * 60 + oh.closes_at.min) } }.to_json.html_safe %>;
+  window.capacityPerSlot = <%= @car_wash.capacity_per_slot %>;
+</script>
+
+<script>
+(function() {
+  // CURSOR
+  const cursor = document.getElementById('loov-cursor');
+  const trail  = document.getElementById('loov-cursor-trail');
+  if (cursor && trail) {
+    let mx=-100,my=-100,tx=-100,ty=-100;
+    document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cursor.style.left=mx+'px';cursor.style.top=my+'px';});
+    (function anim(){tx+=(mx-tx)*0.12;ty+=(my-ty)*0.12;trail.style.left=tx+'px';trail.style.top=ty+'px';requestAnimationFrame(anim);})();
+    document.addEventListener('mouseover',e=>{if(e.target.closest('a,button,input,select,textarea'))document.body.classList.add('cursor-hover');});
+    document.addEventListener('mouseout', e=>{if(e.target.closest('a,button,input,select,textarea'))document.body.classList.remove('cursor-hover');});
+    document.addEventListener('mouseleave',()=>{cursor.style.opacity='0';trail.style.opacity='0';});
+    document.addEventListener('mouseenter',()=>{cursor.style.opacity='1';trail.style.opacity='1';});
+  }
+
+  // PAGE TRANSITION
+  const pt = document.getElementById('page-transition');
+  if (pt) {
+    document.addEventListener('click',e=>{
+      const link=e.target.closest('a[href]');if(!link)return;
+      const href=link.getAttribute('href');
+      if(!href||href.startsWith('#')||href.startsWith('mailto')||link.target==='_blank')return;
+      if(href.startsWith('http')&&!href.includes(window.location.hostname))return;
+      e.preventDefault();pt.classList.add('enter');
+      setTimeout(()=>window.location.href=href,400);
+    });
+    window.addEventListener('pageshow',()=>{pt.classList.remove('enter');pt.classList.add('exit');setTimeout(()=>pt.classList.remove('exit'),440);});
+  }
+
+  // FILTRO DE SERVIÇOS
+  document.addEventListener('DOMContentLoaded', () => {
+    const tabs  = document.querySelectorAll('.service-tab');
+    const items = document.querySelectorAll('.service-item');
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
         tabs.forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
         const cat = tab.dataset.cat;
         items.forEach(item => {
-          if (cat === 'all' || item.dataset.category === cat) {
-            item.style.display = 'flex';
-          } else {
-            item.style.display = 'none';
-          }
+          item.style.display = (cat === 'all' || item.dataset.category === cat) ? 'flex' : 'none';
         });
       });
     });
   });
+})();
 </script>
 
 <% Rails.logger.info("Template car_washes/show.html.erb renderizado com sucesso") %>

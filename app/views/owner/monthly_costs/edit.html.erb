@@ -1,78 +1,231 @@
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
+<div id="loov-cursor"></div>
+<div id="loov-cursor-trail"></div>
+<div id="page-transition"></div>
 
+<style>
   :root {
-    --lime: #afff2d; --lime-dim: #8fcc24; --black: #000; --surface-2: #111111; --surface-3: #1a1a1a; --border: #222222; --text-muted: #666666; --white: #ffffff; --red: #ff4d4d; --yellow: #ffaa00;
+    --lime: #afff2d;
+    --lime-dim: #8fcc24;
+    --black: #000;
+    --surface: #0a0a0a;
+    --surface-2: #0d0d0d;
+    --surface-3: #141414;
+    --border: #1a1a1a;
+    --border-soft: #222;
+    --text-muted: #444;
+    --text-secondary: #777;
+    --white: #fff;
   }
 
-  .wrap { min-height: 100vh; background: var(--black); font-family: 'DM Sans', sans-serif; padding-top: 64px; padding-bottom: 4rem; }
-  .inner { max-width: 640px; margin: 0 auto; padding: 3rem 1.5rem; }
+  #loov-cursor { position:fixed;width:8px;height:8px;background:var(--lime);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .18s ease,height .18s ease;mix-blend-mode:difference; }
+  #loov-cursor-trail { position:fixed;width:38px;height:38px;border:1px solid rgba(175,255,45,0.25);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:width .25s ease,height .25s ease,border-color .25s ease; }
+  body.cursor-hover #loov-cursor { width:14px;height:14px; }
+  body.cursor-hover #loov-cursor-trail { width:58px;height:58px;border-color:rgba(175,255,45,0.45); }
+  @media(hover:none){#loov-cursor,#loov-cursor-trail{display:none;}}
+  #page-transition { position:fixed;inset:0;z-index:10000;background:#000;transform:translateY(100%);pointer-events:none; }
+  #page-transition.enter { animation:pgEnter .42s cubic-bezier(.76,0,.24,1) forwards; }
+  #page-transition.exit  { animation:pgExit  .42s cubic-bezier(.76,0,.24,1) forwards; }
+  @keyframes pgEnter{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  @keyframes pgExit{from{transform:translateY(0)}to{transform:translateY(-100%)}}
 
-  .eyebrow { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.7rem; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; color: var(--lime); margin-bottom: 1rem; opacity: 0; animation: fadeUp 0.6s ease forwards 0.1s; }
-  .eyebrow::before { content: ''; display: block; width: 24px; height: 1px; background: var(--lime); }
-  .page-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(2rem, 6vw, 3.5rem); line-height: 1; color: var(--white); margin: 0 0 0.5rem 0; opacity: 0; animation: fadeUp 0.6s ease forwards 0.2s; }
-  .page-title span { color: var(--lime); }
-  .page-sub { font-size: 0.875rem; color: var(--text-muted); margin-bottom: 2.5rem; opacity: 0; animation: fadeUp 0.6s ease forwards 0.25s; }
+  * { box-sizing: border-box; }
+  body { cursor: none; }
 
-  .revenue-banner { background: rgba(175,255,45,0.06); border: 1px solid rgba(175,255,45,0.15); border-radius: 14px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; opacity: 0; animation: fadeUp 0.6s ease forwards 0.3s; }
-  .revenue-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; }
-  .revenue-value { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; color: var(--lime); letter-spacing: 0.03em; }
+  .costs-wrap {
+    min-height: 100vh; background: var(--black);
+    font-family: 'DM Sans', sans-serif;
+    padding-top: 60px; padding-bottom: 5rem;
+  }
 
-  .form-section { background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; margin-bottom: 1.25rem; overflow: hidden; opacity: 0; animation: fadeUp 0.6s ease forwards; }
-  .form-section:nth-child(1) { animation-delay: 0.35s; }
-  .form-section:nth-child(2) { animation-delay: 0.4s; }
-  .form-section:nth-child(3) { animation-delay: 0.45s; }
+  .costs-header {
+    max-width: 660px; margin: 0 auto;
+    padding: 3.5rem 1.5rem 2rem;
+    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards .1s;
+  }
 
-  .section-header { display: flex; align-items: center; justify-content: space-between; padding: 1.1rem 1.5rem; cursor: pointer; user-select: none; }
-  .section-header:hover { background: rgba(255,255,255,0.02); }
-  .section-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; color: var(--lime); letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.5rem; }
-  .section-total { font-family: 'Bebas Neue', sans-serif; font-size: 1rem; color: var(--text-muted); letter-spacing: 0.03em; }
-  .section-chevron { color: var(--text-muted); font-size: 0.8rem; transition: transform 0.25s ease; }
+  .costs-eyebrow {
+    display: inline-flex; align-items: center; gap: .6rem;
+    font-size: .68rem; font-weight: 500; letter-spacing: .25em;
+    text-transform: uppercase; color: var(--lime); margin-bottom: .875rem;
+  }
+  .costs-eyebrow::before { content:''; display:block; width:28px; height:1px; background:var(--lime); }
+
+  .costs-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2rem, 7vw, 4rem);
+    line-height: .92; color: var(--white); margin: 0;
+  }
+  .costs-title span { color: var(--lime); }
+
+  .costs-sub {
+    font-size: .875rem; color: var(--text-muted); margin-top: .5rem;
+  }
+
+  .costs-divider { max-width: 660px; margin: 0 auto; padding: 0 1.5rem; }
+  .costs-divider-line { height: 1px; background: var(--border); }
+
+  .costs-body { max-width: 660px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+
+  /* ── PENDING BANNER ──────────────────────────────────── */
+  .pending-banner {
+    display: flex; align-items: flex-start; gap: .75rem;
+    background: rgba(251,191,36,.05); border: 1px solid rgba(251,191,36,.18);
+    border-radius: 16px; padding: 1rem 1.25rem; margin-bottom: 1.75rem;
+    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards .25s;
+    position: relative; overflow: hidden;
+  }
+  .pending-banner::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 2px; background: #fbbf24; opacity: .6;
+  }
+  .pending-banner i { color: #fbbf24; font-size: 1rem; margin-top: 2px; flex-shrink: 0; }
+  .pending-banner-text { font-size: .82rem; color: #e0e0e0; line-height: 1.55; }
+  .pending-banner-text strong { color: #fbbf24; }
+
+  /* ── FORM SECTIONS ───────────────────────────────────── */
+  .form-section {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 20px; margin-bottom: 1rem; overflow: hidden;
+    position: relative;
+    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards;
+  }
+  .form-section:nth-child(1) { animation-delay: .35s; }
+  .form-section:nth-child(2) { animation-delay: .42s; }
+  .form-section:nth-child(3) { animation-delay: .49s; }
+
+  .form-section::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 2px; background: linear-gradient(to bottom, transparent, rgba(175,255,45,0.25), transparent);
+  }
+
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.125rem 1.5rem 1.125rem 1.75rem;
+    cursor: none; user-select: none; transition: background .15s ease;
+  }
+  .section-header:hover { background: rgba(255,255,255,.02); }
+
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem;
+    color: var(--lime); letter-spacing: .05em;
+    display: flex; align-items: center; gap: .5rem;
+  }
+
+  .section-right { display: flex; align-items: center; gap: .75rem; }
+
+  .section-total {
+    font-family: 'Bebas Neue', sans-serif; font-size: 1rem;
+    color: var(--text-muted); letter-spacing: .03em;
+  }
+
+  .section-chevron { color: var(--text-muted); font-size: .75rem; transition: transform .25s ease; }
   .section-chevron.open { transform: rotate(180deg); }
-  .section-body { max-height: 0; overflow: hidden; transition: max-height 0.35s ease; }
+
+  .section-body { max-height: 0; overflow: hidden; transition: max-height .35s ease; }
   .section-body.open { max-height: 1000px; }
-  .section-body-inner { padding: 0 1.5rem 1.5rem; }
+  .section-body-inner { padding: 0 1.5rem 1.5rem 1.75rem; }
 
-  .form-field { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
+  /* ── FORM FIELDS ─────────────────────────────────────── */
+  .form-field { display: flex; flex-direction: column; gap: .4rem; margin-bottom: 1rem; position: relative; }
   .form-field:last-child { margin-bottom: 0; }
-  .form-label { font-size: 0.75rem; font-weight: 500; color: var(--text-muted); letter-spacing: 0.05em; text-transform: uppercase; }
-  .form-label span { font-size: 0.65rem; color: var(--text-muted); font-weight: 400; text-transform: none; letter-spacing: 0; margin-left: 0.3rem; }
-  .form-input, .form-textarea { background: var(--surface-3); border: 1px solid var(--border); border-radius: 10px; padding: 0.875rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.9375rem; color: var(--white); outline: none; transition: all 0.2s ease; width: 100%; box-sizing: border-box; }
-  .form-input:focus, .form-textarea:focus { border-color: var(--lime); box-shadow: 0 0 0 3px rgba(175,255,45,0.08); }
-  .form-input::placeholder, .form-textarea::placeholder { color: var(--text-muted); }
-  .form-textarea { resize: vertical; min-height: 80px; }
 
-  .profit-preview { background: var(--surface-3); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; opacity: 0; animation: fadeUp 0.6s ease forwards 0.5s; }
-  .profit-preview-title { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.75rem; }
-  .profit-row { display: flex; justify-content: space-between; align-items: center; padding: 0.4rem 0; border-bottom: 1px solid var(--border); font-size: 0.875rem; }
-  .profit-row:last-child { border-bottom: none; padding-top: 0.6rem; }
-  .profit-row.total { font-weight: 600; }
-  .profit-label { color: var(--text-muted); }
-  .profit-val { font-family: 'Bebas Neue', sans-serif; font-size: 1rem; letter-spacing: 0.03em; }
+  .form-field-header { display: flex; align-items: center; justify-content: space-between; }
 
-  .form-actions { display: flex; gap: 0.75rem; opacity: 0; animation: fadeUp 0.6s ease forwards 0.55s; }
-  .btn-lime { display: inline-flex; align-items: center; gap: 0.4rem; background: var(--lime); color: var(--black); border: none; border-radius: 100px; padding: 0.875rem 2rem; font-family: 'DM Sans', sans-serif; font-size: 0.9375rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; }
-  .btn-lime:hover { background: var(--lime-dim); transform: translateY(-1px); }
-  .btn-ghost { display: inline-flex; align-items: center; gap: 0.4rem; background: transparent; color: var(--text-muted); border: 1px solid var(--border); border-radius: 100px; padding: 0.875rem 1.5rem; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; cursor: pointer; transition: all 0.2s ease; text-decoration: none; }
+  .form-label {
+    font-size: .72rem; font-weight: 500; color: var(--text-muted);
+    letter-spacing: .08em; text-transform: uppercase;
+  }
+  .form-label-note { font-size: .62rem; color: var(--text-muted); font-weight: 400; text-transform: none; letter-spacing: 0; margin-left: .3rem; }
+
+  .pending-tag {
+    font-size: .6rem; font-weight: 700; letter-spacing: .06em;
+    color: #fbbf24; text-transform: uppercase;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .pending-tag i { font-size: .55rem; }
+
+  .input-wrap { position: relative; }
+
+  .input-prefix {
+    position: absolute; left: 1rem; top: 50%; transform: translateY(-50%);
+    font-size: .82rem; color: var(--text-muted); pointer-events: none;
+  }
+
+  .form-input {
+    background: var(--surface-3); border: 1px solid var(--border);
+    border-radius: 10px; padding: .875rem 1rem .875rem 2.5rem;
+    font-family: 'DM Sans', sans-serif; font-size: .9375rem; color: var(--white);
+    outline: none; transition: all .2s ease; width: 100%; text-align: right;
+    cursor: none;
+  }
+  .form-input:focus { border-color: var(--lime); box-shadow: 0 0 0 3px rgba(175,255,45,.07); }
+  .form-input::placeholder { color: var(--text-muted); }
+  .form-input:disabled { opacity: .35; cursor: not-allowed; border-color: rgba(251,191,36,.15); }
+
+  .form-textarea {
+    background: var(--surface-3); border: 1px solid var(--border);
+    border-radius: 10px; padding: .875rem 1rem;
+    font-family: 'DM Sans', sans-serif; font-size: .9375rem; color: var(--white);
+    outline: none; transition: all .2s ease; width: 100%;
+    resize: vertical; min-height: 80px; cursor: none;
+  }
+  .form-textarea:focus { border-color: var(--lime); box-shadow: 0 0 0 3px rgba(175,255,45,.07); }
+  .form-textarea:disabled { opacity: .35; cursor: not-allowed; }
+
+  /* ── ACTIONS ─────────────────────────────────────────── */
+  .form-actions {
+    display: flex; gap: .75rem;
+    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards .56s;
+  }
+
+  .btn-lime {
+    display: inline-flex; align-items: center; gap: .4rem;
+    background: var(--lime); color: var(--black); border: none;
+    border-radius: 100px; padding: .9rem 2rem;
+    font-family: 'DM Sans', sans-serif; font-size: .9375rem; font-weight: 600;
+    cursor: none; transition: all .22s ease;
+  }
+  .btn-lime:hover { background: var(--lime-dim); transform: translateY(-2px); box-shadow: 0 10px 28px rgba(175,255,45,.18); }
+
+  .btn-ghost {
+    display: inline-flex; align-items: center; gap: .4rem;
+    background: transparent; color: var(--text-muted);
+    border: 1px solid var(--border-soft); border-radius: 100px;
+    padding: .9rem 1.5rem; font-family: 'DM Sans', sans-serif;
+    font-size: .875rem; cursor: none; transition: all .2s ease; text-decoration: none;
+  }
   .btn-ghost:hover { border-color: var(--lime); color: var(--lime); }
 
-  @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes revealUp { from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)} }
+
+  @media(max-width:640px) {
+    .costs-header, .costs-divider, .costs-body { padding-left: 1.25rem; padding-right: 1.25rem; }
+  }
 </style>
 
-<div class="wrap">
-  <div class="inner">
+<div class="costs-wrap">
 
-    <div class="eyebrow">Lançamento de Custos</div>
-    <h1 class="page-title"><%= MonthlyCost::MONTH_NAMES[@cost.month - 1] %><span>/</span><%= @cost.year %></h1>
-    <p class="page-sub">Registre os custos fixos e variáveis do mês para calcular o lucro real do negócio.</p>
+  <div class="costs-header">
+    <div class="costs-eyebrow">Lançamento de Custos</div>
+    <h1 class="costs-title">
+      <%= MonthlyCost::MONTH_NAMES[@cost.month - 1] %><span>/</span><%= @cost.year %>
+    </h1>
+    <p class="costs-sub">Registre os custos fixos e variáveis do mês.</p>
+  </div>
 
-    <div class="revenue-banner">
-      <div>
-        <div class="revenue-label">Faturamento do mês</div>
-        <div class="revenue-value">R$ <%= number_with_precision(@revenue, precision: 2) %></div>
+  <div class="costs-divider"><div class="costs-divider-line"></div></div>
+
+  <div class="costs-body">
+
+    <% if @has_pending %>
+    <div class="pending-banner">
+      <i class="fas fa-clock"></i>
+      <div class="pending-banner-text">
+        <strong>Alteração pendente de aprovação.</strong><br>
+        Os campos marcados com <strong style="color:#fbbf24;">⏳</strong> aguardam aprovação e não podem ser alterados até lá.
       </div>
-      <i class="fas fa-chart-line" style="color:var(--lime);font-size:1.5rem;opacity:0.5;"></i>
     </div>
+    <% end %>
 
     <%= form_with model: @cost, url: upsert_owner_monthly_costs_path, method: :post, local: true do |f| %>
       <%= hidden_field_tag :year,  @cost.year  %>
@@ -82,29 +235,39 @@
       <div class="form-section">
         <div class="section-header" onclick="toggleSection(this)">
           <div class="section-title"><i class="fas fa-lock"></i> Custos Fixos</div>
-          <div style="display:flex;align-items:center;gap:0.75rem;">
+          <div class="section-right">
             <span class="section-total" id="total-fixed">R$ 0,00</span>
             <i class="fas fa-chevron-down section-chevron open"></i>
           </div>
         </div>
         <div class="section-body open">
           <div class="section-body-inner">
+            <% [
+              [:rent,          "Aluguel",                     nil],
+              [:salaries,      "Salários e Encargos",         nil],
+              [:utilities,     "Água, Luz e Internet",        nil],
+              [:other_fixed,   "Outros Fixos",                "contador, seguros, etc"],
+            ].each do |field, label, note| %>
             <div class="form-field">
-              <%= f.label :rent, class: "form-label" do %>Aluguel<% end %>
-              <%= f.number_field :rent, class: "form-input cost-input", placeholder: "0,00", step: "0.01", min: "0", data: { group: "fixed" } %>
+              <div class="form-field-header">
+                <label class="form-label">
+                  <%= label %>
+                  <% if note %><span class="form-label-note">(<%= note %>)</span><% end %>
+                </label>
+                <% if @pending_fields.include?(field.to_s) %>
+                  <span class="pending-tag"><i class="fas fa-clock"></i> Aguard. aprovação</span>
+                <% end %>
+              </div>
+              <div class="input-wrap">
+                <span class="input-prefix">R$</span>
+                <%= f.text_field field, class: "form-input cost-input",
+                    placeholder: "0,00",
+                    data: { group: "fixed", field: field },
+                    disabled: @pending_fields.include?(field.to_s),
+                    value: number_with_precision(@cost.send(field), precision: 2, delimiter: '.', separator: ',') %>
+              </div>
             </div>
-            <div class="form-field">
-              <%= f.label :salaries, class: "form-label" do %>Salários e Encargos<% end %>
-              <%= f.number_field :salaries, class: "form-input cost-input", placeholder: "0,00", step: "0.01", min: "0", data: { group: "fixed" } %>
-            </div>
-            <div class="form-field">
-              <%= f.label :utilities, class: "form-label" do %>Água, Luz e Internet<% end %>
-              <%= f.number_field :utilities, class: "form-input cost-input", placeholder: "0,00", step: "0.01", min: "0", data: { group: "fixed" } %>
-            </div>
-            <div class="form-field">
-              <%= f.label :other_fixed, class: "form-label" do %>Outros Fixos <span>(contador, seguros, etc)</span><% end %>
-              <%= f.number_field :other_fixed, class: "form-input cost-input", placeholder: "0,00", step: "0.01", min: "0", data: { group: "fixed" } %>
-            </div>
+            <% end %>
           </div>
         </div>
       </div>
@@ -113,25 +276,38 @@
       <div class="form-section">
         <div class="section-header" onclick="toggleSection(this)">
           <div class="section-title"><i class="fas fa-arrows-spin"></i> Custos Variáveis</div>
-          <div style="display:flex;align-items:center;gap:0.75rem;">
+          <div class="section-right">
             <span class="section-total" id="total-variable">R$ 0,00</span>
             <i class="fas fa-chevron-down section-chevron open"></i>
           </div>
         </div>
         <div class="section-body open">
           <div class="section-body-inner">
+            <% [
+              [:products,       "Produtos",       "shampoo, cera, detergente, etc"],
+              [:maintenance,    "Manutenção",     "equipamentos, reparos"],
+              [:other_variable, "Outros Variáveis", nil],
+            ].each do |field, label, note| %>
             <div class="form-field">
-              <%= f.label :products, class: "form-label" do %>Produtos <span>(shampoo, cera, detergente, etc)</span><% end %>
-              <%= f.number_field :products, class: "form-input cost-input", placeholder: "0,00", step: "0.01", min: "0", data: { group: "variable" } %>
+              <div class="form-field-header">
+                <label class="form-label">
+                  <%= label %>
+                  <% if note %><span class="form-label-note">(<%= note %>)</span><% end %>
+                </label>
+                <% if @pending_fields.include?(field.to_s) %>
+                  <span class="pending-tag"><i class="fas fa-clock"></i> Aguard. aprovação</span>
+                <% end %>
+              </div>
+              <div class="input-wrap">
+                <span class="input-prefix">R$</span>
+                <%= f.text_field field, class: "form-input cost-input",
+                    placeholder: "0,00",
+                    data: { group: "variable", field: field },
+                    disabled: @pending_fields.include?(field.to_s),
+                    value: number_with_precision(@cost.send(field), precision: 2, delimiter: '.', separator: ',') %>
+              </div>
             </div>
-            <div class="form-field">
-              <%= f.label :maintenance, class: "form-label" do %>Manutenção <span>(equipamentos, reparos)</span><% end %>
-              <%= f.number_field :maintenance, class: "form-input cost-input", placeholder: "0,00", step: "0.01", min: "0", data: { group: "variable" } %>
-            </div>
-            <div class="form-field">
-              <%= f.label :other_variable, class: "form-label" do %>Outros Variáveis<% end %>
-              <%= f.number_field :other_variable, class: "form-input cost-input", placeholder: "0,00", step: "0.01", min: "0", data: { group: "variable" } %>
-            </div>
+            <% end %>
           </div>
         </div>
       </div>
@@ -140,35 +316,19 @@
       <div class="form-section">
         <div class="section-header" onclick="toggleSection(this)">
           <div class="section-title"><i class="fas fa-note-sticky"></i> Observações</div>
-          <i class="fas fa-chevron-down section-chevron"></i>
+          <i class="fas fa-chevron-down section-chevron" style="margin-right:0;"></i>
         </div>
         <div class="section-body">
           <div class="section-body-inner">
             <div class="form-field">
-              <%= f.text_area :notes, class: "form-textarea", placeholder: "Ex: aluguel reajustado, comprei equipamento novo, mês com reforma..." %>
+              <% if @pending_fields.include?("notes") %>
+                <span class="pending-tag" style="margin-bottom:6px;"><i class="fas fa-clock"></i> Aguard. aprovação</span>
+              <% end %>
+              <%= f.text_area :notes, class: "form-textarea",
+                  placeholder: "Ex: aluguel reajustado, comprei equipamento novo...",
+                  disabled: @pending_fields.include?("notes") %>
             </div>
           </div>
-        </div>
-      </div>
-
-      <!-- PREVIEW LUCRO -->
-      <div class="profit-preview">
-        <div class="profit-preview-title"><i class="fas fa-calculator"></i> Prévia do Resultado</div>
-        <div class="profit-row">
-          <span class="profit-label">Faturamento</span>
-          <span class="profit-val" style="color:var(--lime);">R$ <%= number_with_precision(@revenue, precision: 2) %></span>
-        </div>
-        <div class="profit-row">
-          <span class="profit-label">Custos Fixos</span>
-          <span class="profit-val" id="preview-fixed" style="color:var(--yellow);">R$ 0,00</span>
-        </div>
-        <div class="profit-row">
-          <span class="profit-label">Custos Variáveis</span>
-          <span class="profit-val" id="preview-variable" style="color:var(--yellow);">R$ 0,00</span>
-        </div>
-        <div class="profit-row total">
-          <span class="profit-label">Lucro Líquido</span>
-          <span class="profit-val" id="preview-profit" style="color:var(--lime);">R$ <%= number_with_precision(@revenue, precision: 2) %></span>
         </div>
       </div>
 
@@ -182,41 +342,32 @@
 </div>
 
 <script>
-var revenue = <%= @revenue %>;
+(function(){
+  const cursor=document.getElementById('loov-cursor'),trail=document.getElementById('loov-cursor-trail');
+  if(cursor&&trail){let mx=-100,my=-100,tx=-100,ty=-100;document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cursor.style.left=mx+'px';cursor.style.top=my+'px';});(function anim(){tx+=(mx-tx)*0.12;ty+=(my-ty)*0.12;trail.style.left=tx+'px';trail.style.top=ty+'px';requestAnimationFrame(anim);})();document.addEventListener('mouseover',e=>{if(e.target.closest('a,button,input,select,textarea'))document.body.classList.add('cursor-hover');});document.addEventListener('mouseout',e=>{if(e.target.closest('a,button,input,select,textarea'))document.body.classList.remove('cursor-hover');});document.addEventListener('mouseleave',()=>{cursor.style.opacity='0';trail.style.opacity='0';});document.addEventListener('mouseenter',()=>{cursor.style.opacity='1';trail.style.opacity='1';});}
+  const pt=document.getElementById('page-transition');
+  if(pt){document.addEventListener('click',e=>{const link=e.target.closest('a[href]');if(!link)return;const href=link.getAttribute('href');if(!href||href.startsWith('#')||href.startsWith('mailto')||link.target==='_blank')return;if(href.startsWith('http')&&!href.includes(window.location.hostname))return;e.preventDefault();pt.classList.add('enter');setTimeout(()=>window.location.href=href,400);});window.addEventListener('pageshow',()=>{pt.classList.remove('enter');pt.classList.add('exit');setTimeout(()=>pt.classList.remove('exit'),440);});}
+})();
 
 function toggleSection(header) {
-  var body    = header.nextElementSibling;
-  var chevron = header.querySelector('.section-chevron');
-  var isOpen  = body.classList.contains('open');
-  body.classList.toggle('open');
-  chevron.classList.toggle('open', !isOpen);
+  var body=header.nextElementSibling,chevron=header.querySelector('.section-chevron'),isOpen=body.classList.contains('open');
+  body.classList.toggle('open');chevron.classList.toggle('open',!isOpen);
 }
 
-function fmtBRL(v) {
-  return 'R$ ' + Math.abs(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
+function applyMask(input){var d=input.value.replace(/\D/g,'');if(!d.length)d='0';var c=parseInt(d,10),r=(c/100).toFixed(2),p=r.split('.');input.value=p[0].replace(/\B(?=(\d{3})+(?!\d))/g,'.')+','+p[1];}
+function getRawValue(input){return input.value.replace(/\./g,'').replace(',','.');}
 
-function recalc() {
-  var fixed    = 0;
-  var variable = 0;
-  document.querySelectorAll('.cost-input').forEach(function(el) {
-    var val = parseFloat(el.value) || 0;
-    if (el.dataset.group === 'fixed')    fixed    += val;
-    if (el.dataset.group === 'variable') variable += val;
-  });
-  var profit = revenue - fixed - variable;
-  document.getElementById('total-fixed').textContent    = fmtBRL(fixed);
-  document.getElementById('total-variable').textContent = fmtBRL(variable);
-  document.getElementById('preview-fixed').textContent    = fmtBRL(fixed);
-  document.getElementById('preview-variable').textContent = fmtBRL(variable);
-  var profitEl = document.getElementById('preview-profit');
-  profitEl.textContent = (profit < 0 ? '- ' : '') + fmtBRL(profit);
-  profitEl.style.color = profit >= 0 ? '#afff2d' : '#ff4d4d';
-}
-
-document.querySelectorAll('.cost-input').forEach(function(el) {
-  el.addEventListener('input', recalc);
+document.querySelectorAll('.cost-input').forEach(function(el){
+  var raw=el.value.replace(/\./g,'').replace(',','.');var num=parseFloat(raw)||0;var c=Math.round(num*100);var r=(c/100).toFixed(2);var p=r.split('.');el.value=p[0].replace(/\B(?=(\d{3})+(?!\d))/g,'.')+','+p[1];
+  el.addEventListener('input',function(){applyMask(this);recalc();});
+  el.addEventListener('keydown',function(e){if([8,9,27,46,37,38,39,40].indexOf(e.keyCode)!==-1)return;if((e.keyCode<48||e.keyCode>57)&&(e.keyCode<96||e.keyCode>105))e.preventDefault();});
 });
 
+document.querySelector('form').addEventListener('submit',function(){
+  document.querySelectorAll('.cost-input').forEach(function(el){if(!el.disabled)el.value=getRawValue(el);});
+});
+
+function fmtBRL(v){return'R$ '+Math.abs(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function recalc(){var fixed=0,variable=0;document.querySelectorAll('.cost-input').forEach(function(el){if(el.disabled)return;var raw=el.value.replace(/\./g,'').replace(',','.');var val=parseFloat(raw)||0;if(el.dataset.group==='fixed')fixed+=val;if(el.dataset.group==='variable')variable+=val;});document.getElementById('total-fixed').textContent=fmtBRL(fixed);document.getElementById('total-variable').textContent=fmtBRL(variable);}
 recalc();
 </script>

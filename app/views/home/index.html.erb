@@ -1,453 +1,492 @@
-<% if user_signed_in? && current_user.owner? %>
-
-<div id="matter-wrap-container" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;overflow:hidden;">
-  <canvas id="matter-wrap-canvas"></canvas>
-</div>
+<% if user_signed_in? && (current_user.owner? || current_user.attendant?) %>
 
 <style>
-  body { background: #000; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #000; overflow: hidden; }
 
-  .checkin-overlay {
+  .brand-stage {
     position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 0;
+  }
+
+  .brand-vignette {
+    position: fixed;
+    inset: 0;
+    z-index: 2;
+    background: radial-gradient(
+      ellipse 72% 68% at 50% 48%,
+      rgba(0,0,0,0.0) 0%,
+      rgba(0,0,0,0.5) 50%,
+      rgba(0,0,0,0.88) 85%,
+      rgba(0,0,0,0.97) 100%
+    );
+    pointer-events: none;
+  }
+
+  .cmd-overlay {
+    position: fixed;
+    inset: 0;
     z-index: 10;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 80px 24px 24px;
+    padding: 70px 24px 24px;
     pointer-events: none;
   }
 
-  .checkin-panel {
+  .cmd-panel {
     width: 100%;
-    max-width: 480px;
-    max-height: calc(100vh - 120px);
-    background: rgba(8,8,8,0.88);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid #1e1e1e;
-    border-radius: 20px;
+    max-width: 580px;
+    max-height: calc(100vh - 110px);
+    background: rgba(3,3,3,0.94);
+    backdrop-filter: blur(48px);
+    -webkit-backdrop-filter: blur(48px);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 24px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
     pointer-events: all;
-    box-shadow: 0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.03);
+    box-shadow:
+      0 48px 120px rgba(0,0,0,0.9),
+      0 0 0 1px rgba(175,255,45,0.05),
+      inset 0 1px 0 rgba(255,255,255,0.04);
   }
 
-  .checkin-header {
-    padding: 20px 20px 16px;
-    border-bottom: 1px solid #161616;
-    flex-shrink: 0;
-  }
+  .cmd-header { padding:18px 20px 16px; border-bottom:1px solid rgba(255,255,255,0.04); flex-shrink:0; }
+  .cmd-header-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:14px; }
+  .cmd-header-left { display:flex; flex-direction:column; gap:1px; }
+  .cmd-car-wash-name { font-family:'Montserrat',sans-serif; font-size:0.55rem; font-weight:700; letter-spacing:0.22em; text-transform:uppercase; color:rgba(175,255,45,0.35); }
+  .cmd-clock { font-family:'Bebas Neue',sans-serif; font-size:3.25rem; line-height:1; color:#fff; letter-spacing:0.04em; }
+  .cmd-date { font-size:0.66rem; color:#333; margin-top:2px; letter-spacing:0.05em; text-transform:capitalize; }
 
-  .checkin-header-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 14px;
-  }
+  .cmd-approval-btn { position:relative; background:transparent; border:1px solid rgba(255,255,255,0.06); border-radius:10px; width:36px; height:36px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#333; font-size:0.78rem; transition:all .2s ease; flex-shrink:0; }
+  .cmd-approval-btn:hover { border-color:rgba(251,191,36,0.4); color:#fbbf24; background:rgba(251,191,36,0.05); }
+  .cmd-approval-btn.has-pending { border-color:rgba(251,191,36,0.3); color:#fbbf24; }
+  .cmd-approval-badge { position:absolute; top:-5px; right:-5px; background:#fbbf24; color:#000; font-family:'Montserrat',sans-serif; font-size:0.5rem; font-weight:800; width:16px; height:16px; border-radius:50%; display:none; align-items:center; justify-content:center; border:2px solid #000; }
+  .cmd-approval-badge.visible { display:flex; }
 
-  .checkin-title {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: #afff2d;
-  }
+  .cmd-kpis { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; }
 
-  .checkin-date { font-size: 0.7rem; color: #444; }
+  .kpi-revenue { grid-column:1/-1; background:rgba(175,255,45,0.03); border:1px solid rgba(175,255,45,0.08); border-radius:14px; padding:12px 16px; display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; position:relative; overflow:hidden; }
+  .kpi-revenue::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(to right,transparent,rgba(175,255,45,0.25),transparent); }
+  .kpi-revenue-left { display:flex; flex-direction:column; gap:3px; }
+  .kpi-revenue-label { font-size:0.54rem; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; color:rgba(175,255,45,0.35); }
+  .kpi-revenue-value { font-family:'Bebas Neue',sans-serif; font-size:2.25rem; color:#afff2d; line-height:1; letter-spacing:0.02em; }
+  .kpi-revenue-right { display:flex; flex-direction:column; align-items:flex-end; gap:6px; padding-bottom:2px; }
+  .kpi-progress-wrap { display:flex; flex-direction:column; align-items:flex-end; gap:3px; }
+  .kpi-progress-label { font-size:0.52rem; color:#2a2a2a; letter-spacing:0.05em; }
+  .kpi-progress-track { width:90px; height:3px; background:rgba(255,255,255,0.05); border-radius:99px; overflow:hidden; }
+  .kpi-progress-fill { height:100%; background:linear-gradient(to right,#5a8a00,#afff2d); border-radius:99px; transition:width .8s cubic-bezier(.16,1,.3,1); width:0%; }
 
-  .checkin-kpis {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 6px;
-  }
+  .kpi-small { background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); border-radius:12px; padding:10px 12px; display:flex; flex-direction:column; gap:4px; }
+  .kpi-small-label { font-size:0.5rem; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:#222; }
+  .kpi-small-value { font-family:'Montserrat',sans-serif; font-size:1.4rem; font-weight:700; color:#fff; line-height:1; }
+  .kpi-small-value.yellow { color:#fbbf24; }
+  .kpi-small-value.green  { color:#afff2d; }
 
-  .kpi-box {
-    background: #0d0d0d;
-    border: 1px solid #181818;
-    border-radius: 10px;
-    padding: 10px 6px;
-    text-align: center;
-  }
+  .cmd-list { overflow-y:auto; flex:1; padding:6px 10px; }
+  .cmd-list::-webkit-scrollbar { width:2px; }
+  .cmd-list::-webkit-scrollbar-thumb { background:#1a1a1a; border-radius:99px; }
 
-  .kpi-value {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: #fff;
-    line-height: 1;
-    margin-bottom: 4px;
-  }
+  .cmd-empty { padding:28px 12px; text-align:center; }
+  .cmd-empty-icon { width:48px; height:48px; border-radius:14px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); display:flex; align-items:center; justify-content:center; margin:0 auto 10px; font-size:1.1rem; color:#1a1a1a; }
+  .cmd-empty-title { font-family:'Montserrat',sans-serif; font-size:0.65rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#1e1e1e; margin-bottom:4px; }
+  .cmd-empty-sub { font-size:0.65rem; color:#161616; line-height:1.5; }
 
-  .kpi-value.green  { color: #afff2d; }
-  .kpi-value.yellow { color: #fbbf24; }
-  .kpi-value.red    { color: #f87171; }
+  .appt-card { display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:12px; margin-bottom:3px; border:1px solid transparent; transition:all .15s ease; position:relative; overflow:hidden; }
+  .appt-card::before { content:''; position:absolute; left:0; top:4px; bottom:4px; width:2px; border-radius:99px; opacity:0; transition:opacity .2s ease; }
+  .appt-card:hover { background:rgba(255,255,255,0.02); border-color:rgba(255,255,255,0.04); }
+  .appt-card:hover::before { opacity:1; }
+  .appt-card.status-confirmed::before { background:#fbbf24; }
+  .appt-card.status-attended::before  { background:#afff2d; }
+  .appt-card.status-no_show::before   { background:#f87171; }
+  .appt-card.is-attended { opacity:.45; }
+  .appt-card.is-no_show  { opacity:.25; }
+  .appt-card.flash-green { background:rgba(175,255,45,0.06)!important; border-color:rgba(175,255,45,0.12)!important; }
+  .appt-card.flash-red   { background:rgba(248,113,113,0.06)!important; border-color:rgba(248,113,113,0.12)!important; }
 
-  .kpi-label {
-    font-size: 0.58rem;
-    color: #444;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
+  .appt-time-block { display:flex; flex-direction:column; align-items:center; flex-shrink:0; min-width:40px; }
+  .appt-time-main { font-family:'Bebas Neue',sans-serif; font-size:1.1rem; color:#fff; line-height:1; letter-spacing:0.02em; }
+  .appt-dot { width:4px; height:4px; border-radius:50%; margin-top:4px; flex-shrink:0; }
+  .appt-dot.yellow { background:#fbbf24; } .appt-dot.green { background:#afff2d; } .appt-dot.red { background:#f87171; } .appt-dot.gray { background:#333; }
+  .appt-info { flex:1; min-width:0; }
+  .appt-client { font-size:.8rem; font-weight:500; color:#e0e0e0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.3; display:flex; align-items:center; gap:5px; }
+  .appt-walkin-tag { font-size:.52rem; color:#444; background:#0a0a0a; border:1px solid #1a1a1a; border-radius:4px; padding:1px 5px; flex-shrink:0; }
+  .appt-service { font-size:.68rem; color:#2a2a2a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }
+  .appt-price { font-family:'Bebas Neue',sans-serif; font-size:.9rem; color:#222; flex-shrink:0; letter-spacing:.02em; }
+  .appt-price.overridden { color:#fbbf24; }
+  .appt-actions { display:flex; gap:3px; flex-shrink:0; }
+  .appt-btn { width:26px; height:26px; border-radius:8px; border:1px solid rgba(255,255,255,0.05); background:transparent; color:#2a2a2a; font-size:.62rem; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all .15s ease; flex-shrink:0; }
+  .appt-btn:hover.attend-btn { background:rgba(175,255,45,.1); border-color:#afff2d; color:#afff2d; }
+  .appt-btn:hover.noshow-btn { background:rgba(248,113,113,.1); border-color:#f87171; color:#f87171; }
+  .appt-btn:hover.revert-btn { background:rgba(251,191,36,.1); border-color:#fbbf24; color:#fbbf24; }
+  .appt-btn:hover.edit-btn   { background:rgba(255,255,255,.04); border-color:#2a2a2a; color:#777; }
 
-  .checkin-list {
-    overflow-y: auto;
-    flex: 1;
-    padding: 6px 10px;
-  }
+  .cmd-footer { padding:10px 20px 14px; border-top:1px solid rgba(255,255,255,0.04); flex-shrink:0; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .cmd-footer-info { display:flex; align-items:center; gap:6px; font-size:.62rem; color:#222; }
+  .cmd-footer-info i { color:#1a1a1a; font-size:.58rem; }
+  .cmd-footer-upcoming { color:rgba(175,255,45,0.6); font-weight:700; }
+  .cmd-walkin-btn { background:#afff2d; border:none; border-radius:8px; color:#000; width:28px; height:28px; font-size:.7rem; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:background .15s ease; }
+  .cmd-walkin-btn:hover { background:#8fcc24; }
 
-  .checkin-list::-webkit-scrollbar { width: 3px; }
-  .checkin-list::-webkit-scrollbar-track { background: transparent; }
-  .checkin-list::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 99px; }
+  .loading-state { padding:24px; text-align:center; color:#1a1a1a; font-size:.72rem; display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .loov-loader { display:inline-flex; align-items:center; gap:5px; }
+  .loov-loader span { width:5px; height:5px; background:#afff2d; border-radius:50%; animation:loaderPulse 1.2s ease-in-out infinite; }
+  .loov-loader span:nth-child(2){animation-delay:.2s;} .loov-loader span:nth-child(3){animation-delay:.4s;}
+  @keyframes loaderPulse{0%,100%{opacity:.2;transform:scale(.8)}50%{opacity:1;transform:scale(1.2)}}
+  @keyframes spin{to{transform:rotate(360deg)}} .spin{animation:spin .8s linear infinite;display:inline-block;}
 
-  .checkin-empty {
-    padding: 36px 16px;
-    text-align: center;
-    color: #333;
-    font-size: 0.8rem;
-  }
+  .approval-overlay{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .25s ease;}
+  .approval-overlay.open{opacity:1;pointer-events:all;}
+  .approval-drawer{position:fixed;top:0;right:0;bottom:0;z-index:51;width:min(380px,94vw);background:rgba(3,3,3,0.98);border-left:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .32s cubic-bezier(.32,.72,0,1);box-shadow:-20px 0 60px rgba(0,0,0,.7);}
+  .approval-drawer.open{transform:translateX(0);}
+  .approval-drawer-header{padding:20px;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+  .approval-drawer-title{font-family:'Montserrat',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#fbbf24;display:flex;align-items:center;gap:8px;}
+  .approval-drawer-badge{background:#fbbf24;color:#000;border-radius:100px;font-size:.56rem;font-weight:800;padding:2px 7px;}
+  .approval-drawer-close{background:none;border:1px solid rgba(255,255,255,.06);border-radius:8px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#444;font-size:.75rem;transition:all .15s ease;}
+  .approval-drawer-close:hover{border-color:#f87171;color:#f87171;}
+  .approval-drawer-body{overflow-y:auto;flex:1;padding:12px;}
+  .approval-drawer-body::-webkit-scrollbar{width:2px;}
+  .approval-drawer-body::-webkit-scrollbar-thumb{background:#1a1a1a;border-radius:99px;}
+  .approval-card{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);border-radius:12px;padding:12px 14px;margin-bottom:8px;transition:opacity .2s ease,transform .2s ease;position:relative;overflow:hidden;}
+  .approval-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:#fbbf24;opacity:.5;}
+  .approval-card.removing{opacity:0;transform:translateX(16px);}
+  .approval-card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;}
+  .approval-card-desc{font-size:.78rem;color:#e0e0e0;line-height:1.4;flex:1;}
+  .approval-card-meta{font-size:.62rem;color:#333;margin-bottom:8px;}
+  .approval-toggle{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.15);color:#fbbf24;border-radius:6px;width:22px;height:22px;font-size:.6rem;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:background .15s;}
+  .approval-toggle:hover{background:rgba(251,191,36,.15);}
+  .approval-detail{display:none;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.04);border-radius:8px;padding:10px;margin-bottom:8px;font-size:.7rem;line-height:1.6;}
+  .approval-actions{display:flex;gap:6px;}
+  .btn-approve{flex:1;background:rgba(175,255,45,.08);border:1px solid rgba(175,255,45,.2);color:#afff2d;border-radius:7px;font-size:.68rem;font-weight:700;cursor:pointer;padding:6px 0;transition:all .15s;}
+  .btn-approve:hover{background:rgba(175,255,45,.14);border-color:#afff2d;}
+  .btn-reject{flex:1;background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.15);color:#f87171;border-radius:7px;font-size:.68rem;font-weight:700;cursor:pointer;padding:6px 0;transition:all .15s;}
+  .btn-reject:hover{background:rgba(248,113,113,.12);border-color:#f87171;}
+  .approval-drawer-empty{padding:32px 16px;text-align:center;color:#222;font-size:.75rem;}
 
-  .checkin-empty i { font-size: 1.4rem; margin-bottom: 8px; display: block; }
+  .toast-container{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);z-index:200;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;}
+  .toast{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:100px;font-family:'Montserrat',sans-serif;font-size:.7rem;font-weight:600;letter-spacing:.04em;backdrop-filter:blur(16px);box-shadow:0 8px 24px rgba(0,0,0,.5);opacity:0;transform:translateY(12px);animation:toastIn .3s ease forwards;pointer-events:none;}
+  .toast.success{background:rgba(175,255,45,.12);border:1px solid rgba(175,255,45,.3);color:#afff2d;}
+  .toast.error{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);color:#f87171;}
+  .toast.out{animation:toastOut .3s ease forwards;}
+  @keyframes toastIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes toastOut{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-8px)}}
 
-  .appt-card {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    padding: 9px 8px;
-    border-radius: 10px;
-    margin-bottom: 3px;
-    transition: background 0.15s;
-    border: 1px solid transparent;
-  }
-
-  .appt-card:hover { background: #0e0e0e; border-color: #1a1a1a; }
-  .appt-card.is-attended { opacity: 0.55; }
-  .appt-card.is-no_show  { opacity: 0.35; }
-
-  .appt-time {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 0.76rem;
-    font-weight: 700;
-    color: #fff;
-    min-width: 36px;
-    flex-shrink: 0;
-  }
-
-  .appt-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
-  .appt-dot.yellow { background: #fbbf24; }
-  .appt-dot.green  { background: #afff2d; }
-  .appt-dot.red    { background: #f87171; }
-  .appt-dot.gray   { background: #333; }
-
-  .appt-info { flex: 1; min-width: 0; }
-
-  .appt-client {
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: #e0e0e0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    line-height: 1.3;
-  }
-
-  .appt-service {
-    font-size: 0.7rem;
-    color: #444;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .appt-price {
-    font-size: 0.72rem;
-    font-weight: 600;
-    color: #555;
-    flex-shrink: 0;
-    min-width: 44px;
-    text-align: right;
-  }
-
-  .appt-actions { display: flex; gap: 4px; flex-shrink: 0; }
-
-  .appt-btn {
-    width: 26px; height: 26px;
-    border-radius: 7px;
-    border: 1px solid #1e1e1e;
-    background: #0a0a0a;
-    color: #444;
-    font-size: 0.65rem;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
-    transition: all 0.15s;
-    flex-shrink: 0;
-  }
-
-  .appt-btn:hover.attend-btn { background: rgba(175,255,45,0.12); border-color: #afff2d; color: #afff2d; }
-  .appt-btn:hover.noshow-btn { background: rgba(248,113,113,0.12); border-color: #f87171; color: #f87171; }
-  .appt-btn:hover.revert-btn { background: rgba(251,191,36,0.12); border-color: #fbbf24; color: #fbbf24; }
-  .appt-btn:hover.edit-btn   { background: rgba(255,255,255,0.06); border-color: #333; color: #aaa; }
-
-  .checkin-footer {
-    padding: 10px 20px 14px;
-    border-top: 1px solid #161616;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .upcoming-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 0.68rem; color: #444;
-  }
-  .upcoming-badge span { color: #afff2d; font-weight: 600; }
-  .car-wash-name { font-size: 0.68rem; color: #333; font-style: italic; }
-
-  .loading-state { padding: 24px; text-align: center; color: #333; font-size: 0.78rem; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .spin { animation: spin 1s linear infinite; display: inline-block; }
-
-  @media (max-width: 600px) {
-    .checkin-overlay { padding: 68px 12px 12px; align-items: flex-end; }
-    .checkin-panel { max-width: 100%; max-height: 60vh; border-radius: 16px; }
+  @media(max-width:600px){
+    .cmd-overlay{padding:60px 10px 10px;align-items:flex-end;}
+    .cmd-panel{max-height:72vh;border-radius:20px;}
+    .cmd-clock{font-size:2.5rem;}
+    .kpi-revenue-value{font-size:1.875rem;}
   }
 </style>
 
-<div class="checkin-overlay">
-  <div class="checkin-panel">
-    <div class="checkin-header">
-      <div class="checkin-header-top">
-        <span class="checkin-title">Painel do Dia</span>
-        <span class="checkin-date" id="checkin-date"></span>
-      </div>
-      <div class="checkin-kpis">
-        <div class="kpi-box">
-          <div class="kpi-value" id="kpi-total"><%= @today_total || 0 %></div>
-          <div class="kpi-label">Total</div>
-        </div>
-        <div class="kpi-box">
-          <div class="kpi-value yellow" id="kpi-pending"><%= @today_pending || 0 %></div>
-          <div class="kpi-label">Aguard.</div>
-        </div>
-        <div class="kpi-box">
-          <div class="kpi-value green" id="kpi-attended"><%= @today_attended || 0 %></div>
-          <div class="kpi-label">Vieram</div>
-        </div>
-        <div class="kpi-box">
-          <div class="kpi-value green" id="kpi-revenue">R$&nbsp;<%= number_with_precision(@today_revenue || 0, precision: 0, delimiter: '.') %></div>
-          <div class="kpi-label">Caixa</div>
-        </div>
-      </div>
-    </div>
+<svg class="brand-stage" viewBox="0 0 1440 900" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <pattern id="p-diag" patternUnits="userSpaceOnUse" width="28.28" height="28.28" patternTransform="rotate(45)">
+      <rect width="14.14" height="28.28" fill="#afff2d"/>
+      <rect x="14.14" width="14.14" height="28.28" fill="#030303"/>
+    </pattern>
+    <pattern id="p-dots" patternUnits="userSpaceOnUse" width="20" height="20">
+      <rect width="20" height="20" fill="#030303"/>
+      <circle cx="10" cy="10" r="4" fill="#afff2d"/>
+    </pattern>
+    <pattern id="p-check" patternUnits="userSpaceOnUse" width="28" height="28">
+      <rect width="28" height="28" fill="#afff2d"/>
+      <rect width="14" height="14" fill="#030303"/>
+      <rect x="14" y="14" width="14" height="14" fill="#030303"/>
+    </pattern>
+    <clipPath id="clip-bl">
+      <circle cx="-60" cy="860" r="260"/>
+    </clipPath>
+  </defs>
+  <rect width="1440" height="900" fill="#000"/>
+  <circle cx="-80" cy="110" r="290" fill="url(#p-diag)"/>
+  <circle cx="1510" cy="90" r="250" fill="url(#p-dots)"/>
+  <circle cx="1490" cy="870" r="300" fill="url(#p-check)"/>
+  <g clip-path="url(#clip-bl)">
+    <rect x="-340" y="590" width="600" height="540" fill="#000"/>
+    <circle cx="-60" cy="860" r="248" fill="none" stroke="#afff2d" stroke-width="18" stroke-opacity="0.9"/>
+    <circle cx="-60" cy="860" r="212" fill="none" stroke="#afff2d" stroke-width="18" stroke-opacity="0.75"/>
+    <circle cx="-60" cy="860" r="176" fill="none" stroke="#afff2d" stroke-width="18" stroke-opacity="0.6"/>
+    <circle cx="-60" cy="860" r="140" fill="none" stroke="#afff2d" stroke-width="18" stroke-opacity="0.45"/>
+    <circle cx="-60" cy="860" r="104" fill="none" stroke="#afff2d" stroke-width="18" stroke-opacity="0.3"/>
+    <circle cx="-60" cy="860" r="68"  fill="none" stroke="#afff2d" stroke-width="18" stroke-opacity="0.2"/>
+  </g>
+  <polygon fill="#afff2d" fill-opacity="0.9" points="1292,348 1303,412 1344,363 1334,427 1386,393 1342,441 1392,450 1342,459 1386,507 1334,473 1344,537 1303,488 1292,552 1281,488 1240,537 1250,473 1198,507 1242,459 1192,450 1242,441 1198,393 1250,427 1240,363 1281,412"/>
+  <circle cx="1292" cy="450" r="52" fill="#000"/>
+  <polygon fill="none" stroke="#afff2d" stroke-width="3" stroke-opacity="0.55" points="170,368 179,416 212,378 201,426 244,408 213,446 260,450 213,454 244,492 201,474 212,522 179,484 170,532 161,484 128,522 139,474 96,492 127,454 80,450 127,446 96,408 139,426 128,378 161,416"/>
+  <circle cx="170" cy="450" r="38" fill="none" stroke="#afff2d" stroke-width="3" stroke-opacity="0.3"/>
+  <line x1="0" y1="450" x2="1440" y2="450" stroke="#afff2d" stroke-width="1" stroke-opacity="0.06"/>
+</svg>
 
-    <div class="checkin-list" id="checkin-list">
-      <div class="loading-state"><i class="fas fa-circle-notch spin"></i><br>Carregando agenda...</div>
-    </div>
+<div class="brand-vignette"></div>
 
-    <div class="checkin-footer">
-      <div class="upcoming-badge">
-        <i class="fas fa-calendar-days"></i>
-        Próx. 7 dias: <span><%= @upcoming_count || 0 %> agend.</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span class="car-wash-name"><%= @car_wash&.name %></span>
-        <button id="btn-walk-in" title="Registrar serviço avulso"
-          style="background:#afff2d;border:none;border-radius:7px;color:#000;width:26px;height:26px;font-size:0.7rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;pointer-events:all;">
-          <i class="fas fa-plus"></i>
-        </button>
-      </div>
+<div class="approval-overlay" id="approval-overlay"></div>
+<div class="approval-drawer" id="approval-drawer">
+  <div class="approval-drawer-header">
+    <div class="approval-drawer-title">
+      <i class="fas fa-clock"></i>
+      Aguardando aprovação
+      <span class="approval-drawer-badge" id="drawer-badge">0</span>
+    </div>
+    <button class="approval-drawer-close" id="drawer-close"><i class="fas fa-xmark"></i></button>
+  </div>
+  <div class="approval-drawer-body" id="drawer-body">
+    <div class="approval-drawer-empty">
+      <i class="fas fa-check-circle" style="display:block;font-size:1.5rem;margin-bottom:8px;color:#1a1a1a;"></i>
+      Nenhuma alteração pendente.
     </div>
   </div>
 </div>
 
+<div class="toast-container" id="toast-container"></div>
+
+<div class="cmd-overlay">
+  <div class="cmd-panel">
+    <div class="cmd-header">
+      <div class="cmd-header-top">
+        <div class="cmd-header-left">
+          <span class="cmd-car-wash-name"><%= @car_wash&.name&.upcase %></span>
+          <div class="cmd-clock" id="cmd-clock">00:00</div>
+          <div class="cmd-date" id="cmd-date"></div>
+        </div>
+        <% if current_user.owner? %>
+        <button class="cmd-approval-btn" id="approval-btn" title="Aprovações pendentes">
+          <i class="fas fa-bell"></i>
+          <span class="cmd-approval-badge" id="approval-badge">0</span>
+        </button>
+        <% end %>
+      </div>
+      <div class="cmd-kpis">
+        <div class="kpi-revenue">
+          <div class="kpi-revenue-left">
+            <span class="kpi-revenue-label">Caixa do dia</span>
+            <div class="kpi-revenue-value" id="kpi-revenue">R$&nbsp;<%= number_with_precision(@today_revenue || 0, precision: 0, delimiter: '.') %></div>
+          </div>
+          <div class="kpi-revenue-right">
+            <div class="kpi-progress-wrap">
+              <span class="kpi-progress-label" id="kpi-progress-label">vs. média 7 dias</span>
+              <div class="kpi-progress-track"><div class="kpi-progress-fill" id="kpi-progress-fill"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="kpi-small"><span class="kpi-small-label">Total</span><div class="kpi-small-value" id="kpi-total"><%= @today_total || 0 %></div></div>
+        <div class="kpi-small"><span class="kpi-small-label">Aguard.</span><div class="kpi-small-value yellow" id="kpi-pending"><%= @today_pending || 0 %></div></div>
+        <div class="kpi-small"><span class="kpi-small-label">Vieram</span><div class="kpi-small-value green" id="kpi-attended"><%= @today_attended || 0 %></div></div>
+      </div>
+    </div>
+    <div class="cmd-list" id="cmd-list">
+      <div class="loading-state">
+        <div class="loov-loader"><span></span><span></span><span></span></div>
+        <span>Carregando agenda...</span>
+      </div>
+    </div>
+    <div class="cmd-footer">
+      <div class="cmd-footer-info">
+        <i class="fas fa-calendar-days"></i>
+        Próx. 7 dias:
+        <span class="cmd-footer-upcoming"><%= @upcoming_count || 0 %> agend.</span>
+      </div>
+      <% if current_user.owner? || current_user.attendant? %>
+      <button class="cmd-walkin-btn" id="btn-walk-in" title="Registrar serviço avulso"><i class="fas fa-plus"></i></button>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<%= render 'owner/disponivel_acceptance/widget' %>
+
 <script>
 (function() {
-  const CSRF       = document.querySelector('meta[name="csrf-token"]')?.content;
-  const list       = document.getElementById('checkin-list');
-  const kpiTotal   = document.getElementById('kpi-total');
-  const kpiPending = document.getElementById('kpi-pending');
-  const kpiAttend  = document.getElementById('kpi-attended');
-  const kpiRevenue = document.getElementById('kpi-revenue');
-  const dateEl     = document.getElementById('checkin-date');
-
-  const now = new Date();
-  dateEl.textContent = now.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
-
+  const CSRF = document.querySelector('meta[name="csrf-token"]')?.content;
   let allServices = [];
 
-  async function patch(url, body = {}) {
-    const res = await fetch(url, {
-      method: 'PATCH',
-      headers: { 'X-CSRF-Token': CSRF, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    return res.json();
+  function updateClock() {
+    const now = new Date();
+    document.getElementById('cmd-clock').textContent = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+    document.getElementById('cmd-date').textContent = now.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
+  }
+  updateClock(); setInterval(updateClock, 1000);
+
+  function showToast(msg, type='success') {
+    const c=document.getElementById('toast-container'),t=document.createElement('div');
+    t.className=`toast ${type}`;t.innerHTML=`<i class="fas fa-${type==='success'?'check':'times'}"></i> ${msg}`;
+    c.appendChild(t);setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),320);},3000);
   }
 
-  async function post(url, body = {}) {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'X-CSRF-Token': CSRF, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    return res.json();
+  function animateCounter(el, target, isRev, dur=500) {
+    const st=performance.now();function ease(t){return 1-Math.pow(1-t,3);}
+    function step(ct){const p=Math.min((ct-st)/dur,1),v=Math.round(ease(p)*target);el.textContent=isRev?'R$\u00A0'+v.toLocaleString('pt-BR'):v;if(p<1)requestAnimationFrame(step);}
+    requestAnimationFrame(step);
   }
+
+  async function patch(url,body={}){const r=await fetch(url,{method:'PATCH',headers:{'X-CSRF-Token':CSRF,'Content-Type':'application/json'},body:JSON.stringify(body)});return r.json();}
+  async function post(url,body={}){const r=await fetch(url,{method:'POST',headers:{'X-CSRF-Token':CSRF,'Content-Type':'application/json'},body:JSON.stringify(body)});return r.json();}
 
   function showEditModal(a) {
     document.getElementById('edit-modal')?.remove();
-    const modal = document.createElement('div');
-    modal.id = 'edit-modal';
-    modal.style.cssText = `position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);padding:24px;`;
-    const options = allServices.map(s =>
-      `<option value="${s.id}" data-price="${s.price}" ${s.id === a.service_id ? 'selected' : ''}>${s.title} — R$ ${s.price.toFixed(0)}</option>`
-    ).join('');
-    modal.innerHTML = `
-      <div style="background:#0f0f0f;border:1px solid #222;border-radius:16px;padding:24px;width:100%;max-width:360px;font-family:'Montserrat',sans-serif;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-          <span style="font-size:0.7rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:#afff2d;">Editar Serviço</span>
-          <button id="edit-close" style="background:none;border:none;color:#555;font-size:1rem;cursor:pointer;"><i class="fas fa-xmark"></i></button>
-        </div>
-        <div style="font-size:0.78rem;color:#888;margin-bottom:16px;">${a.client} · ${a.time}</div>
-        <label style="font-size:0.65rem;color:#555;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:6px;">Serviço</label>
-        <select id="edit-service" style="width:100%;background:#1a1a1a;border:1px solid #222;border-radius:8px;color:#fff;padding:10px 12px;font-size:0.82rem;margin-bottom:14px;outline:none;">${options}</select>
-        <label style="font-size:0.65rem;color:#555;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:6px;">Valor cobrado (deixe vazio para usar o padrão)</label>
-        <input id="edit-price" type="number" step="0.01" min="0"
-          placeholder="R$ ${a.price.toFixed(2)}"
-          value="${a.price_overridden ? a.price.toFixed(2) : ''}"
-          style="width:100%;background:#1a1a1a;border:1px solid #222;border-radius:8px;color:#fff;padding:10px 12px;font-size:0.82rem;margin-bottom:20px;outline:none;">
-        <div style="display:flex;gap:8px;">
-          <button id="edit-cancel" style="flex:1;background:transparent;border:1px solid #222;border-radius:8px;color:#666;padding:10px;font-size:0.8rem;cursor:pointer;">Cancelar</button>
-          <button id="edit-save" style="flex:2;background:#afff2d;border:none;border-radius:8px;color:#000;padding:10px;font-size:0.8rem;font-weight:700;cursor:pointer;">Salvar</button>
-        </div>
-      </div>`;
+    const modal=document.createElement('div');modal.id='edit-modal';modal.style.cssText='position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.9);backdrop-filter:blur(8px);padding:24px;';
+    const opts=allServices.map(s=>`<option value="${s.id}" ${s.id===a.service_id?'selected':''}>${s.title} — R$ ${s.price.toFixed(0)}</option>`).join('');
+    modal.innerHTML=`<div style="background:#080808;border:1px solid #1e1e1e;border-radius:20px;padding:24px;width:100%;max-width:360px;font-family:'Montserrat',sans-serif;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;"><span style="font-size:.65rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#afff2d;">Editar Serviço</span><button id="edit-close" style="background:none;border:none;color:#444;font-size:1rem;cursor:pointer;"><i class="fas fa-xmark"></i></button></div><div style="font-size:.75rem;color:#555;margin-bottom:16px;">${a.client} · ${a.time}</div><label style="font-size:.6rem;color:#444;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:6px;">Serviço</label><select id="edit-service" style="width:100%;background:#111;border:1px solid #1e1e1e;border-radius:8px;color:#fff;padding:10px 12px;font-size:.82rem;margin-bottom:14px;outline:none;">${opts}</select><label style="font-size:.6rem;color:#444;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:6px;">Valor (vazio = padrão)</label><input id="edit-price" type="number" step="0.01" min="0" placeholder="R$ ${a.price.toFixed(2)}" value="${a.price_overridden?a.price.toFixed(2):''}" style="width:100%;background:#111;border:1px solid #1e1e1e;border-radius:8px;color:#fff;padding:10px 12px;font-size:.82rem;margin-bottom:20px;outline:none;"><div style="display:flex;gap:8px;"><button id="edit-cancel" style="flex:1;background:transparent;border:1px solid #1e1e1e;border-radius:8px;color:#444;padding:10px;font-size:.8rem;cursor:pointer;">Cancelar</button><button id="edit-save" style="flex:2;background:#afff2d;border:none;border-radius:8px;color:#000;padding:10px;font-size:.8rem;font-weight:700;cursor:pointer;">Salvar</button></div></div>`;
     document.body.appendChild(modal);
-    const serviceSelect = modal.querySelector('#edit-service');
-    const priceInput    = modal.querySelector('#edit-price');
-    serviceSelect.addEventListener('change', () => {
-      const selected = allServices.find(s => s.id == serviceSelect.value);
-      if (selected) priceInput.placeholder = `R$ ${selected.price.toFixed(2)}`;
-    });
-    modal.querySelector('#edit-close').addEventListener('click',  () => modal.remove());
-    modal.querySelector('#edit-cancel').addEventListener('click', () => modal.remove());
-    modal.querySelector('#edit-save').addEventListener('click', async () => {
-      const serviceId     = serviceSelect.value;
-      const priceOverride = priceInput.value.trim();
-      const btn = modal.querySelector('#edit-save');
-      btn.textContent = '...'; btn.disabled = true;
-      const data = await patch(`/owner/checkins/${a.id}/update_service`, { service_id: serviceId, price_override: priceOverride || null });
-      modal.remove();
-      if (data.ok) loadToday();
-    });
+    modal.querySelector('#edit-close').addEventListener('click',()=>modal.remove());
+    modal.querySelector('#edit-cancel').addEventListener('click',()=>modal.remove());
+    modal.querySelector('#edit-save').addEventListener('click',async()=>{const btn=modal.querySelector('#edit-save');btn.textContent='...';btn.disabled=true;const data=await patch(`/owner/checkins/${a.id}/update_service`,{service_id:modal.querySelector('#edit-service').value,price_override:modal.querySelector('#edit-price').value.trim()||null});modal.remove();if(data.ok)loadToday();});
   }
 
   function showWalkInModal() {
     document.getElementById('walkin-modal')?.remove();
-    const modal = document.createElement('div');
-    modal.id = 'walkin-modal';
-    modal.style.cssText = `position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);padding:24px;`;
-    const options = allServices.map(s =>
-      `<option value="${s.id}" data-price="${s.price}">${s.title} — R$ ${s.price.toFixed(0)}</option>`
-    ).join('');
-    const nowTime = new Date().toTimeString().slice(0,5);
-    modal.innerHTML = `
-      <div style="background:#0f0f0f;border:1px solid #222;border-radius:16px;padding:24px;width:100%;max-width:360px;font-family:'Montserrat',sans-serif;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-          <span style="font-size:0.7rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:#afff2d;">+ Serviço Avulso</span>
-          <button id="wi-close" style="background:none;border:none;color:#555;font-size:1rem;cursor:pointer;"><i class="fas fa-xmark"></i></button>
-        </div>
-        <label style="font-size:0.65rem;color:#555;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:6px;">Nome do cliente</label>
-        <input id="wi-name" type="text" placeholder="Ex: João Silva" style="width:100%;background:#1a1a1a;border:1px solid #222;border-radius:8px;color:#fff;padding:10px 12px;font-size:0.82rem;margin-bottom:14px;outline:none;">
-        <label style="font-size:0.65rem;color:#555;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:6px;">Horário</label>
-        <input id="wi-time" type="time" value="${nowTime}" style="width:100%;background:#1a1a1a;border:1px solid #222;border-radius:8px;color:#fff;padding:10px 12px;font-size:0.82rem;margin-bottom:14px;outline:none;">
-        <label style="font-size:0.65rem;color:#555;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:6px;">Serviço</label>
-        <select id="wi-service" style="width:100%;background:#1a1a1a;border:1px solid #222;border-radius:8px;color:#fff;padding:10px 12px;font-size:0.82rem;margin-bottom:14px;outline:none;">${options}</select>
-        <label style="font-size:0.65rem;color:#555;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:6px;">Valor cobrado (opcional)</label>
-        <input id="wi-price" type="number" step="0.01" min="0" placeholder="Usa o preço do serviço" style="width:100%;background:#1a1a1a;border:1px solid #222;border-radius:8px;color:#fff;padding:10px 12px;font-size:0.82rem;margin-bottom:20px;outline:none;">
-        <div id="wi-error" style="color:#f87171;font-size:0.72rem;margin-bottom:10px;display:none;"></div>
-        <div style="display:flex;gap:8px;">
-          <button id="wi-cancel" style="flex:1;background:transparent;border:1px solid #222;border-radius:8px;color:#666;padding:10px;font-size:0.8rem;cursor:pointer;">Cancelar</button>
-          <button id="wi-save" style="flex:2;background:#afff2d;border:none;border-radius:8px;color:#000;padding:10px;font-size:0.8rem;font-weight:700;cursor:pointer;">Registrar</button>
-        </div>
-      </div>`;
+    const modal=document.createElement('div');modal.id='walkin-modal';modal.style.cssText='position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.9);backdrop-filter:blur(8px);padding:24px;';
+    const opts=allServices.map(s=>`<option value="${s.id}">${s.title} — R$ ${s.price.toFixed(0)}</option>`).join('');
+    const nowTime=new Date().toTimeString().slice(0,5);
+    modal.innerHTML=`<div style="background:#080808;border:1px solid #1e1e1e;border-radius:20px;padding:24px;width:100%;max-width:360px;font-family:'Montserrat',sans-serif;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;"><span style="font-size:.65rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#afff2d;">+ Serviço Avulso</span><button id="wi-close" style="background:none;border:none;color:#444;font-size:1rem;cursor:pointer;"><i class="fas fa-xmark"></i></button></div><label style="font-size:.6rem;color:#444;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:6px;">Cliente</label><input id="wi-name" type="text" placeholder="Nome do cliente" style="width:100%;background:#111;border:1px solid #1e1e1e;border-radius:8px;color:#fff;padding:10px 12px;font-size:.82rem;margin-bottom:12px;outline:none;"><label style="font-size:.6rem;color:#444;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:6px;">Horário</label><input id="wi-time" type="time" value="${nowTime}" style="width:100%;background:#111;border:1px solid #1e1e1e;border-radius:8px;color:#fff;padding:10px 12px;font-size:.82rem;margin-bottom:12px;outline:none;"><label style="font-size:.6rem;color:#444;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:6px;">Serviço</label><select id="wi-service" style="width:100%;background:#111;border:1px solid #1e1e1e;border-radius:8px;color:#fff;padding:10px 12px;font-size:.82rem;margin-bottom:12px;outline:none;">${opts}</select><label style="font-size:.6rem;color:#444;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:6px;">Valor (opcional)</label><input id="wi-price" type="number" step="0.01" min="0" placeholder="Usa o preço do serviço" style="width:100%;background:#111;border:1px solid #1e1e1e;border-radius:8px;color:#fff;padding:10px 12px;font-size:.82rem;margin-bottom:18px;outline:none;"><div id="wi-error" style="color:#f87171;font-size:.7rem;margin-bottom:10px;display:none;"></div><div style="display:flex;gap:8px;"><button id="wi-cancel" style="flex:1;background:transparent;border:1px solid #1e1e1e;border-radius:8px;color:#444;padding:10px;font-size:.8rem;cursor:pointer;">Cancelar</button><button id="wi-save" style="flex:2;background:#afff2d;border:none;border-radius:8px;color:#000;padding:10px;font-size:.8rem;font-weight:700;cursor:pointer;">Registrar</button></div></div>`;
     document.body.appendChild(modal);
-    modal.querySelector('#wi-close').addEventListener('click',  () => modal.remove());
-    modal.querySelector('#wi-cancel').addEventListener('click', () => modal.remove());
-    modal.querySelector('#wi-save').addEventListener('click', async () => {
-      const name    = modal.querySelector('#wi-name').value.trim();
-      const time    = modal.querySelector('#wi-time').value;
-      const service = modal.querySelector('#wi-service').value;
-      const price   = modal.querySelector('#wi-price').value.trim();
-      const errEl   = modal.querySelector('#wi-error');
-      const btn     = modal.querySelector('#wi-save');
-      if (!name) { errEl.textContent = 'Informe o nome do cliente.'; errEl.style.display = 'block'; return; }
-      errEl.style.display = 'none';
-      btn.textContent = '...'; btn.disabled = true;
-      const data = await post('/owner/checkins/walk_in', { walk_in_name: name, scheduled_at: time, service_id: service, price_override: price || null });
-      if (data.ok) { modal.remove(); loadToday(); }
-      else { errEl.textContent = data.error || 'Erro ao registrar.'; errEl.style.display = 'block'; btn.textContent = 'Registrar'; btn.disabled = false; }
-    });
+    modal.querySelector('#wi-close').addEventListener('click',()=>modal.remove());
+    modal.querySelector('#wi-cancel').addEventListener('click',()=>modal.remove());
+    modal.querySelector('#wi-save').addEventListener('click',async()=>{const name=modal.querySelector('#wi-name').value.trim(),errEl=modal.querySelector('#wi-error'),btn=modal.querySelector('#wi-save');if(!name){errEl.textContent='Informe o nome do cliente.';errEl.style.display='block';return;}errEl.style.display='none';btn.textContent='...';btn.disabled=true;const data=await post('/owner/checkins/walk_in',{walk_in_name:name,scheduled_at:modal.querySelector('#wi-time').value,service_id:modal.querySelector('#wi-service').value,price_override:modal.querySelector('#wi-price').value.trim()||null});if(data.ok){modal.remove();loadToday();}else{errEl.textContent=data.error||'Erro ao registrar.';errEl.style.display='block';btn.textContent='Registrar';btn.disabled=false;}});
   }
 
-  function renderCard(a) {
-    const settled = a.status === 'attended' || a.status === 'no_show';
-    const card    = document.createElement('div');
-    card.className = `appt-card${a.status === 'attended' ? ' is-attended' : a.status === 'no_show' ? ' is-no_show' : ''}`;
-    card.dataset.id = a.id;
-    const walkInTag = a.walk_in ? `<span style="font-size:0.58rem;color:#555;background:#111;border:1px solid #222;border-radius:4px;padding:1px 5px;margin-left:4px;">avulso</span>` : '';
-    const priceTag  = a.price_overridden ? `<span style="font-size:0.58rem;color:#fbbf24;margin-left:2px;">★</span>` : '';
-    card.innerHTML = `
-      <span class="appt-time">${a.time}</span>
-      <span class="appt-dot ${a.status_color}"></span>
-      <div class="appt-info">
-        <div class="appt-client">${a.client}${walkInTag}</div>
-        <div class="appt-service">${a.service}</div>
-      </div>
-      <span class="appt-price">R$ ${a.price.toFixed(0)}${priceTag}</span>
-      <div class="appt-actions">
-        <button class="appt-btn edit-btn" data-action="edit" title="Editar serviço/valor"><i class="fas fa-pen"></i></button>
-        ${settled
-          ? `<button class="appt-btn revert-btn" data-action="revert" title="Desfazer"><i class="fas fa-rotate-left"></i></button>`
-          : `<button class="appt-btn attend-btn" data-action="attend" title="Compareceu"><i class="fas fa-check"></i></button>
-             <button class="appt-btn noshow-btn" data-action="noshow" title="Não veio"><i class="fas fa-xmark"></i></button>`}
-      </div>`;
-    card.querySelectorAll('.appt-btn').forEach(btn => {
-      btn.addEventListener('click', async e => {
-        e.stopPropagation();
-        if (btn.dataset.action === 'edit') { showEditModal(a); return; }
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-circle-notch spin"></i>';
-        const urls = { attend: `/owner/checkins/${a.id}/attend`, noshow: `/owner/checkins/${a.id}/no_show`, revert: `/owner/checkins/${a.id}/revert` };
-        const data = await patch(urls[btn.dataset.action]);
-        if (data.ok) loadToday();
-      });
-    });
-    return card;
+  // ═══════════════════════════════════════════════════════════════════
+// INSTRUÇÃO: substitui a função renderCard() inteira dentro do
+// bloco <script> da home/index.html.erb (seção do owner/attendant).
+// Procura por: function renderCard(a) {
+// e substitui tudo até o } que fecha a função.
+// ═══════════════════════════════════════════════════════════════════
+
+function renderCard(a) {
+  const settled = a.status === 'attended' || a.status === 'no_show';
+
+  // ── PONTO 2: código do cliente (telefone 4 dígitos + veículo) ──
+  let clientMeta = '';
+  if (a.show_code && (a.phone_last4 || a.vehicle)) {
+    const parts = [];
+    if (a.phone_last4) parts.push(`<span style="font-family:'Bebas Neue',sans-serif;font-size:.95rem;color:#afff2d;letter-spacing:.08em;">****${a.phone_last4}</span>`);
+    if (a.vehicle)     parts.push(`<span style="font-size:.65rem;color:#555;">${a.vehicle}</span>`);
+    clientMeta = `<div style="display:flex;align-items:center;gap:.5rem;margin-top:2px;">${parts.join('')}</div>`;
+  } else if (a.phone_last4 || a.vehicle) {
+    // Mostra discreto sempre (sem destaque)
+    const parts = [];
+    if (a.phone_last4) parts.push(`****${a.phone_last4}`);
+    if (a.vehicle)     parts.push(a.vehicle);
+    clientMeta = `<div style="font-size:.65rem;color:#2a2a2a;margin-top:1px;">${parts.join(' · ')}</div>`;
   }
+
+  // ── PONTO 3: disponível — badge raio + valor restante ──
+  const dispBadge = a.is_disponivel
+    ? `<span style="display:inline-flex;align-items:center;gap:.2rem;background:rgba(175,255,45,.1);border:1px solid rgba(175,255,45,.25);border-radius:100px;padding:.1rem .4rem;font-size:.52rem;font-weight:700;color:#afff2d;margin-left:.3rem;vertical-align:middle;"><i class="fas fa-bolt"></i>Disponível</span>`
+    : '';
+
+  const priceDisplay = a.is_disponivel && a.remaining_amount != null
+    ? `<div style="text-align:right;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:.9rem;color:#f87171;letter-spacing:.02em;text-decoration:line-through;opacity:.5;">R$${a.price.toFixed(0)}</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:.9rem;color:#afff2d;letter-spacing:.02em;">R$${a.remaining_amount.toFixed(0)} <span style="font-size:.55rem;font-weight:400;opacity:.6;">restante</span></div>
+      </div>`
+    : `<span class="appt-price ${a.price_overridden ? 'overridden' : ''}">R$${a.price.toFixed(0)}</span>`;
+
+  const card = document.createElement('div');
+  card.className = `appt-card status-${a.status}${a.status === 'attended' ? ' is-attended' : a.status === 'no_show' ? ' is-no_show' : ''}`;
+  card.dataset.id = a.id;
+
+  card.innerHTML = `
+    <div class="appt-time-block">
+      <span class="appt-time-main">${a.time}</span>
+      <span class="appt-dot ${a.status_color}"></span>
+    </div>
+    <div class="appt-info">
+      <div class="appt-client">
+        ${a.client}${dispBadge}
+        ${a.walk_in ? '<span class="appt-walkin-tag">avulso</span>' : ''}
+      </div>
+      <div class="appt-service">${a.service}</div>
+      ${clientMeta}
+    </div>
+    ${priceDisplay}
+    <div class="appt-actions">
+      <button class="appt-btn edit-btn" data-action="edit" title="Editar"><i class="fas fa-pen"></i></button>
+      ${settled
+        ? `<button class="appt-btn revert-btn" data-action="revert" title="Desfazer"><i class="fas fa-rotate-left"></i></button>`
+        : `<button class="appt-btn attend-btn" data-action="attend" title="Compareceu"><i class="fas fa-check"></i></button>
+           <button class="appt-btn noshow-btn" data-action="noshow" title="Não veio"><i class="fas fa-xmark"></i></button>`
+      }
+    </div>
+  `;
+
+  card.querySelectorAll('.appt-btn').forEach(btn => {
+    btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      if (btn.dataset.action === 'edit') { showEditModal(a); return; }
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-circle-notch spin"></i>';
+      const urls = {
+        attend: `/owner/checkins/${a.id}/attend`,
+        noshow: `/owner/checkins/${a.id}/no_show`,
+        revert: `/owner/checkins/${a.id}/revert`
+      };
+      const data = await patch(urls[btn.dataset.action]);
+      if (data.ok) {
+        if (btn.dataset.action === 'attend') card.classList.add('flash-green');
+        else if (btn.dataset.action === 'noshow') card.classList.add('flash-red');
+        setTimeout(() => loadToday(), 420);
+      }
+    });
+  });
+
+  return card;
+}
 
   async function loadToday() {
-    const res  = await fetch('/owner/checkins/today', { headers: { Accept: 'application/json' } });
-    const data = await res.json();
-    const appts   = data.appointments || [];
-    const summary = data.summary      || {};
-    allServices   = data.services     || [];
-    kpiTotal.textContent   = summary.total    || 0;
-    kpiPending.textContent = summary.pending  || 0;
-    kpiAttend.textContent  = summary.attended || 0;
-    kpiRevenue.textContent = `R$ ${(summary.revenue_today || 0).toFixed(0)}`;
-    list.innerHTML = '';
-    if (!appts.length) {
-      list.innerHTML = '<div class="checkin-empty"><i class="fas fa-calendar-xmark"></i>Nenhum agendamento hoje</div>';
-    } else {
-      appts.forEach(a => list.appendChild(renderCard(a)));
-    }
+    const res=await fetch('/owner/checkins/today',{headers:{Accept:'application/json'}});
+    const data=await res.json();
+    const appts=data.appointments||[],summary=data.summary||{};
+    allServices=data.services||[];
+    animateCounter(document.getElementById('kpi-total'),   summary.total||0,   false);
+    animateCounter(document.getElementById('kpi-pending'), summary.pending||0, false);
+    animateCounter(document.getElementById('kpi-attended'),summary.attended||0,false);
+    animateCounter(document.getElementById('kpi-revenue'), summary.revenue_today||0,true,600);
+    const avg7=summary.avg_7_days||0,rev=summary.revenue_today||0;
+    const pct=avg7>0?Math.min((rev/avg7)*100,100):(rev>0?100:0);
+    document.getElementById('kpi-progress-fill').style.width=pct+'%';
+    if(avg7>0){const diff=rev-avg7,sign=diff>=0?'+':'';document.getElementById('kpi-progress-label').textContent=`${sign}R$${Math.abs(diff).toFixed(0)} vs média`;}
+    const list=document.getElementById('cmd-list');list.innerHTML='';
+    if(!appts.length){const h=new Date().getHours();const sub=h<8?'O movimento começa mais tarde.':h<12?'A manhã ainda está tranquila.':h<18?'Sem agendamentos esta tarde.':'Fim de expediente tranquilo.';list.innerHTML=`<div class="cmd-empty"><div class="cmd-empty-icon"><i class="fas fa-calendar-xmark"></i></div><div class="cmd-empty-title">Nenhum agendamento</div><div class="cmd-empty-sub">${sub}</div></div>`;}
+    else{appts.forEach(a=>list.appendChild(renderCard(a)));}
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    loadToday();
-    document.getElementById('btn-walk-in')?.addEventListener('click', showWalkInModal);
+  const costLabels={rent:'Aluguel',salaries:'Salários',utilities:'Energia/Água',products:'Produtos',maintenance:'Manutenção',other_fixed:'Outros fixos',other_variable:'Outros variáveis',notes:'Observações'};
+  function formatPayload(ct,payload){if(!payload)return'<em style="color:#333">Sem detalhes.</em>';if(ct==='monthly_costs'){const cp=payload.cost_params||{},month=payload.month?`${String(payload.month).padStart(2,'0')}/${payload.year}`:'';let rows=`<div style="font-size:.6rem;color:#fbbf24;margin-bottom:6px;font-weight:700;letter-spacing:.1em;">CUSTOS — ${month}</div>`;rows+=Object.entries(cp).map(([k,v])=>{if(v===''||v===null||v===undefined)return'';const label=costLabels[k]||k;const val=k==='notes'?`<span style="color:#555">${v||'—'}</span>`:`<span style="color:#e0e0e0">R$ ${parseFloat(v).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>`;return`<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #0f0f0f;"><span style="color:#333">${label}</span>${val}</div>`;}).join('');return rows;}return`<pre style="font-size:.62rem;color:#444;white-space:pre-wrap;margin:0;">${JSON.stringify(payload,null,2)}</pre>`;}
+  function toggleDetail(id){const el=document.getElementById(id),icon=document.getElementById('icon-'+id);if(!el)return;const open=el.style.display==='none';el.style.display=open?'block':'none';icon.className=open?'fas fa-minus':'fas fa-plus';}
+  window.toggleDetail=toggleDetail;
+  function removeCard(cardEl,cb){cardEl.classList.add('removing');setTimeout(cb,220);}
+
+  async function loadApprovals(){
+    const btn=document.getElementById('approval-btn');if(!btn)return;
+    try{const res=await fetch('/owner/pending_changes',{headers:{Accept:'application/json'}});const data=await res.json();const badge=document.getElementById('approval-badge');if(data.length>0){btn.classList.add('has-pending');badge.textContent=data.length;badge.classList.add('visible');}else{btn.classList.remove('has-pending');badge.classList.remove('visible');}renderDrawer(data);}catch(e){}
+  }
+
+  function renderDrawer(data){
+    const body=document.getElementById('drawer-body'),drawerBadge=document.getElementById('drawer-badge');
+    drawerBadge.textContent=data.length;
+    if(!data.length){body.innerHTML=`<div class="approval-drawer-empty"><i class="fas fa-check-circle" style="display:block;font-size:1.5rem;margin-bottom:8px;color:#1a1a1a;"></i>Nenhuma alteração pendente.</div>`;return;}
+    body.innerHTML='';
+    data.forEach(pc=>{const did=`detail-${pc.id}`,card=document.createElement('div');card.className='approval-card';card.id=`acard-${pc.id}`;card.innerHTML=`<div class="approval-card-header"><div class="approval-card-desc">${pc.description}</div><button class="approval-toggle" onclick="toggleDetail('${did}')"><i class="fas fa-plus" id="icon-${did}"></i></button></div><div class="approval-card-meta"><i class="fas fa-user" style="margin-right:4px;color:#2a2a2a;"></i>${pc.attendant} · ${pc.created_at}</div><div id="${did}" class="approval-detail">${formatPayload(pc.change_type,pc.payload)}</div><div class="approval-actions"><button class="btn-approve" onclick="approveChange(${pc.id},this)"><i class="fas fa-check"></i> Aprovar</button><button class="btn-reject" onclick="rejectChange(${pc.id},this)"><i class="fas fa-times"></i> Rejeitar</button></div>`;body.appendChild(card);});
+  }
+
+  window.approveChange=async function(id,btn){if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-circle-notch spin"></i>';}try{await fetch(`/owner/pending_changes/${id}/approve`,{method:'PATCH',headers:{'X-CSRF-Token':CSRF,'Content-Type':'application/json'}});const card=document.getElementById(`acard-${id}`);if(card)removeCard(card,()=>loadApprovals());else loadApprovals();showToast('Alteração aprovada e aplicada.','success');}catch(e){showToast('Erro ao aprovar.','error');if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-check"></i> Aprovar';}}};
+  window.rejectChange=async function(id,btn){if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-circle-notch spin"></i>';}try{await fetch(`/owner/pending_changes/${id}/reject`,{method:'PATCH',headers:{'X-CSRF-Token':CSRF,'Content-Type':'application/json'}});const card=document.getElementById(`acard-${id}`);if(card)removeCard(card,()=>loadApprovals());else loadApprovals();showToast('Alteração rejeitada.','error');}catch(e){showToast('Erro ao rejeitar.','error');if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-times"></i> Rejeitar';}}};
+
+  function openDrawer(){document.getElementById('approval-drawer').classList.add('open');document.getElementById('approval-overlay').classList.add('open');document.body.style.overflow='hidden';}
+  function closeDrawer(){document.getElementById('approval-drawer').classList.remove('open');document.getElementById('approval-overlay').classList.remove('open');document.body.style.overflow='';}
+  document.getElementById('approval-btn')?.addEventListener('click',openDrawer);
+  document.getElementById('drawer-close')?.addEventListener('click',closeDrawer);
+  document.getElementById('approval-overlay')?.addEventListener('click',closeDrawer);
+
+  document.addEventListener('DOMContentLoaded',()=>{
+    loadToday(); loadApprovals();
+    document.getElementById('btn-walk-in')?.addEventListener('click',showWalkInModal);
   });
 })();
 </script>
@@ -455,61 +494,149 @@
 <% else %>
 
 <%# ── VIEW CLIENTE / VISITANTE ─────────────────────────────────────────────── %>
+<div id="loov-cursor"></div>
+<div id="loov-cursor-trail"></div>
+<div id="page-transition"></div>
+
 <style>
-  :root { --lime:#afff2d;--lime-dim:#8fcc24;--black:#000;--surface:#0a0a0a;--surface-2:#111;--surface-3:#1a1a1a;--border:#222;--text-muted:#666;--text-secondary:#999;--white:#fff; }
-  .home-wrap*{box-sizing:border-box}
-  .home-wrap{min-height:100vh;background:var(--black);font-family:'DM Sans',sans-serif;padding-top:64px}
-  .hero-section{padding:4rem 1.5rem 3rem;max-width:1200px;margin:0 auto}
-  .hero-eyebrow{display:inline-flex;align-items:center;gap:.5rem;font-size:.7rem;font-weight:500;letter-spacing:.2em;text-transform:uppercase;color:var(--lime);margin-bottom:1.5rem;opacity:0;animation:fadeUp .6s ease forwards .1s}
-  .hero-eyebrow::before{content:'';display:block;width:24px;height:1px;background:var(--lime)}
-  .hero-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(3.5rem,12vw,8rem);line-height:1;color:var(--white);margin:0 0 2rem;opacity:0;animation:fadeUp .7s ease forwards .2s}
-  .hero-title div{font-family:'Bebas Neue',sans-serif;font-size:clamp(3.5rem,12vw,8rem);line-height:1;display:block;color:var(--white)}
-  .hero-title div:last-child{color:var(--lime)}
-  .hero-subtitle{font-size:1rem;color:var(--text-secondary);font-weight:300;max-width:400px;line-height:1.6;margin:0 0 2.5rem;opacity:0;animation:fadeUp .7s ease forwards .3s;display:block}
-  .hero-actions{display:flex;gap:.75rem;flex-wrap:wrap;opacity:0;animation:fadeUp .7s ease forwards .4s}
-  .btn-hero{display:inline-flex;align-items:center;gap:.5rem;padding:.875rem 1.75rem;border-radius:100px;font-family:'DM Sans',sans-serif;font-size:.875rem;font-weight:500;text-decoration:none;transition:all .2s ease;cursor:pointer;border:none}
-  .btn-hero-primary{background:var(--lime);color:var(--black)}
-  .btn-hero-primary:hover{background:var(--lime-dim);transform:translateY(-2px)}
-  .btn-hero-secondary{background:transparent;color:var(--white);border:1px solid var(--border)}
-  .btn-hero-secondary:hover{border-color:var(--lime);color:var(--lime);transform:translateY(-2px)}
-  .search-wrap{max-width:1200px;margin:0 auto;padding:0 1.5rem 3rem;opacity:0;animation:fadeUp .7s ease forwards .5s}
-  .search-inner{position:relative;display:flex;align-items:center}
-  .search-icon{position:absolute;left:1.25rem;color:var(--text-muted);font-size:.9rem;pointer-events:none}
-  .search-input{width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:100px;padding:1rem 1rem 1rem 3rem;font-family:'DM Sans',sans-serif;font-size:.9375rem;color:var(--white);transition:all .2s ease;outline:none}
-  .search-input::placeholder{color:var(--text-muted)}
-  .search-input:focus{border-color:var(--lime);box-shadow:0 0 0 3px rgba(175,255,45,.08)}
-  .search-submit{position:absolute;right:.375rem;background:var(--lime);color:var(--black);border:none;border-radius:100px;width:42px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.8rem;transition:all .2s ease;flex-shrink:0}
-  .search-submit:hover{background:var(--lime-dim)}
-  .section-header{max-width:1200px;margin:0 auto;padding:0 1.5rem 1.5rem;display:flex;align-items:flex-end;justify-content:space-between;gap:1rem}
-  .section-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(1.75rem,5vw,2.5rem);letter-spacing:.02em;color:var(--white);line-height:1;margin:0;font-weight:400}
-  .section-count{font-size:.8rem;color:var(--text-muted);white-space:nowrap;padding-bottom:.25rem}
-  .divider{max-width:1200px;margin:0 auto 2rem;padding:0 1.5rem}
-  .divider-line{height:1px;background:var(--border)}
-  .cards-grid{max-width:1200px;margin:0 auto;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);border-radius:16px;overflow:hidden}
-  .car-wash-card{background:var(--surface);padding:1.75rem;display:flex;flex-direction:column;gap:1rem;text-decoration:none;transition:background .2s ease;opacity:0;transform:translateY(12px);animation:fadeUp .5s ease forwards}
-  .car-wash-card:hover{background:var(--surface-2)}
-  .car-wash-card:hover .card-arrow{transform:translate(3px,-3px);color:var(--lime)}
-  .card-top{display:flex;align-items:center;justify-content:space-between}
-  .card-avatar{width:48px;height:48px;border-radius:12px;background:var(--surface-3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--lime);letter-spacing:.05em;flex-shrink:0}
-  .card-arrow{color:var(--text-muted);font-size:1rem;transition:all .2s ease}
-  .card-name{font-size:1.0625rem;font-weight:500;color:var(--white);line-height:1.3;margin:0}
-  .card-meta{display:flex;flex-direction:column;gap:.4rem}
-  .card-meta-item{display:flex;align-items:center;gap:.5rem;font-size:.8125rem;color:var(--text-muted);margin:0}
-  .card-meta-item i{color:var(--lime);font-size:.7rem;width:12px;flex-shrink:0}
-  .card-badge{display:inline-flex;align-items:center;gap:.35rem;background:rgba(175,255,45,.08);color:var(--lime);font-size:.7rem;font-weight:500;letter-spacing:.05em;padding:.3rem .6rem;border-radius:100px;border:1px solid rgba(175,255,45,.15);width:fit-content;margin-top:auto}
-  .empty-state{max-width:1200px;margin:0 auto;padding:4rem 1.5rem;text-align:center}
-  .empty-icon{font-size:2.5rem;color:var(--border);margin-bottom:1rem}
-  .empty-title{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;color:var(--white);margin-bottom:.5rem}
-  .empty-text{font-size:.875rem;color:var(--text-muted);margin-bottom:1.5rem}
-  .empty-actions{display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap}
-  .flash-wrap{max-width:1200px;margin:0 auto;padding:1.5rem 1.5rem 0}
-  .flash-msg{display:flex;align-items:center;gap:.75rem;padding:.875rem 1.25rem;border-radius:12px;font-size:.875rem;margin-bottom:.75rem}
-  .flash-msg.error{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#fca5a5}
-  .flash-msg.success{background:rgba(175,255,45,.08);border:1px solid rgba(175,255,45,.15);color:var(--lime)}
-  @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-  @media(max-width:640px){.hero-section{padding:3rem 1.25rem 2rem}.search-wrap{padding:0 1.25rem 2.5rem}.section-header{padding:0 1.25rem 1.25rem}.divider{padding:0 1.25rem}.cards-grid{padding:0;margin:0 1.25rem 3rem;grid-template-columns:1fr}}
-  @media(min-width:768px){.cards-grid{grid-template-columns:repeat(2,1fr)}}
-  @media(min-width:1024px){.cards-grid{grid-template-columns:repeat(3,1fr)}}
+  :root{--lime:#afff2d;--lime-dim:#8fcc24;--black:#000;--surface:#0a0a0a;--surface-2:#0d0d0d;--surface-3:#141414;--border:#1a1a1a;--border-soft:#222;--text-muted:#444;--text-secondary:#777;--white:#fff;}
+  #loov-cursor{position:fixed;width:8px;height:8px;background:var(--lime);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .18s ease,height .18s ease;mix-blend-mode:difference;}
+  #loov-cursor-trail{position:fixed;width:38px;height:38px;border:1px solid rgba(175,255,45,0.25);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:width .25s ease,height .25s ease,border-color .25s ease;}
+  body.cursor-hover #loov-cursor{width:14px;height:14px;}body.cursor-hover #loov-cursor-trail{width:58px;height:58px;border-color:rgba(175,255,45,0.45);}
+  @media(hover:none){#loov-cursor,#loov-cursor-trail{display:none;}}
+  #page-transition{position:fixed;inset:0;z-index:10000;background:#000;transform:translateY(100%);pointer-events:none;}
+  #page-transition.enter{animation:pgEnter .42s cubic-bezier(.76,0,.24,1) forwards;}
+  #page-transition.exit{animation:pgExit .42s cubic-bezier(.76,0,.24,1) forwards;}
+  @keyframes pgEnter{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  @keyframes pgExit{from{transform:translateY(0)}to{transform:translateY(-100%)}}
+  *{box-sizing:border-box;}body{cursor:none;}
+  .home-wrap{min-height:100vh;background:var(--black);font-family:'DM Sans',sans-serif;padding-top:60px;}
+  .hero-section{padding:6rem 1.5rem 4.5rem;max-width:1200px;margin:0 auto;position:relative;}
+  .hero-eyebrow{display:inline-flex;align-items:center;gap:.75rem;font-size:.68rem;font-weight:500;letter-spacing:.28em;text-transform:uppercase;color:var(--lime);margin-bottom:2rem;opacity:0;animation:revealUp .8s cubic-bezier(.16,1,.3,1) forwards .1s;}
+  .hero-eyebrow::before{content:'';display:block;width:28px;height:1px;background:var(--lime);}
+  .hero-title{font-family:'Bebas Neue',sans-serif;line-height:.9;color:var(--white);margin:0 0 2.5rem;opacity:0;animation:revealUp .9s cubic-bezier(.16,1,.3,1) forwards .2s;}
+  .hero-title-line{display:block;font-size:clamp(4.5rem,14vw,10rem);letter-spacing:-.01em;}
+  .hero-title-editorial{display:flex;align-items:baseline;gap:.4rem;flex-wrap:wrap;}
+  .hero-title-word{font-size:clamp(4.5rem,14vw,10rem);}
+  .hero-title-sep{font-size:clamp(2rem,5vw,3.5rem);color:#2a2a2a;font-weight:300;letter-spacing:.2em;align-self:flex-end;margin-bottom:.18em;}
+  .hero-title-accent{color:var(--lime);}
+  .hero-title-dot{font-size:clamp(2.5rem,7vw,5rem);color:var(--lime);align-self:flex-end;margin-bottom:.08em;line-height:1;}
+  .hero-subtitle{font-size:1rem;color:var(--text-secondary);font-weight:300;max-width:400px;line-height:1.7;margin:0 0 3rem;opacity:0;animation:revealUp .9s cubic-bezier(.16,1,.3,1) forwards .35s;display:block;}
+  .hero-actions{display:flex;gap:.75rem;flex-wrap:wrap;opacity:0;animation:revealUp .9s cubic-bezier(.16,1,.3,1) forwards .45s;}
+  .hero-aside{position:absolute;right:1.5rem;top:6rem;bottom:4.5rem;display:flex;flex-direction:column;align-items:center;gap:1rem;opacity:0;animation:fadeIn 1.4s ease forwards .8s;}
+  .hero-aside-line{flex:1;width:1px;background:linear-gradient(to bottom,transparent,#1e1e1e,transparent);}
+  .hero-aside-label{font-size:.55rem;letter-spacing:.22em;text-transform:uppercase;color:#282828;writing-mode:vertical-rl;}
+  @media(max-width:768px){.hero-aside{display:none;}}
+  .btn-hero{display:inline-flex;align-items:center;gap:.5rem;padding:.9rem 1.875rem;border-radius:100px;font-family:'DM Sans',sans-serif;font-size:.875rem;font-weight:500;text-decoration:none;transition:all .25s ease;cursor:none;border:none;}
+  .btn-hero-primary{background:var(--lime);color:var(--black);}
+  .btn-hero-primary:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(175,255,45,0.2);}
+  .btn-hero-secondary{background:transparent;color:var(--white);border:1px solid var(--border-soft);}
+  .btn-hero-secondary:hover{border-color:var(--lime);color:var(--lime);transform:translateY(-2px);}
+  .search-wrap{max-width:1200px;margin:0 auto;padding:0 1.5rem 3rem;opacity:0;animation:revealUp .8s cubic-bezier(.16,1,.3,1) forwards .55s;}
+  .search-inner{position:relative;display:flex;align-items:center;}
+  .search-icon{position:absolute;left:1.25rem;color:var(--text-muted);font-size:.875rem;pointer-events:none;}
+  .search-input{width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:100px;padding:1.05rem 1rem 1.05rem 3rem;font-family:'DM Sans',sans-serif;font-size:.9375rem;color:var(--white);transition:all .25s ease;outline:none;cursor:none;}
+  .search-input::placeholder{color:var(--text-muted);}
+  .search-input:focus{border-color:var(--lime);box-shadow:0 0 0 3px rgba(175,255,45,.07);}
+  .search-submit{position:absolute;right:.375rem;background:var(--lime);color:var(--black);border:none;border-radius:100px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:none;font-size:.8rem;transition:all .2s ease;flex-shrink:0;}
+  .search-submit:hover{background:var(--lime-dim);transform:scale(1.05);}
+
+  /* ── DISPONÍVEIS ── */
+  .disp-section{max-width:1200px;margin:0 auto 3.5rem;padding:0 1.5rem;}
+  .disp-section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;}
+  .disp-section-left{display:flex;align-items:center;gap:.75rem;}
+  .disp-badge-live{display:inline-flex;align-items:center;gap:.35rem;background:rgba(175,255,45,.08);border:1px solid rgba(175,255,45,.18);border-radius:100px;padding:.2rem .625rem;font-size:.62rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#afff2d;font-family:'Montserrat',sans-serif;}
+  .disp-live-dot{width:6px;height:6px;border-radius:50%;background:#afff2d;animation:livePulse 1.2s ease-in-out infinite;}
+  @keyframes livePulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.75)}}
+  .disp-section-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(1.5rem,4vw,2rem);color:var(--white);letter-spacing:.02em;line-height:1;margin:0;}
+  .disp-section-link{font-size:.78rem;color:var(--text-muted);text-decoration:none;display:flex;align-items:center;gap:.3rem;transition:color .2s;}
+  .disp-section-link:hover{color:var(--lime);}
+  .disp-row{display:flex;gap:.875rem;overflow-x:auto;padding-bottom:.75rem;scrollbar-width:none;}
+  .disp-row::-webkit-scrollbar{display:none;}
+  .disp-card{flex-shrink:0;width:260px;background:var(--surface-2);border:1px solid var(--border);border-radius:16px;overflow:hidden;text-decoration:none;display:flex;flex-direction:column;transition:all .2s ease;cursor:none;position:relative;}
+  .disp-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(to right,transparent,rgba(175,255,45,.35),transparent);}
+  .disp-card:hover{background:var(--surface-3);border-color:rgba(175,255,45,.15);transform:translateY(-2px);}
+  .disp-card-top{padding:.875rem .875rem .625rem;}
+  .disp-slot-time{font-family:'Bebas Neue',sans-serif;font-size:2.25rem;color:var(--lime);line-height:1;letter-spacing:.04em;}
+  .disp-slot-label{font-size:.65rem;color:var(--text-muted);margin-top:.1rem;}
+  .disp-card-name{font-size:.8rem;font-weight:600;color:var(--white);margin-top:.5rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .disp-card-dist{font-size:.68rem;color:var(--text-muted);margin-top:.1rem;}
+  .disp-card-services{padding:.5rem .875rem;flex:1;}
+  .disp-svc-item{display:flex;justify-content:space-between;align-items:center;padding:.25rem 0;border-bottom:1px solid var(--border);}
+  .disp-svc-item:last-child{border-bottom:none;}
+  .disp-svc-name{font-size:.75rem;color:#ccc;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;}
+  .disp-svc-price{font-family:'Bebas Neue',sans-serif;font-size:.82rem;color:var(--lime);flex-shrink:0;}
+  .disp-card-footer{padding:.625rem .875rem .875rem;display:flex;align-items:center;justify-content:space-between;}
+  .disp-prepay-note{font-size:.62rem;color:rgba(175,255,45,.4);}
+  .disp-cta{display:inline-flex;align-items:center;gap:.25rem;background:var(--lime);color:#000;border:none;border-radius:100px;padding:.375rem .75rem;font-size:.72rem;font-weight:700;cursor:none;transition:background .15s;text-decoration:none;}
+  .disp-cta:hover{background:var(--lime-dim);}
+  .disp-empty{background:var(--surface-2);border:1px solid var(--border);border-radius:16px;padding:2rem 1.5rem;display:flex;align-items:center;gap:1.25rem;}
+  .disp-empty-icon{width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;font-size:1rem;color:#1a1a1a;flex-shrink:0;}
+  .disp-empty-title{font-size:.84rem;font-weight:600;color:#333;margin-bottom:.2rem;}
+  .disp-empty-text{font-size:.75rem;color:#222;line-height:1.5;}
+  .disp-geo{background:rgba(175,255,45,.03);border:1px solid rgba(175,255,45,.1);border-radius:16px;padding:1rem 1.25rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;}
+  .disp-geo-text{font-size:.8rem;color:var(--text-muted);}
+  .disp-geo-btn{background:rgba(175,255,45,.1);border:1px solid rgba(175,255,45,.2);border-radius:100px;padding:.375rem 1rem;font-size:.75rem;font-weight:600;color:var(--lime);cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0;}
+  .disp-geo-btn:hover{background:rgba(175,255,45,.18);}
+
+  .section-header{max-width:1200px;margin:0 auto;padding:0 1.5rem 1.75rem;display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;}
+  .section-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(1.75rem,5vw,2.5rem);letter-spacing:.02em;color:var(--white);line-height:1;margin:0;font-weight:400;}
+  .section-count{font-size:.78rem;color:var(--text-muted);white-space:nowrap;padding-bottom:.25rem;}
+  .divider{max-width:1200px;margin:0 auto 2.5rem;padding:0 1.5rem;}
+  .divider-line{height:1px;background:var(--border);}
+  .cards-grid{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+  .car-wash-card{background:var(--surface);padding:0;display:flex;flex-direction:column;text-decoration:none;cursor:none;position:relative;overflow:hidden;opacity:0;transform:translateY(20px);}
+  .car-wash-card.revealed{transition:background .2s ease,opacity .6s cubic-bezier(.16,1,.3,1),transform .6s cubic-bezier(.16,1,.3,1);opacity:1;transform:translateY(0);}
+  .car-wash-card:hover{background:var(--surface-2);}
+  .car-wash-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--lime);transform:scaleY(0);transform-origin:bottom;transition:transform .3s cubic-bezier(.16,1,.3,1);}
+  .car-wash-card:hover::before{transform:scaleY(1);}
+  .car-wash-card:hover .card-arrow{transform:translate(4px,-4px);color:var(--lime);}
+  .card-body{padding:1.75rem 1.75rem 1.25rem;flex:1;display:flex;flex-direction:column;gap:.875rem;}
+  .card-avatar{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#141414,#1e1e1e);border:1px solid var(--border-soft);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--lime);letter-spacing:.06em;flex-shrink:0;}
+  .card-top{display:flex;align-items:flex-start;justify-content:space-between;}
+  .card-arrow{color:#2a2a2a;font-size:.9rem;transition:all .25s ease;margin-top:2px;}
+  .card-name{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:.02em;color:var(--white);line-height:1;margin:0;}
+  .card-meta{display:flex;flex-direction:column;gap:.375rem;}
+  .card-meta-item{display:flex;align-items:center;gap:.5rem;font-size:.8rem;color:var(--text-muted);}
+  .card-meta-item i{color:var(--lime);font-size:.65rem;width:12px;flex-shrink:0;}
+  .card-footer{padding:.875rem 1.75rem;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:.75rem;}
+  .card-price{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:.02em;color:var(--text-secondary);}
+  .card-price strong{color:var(--lime);}
+  .card-status{display:inline-flex;align-items:center;gap:.35rem;font-size:.68rem;font-weight:500;letter-spacing:.06em;padding:.25rem .625rem;border-radius:100px;}
+  .card-status.open{color:var(--lime);background:rgba(175,255,45,.07);border:1px solid rgba(175,255,45,.15);}
+  .card-status.closed{color:#333;background:transparent;border:1px solid #1e1e1e;}
+  .card-status-dot{width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0;}
+  .empty-state{max-width:1200px;margin:0 auto;padding:5rem 1.5rem;text-align:center;}
+  .empty-icon{font-size:2.5rem;color:#1a1a1a;margin-bottom:1rem;}
+  .empty-title{font-family:'Bebas Neue',sans-serif;font-size:1.75rem;color:var(--white);margin-bottom:.5rem;}
+  .empty-text{font-size:.875rem;color:var(--text-muted);margin-bottom:1.75rem;line-height:1.6;}
+  .empty-actions{display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;}
+  .flash-wrap{max-width:1200px;margin:0 auto;padding:1.5rem 1.5rem 0;}
+  .flash-msg{display:flex;align-items:center;gap:.75rem;padding:.875rem 1.25rem;border-radius:12px;font-size:.875rem;margin-bottom:.75rem;}
+  .flash-msg.error{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#fca5a5;}
+  .flash-msg.success{background:rgba(175,255,45,.08);border:1px solid rgba(175,255,45,.15);color:var(--lime);}
+  .loov-footer{max-width:1200px;margin:5rem auto 0;padding:2rem 1.5rem;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1.25rem;}
+  .loov-footer-left{display:flex;flex-direction:column;gap:.375rem;}
+  .loov-footer-logo{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--white);letter-spacing:.08em;text-decoration:none;line-height:1;}
+  .loov-footer-logo span{color:var(--lime);}
+  .loov-footer-tagline{font-size:.72rem;color:#2a2a2a;letter-spacing:.05em;}
+  .loov-footer-links{display:flex;align-items:center;gap:1.5rem;list-style:none;margin:0;padding:0;}
+  .loov-footer-links a{font-size:.8rem;color:var(--text-muted);text-decoration:none;transition:color .2s ease;}
+  .loov-footer-links a:hover{color:var(--lime);}
+  .loov-footer-copy{font-size:.7rem;color:#1e1e1e;}
+  @keyframes revealUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @media(max-width:640px){
+    .hero-section{padding:4rem 1.25rem 3rem;}
+    .search-wrap{padding:0 1.25rem 2.5rem;}
+    .disp-section,.section-header,.divider{padding-left:1.25rem;padding-right:1.25rem;}
+    .cards-grid{margin:0 1.25rem;grid-template-columns:1fr;}
+    .disp-card{width:230px;}
+    .disp-empty{flex-direction:column;text-align:center;}
+    .loov-footer{padding:2rem 1.25rem;flex-direction:column;align-items:flex-start;}
+  }
+  @media(min-width:768px){.cards-grid{grid-template-columns:repeat(2,1fr);}}
+  @media(min-width:1024px){.cards-grid{grid-template-columns:repeat(3,1fr);}}
 </style>
 
 <div class="home-wrap">
@@ -521,14 +648,20 @@
   <% end %>
 
   <section class="hero-section">
-    <div class="hero-eyebrow"><span>Lava-rápidos perto de você</span></div>
+    <div class="hero-aside"><div class="hero-aside-line"></div><span class="hero-aside-label">Loov · <%= Date.current.year %></span><div class="hero-aside-line"></div></div>
+    <div class="hero-eyebrow"><% if user_signed_in? %><span>Bem-vindo à Loov</span><% else %><span>A nova forma de lavar</span><% end %></div>
     <div class="hero-title">
-      <% if user_signed_in? %><div>Olá,</div><div><%= current_user.display_name.split(' ').first %></div>
-      <% else %><div>Seu carro</div><div>merece mais.</div><% end %>
+      <% if user_signed_in? %>
+        <span class="hero-title-line">Olá,</span>
+        <div class="hero-title-editorial"><span class="hero-title-word hero-title-accent"><%= current_user.display_name.split(' ').first.upcase %></span><span class="hero-title-dot">.</span></div>
+      <% else %>
+        <span class="hero-title-line">Seu carro,</span>
+        <div class="hero-title-editorial"><span class="hero-title-word">SEU</span><span class="hero-title-sep">·</span><span class="hero-title-word hero-title-accent">JEITO</span><span class="hero-title-dot">.</span></div>
+      <% end %>
     </div>
-    <p class="hero-subtitle">Encontre o lava-rápido perfeito e agende em segundos.</p>
+    <p class="hero-subtitle">Você escolhe o lugar, o horário e o serviço.<br>A Loov conecta você aos melhores lava-rápidos do seu bairro.</p>
     <div class="hero-actions">
-      <%= link_to car_washes_path, class: "btn-hero btn-hero-primary" do %><i class="fas fa-car"></i> Ver Lava-Rápidos<% end %>
+      <%= link_to car_washes_path, class: "btn-hero btn-hero-primary" do %><i class="fas fa-car"></i> Explorar<% end %>
       <% unless user_signed_in? %><%= link_to new_user_session_path, class: "btn-hero btn-hero-secondary" do %>Entrar<% end %><% end %>
     </div>
   </section>
@@ -543,6 +676,80 @@
     <% end %>
   </div>
 
+  <%# ── SEÇÃO DISPONÍVEIS ────────────────────────────────────────────────── %>
+  <% if user_signed_in? && current_user.client? %>
+  <div class="disp-section" style="opacity:0;animation:revealUp .8s cubic-bezier(.16,1,.3,1) forwards .5s;">
+
+    <div class="disp-section-header">
+      <div class="disp-section-left">
+        <div class="disp-badge-live"><div class="disp-live-dot"></div>Agora</div>
+        <h2 class="disp-section-title">Disponíveis</h2>
+      </div>
+      <% if @disponivel_has_location %>
+        <%= link_to disponivel_index_path(latitude: params[:latitude], longitude: params[:longitude]), class: "disp-section-link" do %>
+          Ver todos <i class="fas fa-arrow-right" style="font-size:.65rem;"></i>
+        <% end %>
+      <% end %>
+    </div>
+
+    <% if !@disponivel_has_location %>
+      <div class="disp-geo">
+        <span class="disp-geo-text">
+          <i class="fas fa-location-dot" style="color:var(--lime);margin-right:.4rem;"></i>
+          Permita sua localização para ver lava-rápidos disponíveis perto de você agora.
+        </span>
+        <button class="disp-geo-btn" onclick="requestGeoDisponivel()">Usar localização</button>
+      </div>
+
+    <% elsif @disponivel_slots.any? %>
+      <div class="disp-row">
+        <% @disponivel_slots.each do |slot_data| %>
+        <div class="disp-card">
+          <div class="disp-card-top">
+            <div class="disp-slot-time"><%= slot_data[:slot].strftime("%H:%M") %></div>
+            <div class="disp-slot-label">Hoje · vaga disponível</div>
+            <div class="disp-card-name"><%= slot_data[:car_wash].name %></div>
+            <div class="disp-card-dist">
+              <i class="fas fa-location-dot" style="color:var(--lime);font-size:.58rem;"></i>
+              <%= slot_data[:distance_km] %> km de você
+            </div>
+          </div>
+          <div class="disp-card-services">
+            <% slot_data[:services].first(3).each do |svc| %>
+            <div class="disp-svc-item">
+              <span class="disp-svc-name"><%= svc.title %></span>
+              <span class="disp-svc-price">R$<%= number_with_precision(svc.price, precision: 0) %></span>
+            </div>
+            <% end %>
+          </div>
+          <div class="disp-card-footer">
+            <span class="disp-prepay-note">35% agora</span>
+            <%= link_to checkout_disponivel_index_path(
+                  car_wash_id: slot_data[:car_wash].id,
+                  service_id:  slot_data[:services].first.id,
+                  slot:        slot_data[:slot].iso8601
+                ), class: "disp-cta" do %>
+              Reservar <i class="fas fa-bolt" style="font-size:.6rem;"></i>
+            <% end %>
+          </div>
+        </div>
+        <% end %>
+      </div>
+
+    <% else %>
+      <div class="disp-empty">
+        <div class="disp-empty-icon"><i class="fas fa-car-wash"></i></div>
+        <div>
+          <div class="disp-empty-title">Nenhum lava-rápido disponível agora</div>
+          <div class="disp-empty-text">Não há vagas abertas nos próximos 30 minutos num raio de 5km. Tente o agendamento normal ou volte em alguns minutos.</div>
+        </div>
+      </div>
+    <% end %>
+
+  </div>
+  <% end %>
+  <%# ── fim Disponíveis ── %>
+
   <div class="section-header">
     <h2 class="section-title"><% if params[:latitude].present? %>Próximos a você<% elsif params[:search].present? %>Resultados<% else %>Lava-rápidos<% end %></h2>
     <span class="section-count"><%= @car_washes.count %> encontrado<%= @car_washes.count == 1 ? '' : 's' %></span>
@@ -555,44 +762,76 @@
     <h3 class="empty-title">Nenhum resultado</h3>
     <p class="empty-text">Tente buscar por outro nome ou endereço.</p>
     <div class="empty-actions">
-      <% if params[:search].present? || params[:latitude].present? %><%= link_to "Limpar Filtros", root_path, class: "btn-hero btn-hero-secondary" %><% end %>
-      <%= link_to "Ver Todos", root_path, class: "btn-hero btn-hero-primary" %>
+      <% if params[:search].present? || params[:latitude].present? %><%= link_to "Limpar filtros", root_path, class: "btn-hero btn-hero-secondary" %><% end %>
+      <%= link_to "Ver todos", root_path, class: "btn-hero btn-hero-primary" %>
     </div>
   </div>
   <% else %>
   <div class="cards-grid">
     <% @car_washes.each_with_index do |cw, i| %>
-    <%= link_to car_wash_path(cw), class: "car-wash-card", style: "animation-delay:#{0.05*i}s" do %>
-    <div class="card-top">
-      <div class="card-avatar"><%= cw.name.first(2).upcase %></div>
-      <i class="fas fa-arrow-up-right card-arrow"></i>
+    <% min_price=cw.services.minimum(:price);reviews=cw.reviews;avg_rating=reviews.any? ? reviews.average(:rating).to_f : nil;today_dow=Date.current.wday;is_open=cw.operating_hours.exists?(day_of_week: today_dow);opens_today=cw.operating_hours.find_by(day_of_week: today_dow) %>
+    <%= link_to car_wash_path(cw), class: "car-wash-card", data: { index: i } do %>
+    <div class="card-body">
+      <div class="card-top"><div class="card-avatar"><%= cw.name.first(2).upcase %></div><i class="fas fa-arrow-up-right card-arrow"></i></div>
+      <div class="card-name"><%= cw.name %></div>
+      <div class="card-meta">
+        <div class="card-meta-item"><i class="fas fa-location-dot"></i><span><%= cw.address || "Endereço não informado" %></span></div>
+        <% if params[:latitude].present? && params[:longitude].present? && cw.latitude && cw.longitude %>
+        <% dist=cw.distance_to([params[:latitude].to_f, params[:longitude].to_f],:km) %>
+        <div class="card-meta-item"><i class="fas fa-route"></i><span><%= number_with_precision(dist, precision: 1) %> km de você</span></div>
+        <% end %>
+        <% if avg_rating %><div class="card-meta-item"><i class="fas fa-star" style="color:var(--lime);"></i><span style="color:#fff;font-weight:500;"><%= sprintf('%.1f', avg_rating) %></span><span>(<%= reviews.count %>)</span></div>
+        <% else %><div class="card-meta-item"><i class="fas fa-star"></i><span>Seja o primeiro a avaliar</span></div><% end %>
+      </div>
     </div>
-    <div class="card-name"><%= cw.name %></div>
-    <div class="card-meta">
-      <div class="card-meta-item"><i class="fas fa-location-dot"></i><span><%= cw.address || "Endereço não informado" %></span></div>
-      <% if params[:latitude].present? && params[:longitude].present? && cw.latitude && cw.longitude %>
-      <% dist = cw.distance_to([params[:latitude].to_f, params[:longitude].to_f], :km) %>
-      <div class="card-meta-item"><i class="fas fa-route"></i><span><%= number_with_precision(dist, precision: 2) %> km</span></div>
-      <% end %>
-      <% reviews = cw.reviews %>
-      <% if reviews.any? %>
-        <div class="card-meta-item">
-          <i class="fas fa-star" style="color:#afff2d" font-size:.7rem;width:12px;flex-shrink:0;"></i>
-          <span style="color:#fff;font-weight:500;"><%= sprintf('%.1f', reviews.average(:rating).to_f) %></span>
-          <span>(<%= reviews.count %>)</span>
-        </div>
-      <% else %>
-        <div class="card-meta-item">
-          <i class="fas fa-star"></i>
-          <span>Sem avaliações</span>
-        </div>
-      <% end %>
+    <div class="card-footer">
+      <% if min_price %><div class="card-price">A partir de <strong>R$ <%= number_with_precision(min_price, precision: 0) %></strong></div>
+      <% else %><div class="card-price" style="color:var(--text-muted);">Consulte serviços</div><% end %>
+      <% if is_open %><div class="card-status open"><span class="card-status-dot"></span> Aberto agora</div>
+      <% elsif opens_today %><div class="card-status closed">Abre às <%= opens_today.opens_at.strftime("%H:%M") %></div>
+      <% else %><div class="card-status closed">Fechado hoje</div><% end %>
     </div>
-    <div class="card-badge"><i class="fas fa-circle" style="font-size:.4rem"></i> Disponível</div>
     <% end %>
     <% end %>
   </div>
   <% end %>
+
+  <footer class="loov-footer">
+    <div class="loov-footer-left"><a href="/" class="loov-footer-logo">LOOV<span>.</span></a><span class="loov-footer-tagline">Feito para quem não tem tempo a perder.</span></div>
+    <ul class="loov-footer-links"><%= link_to "Lava-rápidos", car_washes_path %><% if user_signed_in? %><%= link_to "Meus agendamentos", appointments_path %><% else %><%= link_to "Entrar", new_user_session_path %><%= link_to "Criar conta", new_user_registration_path %><% end %></ul>
+    <span class="loov-footer-copy">© <%= Date.current.year %> Loov</span>
+  </footer>
 </div>
+
+<script>
+(function(){
+  const cursor=document.getElementById('loov-cursor'),trail=document.getElementById('loov-cursor-trail');
+  if(cursor&&trail){let mx=-100,my=-100,tx=-100,ty=-100;document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cursor.style.left=mx+'px';cursor.style.top=my+'px';});(function anim(){tx+=(mx-tx)*0.12;ty+=(my-ty)*0.12;trail.style.left=tx+'px';trail.style.top=ty+'px';requestAnimationFrame(anim);})();document.addEventListener('mouseover',e=>{if(e.target.closest('a,button,input,select,textarea'))document.body.classList.add('cursor-hover');});document.addEventListener('mouseout',e=>{if(e.target.closest('a,button,input,select,textarea'))document.body.classList.remove('cursor-hover');});document.addEventListener('mouseleave',()=>{cursor.style.opacity='0';trail.style.opacity='0';});document.addEventListener('mouseenter',()=>{cursor.style.opacity='1';trail.style.opacity='1';});}
+  const pt=document.getElementById('page-transition');
+  if(pt){document.addEventListener('click',e=>{const link=e.target.closest('a[href]');if(!link)return;const href=link.getAttribute('href');if(!href||href.startsWith('#')||href.startsWith('mailto')||link.target==='_blank')return;if(href.startsWith('http')&&!href.includes(window.location.hostname))return;e.preventDefault();pt.classList.add('enter');setTimeout(()=>window.location.href=href,400);});window.addEventListener('pageshow',()=>{pt.classList.remove('enter');pt.classList.add('exit');setTimeout(()=>pt.classList.remove('exit'),440);});}
+  const cards=document.querySelectorAll('.car-wash-card');
+  if(cards.length){const obs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){const idx=parseInt(e.target.dataset.index||0);setTimeout(()=>e.target.classList.add('revealed'),idx*55);obs.unobserve(e.target);}});},{threshold:.08,rootMargin:'0px 0px -32px 0px'});cards.forEach(c=>obs.observe(c));}
+  const si=document.getElementById('search-input');
+  if(si){const txt='Buscar lava-rápido ou endereço...';si.setAttribute('placeholder','');let i=0;function type(){if(i<txt.length){si.setAttribute('placeholder',txt.slice(0,++i));setTimeout(type,38);}}setTimeout(type,700);}
+  <% if user_signed_in? && current_user.client? %>
+  const up=new URLSearchParams(window.location.search);
+  if(!window.location.pathname.includes('/client/profile')&&!up.has('latitude')&&navigator.geolocation){navigator.geolocation.getCurrentPosition(pos=>{const url=new URL(window.location);url.searchParams.set('latitude',pos.coords.latitude);url.searchParams.set('longitude',pos.coords.longitude);window.location.href=url.toString();},()=>{},{enableHighAccuracy:true,timeout:10000,maximumAge:0});}
+  <% end %>
+})();
+
+function requestGeoDisponivel() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(
+    function(pos) {
+      var url = new URL(window.location.href);
+      url.searchParams.set('latitude',  pos.coords.latitude);
+      url.searchParams.set('longitude', pos.coords.longitude);
+      window.location.href = url.toString();
+    },
+    function() { alert('Não foi possível obter sua localização.'); },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+}
+</script>
 
 <% end %>

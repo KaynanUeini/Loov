@@ -75,7 +75,7 @@ module Owner
         render json: {
           insight:            existing.section(type),
           status:             existing.section_status(type),
-          action_of_the_week: sections["action_of_the_week"],
+          action_of_the_week: sections["decisao_prioritaria"],
           generated_at:       existing.generated_at.strftime("%d/%m/%Y"),
           next_refresh:       next_cycle_date,
           days_remaining:     days_until_next_cycle,
@@ -222,7 +222,7 @@ module Owner
       Date.new(year, month, day)
     end
 
-    # ── MARGEM ────────────────────────────────────────────────────────────────
+    # ── MARGEM E BENCHMARKS ───────────────────────────────────────────────────
 
     def fetch_margin_context(car_wash)
       margins = (0..2).map do |i|
@@ -238,8 +238,23 @@ module Owner
         profit     = revenue - total_cost
         margin     = revenue > 0 ? ((profit / revenue) * 100).round(1) : 0
 
+        cost_breakdown = {
+          aluguel:      cost.rent.to_f,
+          salarios:     cost.salaries.to_f,
+          agua_luz:     cost.utilities.to_f,
+          produtos:     cost.products.to_f,
+          manutencao:   cost.maintenance.to_f,
+          outros_fixos: cost.other_fixed.to_f,
+          outros_var:   cost.other_variable.to_f
+        }
+
+        cost_pct = cost_breakdown.transform_values do |v|
+          revenue > 0 ? (v / revenue * 100).round(1) : 0
+        end
+
         { mes: date.strftime("%b/%Y"), faturamento: revenue.round(2),
-          custos: total_cost.round(2), lucro: profit.round(2), margem: margin }
+          custos: total_cost.round(2), lucro: profit.round(2), margem: margin,
+          detalhamento_custos: cost_breakdown, percentual_custos: cost_pct }
       end.compact
 
       return nil if margins.empty?
@@ -247,14 +262,114 @@ module Owner
       avg_margin    = (margins.map { |m| m[:margem] }.sum / margins.size).round(1)
       current_month = margins.first
 
+      ticket_medio = car_wash.appointments
+        .where(status: "attended").joins(:service)
+        .where(scheduled_at: 90.days.ago..Time.current)
+        .average("services.price").to_f.round(2)
+
+      custos_fixos_mes = current_month.dig(:detalhamento_custos, :aluguel).to_f  +
+                         current_month.dig(:detalhamento_custos, :salarios).to_f +
+                         current_month.dig(:detalhamento_custos, :agua_luz).to_f +
+                         current_month.dig(:detalhamento_custos, :outros_fixos).to_f
+
+      # ── Alerta de custos suspeitos ────────────────────────────────────────
+      # Âncora: média dos custos fixos dos meses anteriores com dados
+      # Retorna sempre Float (0.0 quando não há histórico) — evita nil comparison
+      meses_anteriores = margins[1..]
+      media_custos_fixos_3m = if meses_anteriores.any?
+        custos_anteriores = meses_anteriores.map do |m|
+          m.dig(:detalhamento_custos, :aluguel).to_f  +
+          m.dig(:detalhamento_custos, :salarios).to_f +
+          m.dig(:detalhamento_custos, :agua_luz).to_f +
+          m.dig(:detalhamento_custos, :outros_fixos).to_f
+        end
+        (custos_anteriores.sum.to_f / [custos_anteriores.size, 1].max).round(2)
+      else
+        0.0
+      end
+
+      # Comparação direta Float vs Float — sem safe navigation (&.>)
+      custos_suspeitos = media_custos_fixos_3m > 0.0 &&
+                         Date.current.day < 28 &&
+                         custos_fixos_mes < (media_custos_fixos_3m * 0.60)
+
+      break_even_atendimentos = ticket_medio > 0 ? (current_month[:custos].to_f / ticket_medio).ceil : nil
+
+      atendimentos_mes_atual = car_wash.appointments
+        .where(status: "attended")
+        .where(scheduled_at: Time.current.beginning_of_month..Time.current)
+        .count
+
+      atendimentos_faltam = break_even_atendimentos ? [break_even_atendimentos - atendimentos_mes_atual, 0].max : nil
+
+      alertas_custo = []
+      pct = current_month[:percentual_custos]
+
+      if pct[:aluguel] > 22
+        impacto = ((pct[:aluguel] - 18) / 100.0 * current_month[:faturamento]).round(2)
+        alertas_custo << {
+          linha: "aluguel", pct_atual: pct[:aluguel], pct_benchmark: "12–22%",
+          acima_do_benchmark: true, impacto_mensal: impacto,
+          mensagem: "Aluguel em #{pct[:aluguel]}% da receita — benchmark é 12–22%. Se reduzido para 18%, o resultado melhora R$ #{impacto}/mês."
+        }
+      end
+
+      if pct[:salarios] > 35
+        impacto = ((pct[:salarios] - 30) / 100.0 * current_month[:faturamento]).round(2)
+        alertas_custo << {
+          linha: "salários", pct_atual: pct[:salarios], pct_benchmark: "25–35%",
+          acima_do_benchmark: true, impacto_mensal: impacto,
+          mensagem: "Folha em #{pct[:salarios]}% da receita — benchmark é 25–35%. Cada ponto percentual vale R$ #{(current_month[:faturamento] / 100).round(2)}/mês."
+        }
+      end
+
+      if pct[:produtos] > 14
+        impacto = ((pct[:produtos] - 11) / 100.0 * current_month[:faturamento]).round(2)
+        alertas_custo << {
+          linha: "produtos", pct_atual: pct[:produtos], pct_benchmark: "8–14%",
+          acima_do_benchmark: true, impacto_mensal: impacto,
+          mensagem: "Produtos em #{pct[:produtos]}% da receita — benchmark é 8–14%. Reduzir para 11% vale R$ #{impacto}/mês."
+        }
+      end
+
+      custos_no_benchmark = alertas_custo.empty? && current_month[:detalhamento_custos].values.any? { |v| v.to_f > 0 }
+
+      is_critical = current_month[:faturamento] > 0 &&
+                    current_month[:lucro] < 0 &&
+                    current_month[:lucro].abs >= current_month[:faturamento] * 0.5
+
+      media_fat_3m    = margins.map { |m| m[:faturamento] }.sum.to_f / [margins.size, 1].max
+      aluguel_atual   = current_month.dig(:detalhamento_custos, :aluguel).to_f
+      salarios_atual  = current_month.dig(:detalhamento_custos, :salarios).to_f
+      aluguel_ideal   = (media_fat_3m * 0.18).round(2)
+      aluguel_reducao = [aluguel_atual - aluguel_ideal, 0].max.round(2)
+
       {
-        historico_margem:   margins.reverse,
-        margem_atual:       current_month[:margem],
-        lucro_atual:        current_month[:lucro],
-        custos_atual:       current_month[:custos],
-        media_margem_3m:    avg_margin,
-        perfil_financeiro:  margin_profile(avg_margin),
-        tem_dados_de_custo: true
+        historico_margem:              margins.reverse,
+        margem_atual:                  current_month[:margem],
+        lucro_atual:                   current_month[:lucro],
+        custos_atual:                  current_month[:custos],
+        custos_fixos_estimados:        custos_fixos_mes.round(2),
+        media_custos_fixos_historica:  media_custos_fixos_3m,
+        detalhamento_custos:           current_month[:detalhamento_custos],
+        percentual_custos:             current_month[:percentual_custos],
+        media_margem_3m:               avg_margin,
+        media_faturamento_3m:          media_fat_3m.round(2),
+        perfil_financeiro:             margin_profile(avg_margin),
+        is_critical_state:             is_critical,
+        custos_suspeitos:              custos_suspeitos,
+        break_even_atendimentos:       break_even_atendimentos,
+        break_even_pode_estar_subestimado: custos_suspeitos,
+        atendimentos_para_break_even:  atendimentos_faltam,
+        atendimentos_realizados_mes:   atendimentos_mes_atual,
+        ticket_medio_90d:              ticket_medio,
+        alertas_custo:                 alertas_custo,
+        custos_dentro_do_benchmark:    custos_no_benchmark,
+        aluguel_atual:                 aluguel_atual,
+        aluguel_ideal_18pct:           aluguel_ideal,
+        aluguel_reducao_sugerida:      aluguel_reducao,
+        salarios_atual:                salarios_atual,
+        tem_dados_de_custo:            true
       }
     end
 
@@ -269,36 +384,265 @@ module Owner
     # ── OCIOSIDADE ────────────────────────────────────────────────────────────
 
     def calc_idle_loss(car_wash, base, ticket_medio)
-      capacity = car_wash.capacity_per_slot.to_i
-      return nil if capacity.zero?
+      daily_counts = base
+        .where(scheduled_at: 90.days.ago..Time.current)
+        .group(Arel.sql("DATE(scheduled_at)"))
+        .count
 
-      operating_hours   = car_wash.operating_hours
-      avg_slots_per_day = if operating_hours.any?
-        total_minutes = operating_hours.sum { |oh| begin; ((oh.closes_at - oh.opens_at) / 60).to_i; rescue; 480; end }
-        ((total_minutes.to_f / operating_hours.size / 60) * capacity).round
-      else
-        capacity * 8
-      end
+      return nil if daily_counts.empty?
+
+      sorted_counts = daily_counts.values.sort
+      p75_index     = [(sorted_counts.size * 0.75).ceil - 1, 0].max
+      teto_realista = sorted_counts[p75_index].to_f
+      media_diaria  = (daily_counts.values.sum.to_f / daily_counts.size).round(1)
 
       day_names   = %w[Domingo Segunda Terça Quarta Quinta Sexta Sábado]
       real_by_dow = base
-        .where(scheduled_at: 30.days.ago..Time.current)
+        .where(scheduled_at: 90.days.ago..Time.current)
         .group(Arel.sql("EXTRACT(DOW FROM scheduled_at)::int"))
         .count
 
-      idle_analysis = real_by_dow.map do |dow, count|
-        avg_per_week  = (count.to_f / 4).round(1)
-        idle_per_week = [avg_slots_per_day - avg_per_week, 0].max
-        { dia: day_names[dow], media_atendimentos: avg_per_week,
-          capacidade_estimada: avg_slots_per_day, buracos_estimados: idle_per_week,
-          receita_perdida_semana: (idle_per_week * ticket_medio).round(2) }
+      idle_analysis = real_by_dow.map do |dow, total|
+        semanas   = (90.0 / 7).round(1)
+        media_dow = (total.to_f / semanas).round(1)
+        gap       = [teto_realista - media_dow, 0].max.round(1)
+        {
+          dia:                    day_names[dow],
+          media_atendimentos:     media_dow,
+          teto_realista:          teto_realista,
+          gap_vs_teto:            gap,
+          receita_perdida_semana: (gap * ticket_medio).round(2)
+        }
       end
 
-      total_lost = idle_analysis.sum { |d| d[:receita_perdida_semana] * 4 }.round(2)
-      worst_day  = idle_analysis.max_by { |d| d[:receita_perdida_semana] }
+      total_lost_mensal = (idle_analysis.sum { |d| d[:receita_perdida_semana] } * 4.3).round(2)
+      worst_day         = idle_analysis.max_by { |d| d[:receita_perdida_semana] }
+      best_day          = idle_analysis.max_by { |d| d[:media_atendimentos] }
 
-      { analise_por_dia: idle_analysis, receita_perdida_mensal: total_lost,
-        dia_mais_ocioso: worst_day&.dig(:dia), ticket_base: ticket_medio }
+      {
+        analise_por_dia:        idle_analysis,
+        media_diaria_real:      media_diaria,
+        teto_realista_dia:      teto_realista,
+        receita_perdida_mensal: total_lost_mensal,
+        dia_mais_ocioso:        worst_day&.dig(:dia),
+        dia_mais_cheio:         best_day&.dig(:dia),
+        nota_metodologia:       "Estimativa baseada no percentil 75 dos dias reais do negócio nos últimos 90 dias.",
+        ticket_base:            ticket_medio
+      }
+    end
+
+    # ── PRECIFICAÇÃO DINÂMICA ─────────────────────────────────────────────────
+
+    def calc_dynamic_pricing(car_wash, base, ticket_medio)
+      return nil if ticket_medio.zero?
+
+      hourly = base
+        .where(scheduled_at: 90.days.ago..Time.current)
+        .group(Arel.sql("EXTRACT(HOUR FROM scheduled_at)::int"))
+        .count
+
+      by_dow = base
+        .where(scheduled_at: 90.days.ago..Time.current)
+        .group(Arel.sql("EXTRACT(DOW FROM scheduled_at)::int"))
+        .count
+
+      return nil if hourly.empty? || by_dow.empty?
+
+      avg_hourly = hourly.values.sum.to_f / hourly.size
+      avg_dow    = by_dow.values.sum.to_f / by_dow.size
+      day_names  = %w[Domingo Segunda Terça Quarta Quinta Sexta Sábado]
+
+      dias_ociosos = by_dow.select { |_, c| c < avg_dow * 0.60 }
+        .map { |dow, c| { dia: day_names[dow], atendimentos_90d: c } }
+
+      dias_pico = by_dow.select { |_, c| c > avg_dow * 1.40 }
+        .map { |dow, c| { dia: day_names[dow], atendimentos_90d: c } }
+
+      horas_ociosas = hourly.select { |_, c| c < avg_hourly * 0.50 }.sort_by { |_, c| c }
+        .map { |h, c| { hora: "#{h}h", atendimentos_90d: c } }
+
+      horas_pico = hourly.select { |_, c| c > avg_hourly * 1.50 }.sort_by { |_, c| -c }
+        .map { |h, c| { hora: "#{h}h", atendimentos_90d: c } }
+
+      impacto_desconto = if dias_ociosos.any?
+        semanas                  = (90.0 / 7).round(1)
+        volume_semanal_ociosos   = dias_ociosos.sum { |d| d[:atendimentos_90d].to_f / semanas }
+        aumento_estimado         = volume_semanal_ociosos * 0.35
+        receita_adicional_mensal = (aumento_estimado * ticket_medio * 0.80 * 4.3).round(2)
+        { dias: dias_ociosos.map { |d| d[:dia] }, desconto_sugerido: "15–20%",
+          aumento_volume_estimado: "30–40%", receita_adicional_mensal: receita_adicional_mensal,
+          nota: "Estimativa baseada em elasticidade típica do setor." }
+      end
+
+      impacto_aumento = if dias_pico.any?
+        semanas                  = (90.0 / 7).round(1)
+        volume_semanal_pico      = dias_pico.sum { |d| d[:atendimentos_90d].to_f / semanas }
+        receita_adicional_mensal = (volume_semanal_pico * ticket_medio * 0.08 * 4.3).round(2)
+        { dias: dias_pico.map { |d| d[:dia] }, aumento_sugerido: "7–10%",
+          queda_volume_estimada: "< 5%", receita_adicional_mensal: receita_adicional_mensal,
+          nota: "Em dias de alta demanda, cliente com carro parado tem baixa elasticidade a preço." }
+      end
+
+      {
+        horas_ociosas:    horas_ociosas,
+        horas_pico:       horas_pico,
+        dias_ociosos:     dias_ociosos,
+        dias_pico:        dias_pico,
+        impacto_desconto: impacto_desconto,
+        impacto_aumento:  impacto_aumento
+      }
+    end
+
+    # ── FUNIL DE CONVERSÃO ────────────────────────────────────────────────────
+
+    def fetch_conversion_funnel(car_wash)
+      all_services = car_wash.services.pluck(:title, :price).to_h
+      return nil if all_services.empty?
+
+      avg_price         = all_services.values.sum.to_f / all_services.size
+      entry_threshold   = avg_price * 0.5
+      premium_threshold = avg_price * 1.2
+
+      entry_titles   = all_services.select { |_, p| p.to_f <= entry_threshold }.keys
+      premium_titles = all_services.select { |_, p| p.to_f >= premium_threshold }.keys
+
+      return nil if entry_titles.empty? || premium_titles.empty?
+
+      first_visit_subquery = car_wash.appointments
+        .where(status: "attended")
+        .select("user_id, MIN(scheduled_at) AS first_at")
+        .group(:user_id)
+
+      first_visits = car_wash.appointments
+        .where(status: "attended")
+        .joins(:service)
+        .joins(
+          "INNER JOIN (#{first_visit_subquery.to_sql}) fv
+           ON appointments.user_id = fv.user_id
+           AND appointments.scheduled_at = fv.first_at"
+        )
+        .pluck(:user_id, "services.title", "appointments.scheduled_at")
+
+      starters_by_service = {}
+      first_date_by_user  = {}
+
+      first_visits.each do |user_id, svc_title, first_date|
+        next unless entry_titles.include?(svc_title)
+        starters_by_service[svc_title] ||= []
+        starters_by_service[svc_title] << user_id
+        first_date_by_user[user_id] = first_date
+      end
+
+      return nil if starters_by_service.empty?
+
+      all_starter_ids = starters_by_service.values.flatten.uniq
+
+      premium_appts = car_wash.appointments
+        .where(status: "attended", user_id: all_starter_ids)
+        .joins(:service)
+        .where(services: { title: premium_titles })
+        .pluck(:user_id, "services.title", "services.price", "appointments.scheduled_at")
+
+      premium_by_user = premium_appts.group_by { |row| row[0] }
+
+      avg_premium_ticket = if premium_appts.any?
+        premium_appts.map { |row| row[2].to_f }.sum / premium_appts.size
+      else
+        premium_titles.map { |t| all_services[t].to_f }.sum / [premium_titles.size, 1].max
+      end
+
+      funnel = {}
+
+      starters_by_service.each do |entry_service, user_ids|
+        total_starters  = user_ids.size
+        converted       = user_ids.select { |uid| premium_by_user.key?(uid) }
+        converted_count = converted.size
+        conversion_rate = (converted_count.to_f / total_starters * 100).round(1)
+
+        conversion_times = converted.map do |uid|
+          first_premium = premium_by_user[uid].map { |r| r[3] }.min
+          first_entry   = first_date_by_user[uid]
+          next nil unless first_premium && first_entry
+          ((first_premium - first_entry) / 1.day).round
+        end.compact
+
+        avg_days_to_convert = conversion_times.any? ? (conversion_times.sum.to_f / conversion_times.size).round : nil
+
+        premium_revenue_from_starters = converted.sum do |uid|
+          premium_by_user[uid].sum { |r| r[2].to_f }
+        end.round(2)
+
+        loss_per_lost_entry_client = (conversion_rate / 100.0 * avg_premium_ticket).round(2)
+
+        funnel[entry_service] = {
+          preco_entrada:                    all_services[entry_service].to_f,
+          clientes_iniciaram_aqui:          total_starters,
+          converteram_para_premium:         converted_count,
+          taxa_conversao_pct:               conversion_rate,
+          dias_medio_ate_conversao:         avg_days_to_convert,
+          receita_premium_gerada:           premium_revenue_from_starters,
+          perda_futura_por_cliente_perdido: loss_per_lost_entry_client,
+          avg_premium_ticket_referencia:    avg_premium_ticket.round(2)
+        }
+      end
+
+      {
+        servicos_entrada:     entry_titles,
+        servicos_premium:     premium_titles,
+        limiar_entrada_preco: entry_threshold.round(2),
+        limiar_premium_preco: premium_threshold.round(2),
+        funil:                funnel
+      }
+    rescue => e
+      Rails.logger.warn("Conversion funnel error: #{e.message}")
+      nil
+    end
+
+    # ── PIPELINE LOSS 60D ─────────────────────────────────────────────────────
+
+    def calc_pipeline_loss(car_wash, funnel_context, services_perf)
+      return nil unless funnel_context&.dig(:funil)&.any?
+
+      total_pipeline_loss = 0
+      detalhes = []
+
+      funnel_context[:funil].each do |entry_service, dados|
+        svc_data = services_perf.find { |s| s[:servico] == entry_service }
+        next unless svc_data
+
+        last_m = svc_data[:atendimentos_ultimo_mes].to_i
+        prev_m = svc_data[:atendimentos_mes_anterior].to_i
+        next if prev_m.zero? || last_m >= prev_m
+
+        queda_absoluta    = prev_m - last_m
+        perda_por_cliente = dados[:perda_futura_por_cliente_perdido].to_f
+        perda_projetada   = (queda_absoluta * perda_por_cliente).round(2)
+        total_pipeline_loss += perda_projetada
+        dias_ate_impacto  = dados[:dias_medio_ate_conversao] || 60
+
+        detalhes << {
+          servico_entrada:    entry_service,
+          queda_clientes:     queda_absoluta,
+          taxa_conversao_pct: dados[:taxa_conversao_pct],
+          ticket_premium:     dados[:avg_premium_ticket_referencia].to_f,
+          perda_projetada:    perda_projetada,
+          impacto_em_dias:    dias_ate_impacto,
+          mensagem: "Queda de #{queda_absoluta} cliente(s) em #{entry_service} representa " \
+                    "R$ #{perda_projetada} em receita premium não gerada nos próximos #{dias_ate_impacto} dias."
+        }
+      end
+
+      return nil if detalhes.empty?
+
+      {
+        perda_pipeline_total_60d: total_pipeline_loss.round(2),
+        detalhes:                 detalhes,
+        nota: "Projeção baseada em dados reais de conversão. Representa receita premium " \
+              "que deixará de entrar nos próximos 60–90 dias se a queda nos serviços de entrada não for revertida."
+      }
+    rescue => e
+      Rails.logger.warn("Pipeline loss error: #{e.message}")
+      nil
     end
 
     # ── MESMO PERÍODO ANO ANTERIOR ────────────────────────────────────────────
@@ -324,7 +668,8 @@ module Owner
       return nil if single_users.empty?
 
       first_dates = all_appts.where(user_id: single_users).group(:user_id).minimum(:scheduled_at)
-      by_month    = first_dates.group_by { |_, d| d.strftime("%Y-%m") }
+      by_month    = first_dates
+        .group_by { |_, d| d.strftime("%Y-%m") }
         .map { |m, e| { mes: m, clientes_unica_visita: e.count } }
         .sort_by { |e| e[:mes] }.last(6)
 
@@ -432,68 +777,87 @@ module Owner
 
       lost_clients = all_last_visit.count { |_, last| last < 90.days.ago }
 
-      first_visits = car_wash.appointments.where(status: "attended")
+      first_visits_data = car_wash.appointments.where(status: "attended")
         .joins(:user).group("users.id").minimum(:scheduled_at)
 
-      new_by_month = first_visits
+      new_by_month = first_visits_data
         .group_by { |_, d| d.strftime("%Y-%m") }
         .map { |month, entries| { mes: month, novos_clientes: entries.count } }
         .sort_by { |e| e[:mes] }.last(6)
 
-      prev_month_new = first_visits.count { |_, d| d >= 60.days.ago && d < 30.days.ago }
-      this_month_new = first_visits.count { |_, d| d >= 30.days.ago }
+      prev_month_new = first_visits_data.count { |_, d| d >= 60.days.ago && d < 30.days.ago }
+      this_month_new = first_visits_data.count { |_, d| d >= 30.days.ago }
       growth_rate    = prev_month_new > 0 ? (((this_month_new.to_f / prev_month_new) - 1) * 100).round(1) : nil
 
       total_past    = car_wash.appointments.where("scheduled_at < ?", Time.current).where.not(status: "cancelled").count
       total_no_show = car_wash.appointments.where(status: "no_show").count
       no_show_rate  = total_past > 0 ? ((total_no_show.to_f / total_past) * 100).round(1) : 0
 
+      dias_restantes_no_mes  = Date.current.end_of_month.day - Date.current.day
+      faturamento_mes_atual  = base
+        .where(scheduled_at: Time.current.beginning_of_month..Time.current)
+        .sum("services.price").to_f.round(2)
+      melhor_mes_historico   = monthly.map { |m| m[:faturamento] }.max.to_f
+      meta_excelencia        = melhor_mes_historico > 0 ? melhor_mes_historico : nil
+      meta_excelencia_diaria = (meta_excelencia && dias_restantes_no_mes > 0) ?
+        ((meta_excelencia - faturamento_mes_atual) / dias_restantes_no_mes).round(2) : nil
+
+      funil_conversao   = fetch_conversion_funnel(car_wash)
+      pipeline_loss_60d = calc_pipeline_loss(car_wash, funil_conversao, services_perf)
+
       {
-        data_atual:                      Time.current.strftime("%d/%m/%Y"),
-        dia_do_mes_atual:                Date.current.day,
-        tipo_de_ciclo:                   cycle_type,
-        mes_atual:                       Time.current.strftime("%B de %Y"),
-        nome:                            car_wash.name,
-        localizacao:                     car_wash.location_context.presence || "não informada",
-        bairro:                          car_wash.bairro,
-        cidade:                          car_wash.cidade,
-        uf:                              car_wash.uf,
-        clima_ultimos_30_dias:           fetch_climate(car_wash.latitude, car_wash.longitude),
-        feriados_proximos_15_dias:       upcoming_holidays,
-        saude_financeira:                fetch_margin_context(car_wash),
-        ociosidade:                      calc_idle_loss(car_wash, base, ticket_medio),
-        mesmo_periodo_ano_anterior:      same_period_last_year(base),
-        padrao_abandono:                 detect_abandonment_pattern(car_wash),
-        faturamento_total:               total_sales.round(2),
-        faturamento_ultimos_30_dias:     last_30_revenue.round(2),
-        faturamento_30_60_dias:          prev_30_revenue.round(2),
-        variacao_faturamento_mensal:     revenue_growth ? "#{revenue_growth}%" : "sem dados",
-        atendimentos_30_dias:            last_30_count,
-        atendimentos_30_60_dias:         prev_30_count,
-        valor_medio_por_atendimento:     ticket_medio,
-        historico_6_meses:               monthly,
-        taxa_no_show:                    "#{no_show_rate}%",
+        data_atual:                       Time.current.strftime("%d/%m/%Y"),
+        dia_do_mes_atual:                 Date.current.day,
+        dias_restantes_no_mes:            dias_restantes_no_mes,
+        faturamento_mes_atual:            faturamento_mes_atual,
+        meta_excelencia_historica:        meta_excelencia&.round(2),
+        meta_excelencia_por_dia_restante: meta_excelencia_diaria,
+        tipo_de_ciclo:                    cycle_type,
+        mes_atual:                        Time.current.strftime("%B de %Y"),
+        nome:                             car_wash.name,
+        localizacao:                      car_wash.location_context.presence || "não informada",
+        bairro:                           car_wash.bairro,
+        cidade:                           car_wash.cidade,
+        uf:                               car_wash.uf,
+        clima_ultimos_30_dias:            fetch_climate(car_wash.latitude, car_wash.longitude),
+        feriados_proximos_15_dias:        upcoming_holidays,
+        saude_financeira:                 fetch_margin_context(car_wash),
+        ociosidade:                       calc_idle_loss(car_wash, base, ticket_medio),
+        precificacao_dinamica:            calc_dynamic_pricing(car_wash, base, ticket_medio),
+        funil_conversao:                  funil_conversao,
+        pipeline_loss_60d:                pipeline_loss_60d,
+        mesmo_periodo_ano_anterior:       same_period_last_year(base),
+        padrao_abandono:                  detect_abandonment_pattern(car_wash),
+        faturamento_total:                total_sales.round(2),
+        faturamento_ultimos_30_dias:      last_30_revenue.round(2),
+        faturamento_30_60_dias:           prev_30_revenue.round(2),
+        variacao_faturamento_mensal:      revenue_growth ? "#{revenue_growth}%" : "sem dados",
+        atendimentos_30_dias:             last_30_count,
+        atendimentos_30_60_dias:          prev_30_count,
+        valor_medio_por_atendimento:      ticket_medio,
+        historico_6_meses:                monthly,
+        taxa_no_show:                     "#{no_show_rate}%",
         agendamentos_confirmados_proximos_30_dias: upcoming_confirmed,
         receita_projetada_proximos_7_dias:         upcoming_7d.round(2),
-        variacao_precos_por_servico:     price_changes,
-        percentual_clientes_que_voltam:  "#{retention_rate}%",
-        media_visitas_cliente_fiel:      avg_visits,
-        total_clientes:                  total_clients,
-        clientes_que_voltaram:           recurring_clients,
-        clientes_que_vieram_so_uma_vez:  new_clients_count,
-        melhor_dia:                      best_day,
-        pior_dia:                        worst_day,
-        horarios_mais_movimentados:      peak_hours,
-        horarios_ociosos:                idle_hours,
-        movimento_por_dia_da_semana:     demand_by_dow,
-        servicos:                        services_perf,
-        clientes_mais_frequentes:        top_clients,
-        clientes_sumidos_30_a_90_dias:   at_risk,
-        clientes_perdidos_mais_90_dias:  lost_clients,
-        novos_clientes_este_mes:         this_month_new,
-        novos_clientes_mes_anterior:     prev_month_new,
-        variacao_novos_clientes:         growth_rate ? "#{growth_rate}%" : "sem dados",
-        novos_clientes_por_mes:          new_by_month
+        variacao_precos_por_servico:      price_changes,
+        percentual_clientes_que_voltam:   "#{retention_rate}%",
+        media_visitas_cliente_fiel:       avg_visits,
+        total_clientes:                   total_clients,
+        clientes_que_voltaram:            recurring_clients,
+        clientes_que_vieram_so_uma_vez:   new_clients_count,
+        melhor_dia:                       best_day,
+        pior_dia:                         worst_day,
+        horarios_mais_movimentados:       peak_hours,
+        horarios_ociosos:                 idle_hours,
+        movimento_por_dia_da_semana:      demand_by_dow,
+        servicos:                         services_perf,
+        clientes_mais_frequentes:         top_clients,
+        clientes_sumidos_30_a_90_dias:    at_risk,
+        clientes_perdidos_mais_90_dias:   lost_clients,
+        novos_clientes_este_mes:          this_month_new,
+        novos_clientes_mes_anterior:      prev_month_new,
+        variacao_novos_clientes:          growth_rate ? "#{growth_rate}%" : "sem dados",
+        novos_clientes_por_mes:           new_by_month
       }
     end
 
@@ -501,6 +865,8 @@ module Owner
 
     def build_prompt(ctx, owner_input = nil, previous_inputs = [], previous_action = nil)
       tipo = ctx[:tipo_de_ciclo]
+      sf   = ctx[:saude_financeira]
+      is_critical = sf&.dig(:is_critical_state) || false
 
       cycle_instruction = if tipo == "fechamento"
         <<~CYCLE
@@ -508,9 +874,7 @@ module Owner
           Hoje é dia #{ctx[:dia_do_mes_atual]}. Este é o ciclo de FECHAMENTO.
           FOCO: avaliar o mês que terminou com números finais — não parciais.
           Compare com o mesmo mês do ano anterior e com o mês imediatamente anterior.
-          Identifique o que funcionou, o que falhou e por quê com base nos dados.
-          Para o mês atual (início): projete o mês completo com base nos agendamentos confirmados e no ritmo histórico.
-          A action_of_the_week deve atacar o maior problema identificado no fechamento.
+          A decisao_prioritaria deve atacar o maior problema estrutural identificado.
         CYCLE
       else
         <<~CYCLE
@@ -518,29 +882,72 @@ module Owner
           Hoje é dia #{ctx[:dia_do_mes_atual]}. Este é o ciclo de ACOMPANHAMENTO.
           FOCO: o mês está pela metade — dados são PARCIAIS.
           Projete o mês completo multiplicando o ritmo atual pelos dias restantes.
-          Compare o ritmo atual com o mesmo período do mês anterior (não compare total parcial com total completo sem avisar).
-          Destaque o que já está bem encaminhado e o que precisa de correção urgente para fechar bem o mês.
-          A action_of_the_week deve ser algo executável ainda neste mês que mova o número.
+          Não compare total parcial com total completo sem avisar.
+          A decisao_prioritaria deve ser a maior alavanca financeira disponível.
         CYCLE
+      end
+
+      crisis_instruction = if is_critical
+        prejuizo      = sf[:lucro_atual].abs
+        faturamento   = sf[:media_faturamento_3m]
+        aluguel       = sf[:aluguel_atual]
+        salarios      = sf[:salarios_atual]
+        aluguel_ideal = sf[:aluguel_ideal_18pct]
+        reducao       = sf[:aluguel_reducao_sugerida]
+
+        <<~CRISIS
+          ═══ MODO DE CRISE ATIVADO ═══════════════════════════════════════════
+          Prejuízo de R$ #{prejuizo} com faturamento médio de R$ #{faturamento}/mês.
+          Custos fixos dominantes: aluguel R$ #{aluguel}/mês + salários R$ #{salarios}/mês.
+
+          REGRAS OBRIGATÓRIAS:
+          1. 80% da análise deve focar em corte de custos fixos e estancamento de caixa.
+          2. Funil, retenção e crescimento são SECUNDÁRIOS — mencione brevemente e use
+             a frase: "otimizar [métrica] agora é arrumar a decoração enquanto a casa pega fogo."
+          3. A decisao_prioritaria DEVE ser sobre custo estrutural ou geração de caixa imediato.
+          4. Se aluguel está acima de 22% da receita: aluguel ideal = R$ #{aluguel_ideal}/mês.
+             Redução sugerida = R$ #{reducao}/mês. Quantifique o impacto.
+          5. Nunca sugira marketing, funil ou precificação como decisão principal em crise.
+          6. Tom: interventor cirúrgico, não consultor motivacional.
+        CRISIS
+      else
+        ""
+      end
+
+      custos_suspeitos_instrucao = if sf&.dig(:custos_suspeitos)
+        media_hist = sf[:media_custos_fixos_historica]
+        atual      = sf[:custos_fixos_estimados]
+        <<~WARN
+          ⚠️ ALERTA DE DADOS INCOMPLETOS: os custos fixos deste mês (R$ #{atual}) estão abaixo
+          de 60% da média histórica dos meses anteriores (R$ #{media_hist}). Isso indica que
+          o lançamento de custos está incompleto — aluguel, salários ou outras linhas fixas
+          provavelmente ainda não foram lançadas para este mês.
+          OBRIGATÓRIO: na seção "sales", avise o dono que o break-even e a margem atual podem
+          estar subestimados. Use a frase: "Os custos deste mês parecem incompletos — a margem
+          pode cair quando você lançar o restante do aluguel e salários."
+          Não omita esse aviso. Não suavize.
+        WARN
+      else
+        ""
       end
 
       input_block = owner_input.present? ? <<~INPUT
         O DONO REPORTOU O SEGUINTE SOBRE O PERÍODO:
         #{owner_input}
-        Cruze o que ele reportou com os números. Se funcionou, confirme com dados e aprofunde. Se não funcionou, explique com base nos números e sugira outro caminho. Não elogie o esforço — avalie o resultado.
+        Cruze com os números. Se funcionou, confirme com dados. Se não funcionou, explique e mude. Não elogie — avalie.
       INPUT
       : "O dono não registrou nenhuma ação neste ciclo."
 
       history_block = previous_inputs.any? ? <<~HISTORY
-        CICLOS ANTERIORES (use para não repetir sugestões já dadas):
+        CICLOS ANTERIORES (não repita sugestões já dadas):
         #{previous_inputs.map.with_index { |inp, i| "Ciclo -#{i+1} (#{inp['saved_at']}): #{inp['text']}" }.join("\n")}
       HISTORY
       : ""
 
       validation_block = previous_action.present? ? <<~VALIDATION
-        A AÇÃO SUGERIDA NO CICLO ANTERIOR FOI:
+        A DECISÃO SUGERIDA NO CICLO ANTERIOR FOI:
         "#{previous_action}"
-        OBRIGATÓRIO: comece o campo "cycle_summary" avaliando se essa ação teve impacto nos dados. Se o indicador melhorou, confirme com números concretos. Se não houve impacto, diga com clareza e mude a abordagem. Nunca use a frase "os números falam por si".
+        OBRIGATÓRIO: comece o "cycle_summary" avaliando se essa decisão teve impacto. Use números concretos. Nunca use "os números falam por si".
       VALIDATION
       : ""
 
@@ -548,102 +955,191 @@ module Owner
         c = ctx[:clima_ultimos_30_dias]
         case c[:perfil_clima]
         when "muito_chuvoso"
-          "ATENÇÃO CLIMA: nos últimos 30 dias corridos (#{c[:periodo]}) foram #{c[:dias_de_chuva_ultimos_30_dias]} dias com chuva significativa (#{c[:total_chuva_mm]}mm). Esse período cruza dois meses — não diga '#{c[:dias_de_chuva_ultimos_30_dias]} dias de chuva este mês'. Se faturamento caiu, o clima é fator relevante. Foque em serviços internos: higienização, ar-condicionado, couro e plásticos."
+          "ATENÇÃO CLIMA: #{c[:dias_de_chuva_ultimos_30_dias]} dias de chuva nos últimos 30 dias (#{c[:periodo]}, #{c[:total_chuva_mm]}mm). Período cruza dois meses — não atribua toda a chuva a um único mês."
         when "chuvoso"
-          "CLIMA: #{c[:dias_de_chuva_ultimos_30_dias]} dias de chuva nos últimos 30 dias (#{c[:periodo]}, #{c[:total_chuva_mm]}mm). Período cruza dois meses — seja preciso ao citar o dado."
+          "CLIMA: #{c[:dias_de_chuva_ultimos_30_dias]} dias de chuva (#{c[:periodo]}, #{c[:total_chuva_mm]}mm)."
         else
-          "CLIMA: favorável nos últimos 30 dias (#{c[:dias_de_chuva_ultimos_30_dias]} dias de chuva). Queda de movimento não tem justificativa climática relevante."
+          "CLIMA: favorável (#{c[:dias_de_chuva_ultimos_30_dias]} dias de chuva). Queda de movimento não tem justificativa climática."
         end
-      else
-        ""
-      end
+      else; ""; end
 
       holiday_instruction = if ctx[:feriados_proximos_15_dias]&.any?
         feriados = ctx[:feriados_proximos_15_dias].map { |h| "#{h[:nome]} (#{h[:dia]}, #{h[:data]}, em #{h[:dias_ate]} dias)" }.join(", ")
-        "FERIADOS NOS PRÓXIMOS 15 DIAS: #{feriados}. Alerte o dono para antecipar o pico — o dia anterior costuma ter movimento alto. Se feriado prolongado, sugira combo de preparação do carro para viagem."
-      else
-        ""
-      end
+        "FERIADOS NOS PRÓXIMOS 15 DIAS: #{feriados}."
+      else; ""; end
 
-      idle_instruction = if ctx[:ociosidade] && ctx[:ociosidade][:receita_perdida_mensal].to_f > 0
-        o = ctx[:ociosidade]
-        "DINHEIRO DEIXADO NA MESA: estimativa de R$ #{o[:receita_perdida_mensal]} em receita perdida por ociosidade nos últimos 30 dias. Dia mais ocioso: #{o[:dia_mais_ocioso]}. Use esse número na análise de demanda."
-      else
-        ""
-      end
-
-      margin_instruction = if ctx[:saude_financeira]
-        m = ctx[:saude_financeira]
-        case m[:perfil_financeiro]
-        when "saudável"
-          "SAÚDE FINANCEIRA — SAUDÁVEL: margem #{m[:margem_atual]}% este mês, média #{m[:media_margem_3m]}% nos últimos 3 meses, lucro R$ #{m[:lucro_atual]}. Negócio TEM capacidade de investir. A action_of_the_week pode ser EXPANSÃO."
-        when "apertado"
-          "SAÚDE FINANCEIRA — APERTADA: margem #{m[:margem_atual]}%, lucro R$ #{m[:lucro_atual]}. Baixo custo com retorno rápido. Investimento máximo R$ 200 com impacto claro. A action_of_the_week deve ser OTIMIZAÇÃO."
-        when "crítico"
-          "SAÚDE FINANCEIRA — CRÍTICA: margem #{m[:margem_atual]}%, lucro R$ #{m[:lucro_atual]}. Aumentar receita com o que já existe. A action_of_the_week deve ser CAIXA RÁPIDO — algo que gere receita em 48h."
-        when "negativo"
-          "SAÚDE FINANCEIRA — NEGATIVA: prejuízo de R$ #{m[:lucro_atual].abs}. Zero investimentos novos. A action_of_the_week deve ser SOBREVIVÊNCIA — específica e diferente a cada ciclo."
+      meta_instrucao = if !is_critical && ctx[:dias_restantes_no_mes].to_i > 0 && ctx[:meta_excelencia_historica].to_f > 0
+        falta = (ctx[:meta_excelencia_historica] - ctx[:faturamento_mes_atual]).round(2)
+        if falta > 0
+          "META DE EXCELÊNCIA: melhor mês histórico foi R$ #{ctx[:meta_excelencia_historica]}. Faltam R$ #{falta} em #{ctx[:dias_restantes_no_mes]} dias = R$ #{ctx[:meta_excelencia_por_dia_restante]}/dia."
         else
-          "SAÚDE FINANCEIRA: margem #{m[:margem_atual]}%, lucro R$ #{m[:lucro_atual]}."
+          "META DE EXCELÊNCIA SUPERADA: faturamento atual (R$ #{ctx[:faturamento_mes_atual]}) já superou o melhor mês histórico (R$ #{ctx[:meta_excelencia_historica]}). Mencione isso."
+        end
+      else; ""; end
+
+      margin_instruction = if sf
+        break_even_str = if sf[:break_even_atendimentos]
+          faltam     = sf[:atendimentos_para_break_even].to_i
+          realizados = sf[:atendimentos_realizados_mes].to_i
+
+          base_str = faltam > 0 ?
+            "BREAK-EVEN: #{sf[:break_even_atendimentos]} atendimentos para cobrir custos. Realizados: #{realizados}. Faltam #{faltam}." :
+            "BREAK-EVEN SUPERADO: #{realizados} atendimentos. Cada atendimento adicional é lucro puro."
+
+          sf[:break_even_pode_estar_subestimado] ?
+            base_str + " ATENÇÃO: esse break-even pode estar subestimado — custos fixos deste mês parecem incompletos." :
+            base_str
+        else; ""; end
+
+        alertas_str  = sf[:alertas_custo]&.any? ? sf[:alertas_custo].map { |a| a[:mensagem] }.join(" | ") : nil
+        custo_ok_str = sf[:custos_dentro_do_benchmark] && alertas_str.nil? ?
+          "CUSTOS NO BENCHMARK: estrutura de custo dentro dos parâmetros do setor. Zona de segurança — não significa que não há espaço para otimizar." : ""
+
+        case sf[:perfil_financeiro]
+        when "saudável"
+          "SAÚDE FINANCEIRA — SAUDÁVEL: margem #{sf[:margem_atual]}%, lucro R$ #{sf[:lucro_atual]}. #{break_even_str} #{custo_ok_str}#{alertas_str}"
+        when "apertado"
+          "SAÚDE FINANCEIRA — APERTADA: margem #{sf[:margem_atual]}%, lucro R$ #{sf[:lucro_atual]}. #{break_even_str} #{alertas_str || custo_ok_str}"
+        when "crítico"
+          "SAÚDE FINANCEIRA — CRÍTICA: margem #{sf[:margem_atual]}%, lucro R$ #{sf[:lucro_atual]}. #{break_even_str} #{alertas_str || custo_ok_str}"
+        when "negativo"
+          "SAÚDE FINANCEIRA — NEGATIVA: prejuízo de R$ #{sf[:lucro_atual].abs}. #{break_even_str} #{alertas_str || custo_ok_str}"
+        else
+          "SAÚDE FINANCEIRA: margem #{sf[:margem_atual]}%, lucro R$ #{sf[:lucro_atual]}. #{break_even_str}"
         end
       else
-        "SAÚDE FINANCEIRA: custos não cadastrados. Sugira ações equilibradas e encoraje o dono a cadastrar os custos mensais."
+        "SAÚDE FINANCEIRA: custos não cadastrados. Encoraje o dono a cadastrar os custos mensais."
       end
+
+      pricing_instruction = if !is_critical && ctx[:precificacao_dinamica]
+        pd    = ctx[:precificacao_dinamica]
+        parts = []
+        if pd[:impacto_desconto]&.dig(:receita_adicional_mensal).to_f > 0
+          parts << "DESCONTO em dias ociosos (#{pd[:impacto_desconto][:dias]&.join(', ')}): projeta +R$ #{pd[:impacto_desconto][:receita_adicional_mensal]}/mês."
+        end
+        if pd[:impacto_aumento]&.dig(:receita_adicional_mensal).to_f > 0
+          parts << "AUMENTO em dias de pico (#{pd[:impacto_aumento][:dias]&.join(', ')}): projeta +R$ #{pd[:impacto_aumento][:receita_adicional_mensal]}/mês."
+        end
+        parts.any? ? "PRECIFICAÇÃO DINÂMICA: #{parts.join(' | ')}" : ""
+      else; ""; end
+
+      idle_instruction = if !is_critical && ctx[:ociosidade]&.dig(:receita_perdida_mensal).to_f > 0
+        o = ctx[:ociosidade]
+        "OCIOSIDADE: média real #{o[:media_diaria_real]} atendimentos/dia. Teto realista #{o[:teto_realista_dia]}/dia. Gap = R$ #{o[:receita_perdida_mensal]}/mês. Dia mais ocioso: #{o[:dia_mais_ocioso]}."
+      else; ""; end
+
+      funnel_instruction = if ctx[:funil_conversao] && !is_critical
+        fc     = ctx[:funil_conversao]
+        linhas = fc[:funil].map do |svc, d|
+          "#{svc}: #{d[:clientes_iniciaram_aqui]} iniciaram, #{d[:taxa_conversao_pct]}% converteram para premium, " \
+          "perda/cliente perdido: R$ #{d[:perda_futura_por_cliente_perdido]}, tempo médio: #{d[:dias_medio_ate_conversao] || 'n/d'} dias"
+        end.join(" | ")
+        "FUNIL DE CONVERSÃO: #{linhas}."
+      elsif ctx[:funil_conversao] && is_critical
+        "FUNIL: dados disponíveis mas secundários no modo de crise."
+      else; ""; end
+
+      pipeline_instruction = if ctx[:pipeline_loss_60d] && !is_critical
+        pl       = ctx[:pipeline_loss_60d]
+        detalhes = pl[:detalhes].map { |d| d[:mensagem] }.join(" | ")
+
+        <<~PIPELINE
+          PIPELINE LOSS: #{detalhes}
+          TOTAL EM RISCO: R$ #{pl[:perda_pipeline_total_60d]} nos próximos 60–90 dias.
+          Use esse número na seção "services" para mostrar o custo real da queda nos serviços de entrada.
+
+          REGRA DE ALERTA ADJACENTE: se a decisao_prioritaria for outra alavanca, adicione ao final:
+          "Atenção paralela: a queda em [serviço] hoje representa R$ [valor] em receita premium
+          em risco para [mês estimado] — monitore e reverta antes do próximo ciclo."
+          Aplicar quando pipeline_loss_60d > R$ 500.
+        PIPELINE
+      elsif ctx[:pipeline_loss_60d] && is_critical
+        pl = ctx[:pipeline_loss_60d]
+        "PIPELINE LOSS (secundário em crise): R$ #{pl[:perda_pipeline_total_60d]} em risco nos próximos 60 dias. Mencione brevemente."
+      else; ""; end
 
       perfil_bairro = case ctx[:bairro].to_s.downcase
       when /paulista|jardins|itaim|moema|pinheiros|vila nova conceição|brooklin/
-        "área nobre — cliente valoriza qualidade acima do preço. Upselling tem alta aceitação."
+        "área nobre — cliente valoriza qualidade. Upselling e premiumização têm alta aceitação."
       when /centro|brás|bom retiro|pari|cambuci/
-        "área comercial densa — foque em agilidade, volume e preço competitivo."
+        "área comercial densa — agilidade, volume e preço competitivo."
       when /zona sul|campo limpo|capão redondo|m'boi mirim|grajaú/
         "área popular — preço acessível, volume e fidelização simples."
       else
-        "analise o perfil da região pela localização e adapte ao poder aquisitivo local."
+        "analise o perfil da região e adapte ao poder aquisitivo local."
       end
 
       <<~PROMPT
-        Você é um consultor especialista em lava-rápidos no Brasil. Direto, pé no chão, linguagem simples.
+        Você é um consultor financeiro especialista em lava-rápidos no Brasil. Direto, pé no chão, linguagem simples.
+        Seu papel é identificar problemas estruturais e quantificar decisões — não dar receitas genéricas de vendas.
 
         #{cycle_instruction}
+        #{crisis_instruction}
+
+        ═══ ALERTAS DE DADOS ════════════════════════════════════════════════
+        #{custos_suspeitos_instrucao}
 
         ═══ CONTEXTO FIXO ═══════════════════════════════════════════════════
-        DATA DE HOJE: #{ctx[:data_atual]} (dia #{ctx[:dia_do_mes_atual]} do mês).
+        DATA DE HOJE: #{ctx[:data_atual]} (dia #{ctx[:dia_do_mes_atual]} do mês, #{ctx[:dias_restantes_no_mes]} dias restantes).
 
-        IMPORTANTE SOBRE OS DADOS: todos os valores de faturamento, receita e atendimentos referem-se EXCLUSIVAMENTE a clientes que compareceram (status "attended"). Agendamentos futuros aparecem separadamente como projeção — não some projeção com histórico.
+        IMPORTANTE: faturamento = EXCLUSIVAMENTE clientes que compareceram (attended). Agendamentos futuros são projeção separada.
 
-        PROJEÇÃO FUTURA: #{ctx[:agendamentos_confirmados_proximos_30_dias]} agendamentos confirmados nos próximos 30 dias (receita potencial de R$ #{ctx[:receita_projetada_proximos_7_dias]} nos próximos 7 dias se todos comparecerem). Taxa de no-show atual: #{ctx[:taxa_no_show]}.
+        PROJEÇÃO FUTURA: #{ctx[:agendamentos_confirmados_proximos_30_dias]} agendamentos confirmados. R$ #{ctx[:receita_projetada_proximos_7_dias]} nos próximos 7 dias. No-show: #{ctx[:taxa_no_show]}.
 
-        PRODUTO: app de agendamento online. NUNCA sugira nada sobre agendamento ou marcação.
+        PRODUTO: app de agendamento. NUNCA sugira nada sobre agendamento ou marcação.
         CLIENTE FINAL: não faz nada. Nunca sugira pedir indicação, avaliação ou feedback.
 
         ═══ SINAIS DO PERÍODO ═══════════════════════════════════════════════
         #{climate_instruction}
         #{holiday_instruction}
+        #{meta_instrucao}
         #{idle_instruction}
 
         ═══ SAÚDE FINANCEIRA ════════════════════════════════════════════════
         #{margin_instruction}
 
+        ═══ PRECIFICAÇÃO DINÂMICA ═══════════════════════════════════════════
+        #{pricing_instruction}
+
+        ═══ FUNIL E PIPELINE ════════════════════════════════════════════════
+        #{funnel_instruction}
+        #{pipeline_instruction}
+
         ═══ PERFIL DO MERCADO ═══════════════════════════════════════════════
         REGIÃO (#{ctx[:bairro]}, #{ctx[:cidade]}): #{perfil_bairro}
 
-        ═══ REGRAS DE ANÁLISE ═══════════════════════════════════════════════
-        PREÇO: se preço já subiu, não sugira novo aumento — sugira premiumização.
-        UPSELLING: cliente com carro parado é o momento mais valioso.
-        MESMO PERÍODO ANO ANTERIOR: use para diferenciar sazonalidade de queda de gestão.
-        PADRÃO DE ABANDONO: pico de visita única pode indicar promoção que atraiu público errado.
+        ═══ HIERARQUIA DE ANÁLISE ═══════════════════════════════════════════
+        1. ESTRUTURAL: custos fora do benchmark | precificação abaixo do mercado | dados incompletos
+        2. OPERACIONAL: ociosidade recorrente | no-show alto | ticket caindo | funil quebrado | pipeline loss alto
+        3. TÁTICO: clientes em risco | feriado próximo | serviço premium sem exposição
 
-        ═══ REGRAS DA ACTION_OF_THE_WEEK ════════════════════════════════════
-        1. NUNCA repita a ação do ciclo anterior.
-        2. NUNCA use "mande mensagem para clientes" como ação — se usar contato, especifique exatamente o que falar, qual oferta e retorno esperado em reais.
-        3. Ataque a MAIOR alavanca dos dados.
-        4. ESPECÍFICO: nome do serviço, valor, dia, horário, estimativa de retorno em reais.
-        5. Executável HOJE ou AMANHÃ.
-        6. Varie o tipo: operacional, comercial, precificação, mix, eficiência de custo.
+        REGRA: decisao_prioritaria ataca o nível mais alto disponível.
+        Em modo de crise: foco total em 1. Nunca pule para 3 ignorando 1 e 2.
+
+        ═══ REGRAS DE ANÁLISE ═══════════════════════════════════════════════
+        PREÇO: se já subiu, não sugira novo aumento — sugira premiumização por serviço específico.
+        FUNIL: queda em serviço de entrada = pipeline_loss em R$ nos próximos 60–90 dias.
+        DADOS INCOMPLETOS: se custos_suspeitos = true, avise antes de qualquer análise financeira.
+        NÚMEROS: use dados reais do contexto. Nunca invente estimativas sem âncora nos dados.
+
+        ═══ REGRAS DA DECISAO_PRIORITARIA ══════════════════════════════════
+        1. Maior alavanca financeira disponível nos dados.
+        2. Impacto em R$/mês usando dados reais.
+        3. Custo: delta vs benchmark e impacto mensal.
+        4. Precificação: cite serviço pelo nome e valor atual.
+        5. Funil: use pipeline_loss_60d do contexto.
+        6. Retenção: use nomes reais dos clientes sumidos.
+        7. Nunca repita a decisão do ciclo anterior.
+        8. Nunca use ações genéricas.
+        9. Tomável hoje ou amanhã, sem investimento externo.
+        10. Se pipeline_loss_60d > R$ 500 e a decisão for outra alavanca, adicione alerta
+            adjacente ao final: "Atenção paralela: a queda em [serviço] representa R$ [X] em
+            receita premium em risco para [mês estimado] — monitore antes do próximo ciclo."
+        11. Varie a cada ciclo: custo → precificação → mix/funil → retenção → operacional.
 
         ═══ REGRAS DE ESCRITA ═══════════════════════════════════════════════
         1. Linguagem de conversa, sem termos técnicos.
-        2. Comece pelo que melhorou.
+        2. Comece pelo que melhorou (mesmo em crise, se houver algo).
         3. Mês incompleto: deixe claro e projete o mês completo.
         4. Compare com mês anterior E mesmo período do ano passado quando disponível.
         5. Cada seção ataca problema diferente — sem repetição.
@@ -664,14 +1160,14 @@ module Owner
 
         ═══ FORMATO DE RESPOSTA (JSON EXATO) ════════════════════════════════
         {
-          "sales":     { "text": "faturamento real com comparativo e projeção se mês parcial", "status": "up|down|stable" },
-          "services":  { "text": "serviços com evolução, upselling e premiumização", "status": "up|down|stable" },
-          "clients":   { "text": "retenção, visita única e padrão de abandono", "status": "up|down|stable" },
-          "demand":    { "text": "pico, ociosidade e dinheiro deixado na mesa com valor estimado", "status": "up|down|stable" },
-          "retention": { "text": "clientes sumidos com nomes e ação concreta", "status": "up|down|stable" },
-          "growth":    { "text": "novos clientes, feriados próximos e visibilidade", "status": "up|down|stable" },
-          "cycle_summary": "valida ação anterior com dados se houver. Resumo do momento em 2 frases.",
-          "action_of_the_week": "ação única, específica, executável hoje ou amanhã — com serviço, valor estimado de retorno, calibrada pela saúde financeira."
+          "sales":     { "text": "faturamento real, comparativo, projeção, break-even com ressalva de custos incompletos se aplicável", "status": "up|down|stable" },
+          "services":  { "text": "serviços com evolução e pipeline_loss em R$ se disponível", "status": "up|down|stable" },
+          "clients":   { "text": "retenção, visita única e abandono com nomes reais", "status": "up|down|stable" },
+          "demand":    { "text": "distribuição real de demanda, ociosidade com valor real, precificação dinâmica por serviço específico", "status": "up|down|stable" },
+          "retention": { "text": "clientes sumidos com nomes reais, dias de ausência e valor histórico estimado", "status": "up|down|stable" },
+          "growth":    { "text": "novos clientes, feriados próximos e perfil do público captado", "status": "up|down|stable" },
+          "cycle_summary": "avalia decisão anterior com dados. Resume o momento financeiro em 2 frases com meta concreta para os dias restantes.",
+          "decisao_prioritaria": "maior alavanca financeira com problema, impacto em R$/mês e como executar. Se pipeline_loss > R$ 500, inclui alerta adjacente ao final. Estrutural > Operacional > Tático."
         }
       PROMPT
     end
@@ -686,7 +1182,7 @@ module Owner
       fallback = { "text" => raw, "status" => "stable" }
       { "sales" => fallback, "services" => fallback, "clients" => fallback,
         "demand" => fallback, "retention" => fallback, "growth" => fallback,
-        "cycle_summary" => "", "action_of_the_week" => "" }
+        "cycle_summary" => "", "decisao_prioritaria" => "" }
     end
 
     def call_claude(prompt)
@@ -704,8 +1200,8 @@ module Owner
 
       request.body = {
         model:      "claude-sonnet-4-6",
-        max_tokens: 4000,
-        system:     "Você é um consultor especialista em lava-rápidos no Brasil. Direto, simples, sem termos técnicos. Nunca sugere nada sobre agendamento. Nunca pede nada ao cliente final. Faturamento = apenas clientes que compareceram (attended). Calibra investimentos pela margem real. Dados de clima são dos últimos 30 dias corridos. Nunca usa 'os números falam por si'. Action_of_the_week é sempre específica. Usa os dados reais do banco naturalmente na análise quando relevantes — não lista todos os indicadores. Responde SEMPRE em JSON válido exatamente no formato solicitado.",
+        max_tokens: 6000,
+        system:     "Você é um consultor financeiro especialista em lava-rápidos no Brasil. Direto, simples, sem termos técnicos. Nunca sugere nada sobre agendamento. Nunca pede nada ao cliente final. Faturamento = apenas clientes que compareceram (attended). Hierarquia: estrutural > operacional > tático. Em modo de crise: 80% do foco em custo e caixa imediato. Se custos_suspeitos = true: avise sobre dados incompletos antes de qualquer análise financeira. Pipeline loss > R$ 500: inclui alerta adjacente ao final da decisao_prioritaria. Nunca inventa estimativas sem âncora nos dados. Capacidade ociosa = percentil 75 dos dias reais. Nunca usa 'os números falam por si'. Responde SEMPRE em JSON válido exatamente no formato solicitado.",
         messages:   [{ role: "user", content: prompt }]
       }.to_json
 

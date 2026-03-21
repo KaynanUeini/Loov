@@ -1,0 +1,322 @@
+<div id="loov-cursor"></div>
+<div id="loov-cursor-trail"></div>
+<div id="page-transition"></div>
+
+<style>
+  :root {
+    --lime: #afff2d;
+    --lime-dim: #8fcc24;
+    --black: #000;
+    --surface: #0a0a0a;
+    --surface-2: #0d0d0d;
+    --surface-3: #141414;
+    --border: #1a1a1a;
+    --border-soft: #222;
+    --text-muted: #444;
+    --text-secondary: #777;
+    --white: #fff;
+  }
+
+  #loov-cursor { position:fixed;width:8px;height:8px;background:var(--lime);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .18s ease,height .18s ease;mix-blend-mode:difference; }
+  #loov-cursor-trail { position:fixed;width:38px;height:38px;border:1px solid rgba(175,255,45,0.25);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:width .25s ease,height .25s ease,border-color .25s ease; }
+  body.cursor-hover #loov-cursor { width:14px;height:14px; }
+  body.cursor-hover #loov-cursor-trail { width:58px;height:58px;border-color:rgba(175,255,45,0.45); }
+  @media(hover:none){#loov-cursor,#loov-cursor-trail{display:none;}}
+  #page-transition { position:fixed;inset:0;z-index:10000;background:#000;transform:translateY(100%);pointer-events:none; }
+  #page-transition.enter { animation:pgEnter .42s cubic-bezier(.76,0,.24,1) forwards; }
+  #page-transition.exit  { animation:pgExit  .42s cubic-bezier(.76,0,.24,1) forwards; }
+  @keyframes pgEnter{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  @keyframes pgExit{from{transform:translateY(0)}to{transform:translateY(-100%)}}
+
+  * { box-sizing: border-box; }
+  body { cursor: none; }
+
+  .team-wrap {
+    min-height: 100vh; background: var(--black);
+    font-family: 'DM Sans', sans-serif;
+    padding-top: 60px; padding-bottom: 5rem;
+  }
+
+  .team-header {
+    max-width: 700px; margin: 0 auto;
+    padding: 3.5rem 1.5rem 2rem;
+    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards .1s;
+  }
+
+  .team-eyebrow {
+    display: inline-flex; align-items: center; gap: .6rem;
+    font-size: .68rem; font-weight: 500; letter-spacing: .25em;
+    text-transform: uppercase; color: var(--lime); margin-bottom: .875rem;
+  }
+  .team-eyebrow::before { content:''; display:block; width:28px; height:1px; background:var(--lime); }
+
+  .team-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.5rem, 8vw, 5rem);
+    line-height: .92; color: var(--white); margin: 0;
+  }
+  .team-title span { color: var(--lime); }
+
+  .team-divider { max-width: 700px; margin: 0 auto; padding: 0 1.5rem; }
+  .team-divider-line { height: 1px; background: var(--border); }
+
+  .team-body { max-width: 700px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+
+  /* ── FLASH ───────────────────────────────────────────── */
+  .flash-msg {
+    display: flex; align-items: center; gap: .75rem;
+    padding: .875rem 1.25rem; border-radius: 12px;
+    font-size: .875rem; margin-bottom: 1.75rem;
+  }
+  .flash-success { background: rgba(175,255,45,.07); border: 1px solid rgba(175,255,45,.15); color: var(--lime); }
+  .flash-error   { background: rgba(248,113,113,.08); border: 1px solid rgba(248,113,113,.18); color: #fca5a5; }
+
+  /* ── CARDS ───────────────────────────────────────────── */
+  .team-card {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 20px; margin-bottom: 1rem;
+    overflow: hidden; position: relative;
+    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards;
+  }
+  .team-card:nth-child(1) { animation-delay: .25s; }
+  .team-card:nth-child(2) { animation-delay: .35s; }
+
+  .team-card::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 2px; background: linear-gradient(to bottom, transparent, rgba(175,255,45,0.3), transparent);
+  }
+
+  .team-card-header {
+    padding: 1.375rem 1.5rem 1.25rem 1.75rem;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: .625rem;
+  }
+
+  .team-card-title {
+    font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem;
+    color: var(--lime); letter-spacing: .05em;
+  }
+
+  .team-card-icon { color: var(--lime); font-size: .8rem; }
+
+  .team-card-body { padding: 1.5rem 1.5rem 1.5rem 1.75rem; }
+
+  /* ── INVITE FORM ─────────────────────────────────────── */
+  .invite-form-row { display: flex; gap: .75rem; align-items: flex-start; }
+
+  .invite-input {
+    flex: 1; background: var(--surface-3); border: 1px solid var(--border);
+    border-radius: 10px; padding: .9rem 1rem;
+    font-family: 'DM Sans', sans-serif; font-size: .9375rem; color: var(--white);
+    outline: none; transition: all .2s ease; cursor: none;
+  }
+  .invite-input::placeholder { color: var(--text-muted); }
+  .invite-input:focus { border-color: var(--lime); box-shadow: 0 0 0 3px rgba(175,255,45,.07); }
+
+  .btn-invite {
+    background: var(--lime); color: var(--black); border: none;
+    border-radius: 100px; padding: .9rem 1.5rem;
+    font-family: 'DM Sans', sans-serif; font-size: .875rem; font-weight: 600;
+    cursor: none; transition: all .22s ease; white-space: nowrap; flex-shrink: 0;
+  }
+  .btn-invite:hover { background: var(--lime-dim); transform: translateY(-2px); }
+
+  /* ── INVITE LIST ─────────────────────────────────────── */
+  .invite-list { display: flex; flex-direction: column; gap: .75rem; }
+
+  .invite-item {
+    background: var(--surface-3); border: 1px solid var(--border);
+    border-radius: 14px; overflow: hidden; transition: border-color .2s ease;
+  }
+  .invite-item:hover { border-color: var(--border-soft); }
+
+  .invite-item-main {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem; padding: 1rem 1.25rem;
+  }
+
+  .invite-item-left { flex: 1; min-width: 0; }
+
+  .invite-email {
+    font-family: 'Bebas Neue', sans-serif; font-size: 1rem;
+    color: var(--white); letter-spacing: .02em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .invite-meta { font-size: .78rem; color: var(--text-muted); margin-top: .2rem; }
+
+  .invite-item-right { display: flex; align-items: center; gap: .75rem; flex-shrink: 0; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: .3rem;
+    font-size: .62rem; font-weight: 600; letter-spacing: .06em;
+    padding: .25rem .65rem; border-radius: 100px; text-transform: uppercase;
+  }
+  .badge-pending  { background: rgba(251,191,36,.08); color: #fbbf24; border: 1px solid rgba(251,191,36,.2); }
+  .badge-accepted { background: rgba(175,255,45,.08); color: var(--lime); border: 1px solid rgba(175,255,45,.2); }
+
+  .btn-danger {
+    background: transparent; color: #f87171;
+    border: 1px solid rgba(248,113,113,.25); border-radius: 8px;
+    padding: .375rem .75rem; font-family: 'DM Sans', sans-serif;
+    font-size: .72rem; cursor: none; transition: all .2s ease;
+  }
+  .btn-danger:hover { background: rgba(248,113,113,.08); border-color: #f87171; }
+
+  .invite-link-wrap {
+    padding: .75rem 1.25rem;
+    border-top: 1px solid var(--border);
+    background: var(--surface-2);
+  }
+
+  .invite-link-label {
+    font-size: .6rem; font-weight: 600; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--text-muted); margin-bottom: .375rem;
+  }
+
+  .invite-link-url {
+    font-size: .72rem; color: var(--text-secondary);
+    word-break: break-all; line-height: 1.5;
+    display: flex; align-items: flex-start; gap: .5rem;
+  }
+
+  .btn-copy {
+    background: transparent; border: 1px solid var(--border);
+    border-radius: 6px; padding: .25rem .5rem;
+    font-size: .62rem; color: var(--text-muted); cursor: none;
+    transition: all .15s ease; white-space: nowrap; flex-shrink: 0;
+  }
+  .btn-copy:hover { border-color: var(--lime); color: var(--lime); }
+  .btn-copy.copied { border-color: var(--lime); color: var(--lime); }
+
+  /* ── EMPTY ───────────────────────────────────────────── */
+  .empty-state {
+    text-align: center; padding: 2.5rem 1rem;
+    display: flex; flex-direction: column; align-items: center; gap: .625rem;
+  }
+  .empty-state-icon {
+    width: 48px; height: 48px; border-radius: 14px;
+    background: var(--surface-3); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; color: #1e1e1e;
+  }
+  .empty-state-text { font-size: .875rem; color: var(--text-muted); }
+
+  @keyframes revealUp { from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)} }
+
+  @media(max-width:640px) {
+    .team-header, .team-divider, .team-body { padding-left: 1.25rem; padding-right: 1.25rem; }
+    .invite-form-row { flex-direction: column; }
+    .btn-invite { width: 100%; justify-content: center; }
+  }
+</style>
+
+<div class="team-wrap">
+
+  <div class="team-header">
+    <div class="team-eyebrow">Equipe</div>
+    <h1 class="team-title">Seus <span>Atendentes</span></h1>
+  </div>
+
+  <div class="team-divider"><div class="team-divider-line"></div></div>
+
+  <div class="team-body">
+
+    <% if flash[:notice] %>
+    <div class="flash-msg flash-success"><i class="fas fa-circle-check"></i><span><%= flash[:notice] %></span></div>
+    <% end %>
+    <% if flash[:alert] %>
+    <div class="flash-msg flash-error"><i class="fas fa-circle-exclamation"></i><span><%= flash[:alert] %></span></div>
+    <% end %>
+
+    <!-- CONVIDAR -->
+    <div class="team-card">
+      <div class="team-card-header">
+        <i class="fas fa-envelope team-card-icon"></i>
+        <span class="team-card-title">Convidar Atendente</span>
+      </div>
+      <div class="team-card-body">
+        <%= form_with url: owner_attendant_invitations_path, method: :post, local: true do %>
+          <div class="invite-form-row">
+            <%= text_field_tag :email, nil, placeholder: "email@atendente.com", class: "invite-input", type: "email", required: true %>
+            <%= submit_tag "Enviar convite", class: "btn-invite" %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- LISTA -->
+    <div class="team-card">
+      <div class="team-card-header">
+        <i class="fas fa-users team-card-icon"></i>
+        <span class="team-card-title">Convites</span>
+      </div>
+      <div class="team-card-body" style="padding-top:1rem;padding-bottom:1rem;">
+        <% if @invitations.any? %>
+        <div class="invite-list">
+          <% @invitations.each do |inv| %>
+          <div class="invite-item">
+            <div class="invite-item-main">
+              <div class="invite-item-left">
+                <div class="invite-email"><%= inv.email %></div>
+                <div class="invite-meta">
+                  Enviado <%= time_ago_in_words(inv.created_at) %> atrás
+                  <% if inv.accepted? && inv.attendant %>
+                    · <%= inv.attendant.display_name %>
+                  <% end %>
+                </div>
+              </div>
+              <div class="invite-item-right">
+                <span class="badge <%= inv.accepted? ? 'badge-accepted' : 'badge-pending' %>">
+                  <i class="fas fa-circle" style="font-size:.3rem;"></i>
+                  <%= inv.accepted? ? 'Aceito' : 'Pendente' %>
+                </span>
+                <% unless inv.accepted? %>
+                  <%= button_to "Remover", owner_attendant_invitation_path(inv), method: :delete, class: "btn-danger", data: { confirm: "Remover este convite?" } %>
+                <% end %>
+              </div>
+            </div>
+            <% unless inv.accepted? %>
+            <div class="invite-link-wrap">
+              <div class="invite-link-label">Link do convite</div>
+              <div class="invite-link-url">
+                <span id="link-<%= inv.id %>"><%= accept_owner_attendant_invitations_url(token: inv.token) %></span>
+                <button class="btn-copy" onclick="copyLink('<%= inv.id %>', '<%= accept_owner_attendant_invitations_url(token: inv.token) %>', this)">
+                  <i class="fas fa-copy"></i> Copiar
+                </button>
+              </div>
+            </div>
+            <% end %>
+          </div>
+          <% end %>
+        </div>
+        <% else %>
+        <div class="empty-state">
+          <div class="empty-state-icon"><i class="fas fa-user-plus"></i></div>
+          <div class="empty-state-text">Nenhum convite enviado ainda.</div>
+        </div>
+        <% end %>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  const cursor=document.getElementById('loov-cursor'),trail=document.getElementById('loov-cursor-trail');
+  if(cursor&&trail){let mx=-100,my=-100,tx=-100,ty=-100;document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cursor.style.left=mx+'px';cursor.style.top=my+'px';});(function anim(){tx+=(mx-tx)*0.12;ty+=(my-ty)*0.12;trail.style.left=tx+'px';trail.style.top=ty+'px';requestAnimationFrame(anim);})();document.addEventListener('mouseover',e=>{if(e.target.closest('a,button,input,select,textarea'))document.body.classList.add('cursor-hover');});document.addEventListener('mouseout',e=>{if(e.target.closest('a,button,input,select,textarea'))document.body.classList.remove('cursor-hover');});document.addEventListener('mouseleave',()=>{cursor.style.opacity='0';trail.style.opacity='0';});document.addEventListener('mouseenter',()=>{cursor.style.opacity='1';trail.style.opacity='1';});}
+  const pt=document.getElementById('page-transition');
+  if(pt){document.addEventListener('click',e=>{const link=e.target.closest('a[href]');if(!link)return;const href=link.getAttribute('href');if(!href||href.startsWith('#')||href.startsWith('mailto')||link.target==='_blank')return;if(href.startsWith('http')&&!href.includes(window.location.hostname))return;e.preventDefault();pt.classList.add('enter');setTimeout(()=>window.location.href=href,400);});window.addEventListener('pageshow',()=>{pt.classList.remove('enter');pt.classList.add('exit');setTimeout(()=>pt.classList.remove('exit'),440);});}
+})();
+
+function copyLink(id, url, btn) {
+  navigator.clipboard.writeText(url).then(function() {
+    btn.textContent = '✓ Copiado';
+    btn.classList.add('copied');
+    setTimeout(function() {
+      btn.innerHTML = '<i class="fas fa-copy"></i> Copiar';
+      btn.classList.remove('copied');
+    }, 2500);
+  });
+}
+</script>

@@ -1,0 +1,222 @@
+<div id="loov-cursor"></div>
+<div id="loov-cursor-trail"></div>
+
+<style>
+  :root{--lime:#afff2d;--lime-dim:#8fcc24;--black:#000;--surface-2:#0d0d0d;--surface-3:#141414;--border:#1a1a1a;--text-muted:#444;--white:#fff;}
+  #loov-cursor{position:fixed;width:8px;height:8px;background:var(--lime);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);mix-blend-mode:difference;}
+  #loov-cursor-trail{position:fixed;width:38px;height:38px;border:1px solid rgba(175,255,45,0.25);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);}
+  *{box-sizing:border-box;}body{cursor:none;background:#000;font-family:'DM Sans',sans-serif;}
+
+  .conf-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.5rem;padding-top:80px;}
+
+  .conf-card{
+    width:100%;max-width:440px;
+    background:var(--surface-2);border:1px solid var(--border);border-radius:24px;
+    padding:2.5rem 2rem;text-align:center;
+    position:relative;overflow:hidden;
+  }
+  .conf-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(to right,transparent,var(--lime),transparent);}
+
+  /* ── ESTADOS ── */
+  .state{display:none;}
+  .state.active{display:block;}
+
+  /* Aguardando */
+  .countdown-ring{position:relative;width:120px;height:120px;margin:0 auto 1.5rem;}
+  .countdown-ring svg{transform:rotate(-90deg);}
+  .ring-track{fill:none;stroke:rgba(255,255,255,0.05);stroke-width:6;}
+  .ring-fill{fill:none;stroke:var(--lime);stroke-width:6;stroke-linecap:round;transition:stroke-dashoffset .9s linear;}
+  .ring-fill.urgent{stroke:#f87171;}
+  .countdown-num{
+    position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    font-family:'Bebas Neue',sans-serif;font-size:2.25rem;color:var(--white);line-height:1;
+  }
+  .countdown-label{font-size:.58rem;color:var(--text-muted);letter-spacing:.1em;text-transform:uppercase;}
+
+  .conf-title{font-family:'Bebas Neue',sans-serif;font-size:1.625rem;color:var(--white);margin-bottom:.5rem;letter-spacing:.03em;}
+  .conf-sub{font-size:.875rem;color:var(--text-muted);line-height:1.6;margin-bottom:1.5rem;}
+
+  .appt-summary{background:var(--surface-3);border:1px solid var(--border);border-radius:14px;padding:1rem 1.25rem;text-align:left;margin-bottom:1.5rem;}
+  .summ-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;}
+  .summ-row:last-child{margin-bottom:0;}
+  .summ-label{font-size:.72rem;color:var(--text-muted);font-weight:500;}
+  .summ-val{font-size:.875rem;color:var(--white);font-weight:500;}
+  .summ-val.lime{color:var(--lime);}
+  .summ-val.small{font-size:.78rem;color:var(--text-muted);}
+
+  .pulse-dots{display:flex;justify-content:center;gap:.5rem;margin-top:1rem;}
+  .pulse-dot{width:8px;height:8px;border-radius:50%;background:var(--lime);animation:dotPulse 1.4s ease-in-out infinite;}
+  .pulse-dot:nth-child(2){animation-delay:.2s;background:rgba(175,255,45,.6);}
+  .pulse-dot:nth-child(3){animation-delay:.4s;background:rgba(175,255,45,.3);}
+  @keyframes dotPulse{0%,80%,100%{transform:scale(.7);opacity:.4}40%{transform:scale(1);opacity:1}}
+
+  /* Confirmado */
+  .state-confirmed .icon-circle{width:80px;height:80px;border-radius:50%;background:rgba(175,255,45,.12);border:2px solid var(--lime);display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;font-size:1.75rem;color:var(--lime);}
+  .btn-go{display:inline-flex;align-items:center;gap:.5rem;background:var(--lime);color:#000;border:none;border-radius:100px;padding:.875rem 2rem;font-family:'DM Sans',sans-serif;font-size:.9375rem;font-weight:700;cursor:none;transition:all .22s;text-decoration:none;margin-top:1rem;}
+  .btn-go:hover{background:var(--lime-dim);transform:translateY(-2px);}
+
+  /* Rejeitado / Expirado */
+  .state-rejected .icon-circle{width:80px;height:80px;border-radius:50%;background:rgba(248,113,113,.1);border:2px solid #f87171;display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;font-size:1.75rem;color:#f87171;}
+  .btn-retry{display:inline-flex;align-items:center;gap:.5rem;background:var(--lime);color:#000;border:none;border-radius:100px;padding:.875rem 2rem;font-family:'DM Sans',sans-serif;font-size:.9375rem;font-weight:700;cursor:none;transition:all .22s;text-decoration:none;margin-top:1rem;}
+  .btn-retry:hover{background:var(--lime-dim);}
+</style>
+
+<div class="conf-wrap">
+  <div class="conf-card">
+
+    <!-- ── AGUARDANDO ACEITE ─────────────────────── -->
+    <div class="state state-waiting <%= @appointment.pending_acceptance? ? 'active' : '' %>" id="state-waiting">
+
+      <div class="countdown-ring">
+        <svg width="120" height="120" viewBox="0 0 120 120">
+          <circle class="ring-track" cx="60" cy="60" r="54"/>
+          <circle class="ring-fill" id="ring-fill" cx="60" cy="60" r="54"
+            stroke-dasharray="339.3"
+            stroke-dashoffset="0"/>
+        </svg>
+        <div class="countdown-num">
+          <span id="countdown-val">3:00</span>
+          <span class="countdown-label">restantes</span>
+        </div>
+      </div>
+
+      <div class="conf-title">Aguardando confirmação</div>
+      <p class="conf-sub">O lava-rápido tem 3 minutos para aceitar sua reserva. Se não confirmar, você <strong style="color:var(--white);">não será cobrado</strong>.</p>
+
+      <div class="appt-summary">
+        <div class="summ-row">
+          <span class="summ-label">Local</span>
+          <span class="summ-val"><%= @appointment.car_wash.name %></span>
+        </div>
+        <div class="summ-row">
+          <span class="summ-label">Serviço</span>
+          <span class="summ-val"><%= @appointment.service.title %></span>
+        </div>
+        <div class="summ-row">
+          <span class="summ-label">Horário</span>
+          <span class="summ-val"><%= @appointment.scheduled_at.strftime("%H:%M") %> — hoje</span>
+        </div>
+        <div class="summ-row">
+          <span class="summ-label">Pago agora (35%)</span>
+          <span class="summ-val lime">R$ <%= number_with_precision(@appointment.prepayment_amount, precision: 2) %></span>
+        </div>
+        <div class="summ-row">
+          <span class="summ-label">Restante no local</span>
+          <span class="summ-val small">R$ <%= number_with_precision(@appointment.effective_price - @appointment.prepayment_amount.to_f, precision: 2) %></span>
+        </div>
+      </div>
+
+      <div class="pulse-dots">
+        <div class="pulse-dot"></div>
+        <div class="pulse-dot"></div>
+        <div class="pulse-dot"></div>
+      </div>
+
+    </div>
+
+    <!-- ── CONFIRMADO ───────────────────────────── -->
+    <div class="state state-confirmed <%= @appointment.confirmed? ? 'active' : '' %>" id="state-confirmed">
+      <div class="icon-circle"><i class="fas fa-check"></i></div>
+      <div class="conf-title">Reserva Confirmada!</div>
+      <p class="conf-sub">O lava-rápido aceitou. Vá agora — seu horário está garantido.</p>
+      <div class="appt-summary">
+        <div class="summ-row">
+          <span class="summ-label">Local</span>
+          <span class="summ-val"><%= @appointment.car_wash.name %></span>
+        </div>
+        <div class="summ-row">
+          <span class="summ-label">Horário</span>
+          <span class="summ-val lime"><%= @appointment.scheduled_at.strftime("%H:%M") %></span>
+        </div>
+        <div class="summ-row">
+          <span class="summ-label">Pague no local</span>
+          <span class="summ-val">R$ <%= number_with_precision(@appointment.effective_price - @appointment.prepayment_amount.to_f, precision: 2) %></span>
+        </div>
+      </div>
+      <%= link_to car_washes_path, class: "btn-go" do %>
+        <i class="fas fa-car"></i> Ok, estou indo!
+      <% end %>
+    </div>
+
+    <!-- ── REJEITADO / EXPIRADO ─────────────────── -->
+    <div class="state state-rejected <%= ((@appointment.rejected? || @appointment.cancelled?) && !@appointment.confirmed?) ? 'active' : '' %>" id="state-rejected">
+      <div class="icon-circle"><i class="fas fa-times"></i></div>
+      <div class="conf-title">Reserva não confirmada</div>
+      <p class="conf-sub">O lava-rápido não confirmou a tempo ou recusou. <strong style="color:var(--white);">Nenhum valor foi cobrado</strong> no seu cartão.</p>
+      <%= link_to disponivel_index_path, class: "btn-retry" do %>
+        <i class="fas fa-rotate-left"></i> Buscar outro horário
+      <% end %>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  const cursor=document.getElementById('loov-cursor'),trail=document.getElementById('loov-cursor-trail');
+  if(cursor&&trail){let mx=-100,my=-100,tx=-100,ty=-100;document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cursor.style.left=mx+'px';cursor.style.top=my+'px';});(function anim(){tx+=(mx-tx)*0.12;ty+=(my-ty)*0.12;trail.style.left=tx+'px';trail.style.top=ty+'px';requestAnimationFrame(anim);})();}
+})();
+
+// ── POLLING + COUNTDOWN ──────────────────────────────────────────────────
+const APPOINTMENT_ID  = <%= @appointment.id %>;
+const SECONDS_LEFT    = <%= @appointment.seconds_until_expiry || 0 %>;
+const CIRCUMFERENCE   = 339.3; // 2π × 54
+
+let secondsLeft = SECONDS_LEFT;
+const ringFill  = document.getElementById('ring-fill');
+const countdownEl = document.getElementById('countdown-val');
+
+function updateRing(seconds) {
+  const pct    = seconds / 180; // 180 segundos = 3 minutos
+  const offset = CIRCUMFERENCE * (1 - pct);
+  ringFill.style.strokeDashoffset = offset;
+  if (seconds <= 30) {
+    ringFill.classList.add('urgent');
+  }
+}
+
+function formatTime(s) {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return m + ':' + String(sec).padStart(2,'0');
+}
+
+// Só roda o countdown/polling se estiver em estado pending
+if (document.getElementById('state-waiting').classList.contains('active')) {
+  updateRing(secondsLeft);
+  countdownEl.textContent = formatTime(secondsLeft);
+
+  const timer = setInterval(() => {
+    secondsLeft--;
+    if (secondsLeft < 0) secondsLeft = 0;
+    updateRing(secondsLeft);
+    countdownEl.textContent = formatTime(secondsLeft);
+  }, 1000);
+
+  // Polling a cada 4 segundos para verificar status
+  const poll = setInterval(() => {
+    fetch('/disponivel/<%= @appointment.id %>', {
+      headers: { Accept: 'application/json' }
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.status === 'confirmed') {
+        clearInterval(timer);
+        clearInterval(poll);
+        showState('confirmed');
+      } else if (['cancelled', 'rejected'].includes(data.status)) {
+        clearInterval(timer);
+        clearInterval(poll);
+        showState('rejected');
+      }
+      // Se ainda pending, continua
+    })
+    .catch(() => {}); // silencia erros de rede
+  }, 4000);
+}
+
+function showState(name) {
+  document.querySelectorAll('.state').forEach(s => s.classList.remove('active'));
+  document.getElementById('state-' + name).classList.add('active');
+}
+</script>

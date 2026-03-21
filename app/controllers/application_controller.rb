@@ -25,4 +25,10 @@ class ApplicationController < ActionController::Base
     return if controller_name == 'registrations'
     redirect_to owner_onboarding_path
   end
+
+  # Retorna o lava-rápido do usuário logado (owner ou attendant)
+  def current_car_wash
+    @current_car_wash ||= current_user&.linked_car_wash
+  end
+  helper_method :current_car_wash
 end

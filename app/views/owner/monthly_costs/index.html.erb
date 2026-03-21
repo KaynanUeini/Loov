@@ -1,109 +1,269 @@
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
+<div id="loov-cursor"></div>
+<div id="loov-cursor-trail"></div>
+<div id="page-transition"></div>
 
+<style>
   :root {
     --lime: #afff2d;
     --lime-dim: #8fcc24;
-    --black: #000000;
+    --black: #000;
     --surface: #0a0a0a;
-    --surface-2: #111111;
-    --surface-3: #1a1a1a;
-    --border: #222222;
-    --text-muted: #666666;
-    --text-secondary: #999999;
-    --white: #ffffff;
-    --red: #ff4d4d;
-    --yellow: #ffaa00;
-    --green: #afff2d;
+    --surface-2: #0d0d0d;
+    --surface-3: #141414;
+    --border: #1a1a1a;
+    --border-soft: #222;
+    --text-muted: #444;
+    --text-secondary: #777;
+    --white: #fff;
+    --red: #f87171;
+    --yellow: #fbbf24;
   }
 
-  .fin-wrap { min-height: 100vh; background: var(--black); font-family: 'DM Sans', sans-serif; padding-top: 64px; padding-bottom: 4rem; }
-  .fin-inner { max-width: 1100px; margin: 0 auto; padding: 3rem 1.5rem; }
+  /* ── CURSOR ─────────────────────────────────────────── */
+  #loov-cursor { position:fixed;width:8px;height:8px;background:var(--lime);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .18s ease,height .18s ease;mix-blend-mode:difference; }
+  #loov-cursor-trail { position:fixed;width:38px;height:38px;border:1px solid rgba(175,255,45,0.25);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:width .25s ease,height .25s ease,border-color .25s ease; }
+  body.cursor-hover #loov-cursor { width:14px;height:14px; }
+  body.cursor-hover #loov-cursor-trail { width:58px;height:58px;border-color:rgba(175,255,45,0.45); }
+  @media(hover:none){#loov-cursor,#loov-cursor-trail{display:none;}}
 
-  .fin-eyebrow { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.7rem; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; color: var(--lime); margin-bottom: 1rem; opacity: 0; animation: fadeUp 0.6s ease forwards 0.1s; }
-  .fin-eyebrow::before { content: ''; display: block; width: 24px; height: 1px; background: var(--lime); }
-  .fin-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(2.5rem, 8vw, 4.5rem); line-height: 1; color: var(--white); margin: 0 0 2.5rem 0; opacity: 0; animation: fadeUp 0.6s ease forwards 0.2s; }
+  /* ── PAGE TRANSITION ─────────────────────────────────── */
+  #page-transition { position:fixed;inset:0;z-index:10000;background:#000;transform:translateY(100%);pointer-events:none; }
+  #page-transition.enter { animation:pgEnter .42s cubic-bezier(.76,0,.24,1) forwards; }
+  #page-transition.exit  { animation:pgExit  .42s cubic-bezier(.76,0,.24,1) forwards; }
+  @keyframes pgEnter{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  @keyframes pgExit{from{transform:translateY(0)}to{transform:translateY(-100%)}}
+
+  * { box-sizing: border-box; }
+  body { cursor: none; }
+
+  .fin-wrap {
+    min-height: 100vh; background: var(--black);
+    font-family: 'DM Sans', sans-serif;
+    padding-top: 60px; padding-bottom: 5rem;
+  }
+
+  /* ── HEADER ──────────────────────────────────────────── */
+  .fin-header {
+    max-width: 1100px; margin: 0 auto;
+    padding: 3.5rem 1.5rem 2rem;
+    display: flex; align-items: flex-end;
+    justify-content: space-between; gap: 1.5rem;
+    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards .1s;
+  }
+
+  .fin-header-left {}
+
+  .fin-eyebrow {
+    display: inline-flex; align-items: center; gap: .6rem;
+    font-size: .68rem; font-weight: 500; letter-spacing: .25em;
+    text-transform: uppercase; color: var(--lime); margin-bottom: .875rem;
+  }
+  .fin-eyebrow::before { content:''; display:block; width:28px; height:1px; background:var(--lime); }
+
+  .fin-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.5rem, 8vw, 5rem);
+    line-height: .92; color: var(--white); margin: 0;
+  }
   .fin-title span { color: var(--lime); }
 
-  .flash-msg { display: flex; align-items: center; gap: 0.75rem; padding: 0.875rem 1.25rem; border-radius: 12px; font-size: 0.875rem; margin-bottom: 1rem; }
-  .flash-msg.success { background: rgba(175,255,45,0.08); border: 1px solid rgba(175,255,45,0.15); color: var(--lime); }
-  .flash-msg.error   { background: rgba(255,77,77,0.08);  border: 1px solid rgba(255,77,77,0.15);  color: var(--red); }
+  .btn-cta {
+    display: inline-flex; align-items: center; gap: .5rem;
+    background: var(--lime); color: var(--black); border: none;
+    border-radius: 100px; padding: .875rem 1.75rem;
+    font-family: 'DM Sans', sans-serif; font-size: .875rem; font-weight: 600;
+    cursor: none; transition: all .22s ease; text-decoration: none; white-space: nowrap; flex-shrink: 0;
+  }
+  .btn-cta:hover { background: var(--lime-dim); transform: translateY(-2px); box-shadow: 0 10px 28px rgba(175,255,45,.18); }
 
-  /* KPI */
-  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-bottom: 1.5rem; opacity: 0; animation: fadeUp 0.6s ease forwards 0.3s; }
-  .kpi-card { background: var(--surface-2); padding: 1.5rem; display: flex; flex-direction: column; gap: 0.4rem; }
-  .kpi-label { font-size: 0.7rem; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; }
-  .kpi-value { font-family: 'Bebas Neue', sans-serif; font-size: 1.75rem; color: var(--white); line-height: 1; }
-  .kpi-value.lime { color: var(--lime); }
-  .kpi-value.red  { color: var(--red); }
+  .fin-divider { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; }
+  .fin-divider-line { height: 1px; background: var(--border); }
+
+  .fin-inner { max-width: 1100px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+
+  /* ── FLASH ───────────────────────────────────────────── */
+  .flash-msg {
+    display: flex; align-items: center; gap: .75rem;
+    padding: .875rem 1.25rem; border-radius: 12px;
+    font-size: .875rem; margin-bottom: 1.75rem;
+  }
+  .flash-success { background: rgba(175,255,45,.07); border: 1px solid rgba(175,255,45,.15); color: var(--lime); }
+  .flash-error   { background: rgba(248,113,113,.07); border: 1px solid rgba(248,113,113,.15); color: var(--red); }
+
+  /* ── KPIs ────────────────────────────────────────────── */
+  .kpi-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 1px; background: var(--border);
+    border: 1px solid var(--border); border-radius: 16px; overflow: hidden;
+    margin-bottom: 1.5rem;
+    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards .25s;
+  }
+
+  .kpi-card {
+    background: var(--surface-2); padding: 1.5rem;
+    display: flex; flex-direction: column; gap: .4rem;
+    transition: background .15s ease; position: relative; overflow: hidden;
+  }
+  .kpi-card:first-child::before { content:''; position:absolute; left:0; top:0; bottom:0; width:2px; background:var(--lime); opacity:.5; }
+  .kpi-card:hover { background: var(--surface-3); }
+  .kpi-label { font-size: .68rem; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: .1em; }
+  .kpi-value { font-family: 'Bebas Neue', sans-serif; font-size: 1.875rem; color: var(--white); line-height: 1; letter-spacing: .02em; }
+  .kpi-value.lime   { color: var(--lime); }
+  .kpi-value.red    { color: var(--red); }
   .kpi-value.yellow { color: var(--yellow); }
-  .kpi-sub { font-size: 0.75rem; color: var(--text-muted); }
+  .kpi-value.muted  { color: var(--text-muted); }
+  .kpi-sub { font-size: .72rem; color: var(--text-muted); }
 
-  /* DRE TABLE */
-  .section-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; margin-bottom: 1.25rem; opacity: 0; animation: fadeUp 0.6s ease forwards; }
-  .section-header { padding: 1.25rem 1.75rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; }
-  .section-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; color: var(--lime); letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.5rem; }
+  /* ── SECTION CARD ────────────────────────────────────── */
+  .section-card {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 20px; overflow: hidden; margin-bottom: 1.25rem;
+    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards;
+    position: relative;
+  }
+  .section-card::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 2px; background: linear-gradient(to bottom, transparent, rgba(175,255,45,0.2), transparent);
+  }
 
+  .section-header {
+    padding: 1.25rem 1.75rem;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: .75rem;
+  }
+
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem;
+    color: var(--lime); letter-spacing: .05em;
+    display: flex; align-items: center; gap: .5rem;
+  }
+
+  /* ── CHART ───────────────────────────────────────────── */
+  .chart-wrap { padding: 1.5rem 1.75rem; }
+  .chart-inner { position: relative; height: 260px; }
+
+  /* ── DRE TABLE ───────────────────────────────────────── */
   .dre-table { width: 100%; border-collapse: collapse; }
-  .dre-table thead th { padding: 0.75rem 1.25rem; text-align: left; font-size: 0.7rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; border-bottom: 1px solid var(--border); background: var(--surface-3); white-space: nowrap; }
-  .dre-table tbody td { padding: 0.875rem 1.25rem; font-size: 0.875rem; color: var(--white); border-bottom: 1px solid var(--border); }
+  .dre-table thead th {
+    padding: .75rem 1.25rem; text-align: left;
+    font-size: .68rem; font-weight: 600; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: .1em;
+    border-bottom: 1px solid var(--border); background: var(--surface-3);
+    white-space: nowrap;
+  }
+  .dre-table tbody td { padding: .875rem 1.25rem; font-size: .875rem; color: var(--white); border-bottom: 1px solid var(--border); }
   .dre-table tbody tr:last-child td { border-bottom: none; }
-  .dre-table tbody tr:hover td { background: rgba(255,255,255,0.02); }
-  .dre-table tbody tr.row-pending td { background: rgba(255,170,0,0.03); }
-  .dre-table tbody tr.row-pending:hover td { background: rgba(255,170,0,0.06); }
+  .dre-table tbody tr:hover td { background: rgba(255,255,255,.02); }
+  .dre-table tbody tr.row-pending td { background: rgba(251,191,36,.02); }
+  .dre-table tbody tr.row-pending:hover td { background: rgba(251,191,36,.04); }
 
-  .td-mes { font-weight: 500; }
-  .td-value { font-family: 'Bebas Neue', sans-serif; font-size: 1rem; letter-spacing: 0.03em; }
+  .td-mes { font-weight: 500; font-size: .875rem; }
+  .td-value { font-family: 'Bebas Neue', sans-serif; font-size: 1rem; letter-spacing: .03em; }
   .td-lime   { color: var(--lime); }
   .td-red    { color: var(--red); }
   .td-yellow { color: var(--yellow); }
-  .td-muted  { color: var(--text-muted); font-size: 0.8rem; }
+  .td-muted  { color: var(--text-muted); font-size: .8rem; }
 
-  .margin-pill { display: inline-flex; align-items: center; font-size: 0.72rem; font-weight: 600; padding: 0.2rem 0.6rem; border-radius: 100px; }
-  .margin-positive { background: rgba(175,255,45,0.1); color: var(--lime); border: 1px solid rgba(175,255,45,0.2); }
-  .margin-negative { background: rgba(255,77,77,0.1);  color: var(--red);  border: 1px solid rgba(255,77,77,0.2); }
-  .margin-neutral  { background: rgba(255,170,0,0.1);  color: var(--yellow); border: 1px solid rgba(255,170,0,0.2); }
-  .margin-empty    { background: rgba(255,255,255,0.04); color: var(--text-muted); border: 1px solid var(--border); }
+  .margin-pill {
+    display: inline-flex; align-items: center;
+    font-size: .68rem; font-weight: 600;
+    padding: .2rem .6rem; border-radius: 100px;
+  }
+  .margin-positive { background: rgba(175,255,45,.08); color: var(--lime); border: 1px solid rgba(175,255,45,.18); }
+  .margin-negative { background: rgba(248,113,113,.08); color: var(--red); border: 1px solid rgba(248,113,113,.18); }
+  .margin-neutral  { background: rgba(251,191,36,.08); color: var(--yellow); border: 1px solid rgba(251,191,36,.18); }
+  .margin-empty    { background: rgba(255,255,255,.03); color: var(--text-muted); border: 1px solid var(--border); }
 
-  .pending-badge { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.68rem; font-weight: 600; color: var(--yellow); background: rgba(255,170,0,0.08); border: 1px solid rgba(255,170,0,0.2); border-radius: 100px; padding: 0.2rem 0.6rem; white-space: nowrap; }
-  .no-cost-badge { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.65rem; color: var(--text-muted); border: 1px dashed var(--border); border-radius: 100px; padding: 0.2rem 0.6rem; }
+  .pending-badge {
+    display: inline-flex; align-items: center; gap: .35rem;
+    font-size: .65rem; font-weight: 600; color: var(--yellow);
+    background: rgba(251,191,36,.07); border: 1px solid rgba(251,191,36,.18);
+    border-radius: 100px; padding: .2rem .6rem; white-space: nowrap;
+  }
 
-  /* LEGEND */
-  .legend-row { display: flex; gap: 1.5rem; padding: 0.875rem 1.75rem; border-top: 1px solid var(--border); flex-wrap: wrap; }
-  .legend-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.7rem; color: var(--text-muted); }
-  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .no-cost-badge {
+    display: inline-flex; align-items: center; gap: .3rem;
+    font-size: .65rem; color: var(--text-muted);
+    border: 1px dashed var(--border); border-radius: 100px; padding: .2rem .6rem;
+  }
 
-  /* CHART */
-  .chart-wrap { padding: 1.5rem; }
-  .chart-inner { position: relative; height: 260px; }
-
-  /* BUTTONS */
-  .btn-lime { display: inline-flex; align-items: center; gap: 0.4rem; background: var(--lime); color: var(--black); border: none; border-radius: 100px; padding: 0.6rem 1.25rem; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; text-decoration: none; white-space: nowrap; }
-  .btn-lime:hover { background: var(--lime-dim); transform: translateY(-1px); }
-  .btn-ghost { display: inline-flex; align-items: center; gap: 0.4rem; background: transparent; color: var(--text-muted); border: 1px solid var(--border); border-radius: 100px; padding: 0.6rem 1.25rem; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; cursor: pointer; transition: all 0.2s ease; text-decoration: none; white-space: nowrap; }
+  /* ── BOTÕES ──────────────────────────────────────────── */
+  .btn-ghost {
+    display: inline-flex; align-items: center; gap: .4rem;
+    background: transparent; color: var(--text-muted);
+    border: 1px solid var(--border-soft); border-radius: 100px;
+    padding: .6rem 1.25rem; font-family: 'DM Sans', sans-serif;
+    font-size: .875rem; cursor: none; transition: all .2s ease;
+    text-decoration: none; white-space: nowrap;
+  }
   .btn-ghost:hover { border-color: var(--lime); color: var(--lime); }
-  .btn-icon-danger { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--text-muted); cursor: pointer; transition: all 0.2s ease; font-size: 0.75rem; }
-  .btn-icon-danger:hover { border-color: var(--red); color: var(--red); }
 
-  .empty-state { text-align: center; padding: 3rem 1.5rem; color: var(--text-muted); }
-  .empty-icon  { font-size: 2rem; margin-bottom: 0.75rem; color: var(--border); }
+  .btn-launch {
+    display: inline-flex; align-items: center; gap: .35rem;
+    background: transparent; color: var(--lime);
+    border: 1px solid rgba(175,255,45,.25); border-radius: 100px;
+    padding: .3rem .875rem; font-family: 'DM Sans', sans-serif;
+    font-size: .75rem; font-weight: 500; cursor: none; transition: all .2s ease; text-decoration: none;
+  }
+  .btn-launch:hover { background: rgba(175,255,45,.07); border-color: var(--lime); }
 
-  @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
-  @media (max-width: 768px) { .kpi-grid { grid-template-columns: repeat(2,1fr); } }
-  @media (max-width: 480px) { .kpi-grid { grid-template-columns: 1fr 1fr; } .fin-inner { padding: 2rem 1.25rem; } }
+  .btn-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 8px;
+    border: 1px solid var(--border); background: transparent;
+    color: var(--text-muted); cursor: none; transition: all .2s ease; font-size: .72rem;
+  }
+  .btn-icon:hover { border-color: var(--lime); color: var(--lime); }
+  .btn-icon.danger:hover { border-color: var(--red); color: var(--red); }
+
+  /* ── LEGENDA ─────────────────────────────────────────── */
+  .legend-row {
+    display: flex; gap: 1.5rem; padding: .875rem 1.75rem;
+    border-top: 1px solid var(--border); flex-wrap: wrap;
+  }
+  .legend-item { display: flex; align-items: center; gap: .4rem; font-size: .7rem; color: var(--text-muted); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ── FOOTER ──────────────────────────────────────────── */
+  .fin-footer {
+    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards .7s;
+  }
+
+  @keyframes revealUp { from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)} }
+
+  @media(max-width:900px) {
+    .fin-header { flex-direction: column; align-items: flex-start; }
+    .kpi-grid { grid-template-columns: repeat(2,1fr); }
+  }
+  @media(max-width:480px) {
+    .kpi-grid { grid-template-columns: 1fr 1fr; }
+    .fin-inner { padding: 2rem 1.25rem; }
+    .fin-header, .fin-divider { padding-left: 1.25rem; padding-right: 1.25rem; }
+  }
 </style>
 
 <div class="fin-wrap">
+
+  <div class="fin-header">
+    <div class="fin-header-left">
+      <div class="fin-eyebrow">Gestão</div>
+      <h1 class="fin-title">Financeiro<span>.</span></h1>
+    </div>
+    <%= link_to edit_owner_monthly_costs_path(year: Date.current.year, month: Date.current.month), class: "btn-cta" do %>
+      <i class="fas fa-plus"></i> Lançar Custos
+    <% end %>
+  </div>
+
+  <div class="fin-divider"><div class="fin-divider-line"></div></div>
+
   <div class="fin-inner">
 
-    <div class="fin-eyebrow">Gestão</div>
-    <h1 class="fin-title">Financeiro<span>.</span></h1>
-
     <% if flash[:notice] %>
-    <div class="flash-msg success"><i class="fas fa-circle-check"></i> <%= flash[:notice] %></div>
+    <div class="flash-msg flash-success"><i class="fas fa-circle-check"></i> <%= flash[:notice] %></div>
     <% end %>
     <% if flash[:alert] %>
-    <div class="flash-msg error"><i class="fas fa-circle-exclamation"></i> <%= flash[:alert] %></div>
+    <div class="flash-msg flash-error"><i class="fas fa-circle-exclamation"></i> <%= flash[:alert] %></div>
     <% end %>
 
     <%
@@ -118,21 +278,21 @@
     <div class="kpi-grid">
       <div class="kpi-card">
         <div class="kpi-label">Faturamento Este Mês</div>
-        <div class="kpi-value lime">R$ <%= number_with_precision(current_dre&.dig(:faturamento).to_f, precision: 0, delimiter: '.') %></div>
+        <div class="kpi-value lime">R$&nbsp;<%= number_with_precision(current_dre&.dig(:faturamento).to_f, precision: 0, delimiter: '.') %></div>
         <div class="kpi-sub">clientes que compareceram</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">Em Aberto (agendados)</div>
-        <div class="kpi-value yellow">R$ <%= number_with_precision(current_pending, precision: 0, delimiter: '.') %></div>
-        <div class="kpi-sub">confirmados, ainda não realizados</div>
+        <div class="kpi-label">Em Aberto</div>
+        <div class="kpi-value yellow">R$&nbsp;<%= number_with_precision(current_pending, precision: 0, delimiter: '.') %></div>
+        <div class="kpi-sub">confirmados, não realizados</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Lucro Este Mês</div>
         <% if current_dre && current_dre[:tem_custo] %>
-          <div class="kpi-value <%= current_dre[:lucro] >= 0 ? 'lime' : 'red' %>">R$ <%= number_with_precision(current_dre[:lucro].abs, precision: 0, delimiter: '.') %></div>
+          <div class="kpi-value <%= current_dre[:lucro] >= 0 ? 'lime' : 'red' %>">R$&nbsp;<%= number_with_precision(current_dre[:lucro].abs, precision: 0, delimiter: '.') %></div>
           <div class="kpi-sub"><%= current_dre[:lucro] >= 0 ? 'lucro líquido' : 'prejuízo' %></div>
         <% else %>
-          <div class="kpi-value" style="color:var(--text-muted);">—</div>
+          <div class="kpi-value muted">—</div>
           <div class="kpi-sub">custos não cadastrados</div>
         <% end %>
       </div>
@@ -142,15 +302,15 @@
           <div class="kpi-value <%= avg_margin >= 20 ? 'lime' : avg_margin >= 0 ? '' : 'red' %>"><%= avg_margin %>%</div>
           <div class="kpi-sub"><%= months_with_cost %> meses com dados</div>
         <% else %>
-          <div class="kpi-value" style="color:var(--text-muted);">—</div>
+          <div class="kpi-value muted">—</div>
           <div class="kpi-sub">cadastre custos mensais</div>
         <% end %>
       </div>
     </div>
 
-    <!-- CHART DRE -->
+    <!-- CHART -->
     <% if months_with_cost > 0 %>
-    <div class="section-card" style="animation-delay:0.35s;">
+    <div class="section-card" style="animation-delay:.35s;">
       <div class="section-header">
         <div class="section-title"><i class="fas fa-chart-bar"></i> Faturamento vs Custos vs Lucro</div>
       </div>
@@ -161,12 +321,9 @@
     <% end %>
 
     <!-- DRE TABLE -->
-    <div class="section-card" style="animation-delay:0.4s;">
+    <div class="section-card" style="animation-delay:.42s;">
       <div class="section-header">
         <div class="section-title"><i class="fas fa-table-list"></i> DRE Mensal</div>
-        <%= link_to edit_owner_monthly_costs_path(year: Date.current.year, month: Date.current.month), class: "btn-lime" do %>
-          <i class="fas fa-plus"></i> Lançar Custos
-        <% end %>
       </div>
       <div style="overflow-x:auto;">
         <table class="dre-table">
@@ -186,69 +343,52 @@
           <tbody>
             <% @dre.reverse.each do |d| %>
             <%
-              is_current = d[:ano] == Date.current.year && d[:mes_num] == Date.current.month
+              is_current  = d[:ano] == Date.current.year && d[:mes_num] == Date.current.month
               has_pending = d[:receita_aberto].to_f > 0
             %>
             <tr class="<%= is_current && has_pending ? 'row-pending' : '' %>">
               <td class="td-mes">
                 <%= d[:mes_label] %> <%= d[:ano] %>
                 <% if is_current %>
-                  <span style="font-size:0.6rem;color:var(--lime);margin-left:0.3rem;">● atual</span>
+                  <span style="font-size:.58rem;color:var(--lime);margin-left:.3rem;">● atual</span>
                 <% end %>
               </td>
 
-              <%# Faturamento real (attended) %>
-              <td>
-                <span class="td-value td-lime">R$ <%= number_with_precision(d[:faturamento], precision: 2) %></span>
-              </td>
+              <td><span class="td-value td-lime">R$ <%= number_with_precision(d[:faturamento], precision: 2) %></span></td>
 
-              <%# Receita em aberto (confirmed futuros) — só faz sentido no mês atual %>
               <td>
                 <% if is_current && has_pending %>
-                  <span class="pending-badge">
-                    <i class="fas fa-clock"></i>
-                    R$ <%= number_with_precision(d[:receita_aberto], precision: 2) %>
-                  </span>
+                  <span class="pending-badge"><i class="fas fa-clock"></i> R$ <%= number_with_precision(d[:receita_aberto], precision: 2) %></span>
                 <% else %>
                   <span class="td-muted">—</span>
                 <% end %>
               </td>
 
               <% if d[:tem_custo] %>
-                <%
-                  cost = @car_wash.monthly_costs.find_by(year: d[:ano], month: d[:mes_num])
-                %>
+                <% cost = @car_wash.monthly_costs.find_by(year: d[:ano], month: d[:mes_num]) %>
                 <td class="td-muted">R$ <%= number_with_precision(cost&.total_fixed.to_f, precision: 2) %></td>
                 <td class="td-muted">R$ <%= number_with_precision(cost&.total_variable.to_f, precision: 2) %></td>
                 <td><span class="td-value" style="color:var(--yellow);">R$ <%= number_with_precision(d[:custos], precision: 2) %></span></td>
-                <td>
-                  <span class="td-value <%= d[:lucro] >= 0 ? 'td-lime' : 'td-red' %>">
-                    <%= d[:lucro] < 0 ? '▼ ' : '' %>R$ <%= number_with_precision(d[:lucro].abs, precision: 2) %>
-                  </span>
-                </td>
+                <td><span class="td-value <%= d[:lucro] >= 0 ? 'td-lime' : 'td-red' %>"><%= d[:lucro] < 0 ? '▼ ' : '' %>R$ <%= number_with_precision(d[:lucro].abs, precision: 2) %></span></td>
                 <td>
                   <% if d[:margem] %>
-                    <span class="margin-pill <%= d[:margem] >= 20 ? 'margin-positive' : d[:margem] >= 0 ? 'margin-neutral' : 'margin-negative' %>">
-                      <%= d[:margem] %>%
-                    </span>
+                    <span class="margin-pill <%= d[:margem] >= 20 ? 'margin-positive' : d[:margem] >= 0 ? 'margin-neutral' : 'margin-negative' %>"><%= d[:margem] %>%</span>
                   <% end %>
                 </td>
                 <td>
-                  <div style="display:flex;gap:0.4rem;align-items:center;">
-                    <%= link_to edit_owner_monthly_costs_path(year: d[:ano], month: d[:mes_num]), class: "btn-icon-danger", style: "color:var(--text-muted);border-color:var(--border);" do %>
+                  <div style="display:flex;gap:.375rem;align-items:center;">
+                    <%= link_to edit_owner_monthly_costs_path(year: d[:ano], month: d[:mes_num]), class: "btn-icon" do %>
                       <i class="fas fa-pen"></i>
                     <% end %>
-                    <%= button_to owner_monthly_cost_path(cost), method: :delete, form: { style: "display:inline;" }, data: { confirm: "Remover custos de #{d[:mes_label]}?" }, class: "btn-icon-danger" do %>
+                    <%= button_to owner_monthly_cost_path(cost), method: :delete, form: { style: "display:inline;" }, data: { confirm: "Remover custos de #{d[:mes_label]}?" }, class: "btn-icon danger" do %>
                       <i class="fas fa-trash-can"></i>
                     <% end %>
                   </div>
                 </td>
               <% else %>
-                <td colspan="5">
-                  <span class="no-cost-badge"><i class="fas fa-circle-info"></i> Custos não lançados</span>
-                </td>
+                <td colspan="5"><span class="no-cost-badge"><i class="fas fa-circle-info"></i> Custos não lançados</span></td>
                 <td>
-                  <%= link_to edit_owner_monthly_costs_path(year: d[:ano], month: d[:mes_num]), class: "btn-ghost", style: "padding:0.3rem 0.75rem;font-size:0.75rem;" do %>
+                  <%= link_to edit_owner_monthly_costs_path(year: d[:ano], month: d[:mes_num]), class: "btn-launch" do %>
                     <i class="fas fa-plus"></i> Lançar
                   <% end %>
                 </td>
@@ -259,16 +399,15 @@
         </table>
       </div>
 
-      <!-- LEGENDA -->
       <div class="legend-row">
-        <div class="legend-item"><div class="legend-dot" style="background:var(--lime);"></div> Faturamento Real = clientes que compareceram (attended)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--lime);"></div> Faturamento Real = clientes que compareceram</div>
         <div class="legend-item"><div class="legend-dot" style="background:var(--yellow);"></div> Em Aberto = agendamentos confirmados ainda não realizados</div>
       </div>
     </div>
 
-    <div style="opacity:0;animation:fadeUp 0.6s ease forwards 0.7s;">
+    <div class="fin-footer">
       <%= link_to owner_financial_tracking_path, class: "btn-ghost" do %>
-        <i class="fas fa-chart-line"></i> Ver Análise
+        <i class="fas fa-chart-line"></i> Ver Análise Completa
       <% end %>
     </div>
 
@@ -277,6 +416,13 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+(function(){
+  const cursor=document.getElementById('loov-cursor'),trail=document.getElementById('loov-cursor-trail');
+  if(cursor&&trail){let mx=-100,my=-100,tx=-100,ty=-100;document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cursor.style.left=mx+'px';cursor.style.top=my+'px';});(function anim(){tx+=(mx-tx)*0.12;ty+=(my-ty)*0.12;trail.style.left=tx+'px';trail.style.top=ty+'px';requestAnimationFrame(anim);})();document.addEventListener('mouseover',e=>{if(e.target.closest('a,button,input,select,textarea'))document.body.classList.add('cursor-hover');});document.addEventListener('mouseout',e=>{if(e.target.closest('a,button,input,select,textarea'))document.body.classList.remove('cursor-hover');});document.addEventListener('mouseleave',()=>{cursor.style.opacity='0';trail.style.opacity='0';});document.addEventListener('mouseenter',()=>{cursor.style.opacity='1';trail.style.opacity='1';});}
+  const pt=document.getElementById('page-transition');
+  if(pt){document.addEventListener('click',e=>{const link=e.target.closest('a[href]');if(!link)return;const href=link.getAttribute('href');if(!href||href.startsWith('#')||href.startsWith('mailto')||link.target==='_blank')return;if(href.startsWith('http')&&!href.includes(window.location.hostname))return;e.preventDefault();pt.classList.add('enter');setTimeout(()=>window.location.href=href,400);});window.addEventListener('pageshow',()=>{pt.classList.remove('enter');pt.classList.add('exit');setTimeout(()=>pt.classList.remove('exit'),440);});}
+})();
+
 document.addEventListener('DOMContentLoaded', function() {
   var dreCtx = document.getElementById('dreChart');
   if (!dreCtx) return;
@@ -292,25 +438,24 @@ document.addEventListener('DOMContentLoaded', function() {
       labels: labels,
       datasets: [
         { label: 'Faturamento Real', data: fat,    backgroundColor: 'rgba(175,255,45,0.5)', borderRadius: 4, order: 2 },
-        { label: 'Custos',          data: costs,  backgroundColor: 'rgba(255,77,77,0.4)',  borderRadius: 4, order: 2 },
-        { label: 'Lucro',           data: profit, type: 'line', borderColor: '#afff2d', backgroundColor: 'rgba(175,255,45,0.06)', borderWidth: 2, fill: true, tension: 0.4, pointBackgroundColor: '#afff2d', pointRadius: 4, order: 1 }
+        { label: 'Custos',          data: costs,  backgroundColor: 'rgba(248,113,113,0.4)', borderRadius: 4, order: 2 },
+        { label: 'Lucro',           data: profit, type: 'line', borderColor: '#afff2d', backgroundColor: 'rgba(175,255,45,0.06)', borderWidth: 2, fill: true, tension: 0.4, pointBackgroundColor: '#afff2d', pointBorderColor: '#000', pointBorderWidth: 2, pointRadius: 4, order: 1 }
       ]
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
+      responsive: true, maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { labels: { color: '#666', font: { family: 'DM Sans', size: 11 } } },
+        legend: { labels: { color: '#444', font: { family: 'DM Sans', size: 11 } } },
         tooltip: {
-          backgroundColor: '#111', borderColor: '#222', borderWidth: 1,
+          backgroundColor: '#0d0d0d', borderColor: '#1a1a1a', borderWidth: 1,
           titleColor: '#afff2d', bodyColor: '#fff', padding: 12,
           callbacks: { label: function(c) { return ' ' + c.dataset.label + ': R$ ' + c.parsed.y.toFixed(2); } }
         }
       },
       scales: {
-        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#666', font: { family: 'DM Sans', size: 11 } } },
-        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#666', font: { family: 'DM Sans', size: 11 }, callback: function(v) { return 'R$ ' + v.toLocaleString('pt-BR'); } } }
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#444', font: { family: 'DM Sans', size: 11 } } },
+        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#444', font: { family: 'DM Sans', size: 11 }, callback: function(v) { return 'R$ ' + v.toLocaleString('pt-BR'); } } }
       }
     }
   });

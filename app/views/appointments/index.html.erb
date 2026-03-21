@@ -1,250 +1,380 @@
 <% Rails.logger.info("Renderizando appointments/index.html.erb") %>
 
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
+<div id="loov-cursor"></div>
+<div id="loov-cursor-trail"></div>
+<div id="page-transition"></div>
 
+<style>
   :root {
     --lime: #afff2d;
     --lime-dim: #8fcc24;
-    --black: #000000;
+    --black: #000;
     --surface: #0a0a0a;
-    --surface-2: #111111;
-    --surface-3: #1a1a1a;
-    --border: #222222;
-    --text-muted: #666666;
-    --text-secondary: #999999;
-    --white: #ffffff;
+    --surface-2: #0d0d0d;
+    --surface-3: #141414;
+    --border: #1a1a1a;
+    --border-soft: #222;
+    --text-muted: #444;
+    --text-secondary: #777;
+    --white: #fff;
   }
 
-  .idx-wrap { min-height: 100vh; background: var(--black); font-family: 'DM Sans', sans-serif; padding-top: 64px; }
+  /* ── CURSOR ─────────────────────────────────────────── */
+  #loov-cursor { position:fixed;width:8px;height:8px;background:var(--lime);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .18s ease,height .18s ease;mix-blend-mode:difference; }
+  #loov-cursor-trail { position:fixed;width:38px;height:38px;border:1px solid rgba(175,255,45,0.25);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:width .25s ease,height .25s ease,border-color .25s ease,opacity .2s ease; }
+  body.cursor-hover #loov-cursor { width:14px;height:14px; }
+  body.cursor-hover #loov-cursor-trail { width:58px;height:58px;border-color:rgba(175,255,45,0.45); }
+  @media(hover:none){#loov-cursor,#loov-cursor-trail{display:none;}}
 
-  .idx-header {
-    max-width: 800px; margin: 0 auto; padding: 2.5rem 1.5rem 1.5rem;
-    display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem;
-    opacity: 0; animation: fadeUp 0.6s ease forwards 0.1s;
+  /* ── PAGE TRANSITION ─────────────────────────────────── */
+  #page-transition { position:fixed;inset:0;z-index:10000;background:#000;transform:translateY(100%);pointer-events:none; }
+  #page-transition.enter { animation:pgEnter .42s cubic-bezier(.76,0,.24,1) forwards; }
+  #page-transition.exit  { animation:pgExit  .42s cubic-bezier(.76,0,.24,1) forwards; }
+  @keyframes pgEnter { from{transform:translateY(100%)}to{transform:translateY(0)} }
+  @keyframes pgExit  { from{transform:translateY(0)}to{transform:translateY(-100%)} }
+
+  /* ── BASE ────────────────────────────────────────────── */
+  * { box-sizing: border-box; }
+  body { cursor: none; }
+
+  .appts-wrap {
+    min-height: 100vh;
+    background: var(--black);
+    font-family: 'DM Sans', sans-serif;
+    padding-top: 60px;
+    padding-bottom: 4rem;
   }
 
-  .idx-eyebrow {
-    display: inline-flex; align-items: center; gap: 0.5rem;
-    font-size: 0.7rem; font-weight: 500; letter-spacing: 0.2em;
-    text-transform: uppercase; color: var(--lime); margin-bottom: 0.5rem;
+  /* ── HEADER ──────────────────────────────────────────── */
+  .appts-header {
+    max-width: 820px; margin: 0 auto;
+    padding: 3.5rem 1.5rem 1.75rem;
+    display: flex; align-items: flex-end;
+    justify-content: space-between; gap: 1.5rem;
+    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards .1s;
   }
-  .idx-eyebrow::before { content: ''; display: block; width: 24px; height: 1px; background: var(--lime); }
 
-  .idx-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(2rem, 6vw, 3.5rem); line-height: 0.95; color: var(--white); }
+  .appts-eyebrow {
+    display: inline-flex; align-items: center; gap: .6rem;
+    font-size: .68rem; font-weight: 500; letter-spacing: .25em;
+    text-transform: uppercase; color: var(--lime); margin-bottom: .75rem;
+  }
+  .appts-eyebrow::before { content:''; display:block; width:28px; height:1px; background:var(--lime); }
 
-  .btn-idx {
-    display: inline-flex; align-items: center; gap: 0.5rem;
-    padding: 0.75rem 1.5rem; border-radius: 100px;
-    font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-weight: 500;
-    text-decoration: none; transition: all 0.2s ease; cursor: pointer;
+  .appts-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.5rem, 8vw, 5rem);
+    line-height: .92; color: var(--white); margin: 0;
+  }
+  .appts-title span { color: var(--lime); }
+
+  /* ── BOTÕES ──────────────────────────────────────────── */
+  .btn-appt {
+    display: inline-flex; align-items: center; gap: .45rem;
+    padding: .75rem 1.5rem; border-radius: 100px;
+    font-family: 'DM Sans', sans-serif; font-size: .875rem; font-weight: 500;
+    text-decoration: none; transition: all .22s ease; cursor: none;
     border: none; white-space: nowrap; flex-shrink: 0;
   }
-  .btn-idx-primary { background: var(--lime); color: var(--black); }
-  .btn-idx-primary:hover { background: var(--lime-dim); transform: translateY(-2px); }
-  .btn-idx-secondary { background: transparent; color: var(--white); border: 1px solid var(--border); }
-  .btn-idx-secondary:hover { border-color: var(--lime); color: var(--lime); }
-  .btn-idx-danger { background: transparent; color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
-  .btn-idx-danger:hover { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.6); }
+  .btn-primary  { background: var(--lime); color: var(--black); }
+  .btn-primary:hover  { background: var(--lime-dim); transform: translateY(-2px); box-shadow: 0 10px 28px rgba(175,255,45,0.18); }
+  .btn-secondary { background: transparent; color: var(--white); border: 1px solid var(--border-soft); }
+  .btn-secondary:hover { border-color: var(--lime); color: var(--lime); transform: translateY(-2px); }
+  .btn-danger { background: transparent; color: #fca5a5; border: 1px solid rgba(239,68,68,0.25); }
+  .btn-danger:hover { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.5); }
 
-  .idx-divider { max-width: 800px; margin: 0 auto; padding: 0 1.5rem; }
-  .idx-divider-line { height: 1px; background: var(--border); }
-  .idx-body { max-width: 800px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  /* ── DIVIDER ─────────────────────────────────────────── */
+  .appts-divider { max-width: 820px; margin: 0 auto; padding: 0 1.5rem; }
+  .appts-divider-line { height: 1px; background: var(--border); }
 
-  .idx-flash-msg {
-    display: flex; align-items: center; gap: 0.75rem;
-    padding: 0.875rem 1.25rem; border-radius: 12px; font-size: 0.875rem; margin-bottom: 1.5rem;
+  /* ── BODY ────────────────────────────────────────────── */
+  .appts-body { max-width: 820px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+
+  /* ── FLASH ───────────────────────────────────────────── */
+  .flash-msg {
+    display: flex; align-items: center; gap: .75rem;
+    padding: .875rem 1.25rem; border-radius: 12px;
+    font-size: .875rem; margin-bottom: 1.75rem;
   }
-  .idx-flash-msg.error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); color: #fca5a5; }
-  .idx-flash-msg.success { background: rgba(175,255,45,0.08); border: 1px solid rgba(175,255,45,0.15); color: var(--lime); }
+  .flash-error   { background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.18); color: #fca5a5; }
+  .flash-success { background: rgba(175,255,45,.07); border: 1px solid rgba(175,255,45,.15); color: var(--lime); }
 
-  /* NEXT CARD */
+  /* ── PRÓXIMO AGENDAMENTO ─────────────────────────────── */
   .next-card {
-    background: var(--surface-2); border: 1px solid var(--lime);
-    box-shadow: 0 0 0 1px var(--lime), 0 0 32px rgba(175,255,45,0.06);
-    border-radius: 20px; overflow: hidden; margin-bottom: 1rem;
-    opacity: 0; animation: fadeUp 0.6s ease forwards 0.2s;
+    border: 1px solid rgba(175,255,45,0.3);
+    box-shadow: 0 0 0 1px rgba(175,255,45,0.08), 0 0 48px rgba(175,255,45,0.04);
+    background: var(--surface-2); border-radius: 20px;
+    overflow: hidden; margin-bottom: 1.25rem;
+    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards .2s;
+    position: relative;
   }
-  .next-card-top { padding: 1.75rem 1.75rem 1.25rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
-  .next-card-name { font-family: 'Bebas Neue', sans-serif; font-size: clamp(1.75rem, 5vw, 2.5rem); line-height: 0.95; color: var(--white); margin-bottom: 0.4rem; }
-  .next-card-address { font-size: 0.8125rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.4rem; }
-  .next-card-address i { color: var(--lime); font-size: 0.65rem; }
+
+  /* Faixa lime vertical sutil */
+  .next-card::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 2px; background: var(--lime);
+  }
+
+  .next-card-top {
+    padding: 1.75rem 1.75rem 1.25rem 2rem;
+    display: flex; align-items: flex-start;
+    justify-content: space-between; gap: 1.5rem;
+  }
+
+  .next-card-eyebrow {
+    font-size: .62rem; font-weight: 500; letter-spacing: .2em;
+    text-transform: uppercase; color: var(--lime); margin-bottom: .6rem;
+    display: flex; align-items: center; gap: .4rem;
+  }
+  .next-card-eyebrow::before { content:''; display:block; width:16px; height:1px; background:var(--lime); }
+
+  .next-card-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(1.75rem, 5vw, 2.75rem);
+    line-height: .95; color: var(--white); margin-bottom: .4rem;
+  }
+
+  .next-card-address {
+    font-size: .8rem; color: var(--text-muted);
+    display: flex; align-items: center; gap: .4rem;
+  }
+  .next-card-address i { color: var(--lime); font-size: .6rem; }
+
   .next-card-datetime { text-align: right; flex-shrink: 0; }
-  .next-card-time { font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; color: var(--lime); line-height: 1; letter-spacing: 0.02em; }
-  .next-card-date { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem; }
-  .next-card-bottom { border-top: 1px solid var(--border); padding: 1.25rem 1.75rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
-  .next-card-service { display: flex; align-items: center; gap: 0.75rem; }
-  .next-card-service-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--surface-3); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--lime); font-size: 0.75rem; flex-shrink: 0; }
-  .next-card-service-name { font-size: 0.9375rem; font-weight: 500; color: var(--white); }
-  .next-card-service-duration { font-size: 0.8rem; color: var(--text-muted); }
-  .next-card-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .next-card-time {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3rem; color: var(--lime);
+    line-height: 1; letter-spacing: .02em;
+  }
+  .next-card-date { font-size: .78rem; color: var(--text-muted); margin-top: .2rem; }
 
-  /* UPCOMING */
-  .upcoming-list { display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 3rem; opacity: 0; animation: fadeUp 0.6s ease forwards 0.3s; }
-  .upcoming-item { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: border-color 0.2s ease; cursor: pointer; }
-  .upcoming-item:hover { border-color: rgba(175,255,45,0.3); }
-  .upcoming-item.expanded { border-color: rgba(175,255,45,0.4); }
-  .upcoming-item-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; gap: 1rem; user-select: none; }
+  .next-card-bottom {
+    border-top: 1px solid var(--border);
+    padding: 1.25rem 1.75rem 1.25rem 2rem;
+    display: flex; align-items: center;
+    justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+  }
+
+  .next-card-service { display: flex; align-items: center; gap: .75rem; }
+  .next-card-service-icon {
+    width: 38px; height: 38px; border-radius: 10px;
+    background: var(--surface-3); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--lime); font-size: .75rem; flex-shrink: 0;
+  }
+  .next-card-service-name { font-size: .9375rem; font-weight: 500; color: var(--white); }
+  .next-card-service-meta { font-size: .78rem; color: var(--text-muted); margin-top: .15rem; }
+  .next-card-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+
+  /* ── PRÓXIMOS ────────────────────────────────────────── */
+  .upcoming-list {
+    display: flex; flex-direction: column; gap: .625rem; margin-bottom: 3rem;
+    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards .3s;
+  }
+
+  .upcoming-item {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 14px; overflow: hidden;
+    transition: border-color .2s ease; cursor: none;
+    position: relative;
+  }
+
+  .upcoming-item::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 2px; background: var(--lime);
+    transform: scaleY(0); transform-origin: bottom;
+    transition: transform .3s cubic-bezier(.16,1,.3,1);
+  }
+
+  .upcoming-item:hover { border-color: rgba(175,255,45,0.2); }
+  .upcoming-item:hover::before,
+  .upcoming-item.expanded::before { transform: scaleY(1); }
+  .upcoming-item.expanded { border-color: rgba(175,255,45,0.25); }
+
+  .upcoming-item-header {
+    display: flex; align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem 1rem 1.5rem;
+    gap: 1rem; user-select: none; cursor: none;
+  }
+
   .upcoming-item-left { flex: 1; min-width: 0; }
-  .upcoming-item-name { font-size: 0.9375rem; font-weight: 500; color: var(--white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .upcoming-item-meta { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
-  .upcoming-item-meta i { color: var(--lime); font-size: 0.65rem; }
-  .upcoming-item-right { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
-  .upcoming-item-time { font-family: 'Bebas Neue', sans-serif; font-size: 1.25rem; color: var(--white); text-align: right; }
-  .upcoming-item-date { font-size: 0.75rem; color: var(--text-muted); text-align: right; }
-  .upcoming-item-chevron { color: var(--text-muted); font-size: 0.75rem; transition: transform 0.25s ease; flex-shrink: 0; }
+  .upcoming-item-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.15rem; color: var(--white);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .upcoming-item-meta {
+    font-size: .78rem; color: var(--text-muted); margin-top: .2rem;
+    display: flex; align-items: center; gap: .4rem; flex-wrap: wrap;
+  }
+  .upcoming-item-meta i { color: var(--lime); font-size: .6rem; }
+
+  .upcoming-item-right { display: flex; align-items: center; gap: .75rem; flex-shrink: 0; }
+  .upcoming-item-time { font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; color: var(--white); text-align: right; }
+  .upcoming-item-date { font-size: .72rem; color: var(--text-muted); text-align: right; margin-top: .1rem; }
+  .upcoming-item-chevron { color: var(--text-muted); font-size: .72rem; transition: transform .25s ease; flex-shrink: 0; }
   .upcoming-item.expanded .upcoming-item-chevron { transform: rotate(180deg); }
-  .upcoming-item-details { max-height: 0; overflow: hidden; transition: max-height 0.35s ease; }
+
+  .upcoming-item-details { max-height: 0; overflow: hidden; transition: max-height .35s ease; }
   .upcoming-item-details.open { max-height: 400px; }
-  .upcoming-item-details-inner { border-top: 1px solid var(--border); padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; }
-  .detail-row { display: flex; align-items: center; justify-content: space-between; font-size: 0.875rem; gap: 1rem; }
-  .detail-label { color: var(--text-muted); font-size: 0.8125rem; }
+  .upcoming-item-details-inner {
+    border-top: 1px solid var(--border);
+    padding: 1.25rem 1.25rem 1.25rem 1.5rem;
+    display: flex; flex-direction: column; gap: .75rem;
+  }
+
+  .detail-row {
+    display: flex; align-items: center;
+    justify-content: space-between;
+    font-size: .875rem; gap: 1rem;
+  }
+  .detail-label { color: var(--text-muted); font-size: .8rem; }
   .detail-value { color: var(--white); text-align: right; }
-  .upcoming-item-actions { display: flex; justify-content: flex-end; padding-top: 0.75rem; border-top: 1px solid var(--border); margin-top: 0.25rem; }
+  .upcoming-item-actions {
+    display: flex; justify-content: flex-end;
+    padding-top: .75rem; border-top: 1px solid var(--border); margin-top: .25rem;
+  }
 
-  /* SECTION HEADER */
-  .idx-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
-  .idx-section-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.25rem; letter-spacing: 0.05em; color: var(--white); }
-  .idx-section-count { font-size: 0.8rem; color: var(--text-muted); }
+  /* ── SECTION HEADER ──────────────────────────────────── */
+  .section-header {
+    display: flex; align-items: center;
+    justify-content: space-between; margin-bottom: 1rem;
+  }
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem; letter-spacing: .04em; color: var(--white);
+  }
+  .section-count { font-size: .78rem; color: var(--text-muted); }
 
-  /* HISTÓRICO */
-  .history-list { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; opacity: 0; animation: fadeUp 0.6s ease forwards 0.4s; }
-  .history-item { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; background: var(--surface); border-bottom: 1px solid var(--border); gap: 1rem; }
+  /* ── HISTÓRICO ───────────────────────────────────────── */
+  .history-list {
+    display: flex; flex-direction: column;
+    border: 1px solid var(--border); border-radius: 16px; overflow: hidden;
+    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards .4s;
+  }
+
+  .history-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 1.25rem; background: var(--surface);
+    border-bottom: 1px solid var(--border); gap: 1rem;
+    transition: background .15s ease;
+  }
   .history-item:last-child { border-bottom: none; }
+  .history-item:hover { background: var(--surface-2); }
+
   .history-item-left { flex: 1; min-width: 0; }
-  .history-item-name { font-size: 0.9rem; font-weight: 500; color: var(--white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .history-item-meta { font-size: 0.775rem; color: var(--text-muted); margin-top: 0.2rem; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
-  .history-item-meta i { color: var(--lime); font-size: 0.6rem; }
-  .history-item-right { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
-  .history-item-date-main { font-size: 0.875rem; color: var(--text-secondary); text-align: right; }
-  .history-item-date-time { font-size: 0.75rem; color: var(--text-muted); text-align: right; }
+  .history-item-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem; color: var(--white);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .history-item-meta {
+    font-size: .775rem; color: var(--text-muted); margin-top: .2rem;
+    display: flex; align-items: center; gap: .4rem; flex-wrap: wrap;
+  }
+  .history-item-meta i { color: var(--lime); font-size: .6rem; }
+  .history-item-right { display: flex; align-items: center; gap: .75rem; flex-shrink: 0; }
+  .history-item-date-main { font-size: .875rem; color: var(--text-secondary); text-align: right; }
+  .history-item-date-time { font-size: .72rem; color: var(--text-muted); text-align: right; }
 
-  .status-badge { font-size: 0.65rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; padding: 0.2rem 0.6rem; border-radius: 100px; }
-  .status-confirmed { background: rgba(175,255,45,0.1); color: var(--lime); border: 1px solid rgba(175,255,45,0.2); }
-  .status-cancelled { background: rgba(239,68,68,0.08); color: #fca5a5; border: 1px solid rgba(239,68,68,0.2); }
-  .status-pending { background: rgba(255,255,255,0.05); color: var(--text-secondary); border: 1px solid var(--border); }
+  /* ── STATUS BADGES ───────────────────────────────────── */
+  .status-badge {
+    font-size: .62rem; font-weight: 600; letter-spacing: .06em;
+    text-transform: uppercase; padding: .2rem .6rem; border-radius: 100px;
+  }
+  .status-confirmed { background: rgba(175,255,45,.08); color: var(--lime); border: 1px solid rgba(175,255,45,.18); }
+  .status-cancelled { background: rgba(239,68,68,.06); color: #fca5a5; border: 1px solid rgba(239,68,68,.18); }
+  .status-pending   { background: rgba(255,255,255,.04); color: var(--text-secondary); border: 1px solid var(--border); }
 
-  /* REVIEW BUTTON */
+  /* ── REVIEW ──────────────────────────────────────────── */
   .btn-review {
-    display: inline-flex; align-items: center; gap: 0.4rem;
-    padding: 0.3rem 0.75rem; border-radius: 100px;
-    font-size: 0.7rem; font-weight: 500; cursor: pointer;
-    background: transparent; color: #facc15;
-    border: 1px solid rgba(250,204,21,0.3);
-    transition: all 0.2s ease; white-space: nowrap;
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: .3rem .75rem; border-radius: 100px; font-size: .7rem; font-weight: 500;
+    cursor: none; background: transparent; color: #facc15;
+    border: 1px solid rgba(250,204,21,0.25); transition: all .2s ease; white-space: nowrap;
   }
-  .btn-review:hover { background: rgba(250,204,21,0.08); border-color: rgba(250,204,21,0.6); }
+  .btn-review:hover { background: rgba(250,204,21,0.08); border-color: rgba(250,204,21,0.5); }
 
-  .reviewed-badge {
-    display: inline-flex; align-items: center; gap: 0.3rem;
-    font-size: 0.65rem; color: var(--text-muted);
-  }
+  .reviewed-badge { display: inline-flex; align-items: center; gap: .3rem; font-size: .65rem; color: var(--text-muted); }
   .reviewed-badge i { color: #facc15; }
 
-  /* REVIEW MODAL */
-  .review-modal-overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+  /* ── REVIEW MODAL ────────────────────────────────────── */
+  .review-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.88);
     z-index: 1000; display: flex; align-items: center; justify-content: center;
-    padding: 1rem; opacity: 0; pointer-events: none;
-    transition: opacity 0.25s ease;
+    padding: 1rem; opacity: 0; pointer-events: none; transition: opacity .25s ease;
+    backdrop-filter: blur(8px);
   }
-  .review-modal-overlay.open { opacity: 1; pointer-events: all; }
+  .review-overlay.open { opacity: 1; pointer-events: all; }
 
   .review-modal {
     background: var(--surface-2); border: 1px solid var(--border);
     border-radius: 20px; padding: 2rem; width: 100%; max-width: 460px;
-    transform: translateY(20px); transition: transform 0.25s ease;
+    transform: translateY(20px); transition: transform .25s cubic-bezier(.16,1,.3,1);
   }
-  .review-modal-overlay.open .review-modal { transform: translateY(0); }
+  .review-overlay.open .review-modal { transform: translateY(0); }
 
   .review-modal-title {
     font-family: 'Bebas Neue', sans-serif; font-size: 1.75rem;
-    color: var(--white); margin-bottom: 0.25rem;
+    color: var(--white); margin-bottom: .25rem;
   }
-  .review-modal-sub { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1.5rem; }
+  .review-modal-sub { font-size: .8rem; color: var(--text-muted); margin-bottom: 1.5rem; }
 
-  /* STARS */
-  .stars-row { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
-  .star-btn {
-    background: none; border: none; cursor: pointer;
-    font-size: 1.75rem; color: var(--border);
-    transition: color 0.15s ease, transform 0.15s ease;
-    padding: 0;
-  }
+  .stars-row { display: flex; gap: .5rem; margin-bottom: 1.5rem; }
+  .star-btn { background: none; border: none; cursor: none; font-size: 1.75rem; color: var(--border); transition: color .15s ease, transform .15s ease; padding: 0; }
   .star-btn.active { color: #facc15; }
   .star-btn:hover { transform: scale(1.15); }
 
-  /* TAGS */
-  .tags-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.25rem; }
-  .tag-btn {
-    padding: 0.35rem 0.85rem; border-radius: 100px;
-    font-size: 0.775rem; cursor: pointer;
-    background: var(--surface-3); color: var(--text-secondary);
-    border: 1px solid var(--border); transition: all 0.15s ease;
-  }
-  .tag-btn.selected {
-    background: rgba(175,255,45,0.1); color: var(--lime);
-    border-color: rgba(175,255,45,0.4);
-  }
+  .tags-row { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.25rem; }
+  .tag-btn { padding: .35rem .85rem; border-radius: 100px; font-size: .775rem; cursor: none; background: var(--surface-3); color: var(--text-secondary); border: 1px solid var(--border); transition: all .15s ease; }
+  .tag-btn.selected { background: rgba(175,255,45,.08); color: var(--lime); border-color: rgba(175,255,45,.35); }
 
-  /* COMMENT */
   .review-textarea {
     width: 100%; background: var(--surface-3); border: 1px solid var(--border);
-    border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.875rem;
-    color: var(--white); font-family: 'DM Sans', sans-serif;
-    resize: none; box-sizing: border-box; margin-bottom: 1.25rem;
-    transition: border-color 0.2s ease;
+    border-radius: 10px; padding: .75rem 1rem; font-size: .875rem; color: var(--white);
+    font-family: 'DM Sans', sans-serif; resize: none; box-sizing: border-box;
+    margin-bottom: 1.25rem; transition: border-color .2s ease;
   }
   .review-textarea:focus { outline: none; border-color: var(--lime); }
   .review-textarea::placeholder { color: var(--text-muted); }
 
-  .review-modal-actions { display: flex; gap: 0.75rem; }
-  .btn-modal-cancel {
-    flex: 1; padding: 0.75rem; border-radius: 10px;
-    background: transparent; color: var(--text-muted);
-    border: 1px solid var(--border); font-family: 'DM Sans', sans-serif;
-    font-size: 0.875rem; cursor: pointer; transition: all 0.2s ease;
-  }
+  .review-modal-actions { display: flex; gap: .75rem; }
+  .btn-modal-cancel { flex: 1; padding: .75rem; border-radius: 10px; background: transparent; color: var(--text-muted); border: 1px solid var(--border); font-family: 'DM Sans', sans-serif; font-size: .875rem; cursor: none; transition: all .2s ease; }
   .btn-modal-cancel:hover { border-color: var(--white); color: var(--white); }
-  .btn-modal-submit {
-    flex: 2; padding: 0.75rem; border-radius: 10px;
-    background: var(--lime); color: var(--black);
-    border: none; font-family: 'Bebas Neue', sans-serif;
-    font-size: 1rem; letter-spacing: 0.06em; cursor: pointer;
-    transition: opacity 0.2s ease;
+  .btn-modal-submit { flex: 2; padding: .75rem; border-radius: 10px; background: var(--lime); color: var(--black); border: none; font-family: 'Bebas Neue', sans-serif; font-size: 1rem; letter-spacing: .06em; cursor: none; transition: opacity .2s ease; }
+  .btn-modal-submit:hover { opacity: .85; }
+  .btn-modal-submit:disabled { opacity: .35; cursor: not-allowed; }
+
+  /* ── EMPTY ───────────────────────────────────────────── */
+  .empty-state {
+    text-align: center; padding: 4rem 2rem;
+    border: 1px solid var(--border); border-radius: 20px;
+    background: var(--surface-2);
   }
-  .btn-modal-submit:hover { opacity: 0.85; }
-  .btn-modal-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+  .empty-icon { font-size: 2rem; color: #1e1e1e; margin-bottom: 1rem; }
+  .empty-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.75rem; color: var(--white); margin-bottom: .5rem; }
+  .empty-text { font-size: .875rem; color: var(--text-muted); margin-bottom: 1.75rem; line-height: 1.6; }
 
-  /* EMPTY */
-  .idx-empty { text-align: center; padding: 3rem 1.5rem; border: 1px solid var(--border); border-radius: 16px; background: var(--surface-2); }
-  .idx-empty-icon { font-size: 2rem; color: var(--border); margin-bottom: 1rem; }
-  .idx-empty-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; color: var(--white); margin-bottom: 0.5rem; }
-  .idx-empty-text { font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1.5rem; }
+  /* ── ANIMAÇÕES ───────────────────────────────────────── */
+  @keyframes revealUp { from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)} }
 
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(16px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  @media (max-width: 640px) {
-    .idx-header { flex-direction: column; align-items: flex-start; }
+  /* ── RESPONSIVE ──────────────────────────────────────── */
+  @media(max-width:640px) {
+    .appts-header { flex-direction: column; align-items: flex-start; }
     .next-card-top { flex-direction: column; }
     .next-card-datetime { text-align: left; }
-    .idx-header, .idx-divider, .idx-body { padding-left: 1.25rem; padding-right: 1.25rem; }
+    .appts-header, .appts-divider, .appts-body { padding-left: 1.25rem; padding-right: 1.25rem; }
   }
 </style>
 
 <!-- REVIEW MODAL -->
-<div class="review-modal-overlay" id="review-overlay">
+<div class="review-overlay" id="review-overlay">
   <div class="review-modal">
     <div class="review-modal-title">Avaliar <span id="modal-car-wash-name" style="color:var(--lime);"></span></div>
     <div class="review-modal-sub">Como foi sua experiência?</div>
-
     <%= form_with url: client_reviews_path, method: :post, data: { turbo: false }, id: "review-form" do |f| %>
       <%= f.hidden_field :appointment_id, id: "review-appointment-id" %>
-
-      <!-- Stars -->
       <div class="stars-row" id="stars-row">
         <% (1..5).each do |i| %>
           <button type="button" class="star-btn" data-value="<%= i %>" onclick="setStar(<%= i %>)">
@@ -253,23 +383,13 @@
         <% end %>
       </div>
       <%= f.hidden_field :rating, id: "review-rating", value: "" %>
-
-      <!-- Tags -->
       <div class="tags-row" id="tags-row">
         <% Review::TAGS.each do |tag| %>
-          <button type="button" class="tag-btn" data-tag="<%= tag %>" onclick="toggleTag(this)">
-            <%= tag %>
-          </button>
+          <button type="button" class="tag-btn" data-tag="<%= tag %>" onclick="toggleTag(this)"><%= tag %></button>
         <% end %>
       </div>
       <%= f.hidden_field :tags, id: "review-tags", value: "" %>
-
-      <!-- Comment -->
-      <%= f.text_area :comment,
-          class: "review-textarea",
-          rows: 3,
-          placeholder: "Comentário opcional..." %>
-
+      <%= f.text_area :comment, class: "review-textarea", rows: 3, placeholder: "Comentário opcional..." %>
       <div class="review-modal-actions">
         <button type="button" class="btn-modal-cancel" onclick="closeReviewModal()">Cancelar</button>
         <%= f.submit "Enviar Avaliação", class: "btn-modal-submit", id: "review-submit", disabled: true %>
@@ -278,29 +398,29 @@
   </div>
 </div>
 
-<div class="idx-wrap">
+<div class="appts-wrap">
 
-  <div class="idx-header">
+  <div class="appts-header">
     <div>
-      <div class="idx-eyebrow">Área do Cliente</div>
-      <h1 class="idx-title">Meus Agendamentos</h1>
+      <div class="appts-eyebrow">Sua agenda</div>
+      <h1 class="appts-title">Meus<br><span>Agendamentos</span></h1>
     </div>
-    <%= link_to car_washes_path, class: "btn-idx btn-idx-primary" do %>
-      <i class="fas fa-plus"></i> Novo Agendamento
+    <%= link_to car_washes_path, class: "btn-appt btn-primary" do %>
+      <i class="fas fa-plus"></i> Novo agendamento
     <% end %>
   </div>
 
-  <div class="idx-divider"><div class="idx-divider-line"></div></div>
+  <div class="appts-divider"><div class="appts-divider-line"></div></div>
 
-  <div class="idx-body">
+  <div class="appts-body">
 
     <% if flash[:alert] %>
-      <div class="idx-flash-msg error" id="flash-error">
+      <div class="flash-msg flash-error" id="flash-error">
         <i class="fas fa-circle-exclamation"></i><span><%= flash[:alert] %></span>
       </div>
     <% end %>
     <% if flash[:notice] %>
-      <div class="idx-flash-msg success" id="flash-notice">
+      <div class="flash-msg flash-success" id="flash-notice">
         <i class="fas fa-circle-check"></i><span><%= flash[:notice] %></span>
       </div>
     <% end %>
@@ -308,11 +428,11 @@
     <% current_time = DateTime.now.in_time_zone("America/Sao_Paulo") %>
 
     <% if @upcoming_appointments.empty? && @past_appointments.empty? %>
-      <div class="idx-empty">
-        <div class="idx-empty-icon"><i class="fas fa-calendar-xmark"></i></div>
-        <div class="idx-empty-title">Nenhum agendamento</div>
-        <p class="idx-empty-text">Você ainda não fez nenhum agendamento. Que tal começar agora?</p>
-        <%= link_to "Encontrar Lava-Rápido", car_washes_path, class: "btn-idx btn-idx-primary" %>
+      <div class="empty-state">
+        <div class="empty-icon"><i class="fas fa-calendar-xmark"></i></div>
+        <div class="empty-title">Tudo limpo por aqui</div>
+        <p class="empty-text">Você ainda não fez nenhum agendamento.<br>Que tal marcar o primeiro?</p>
+        <%= link_to "Explorar lava-rápidos", car_washes_path, class: "btn-appt btn-primary" %>
       </div>
 
     <% else %>
@@ -326,6 +446,7 @@
         <div class="next-card">
           <div class="next-card-top">
             <div>
+              <div class="next-card-eyebrow">Próximo agendamento</div>
               <div class="next-card-name"><%= next_appt.car_wash.name %></div>
               <div class="next-card-address">
                 <i class="fas fa-location-dot"></i>
@@ -342,19 +463,13 @@
               <div class="next-card-service-icon"><i class="fas fa-wrench"></i></div>
               <div>
                 <div class="next-card-service-name"><%= next_appt.service.title %></div>
-                <div class="next-card-service-duration">
-                  <%= next_appt.service.duration %> min · R$ <%= number_with_precision(next_appt.service.price, precision: 2, separator: ',') %>
-                </div>
+                <div class="next-card-service-meta"><%= next_appt.service.duration %> min · R$ <%= number_with_precision(next_appt.service.price, precision: 2, separator: ',') %></div>
               </div>
             </div>
             <div class="next-card-actions">
-              <% if next_is_ongoing %>
-                <%= link_to help_appointment_path(next_appt), class: "btn-idx btn-idx-secondary" do %>
-                  <i class="fas fa-headset"></i> Ajuda
-                <% end %>
-              <% elsif next_can_cancel %>
+              <% if next_can_cancel %>
                 <%= form_with url: cancel_appointment_path(next_appt), method: :delete, local: true, data: { turbo: false, confirm: "Tem certeza que deseja cancelar?" } do %>
-                  <%= submit_tag "Cancelar", class: "btn-idx btn-idx-danger" %>
+                  <%= submit_tag "Cancelar", class: "btn-appt btn-danger" %>
                 <% end %>
               <% end %>
             </div>
@@ -388,39 +503,20 @@
                 </div>
                 <div class="upcoming-item-details" id="details-<%= appt.id %>">
                   <div class="upcoming-item-details-inner">
-                    <div class="detail-row">
-                      <span class="detail-label">Lava-Rápido</span>
-                      <span class="detail-value"><%= appt.car_wash.name %></span>
-                    </div>
-                    <div class="detail-row">
-                      <span class="detail-label">Endereço</span>
-                      <span class="detail-value"><%= appt.car_wash.address %></span>
-                    </div>
-                    <div class="detail-row">
-                      <span class="detail-label">Serviço</span>
-                      <span class="detail-value"><%= appt.service.title %></span>
-                    </div>
-                    <div class="detail-row">
-                      <span class="detail-label">Duração</span>
-                      <span class="detail-value"><%= appt.service.duration %> min</span>
-                    </div>
+                    <div class="detail-row"><span class="detail-label">Serviço</span><span class="detail-value"><%= appt.service.title %></span></div>
+                    <div class="detail-row"><span class="detail-label">Duração</span><span class="detail-value"><%= appt.service.duration %> min</span></div>
+                    <div class="detail-row"><span class="detail-label">Endereço</span><span class="detail-value"><%= appt.car_wash.address %></span></div>
                     <div class="detail-row">
                       <span class="detail-label">Valor</span>
-                      <span class="detail-value" style="color:var(--lime);font-family:'Bebas Neue',sans-serif;font-size:1.1rem;">
-                        R$ <%= number_with_precision(appt.service.price, precision: 2, separator: ',') %>
-                      </span>
+                      <span class="detail-value" style="color:var(--lime);font-family:'Bebas Neue',sans-serif;font-size:1.15rem;">R$ <%= number_with_precision(appt.service.price, precision: 2, separator: ',') %></span>
                     </div>
                     <div class="upcoming-item-actions">
-                      <% if is_ongoing %>
-                        <%= link_to help_appointment_path(appt), class: "btn-idx btn-idx-secondary" do %>
-                          <i class="fas fa-headset"></i> Ajuda
-                        <% end %>
-                      <% elsif can_cancel %>
+                      <% if can_cancel %>
                         <%= form_with url: cancel_appointment_path(appt), method: :delete, local: true, data: { turbo: false, confirm: "Tem certeza que deseja cancelar?" } do %>
-                          <%= submit_tag "Cancelar Agendamento", class: "btn-idx btn-idx-danger" %>
+                          <%= submit_tag "Cancelar agendamento", class: "btn-appt btn-danger" %>
                         <% end %>
                       <% else %>
-                        <span style="font-size:0.8rem;color:var(--text-muted);">Cancelamento não disponível</span>
+                        <span style="font-size:.78rem;color:var(--text-muted);">Cancelamento indisponível</span>
                       <% end %>
                     </div>
                   </div>
@@ -431,18 +527,18 @@
         <% end %>
 
       <% else %>
-        <div class="idx-empty" style="margin-bottom: 2rem;">
-          <div class="idx-empty-icon"><i class="fas fa-calendar-check"></i></div>
-          <div class="idx-empty-title">Nenhum agendamento futuro</div>
-          <p class="idx-empty-text">Agende seu próximo serviço agora.</p>
-          <%= link_to "Agendar Agora", car_washes_path, class: "btn-idx btn-idx-primary" %>
+        <div class="empty-state" style="margin-bottom:2rem;">
+          <div class="empty-icon"><i class="fas fa-calendar-check"></i></div>
+          <div class="empty-title">Nenhum agendamento futuro</div>
+          <p class="empty-text">Seu carro merece atenção. Agende agora.</p>
+          <%= link_to "Explorar lava-rápidos", car_washes_path, class: "btn-appt btn-primary" %>
         </div>
       <% end %>
 
       <% if @past_appointments.any? %>
-        <div class="idx-section-header">
-          <div class="idx-section-title">Histórico</div>
-          <span class="idx-section-count"><%= @past_appointments.count %> agendamento<%= @past_appointments.count == 1 ? '' : 's' %></span>
+        <div class="section-header">
+          <div class="section-title">Histórico</div>
+          <span class="section-count"><%= @past_appointments.count %> agendamento<%= @past_appointments.count == 1 ? '' : 's' %></span>
         </div>
         <div class="history-list">
           <% @past_appointments.each do |appt| %>
@@ -460,23 +556,16 @@
                   <div class="history-item-date-main"><%= appt.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%d/%m/%Y") %></div>
                   <div class="history-item-date-time"><%= appt.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%H:%M") %></div>
                 </div>
-
                 <% if appt.reviewable? %>
                   <button class="btn-review" onclick="openReviewModal(<%= appt.id %>, '<%= j appt.car_wash.name %>')">
                     <i class="fas fa-star"></i> Avaliar
                   </button>
                 <% elsif appt.review.present? %>
                   <div class="reviewed-badge">
-                    <% appt.review.rating.times do %>
-                      <i class="fas fa-star"></i>
-                    <% end %>
+                    <% appt.review.rating.times do %><i class="fas fa-star"></i><% end %>
                   </div>
                 <% else %>
-                  <% status_class = case appt.status
-                    when 'confirmed' then 'status-confirmed'
-                    when 'cancelled' then 'status-cancelled'
-                    else 'status-pending'
-                  end %>
+                  <% status_class = case appt.status when 'confirmed' then 'status-confirmed' when 'cancelled' then 'status-cancelled' else 'status-pending' end %>
                   <span class="status-badge <%= status_class %>">
                     <%= appt.status == 'confirmed' ? 'Concluído' : appt.status == 'cancelled' ? 'Cancelado' : appt.status.capitalize %>
                   </span>
@@ -492,71 +581,76 @@
 </div>
 
 <script>
-  // TOGGLE UPCOMING
-  function toggleUpcoming(id) {
-    var item = document.querySelector('[data-appt-id="' + id + '"]');
-    var details = document.getElementById('details-' + id);
-    var isOpen = item.classList.contains('expanded');
-    document.querySelectorAll('.upcoming-item').forEach(function(el) {
-      el.classList.remove('expanded');
-      var d = el.querySelector('.upcoming-item-details');
-      if (d) d.classList.remove('open');
-    });
-    if (!isOpen) {
-      item.classList.add('expanded');
-      details.classList.add('open');
-    }
+(function() {
+  // CURSOR
+  const cursor = document.getElementById('loov-cursor');
+  const trail  = document.getElementById('loov-cursor-trail');
+  if (cursor && trail) {
+    let mx=-100,my=-100,tx=-100,ty=-100;
+    document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cursor.style.left=mx+'px';cursor.style.top=my+'px';});
+    (function anim(){tx+=(mx-tx)*0.12;ty+=(my-ty)*0.12;trail.style.left=tx+'px';trail.style.top=ty+'px';requestAnimationFrame(anim);})();
+    document.addEventListener('mouseover',e=>{if(e.target.closest('a,button,input,select,textarea'))document.body.classList.add('cursor-hover');});
+    document.addEventListener('mouseout', e=>{if(e.target.closest('a,button,input,select,textarea'))document.body.classList.remove('cursor-hover');});
+    document.addEventListener('mouseleave',()=>{cursor.style.opacity='0';trail.style.opacity='0';});
+    document.addEventListener('mouseenter',()=>{cursor.style.opacity='1';trail.style.opacity='1';});
   }
+
+  // PAGE TRANSITION
+  const pt = document.getElementById('page-transition');
+  if (pt) {
+    document.addEventListener('click',e=>{
+      const link=e.target.closest('a[href]');
+      if(!link)return;
+      const href=link.getAttribute('href');
+      if(!href||href.startsWith('#')||href.startsWith('mailto')||link.target==='_blank')return;
+      if(href.startsWith('http')&&!href.includes(window.location.hostname))return;
+      e.preventDefault(); pt.classList.add('enter');
+      setTimeout(()=>window.location.href=href,400);
+    });
+    window.addEventListener('pageshow',()=>{pt.classList.remove('enter');pt.classList.add('exit');setTimeout(()=>pt.classList.remove('exit'),440);});
+  }
+
+  // TOGGLE UPCOMING
+  window.toggleUpcoming = function(id) {
+    var item=document.querySelector('[data-appt-id="'+id+'"]');
+    var details=document.getElementById('details-'+id);
+    var isOpen=item.classList.contains('expanded');
+    document.querySelectorAll('.upcoming-item').forEach(function(el){el.classList.remove('expanded');var d=el.querySelector('.upcoming-item-details');if(d)d.classList.remove('open');});
+    if(!isOpen){item.classList.add('expanded');details.classList.add('open');}
+  };
 
   // REVIEW MODAL
-  function openReviewModal(appointmentId, carWashName) {
-    document.getElementById('review-appointment-id').value = appointmentId;
-    document.getElementById('modal-car-wash-name').textContent = carWashName;
-    document.getElementById('review-rating').value = '';
-    document.getElementById('review-tags').value = '';
-    document.getElementById('review-submit').disabled = true;
-    document.querySelectorAll('.star-btn').forEach(function(b) { b.classList.remove('active'); });
-    document.querySelectorAll('.tag-btn').forEach(function(b) { b.classList.remove('selected'); });
-    var ta = document.querySelector('.review-textarea');
-    if (ta) ta.value = '';
+  window.openReviewModal = function(id, name) {
+    document.getElementById('review-appointment-id').value=id;
+    document.getElementById('modal-car-wash-name').textContent=name;
+    document.getElementById('review-rating').value='';
+    document.getElementById('review-tags').value='';
+    document.getElementById('review-submit').disabled=true;
+    document.querySelectorAll('.star-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tag-btn').forEach(b=>b.classList.remove('selected'));
+    var ta=document.querySelector('.review-textarea');if(ta)ta.value='';
     document.getElementById('review-overlay').classList.add('open');
-  }
+  };
+  window.closeReviewModal = function() { document.getElementById('review-overlay').classList.remove('open'); };
+  document.getElementById('review-overlay').addEventListener('click',function(e){if(e.target===this)window.closeReviewModal();});
 
-  function closeReviewModal() {
-    document.getElementById('review-overlay').classList.remove('open');
-  }
-
-  // Fecha ao clicar fora
-  document.getElementById('review-overlay').addEventListener('click', function(e) {
-    if (e.target === this) closeReviewModal();
-  });
-
-  // STARS
-  function setStar(value) {
-    document.getElementById('review-rating').value = value;
-    document.getElementById('review-submit').disabled = false;
-    document.querySelectorAll('.star-btn').forEach(function(b) {
-      b.classList.toggle('active', parseInt(b.dataset.value) <= value);
-    });
-  }
-
-  // TAGS
-  function toggleTag(btn) {
+  window.setStar = function(val) {
+    document.getElementById('review-rating').value=val;
+    document.getElementById('review-submit').disabled=false;
+    document.querySelectorAll('.star-btn').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.value)<=val));
+  };
+  window.toggleTag = function(btn) {
     btn.classList.toggle('selected');
-    var selected = Array.from(document.querySelectorAll('.tag-btn.selected')).map(function(b) { return b.dataset.tag; });
-    document.getElementById('review-tags').value = selected.join(',');
-  }
+    var sel=Array.from(document.querySelectorAll('.tag-btn.selected')).map(b=>b.dataset.tag);
+    document.getElementById('review-tags').value=sel.join(',');
+  };
 
   // FLASH AUTO-DISMISS
-  document.addEventListener('DOMContentLoaded', function() {
-    ['flash-notice', 'flash-error'].forEach(function(id) {
-      var el = document.getElementById(id);
-      if (!el) return;
-      setTimeout(function() {
-        el.style.transition = 'opacity 0.5s ease';
-        el.style.opacity = '0';
-        setTimeout(function() { el.style.display = 'none'; }, 500);
-      }, 8000);
+  document.addEventListener('DOMContentLoaded',function(){
+    ['flash-notice','flash-error'].forEach(function(id){
+      var el=document.getElementById(id);if(!el)return;
+      setTimeout(function(){el.style.transition='opacity .5s ease';el.style.opacity='0';setTimeout(function(){el.style.display='none';},500);},6000);
     });
   });
+})();
 </script>

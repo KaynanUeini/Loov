@@ -1,122 +1,409 @@
-<% Rails.logger.info("Renderizando navbar: user_signed_in?=#{user_signed_in?}, current_user=#{current_user.inspect}") %>
-<% if user_signed_in? && current_user %>
-<% Rails.logger.info("Atributos do current_user: #{current_user.attributes.inspect}") %>
-<% end %>
-
 <style>
-  .nav-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: var(--lime, #afff2d);
-    color: #000;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 0.85rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-    transition: opacity 0.2s ease, transform 0.15s ease;
-    flex-shrink: 0;
-  }
-  .nav-avatar:hover {
-    opacity: 0.85;
-    transform: scale(1.05);
-  }
-  .nav-avatar.incomplete {
-    background: transparent;
-    border: 2px solid #ffaa00;
-    color: #ffaa00;
-  }
-  .nav-avatar-wrap {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    position: relative;
-  }
-  .nav-avatar-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #ffaa00;
-    position: absolute;
-    top: -1px;
-    right: -1px;
-    border: 1.5px solid #000;
+  :root {
+    --lime: #afff2d;
+    --lime-dim: #8fcc24;
+    --black: #000;
+    --surface: #0a0a0a;
+    --surface-2: #111;
+    --border: #1e1e1e;
+    --text-muted: #555;
+    --white: #fff;
   }
 
-  .navbar .menu.menu-horizontal {
+  .loov-nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    height: 60px;
     display: flex;
     align-items: center;
-    gap: 0.25rem;
+    justify-content: space-between;
+    padding: 0 1.5rem;
+    background: rgba(0,0,0,0.82);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
   }
-  .navbar .menu.menu-horizontal li {
-    display: flex;
-    align-items: center;
+
+  .loov-nav-logo { display:flex; align-items:center; text-decoration:none; flex-shrink:0; }
+  .loov-nav-logo img { height:36px; width:auto; }
+
+  .loov-nav-links {
+    display: flex; align-items: center; gap: 0.125rem;
+    list-style: none; margin: 0; padding: 0;
   }
+  .loov-nav-links li { display:flex; align-items:center; }
+  .loov-nav-links a,
+  .loov-nav-links button.nav-link-btn {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.45rem 0.75rem; border-radius: 8px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.8125rem; font-weight: 500;
+    color: var(--text-muted); text-decoration: none;
+    transition: color 0.15s ease, background 0.15s ease;
+    background: transparent; border: none; cursor: pointer; white-space: nowrap;
+  }
+  .loov-nav-links a:hover,
+  .loov-nav-links button.nav-link-btn:hover { color:var(--white); background:rgba(255,255,255,0.05); }
+  .loov-nav-links a.active { color:var(--lime); }
+
+  .loov-nav-sep { width:1px; height:16px; background:var(--border); margin:0 0.25rem; flex-shrink:0; }
+
+  .loov-nav-links a.nav-exit,
+  .loov-nav-links button.nav-exit { color:#333; }
+  .loov-nav-links a.nav-exit:hover,
+  .loov-nav-links button.nav-exit:hover { color:#f87171; background:rgba(248,113,113,0.08); }
+
+  .nav-avatar {
+    width:30px; height:30px; border-radius:50%;
+    background:var(--lime); color:#000;
+    font-family:'Bebas Neue',sans-serif; font-size:0.82rem;
+    display:inline-flex; align-items:center; justify-content:center;
+    text-decoration:none; transition:opacity 0.15s ease, transform 0.15s ease; flex-shrink:0;
+  }
+  .nav-avatar:hover { opacity:0.85; transform:scale(1.06); }
+  .nav-avatar.incomplete { background:transparent; border:2px solid #ffaa00; color:#ffaa00; }
+  .nav-avatar-wrap { display:inline-flex; align-items:center; gap:0.35rem; position:relative; }
+  .nav-avatar-dot { width:7px; height:7px; border-radius:50%; background:#ffaa00; position:absolute; top:-1px; right:-1px; border:1.5px solid #000; }
+
+  /* ── SINO ── */
+  .nav-bell-wrap { position:relative; display:inline-flex; align-items:center; }
+  .nav-bell-btn {
+    position:relative; width:32px; height:32px; border-radius:8px;
+    background:transparent; border:1px solid transparent;
+    display:flex; align-items:center; justify-content:center;
+    color:#444; font-size:.78rem; cursor:pointer; transition:all .2s;
+  }
+  .nav-bell-btn:hover { color:var(--white); background:rgba(255,255,255,.05); border-color:rgba(255,255,255,.06); }
+  .nav-bell-btn.has-notif { color:#afff2d; border-color:rgba(175,255,45,.2); background:rgba(175,255,45,.06); }
+  .nav-bell-badge {
+    position:absolute; top:-4px; right:-4px;
+    background:#afff2d; color:#000;
+    font-family:'Montserrat',sans-serif; font-size:.48rem; font-weight:800;
+    width:14px; height:14px; border-radius:50%;
+    display:none; align-items:center; justify-content:center;
+    border:2px solid #000;
+  }
+  .nav-bell-badge.visible { display:flex; }
+
+  .nav-notif-dropdown {
+    position:absolute; top:calc(100% + 8px); right:0;
+    width:300px; background:rgba(8,8,8,0.98);
+    border:1px solid rgba(255,255,255,.07); border-radius:16px;
+    overflow:hidden; box-shadow:0 16px 48px rgba(0,0,0,.9);
+    opacity:0; pointer-events:none; transform:translateY(-8px);
+    transition:all .2s cubic-bezier(.16,1,.3,1); z-index:200;
+  }
+  .nav-notif-dropdown.open { opacity:1; pointer-events:all; transform:translateY(0); }
+  .nav-notif-header {
+    padding:.75rem 1rem .5rem; border-bottom:1px solid rgba(255,255,255,.05);
+    font-family:'Montserrat',sans-serif; font-size:.6rem; font-weight:700;
+    letter-spacing:.15em; text-transform:uppercase; color:rgba(175,255,45,.5);
+  }
+  .nav-notif-item {
+    display:flex; align-items:flex-start; gap:.75rem;
+    padding:.875rem 1rem; border-bottom:1px solid rgba(255,255,255,.04);
+    text-decoration:none; transition:background .15s; cursor:pointer;
+  }
+  .nav-notif-item:hover { background:rgba(255,255,255,.03); }
+  .nav-notif-item:last-child { border-bottom:none; }
+  .nav-notif-icon {
+    width:32px; height:32px; border-radius:8px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:.78rem;
+  }
+  .nav-notif-icon.pending   { background:rgba(175,255,45,.08); color:#afff2d; border:1px solid rgba(175,255,45,.15); }
+  .nav-notif-icon.confirmed { background:rgba(175,255,45,.12); color:#afff2d; }
+  .nav-notif-icon.rejected  { background:rgba(248,113,113,.08); color:#f87171; }
+  .nav-notif-title { font-size:.8rem; font-weight:600; color:var(--white); margin-bottom:.15rem; }
+  .nav-notif-sub { font-size:.72rem; color:#444; line-height:1.4; }
+  .nav-notif-empty { padding:1.5rem 1rem; text-align:center; font-size:.78rem; color:#333; }
+  .nav-notif-footer { padding:.625rem 1rem; border-top:1px solid rgba(255,255,255,.05); text-align:center; }
+  .nav-notif-footer a { font-size:.72rem; color:rgba(175,255,45,.5); text-decoration:none; transition:color .15s; }
+  .nav-notif-footer a:hover { color:#afff2d; }
+
+  .loov-hamburger {
+    display:none; flex-direction:column; justify-content:center; align-items:center;
+    gap:5px; width:36px; height:36px; background:none; border:none;
+    cursor:pointer; padding:4px; border-radius:8px;
+    transition:background 0.15s ease; z-index:110; flex-shrink:0;
+  }
+  .loov-hamburger:hover { background:rgba(255,255,255,0.06); }
+  .loov-hamburger span { display:block; width:20px; height:1.5px; background:var(--white); border-radius:99px; transition:transform 0.25s ease, opacity 0.25s ease, width 0.25s ease; transform-origin:center; }
+  .loov-hamburger.open span:nth-child(1) { transform:translateY(6.5px) rotate(45deg); }
+  .loov-hamburger.open span:nth-child(2) { opacity:0; width:0; }
+  .loov-hamburger.open span:nth-child(3) { transform:translateY(-6.5px) rotate(-45deg); }
+
+  .loov-drawer-overlay { display:none; position:fixed; inset:0; z-index:105; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); opacity:0; transition:opacity 0.25s ease; }
+  .loov-drawer-overlay.open { opacity:1; }
+  .loov-drawer { position:fixed; top:0; right:0; bottom:0; z-index:106; width:min(300px,85vw); background:rgba(8,8,8,0.97); border-left:1px solid var(--border); display:flex; flex-direction:column; padding:80px 1.25rem 2rem; gap:0.25rem; transform:translateX(100%); transition:transform 0.3s cubic-bezier(0.32,0.72,0,1); }
+  .loov-drawer.open { transform:translateX(0); }
+  .loov-drawer a, .loov-drawer button.drawer-link { display:flex; align-items:center; gap:0.625rem; padding:0.75rem 1rem; border-radius:10px; font-family:'DM Sans',sans-serif; font-size:0.9375rem; font-weight:500; color:#888; text-decoration:none; transition:color 0.15s ease, background 0.15s ease; background:transparent; border:none; cursor:pointer; width:100%; text-align:left; }
+  .loov-drawer a:hover, .loov-drawer button.drawer-link:hover { color:var(--white); background:rgba(255,255,255,0.05); }
+  .loov-drawer a i, .loov-drawer button.drawer-link i { width:18px; text-align:center; font-size:0.85rem; color:var(--lime); flex-shrink:0; }
+  .loov-drawer .drawer-sep { height:1px; background:var(--border); margin:0.5rem 0; }
+  .loov-drawer a.drawer-exit, .loov-drawer button.drawer-exit { color:#333; margin-top:auto; }
+  .loov-drawer a.drawer-exit:hover, .loov-drawer button.drawer-exit:hover { color:#f87171; background:rgba(248,113,113,0.08); }
+  .loov-drawer a.drawer-exit i, .loov-drawer button.drawer-exit i { color:inherit; }
+  .loov-drawer a.drawer-active { color:var(--lime); background:rgba(175,255,45,0.06); }
+
+  @media (max-width: 860px) { .loov-nav-links { display:none; } .loov-hamburger { display:flex; } .loov-drawer-overlay { display:block; } }
+  @media (min-width: 861px) { .loov-drawer { display:none !important; } .loov-drawer-overlay { display:none !important; } }
 </style>
 
-<nav class="navbar">
-  <div class="flex-1">
-    <a href="/">
-      <img src="/assets/Loov.png" alt="Logo Loov" class="navbar-logo" style="height: 40px; width: auto;">
-    </a>
-  </div>
-  <div class="flex-none">
-    <button class="menu-toggle" aria-label="Toggle menu">
-      <i class="fas fa-bars"></i>
-    </button>
-    <ul class="menu menu-horizontal">
-      <% if user_signed_in? %>
-        <% if current_user.client? %>
-          <li><%= link_to "Meus Agendamentos", appointments_path %></li>
-           <li>
-                       <div class="nav-avatar-wrap">
-                         <%= link_to edit_client_profile_path,
-                             class: "nav-avatar #{current_user.profile_complete? ? '' : 'incomplete'}",
-                             title: current_user.profile_complete? ? current_user.display_name : "Complete seu perfil" do %>
-                           <i class="fas fa-user" style="font-size:0.85rem;"></i>
-                         <% end %>
-                         <% unless current_user.profile_complete? %>
-                           <span class="nav-avatar-dot"></span>
-                         <% end %>
-                       </div>
-                     </li>
-          <li><%= link_to "Sair", destroy_user_session_path, method: :delete %></li>
-        <% elsif current_user.owner? %>
-          <% @car_wash = current_user.car_washes.first if @car_wash.nil? %>
-          <li>
-            <% if @car_wash&.persisted? %>
-              <%= link_to "Gerenciar Lava-Rápido", manage_car_wash_path(@car_wash) %>
-            <% else %>
-              <%= link_to "Cadastrar Lava-Rápido", new_car_wash_path, style: "color: var(--lime);" %>
-            <% end %>
-          </li>
-          <li><%= link_to "Agendamentos", owner_car_wash_appointments_path %></li>
-          <li><%= link_to "Financeiro", owner_monthly_costs_path %></li>
-          <li><%= link_to "Análise", owner_financial_tracking_path %></li>
-          <li><%= link_to "Sair", destroy_user_session_path, method: :delete %></li>
-        <% else %>
-          <li><%= link_to "Sair", destroy_user_session_path, method: :delete %></li>
+<% current_path = request.path %>
+
+<div class="loov-drawer-overlay" id="drawer-overlay"></div>
+<div class="loov-drawer" id="loov-drawer">
+  <% if user_signed_in? %>
+    <% if current_user.client? %>
+      <%= link_to appointments_path, class: "#{current_path == appointments_path ? 'drawer-active' : ''}" do %>
+        <i class="fas fa-calendar-check"></i> Meus Agendamentos
+      <% end %>
+      <div class="drawer-sep"></div>
+      <%= link_to edit_client_profile_path, class: "#{current_user.profile_complete? ? '' : 'drawer-active'}" do %>
+        <i class="fas fa-user"></i>
+        Meu Perfil
+        <% unless current_user.profile_complete? %>
+          <span style="margin-left:auto;font-size:0.65rem;color:#ffaa00;background:rgba(255,170,0,0.1);border:1px solid rgba(255,170,0,0.2);border-radius:100px;padding:2px 8px;">Incompleto</span>
+        <% end %>
+      <% end %>
+      <%= link_to destroy_user_session_path, method: :delete, class: "drawer-exit" do %>
+        <i class="fas fa-arrow-right-from-bracket"></i> Sair
+      <% end %>
+
+    <% elsif current_user.owner? %>
+      <% @car_wash = current_user.car_washes.first if @car_wash.nil? %>
+      <% if @car_wash&.persisted? %>
+        <%= link_to manage_car_wash_path(@car_wash), class: "#{current_path.include?('/manage') ? 'drawer-active' : ''}" do %>
+          <i class="fas fa-store"></i> Meu Negócio
         <% end %>
       <% else %>
-        <li><%= link_to "Entrar", new_user_session_path %></li>
-        <li><%= link_to "Cadastrar", new_user_registration_path %></li>
+        <%= link_to new_car_wash_path do %><i class="fas fa-store"></i> Cadastrar Negócio<% end %>
       <% end %>
-    </ul>
-  </div>
+      <%= link_to owner_car_wash_appointments_path, class: "#{current_path.include?('appointments') ? 'drawer-active' : ''}" do %><i class="fas fa-calendar-days"></i> Agenda<% end %>
+      <%= link_to owner_monthly_costs_path, class: "#{current_path.include?('monthly_costs') ? 'drawer-active' : ''}" do %><i class="fas fa-wallet"></i> Financeiro<% end %>
+      <%= link_to owner_financial_tracking_path, class: "#{current_path.include?('financial_tracking') ? 'drawer-active' : ''}" do %><i class="fas fa-chart-line"></i> Relatórios<% end %>
+      <%= link_to owner_attendant_invitations_path, class: "#{current_path.include?('attendant') ? 'drawer-active' : ''}" do %><i class="fas fa-users"></i> Equipe<% end %>
+      <div class="drawer-sep"></div>
+      <%= link_to destroy_user_session_path, method: :delete, class: "drawer-exit" do %><i class="fas fa-arrow-right-from-bracket"></i> Sair<% end %>
+
+    <% elsif current_user.attendant? %>
+      <% _cw = current_car_wash %>
+      <% if _cw %>
+        <%= link_to manage_car_wash_path(_cw), class: "#{current_path.include?('/manage') ? 'drawer-active' : ''}" do %><i class="fas fa-store"></i> Meu Negócio<% end %>
+        <%= link_to edit_owner_monthly_costs_path, class: "#{current_path.include?('monthly_costs') ? 'drawer-active' : ''}" do %><i class="fas fa-wallet"></i> Financeiro<% end %>
+      <% end %>
+      <div class="drawer-sep"></div>
+      <%= link_to destroy_user_session_path, method: :delete, class: "drawer-exit" do %><i class="fas fa-arrow-right-from-bracket"></i> Sair<% end %>
+
+    <% else %>
+      <%= link_to destroy_user_session_path, method: :delete, class: "drawer-exit" do %><i class="fas fa-arrow-right-from-bracket"></i> Sair<% end %>
+    <% end %>
+  <% else %>
+    <%= link_to new_user_session_path do %><i class="fas fa-arrow-right-to-bracket"></i> Entrar<% end %>
+    <%= link_to new_user_registration_path do %><i class="fas fa-user-plus"></i> Criar Conta<% end %>
+  <% end %>
+</div>
+
+<nav class="loov-nav">
+  <a href="/" class="loov-nav-logo">
+    <img src="/assets/Loov.png" alt="Loov">
+  </a>
+
+  <ul class="loov-nav-links">
+    <% if user_signed_in? %>
+      <% if current_user.client? %>
+        <li><%= link_to "Meus Agendamentos", appointments_path, class: current_path == appointments_path ? 'active' : '' %></li>
+
+        <li>
+          <div class="nav-bell-wrap">
+            <button class="nav-bell-btn" id="nav-bell-btn" title="Notificações">
+              <i class="fas fa-bell"></i>
+              <span class="nav-bell-badge" id="nav-bell-badge"></span>
+            </button>
+            <div class="nav-notif-dropdown" id="nav-notif-dropdown">
+              <div class="nav-notif-header">Notificações</div>
+              <div id="nav-notif-list">
+                <div class="nav-notif-empty">Nenhuma notificação.</div>
+              </div>
+              <div class="nav-notif-footer">
+                <%= link_to "Ver todos os agendamentos", appointments_path %>
+              </div>
+            </div>
+          </div>
+        </li>
+
+        <li>
+          <div class="nav-avatar-wrap">
+            <%= link_to edit_client_profile_path,
+                class: "nav-avatar #{current_user.profile_complete? ? '' : 'incomplete'}",
+                title: current_user.profile_complete? ? current_user.display_name : "Complete seu perfil" do %>
+              <i class="fas fa-user" style="font-size:0.75rem;"></i>
+            <% end %>
+            <% unless current_user.profile_complete? %>
+              <span class="nav-avatar-dot"></span>
+            <% end %>
+          </div>
+        </li>
+        <li><div class="loov-nav-sep"></div></li>
+        <li><%= link_to "Sair", destroy_user_session_path, method: :delete, class: "nav-exit" %></li>
+
+      <% elsif current_user.owner? %>
+        <% @car_wash = current_user.car_washes.first if @car_wash.nil? %>
+        <li>
+          <% if @car_wash&.persisted? %>
+            <%= link_to "Meu Negócio", manage_car_wash_path(@car_wash), class: current_path.include?('/manage') ? 'active' : '' %>
+          <% else %>
+            <%= link_to "Cadastrar Negócio", new_car_wash_path, style: "color:var(--lime);" %>
+          <% end %>
+        </li>
+        <li><%= link_to "Agenda", owner_car_wash_appointments_path, class: current_path.include?('appointments') ? 'active' : '' %></li>
+        <li><%= link_to "Financeiro", owner_monthly_costs_path, class: current_path.include?('monthly_costs') ? 'active' : '' %></li>
+        <li><%= link_to "Relatórios", owner_financial_tracking_path, class: current_path.include?('financial_tracking') ? 'active' : '' %></li>
+        <li><%= link_to "Equipe", owner_attendant_invitations_path, class: current_path.include?('attendant') ? 'active' : '' %></li>
+        <li><div class="loov-nav-sep"></div></li>
+        <li><%= link_to "Sair", destroy_user_session_path, method: :delete, class: "nav-exit" %></li>
+
+      <% elsif current_user.attendant? %>
+        <% _cw = current_car_wash %>
+        <% if _cw %>
+          <li><%= link_to "Meu Negócio", manage_car_wash_path(_cw), class: current_path.include?('/manage') ? 'active' : '' %></li>
+          <li><%= link_to "Financeiro", edit_owner_monthly_costs_path, class: current_path.include?('monthly_costs') ? 'active' : '' %></li>
+        <% end %>
+        <li><div class="loov-nav-sep"></div></li>
+        <li><%= link_to "Sair", destroy_user_session_path, method: :delete, class: "nav-exit" %></li>
+
+      <% else %>
+        <li><%= link_to "Sair", destroy_user_session_path, method: :delete, class: "nav-exit" %></li>
+      <% end %>
+    <% else %>
+      <li><%= link_to "Entrar", new_user_session_path %></li>
+      <li><%= link_to "Criar Conta", new_user_registration_path, style: "color:var(--lime);" %></li>
+    <% end %>
+  </ul>
+
+  <button class="loov-hamburger" id="loov-hamburger" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
 </nav>
 
 <script>
-  function initMenuToggle() {
-    const menuToggle = document.querySelector('.menu-toggle');
-    const menu = document.querySelector('.navbar .menu');
-    if (menuToggle && menu) {
-      menuToggle.addEventListener('click', () => {
-        menu.classList.toggle('active');
-      });
-    }
+(function() {
+  // ── HAMBURGER ──────────────────────────────────────────────────────────
+  const hamburger = document.getElementById('loov-hamburger');
+  const drawer    = document.getElementById('loov-drawer');
+  const overlay   = document.getElementById('drawer-overlay');
+
+  function openDrawer()  { hamburger.classList.add('open'); drawer.classList.add('open'); overlay.classList.add('open'); document.body.style.overflow='hidden'; }
+  function closeDrawer() { hamburger.classList.remove('open'); drawer.classList.remove('open'); overlay.classList.remove('open'); document.body.style.overflow=''; }
+
+  hamburger.addEventListener('click', () => drawer.classList.contains('open') ? closeDrawer() : openDrawer());
+  overlay.addEventListener('click', closeDrawer);
+  drawer.querySelectorAll('a').forEach(a => a.addEventListener('click', closeDrawer));
+
+  // ── SINO (apenas cliente) ──────────────────────────────────────────────
+  const bellBtn   = document.getElementById('nav-bell-btn');
+  const bellBadge = document.getElementById('nav-bell-badge');
+  const dropdown  = document.getElementById('nav-notif-dropdown');
+  const notifList = document.getElementById('nav-notif-list');
+
+  if (!bellBtn) return;
+
+  // PONTO 4: chave no localStorage para guardar timestamp da última abertura
+  const SEEN_KEY = 'loov_notif_seen_at';
+
+  function getSeenAt() {
+    const v = localStorage.getItem(SEEN_KEY);
+    return v ? new Date(v) : new Date(0);
   }
-  document.addEventListener('turbo:load', initMenuToggle);
-  document.addEventListener('DOMContentLoaded', initMenuToggle);
+
+  function markAsSeen() {
+    localStorage.setItem(SEEN_KEY, new Date().toISOString());
+  }
+
+  // Fecha ao clicar fora
+  document.addEventListener('click', function(e) {
+    if (!bellBtn.closest('.nav-bell-wrap').contains(e.target)) {
+      dropdown.classList.remove('open');
+    }
+  });
+
+  bellBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    const isOpen = dropdown.classList.contains('open');
+    dropdown.classList.toggle('open');
+
+    if (!isOpen) {
+      // PONTO 4: grava o momento em que o cliente abriu — reseta a contagem
+      markAsSeen();
+      bellBtn.classList.remove('has-notif');
+      bellBadge.classList.remove('visible');
+      loadNotifications();
+    }
+  });
+
+  function loadNotifications() {
+    fetch('/client/notifications', { headers: { Accept: 'application/json' } })
+      .then(r => r.json())
+      .then(data => renderNotifications(data))
+      .catch(() => {});
+  }
+
+  function renderNotifications(items) {
+    if (!items.length) {
+      notifList.innerHTML = '<div class="nav-notif-empty">Nenhuma notificação.</div>';
+      return;
+    }
+
+    notifList.innerHTML = items.map(item => {
+      const iconClass = item.status === 'confirmed'  ? 'confirmed' :
+                        item.status === 'rejected' || item.status === 'cancelled' ? 'rejected' : 'pending';
+      const icon      = item.status === 'confirmed'  ? 'fa-check' :
+                        item.status === 'rejected' || item.status === 'cancelled' ? 'fa-times' : 'fa-clock';
+      const title     = item.status === 'confirmed'  ? 'Reserva confirmada!' :
+                        item.status === 'rejected'   ? 'Reserva recusada' :
+                        item.status === 'cancelled'  ? 'Reserva expirou' : 'Aguardando confirmação';
+
+      return `
+        <a class="nav-notif-item" href="/appointments">
+          <div class="nav-notif-icon ${iconClass}"><i class="fas ${icon}"></i></div>
+          <div>
+            <div class="nav-notif-title">${title}</div>
+            <div class="nav-notif-sub">${item.service_name} · ${item.car_wash_name}<br>${item.scheduled_at}</div>
+          </div>
+        </a>
+      `;
+    }).join('');
+  }
+
+  // PONTO 4: polling do badge — conta APENAS notificações após o último "visto"
+  function pollBadge() {
+    if (dropdown.classList.contains('open')) return;
+
+    fetch('/client/notifications', { headers: { Accept: 'application/json' } })
+      .then(r => r.json())
+      .then(data => {
+        const seenAt = getSeenAt();
+        // Conta apenas as novas: criadas DEPOIS da última vez que o cliente abriu
+        const newCount = data.filter(i => {
+          if (!i.created_at) return false;
+          return new Date(i.created_at) > seenAt;
+        }).length;
+
+        if (newCount > 0) {
+          bellBtn.classList.add('has-notif');
+          bellBadge.textContent = newCount;
+          bellBadge.classList.add('visible');
+        } else {
+          bellBtn.classList.remove('has-notif');
+          bellBadge.classList.remove('visible');
+        }
+      })
+      .catch(() => {});
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    pollBadge();
+    setInterval(pollBadge, 8000);
+  });
+})();
 </script>

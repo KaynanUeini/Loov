@@ -1,0 +1,237 @@
+<%# Widget de aceite de agendamentos Disponíveis
+    Inclua na home do proprietário: <%= render 'owner/disponivel_acceptance/widget' %>
+    Aparece automaticamente quando chega um pedido. Polling a cada 3s.
+%>
+
+<div id="disp-widget-wrap" style="display:none;position:fixed;inset:0;z-index:600;pointer-events:none;">
+
+  <!-- Overlay escurecido -->
+  <div id="disp-widget-overlay"
+       style="position:absolute;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);pointer-events:all;opacity:0;transition:opacity .3s;"></div>
+
+  <!-- Card central -->
+  <div id="disp-widget-card"
+       style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(0.92);pointer-events:all;width:calc(100% - 2rem);max-width:420px;opacity:0;transition:all .35s cubic-bezier(.16,1,.3,1);">
+
+    <style>
+      .dw2 { background:#0a0a0a; border-radius:20px; overflow:hidden; box-shadow:0 0 0 1px rgba(175,255,45,0.25), 0 32px 80px rgba(0,0,0,0.98); }
+
+      /* Barra de progresso no topo */
+      .dw2-progress { height:4px; background:rgba(255,255,255,0.05); position:relative; overflow:hidden; }
+      .dw2-progress-fill { position:absolute; left:0; top:0; bottom:0; background:linear-gradient(to right,#afff2d,#6aaa00); transition:width .9s linear; }
+      .dw2-progress-fill.urgent { background:linear-gradient(to right,#f87171,#dc2626); }
+
+      /* Header */
+      .dw2-header { padding:.875rem 1.25rem .75rem; border-bottom:1px solid #111; display:flex; align-items:center; justify-content:space-between; }
+      .dw2-badge { display:inline-flex; align-items:center; gap:.35rem; background:rgba(175,255,45,.08); border:1px solid rgba(175,255,45,.2); border-radius:100px; padding:.2rem .75rem; font-size:.62rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#afff2d; font-family:'Montserrat',sans-serif; }
+      .dw2-badge-dot { width:7px; height:7px; border-radius:50%; background:#afff2d; animation:dw2Pulse 1s ease-in-out infinite; }
+      @keyframes dw2Pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.7)} }
+      .dw2-timer { font-family:'Bebas Neue',sans-serif; font-size:2rem; line-height:1; letter-spacing:.04em; color:#afff2d; }
+      .dw2-timer.urgent { color:#f87171; animation:dw2Shake .4s ease infinite; }
+      @keyframes dw2Shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-2px)} 75%{transform:translateX(2px)} }
+
+      /* Body */
+      .dw2-body { padding:1.125rem 1.25rem .875rem; }
+      .dw2-title { font-family:'Bebas Neue',sans-serif; font-size:1.25rem; color:#fff; letter-spacing:.03em; margin-bottom:.25rem; }
+      .dw2-client { font-size:.875rem; font-weight:600; color:#fff; margin-bottom:.2rem; }
+      .dw2-details { font-size:.78rem; color:#444; }
+
+      .dw2-price-row { display:flex; align-items:flex-end; justify-content:space-between; margin-top:.875rem; padding:.75rem 1rem; background:rgba(175,255,45,.04); border:1px solid rgba(175,255,45,.1); border-radius:12px; }
+      .dw2-price-label { font-size:.62rem; color:rgba(175,255,45,.4); font-family:'Montserrat',sans-serif; letter-spacing:.1em; text-transform:uppercase; }
+      .dw2-price-val { font-family:'Bebas Neue',sans-serif; font-size:1.875rem; color:#afff2d; letter-spacing:.02em; line-height:1; }
+      .dw2-prepay { font-size:.68rem; color:#333; margin-top:.1rem; }
+
+      /* Actions */
+      .dw2-actions { display:grid; grid-template-columns:1fr 1fr; gap:.5rem; padding:.875rem 1.25rem 1.25rem; }
+      .dw2-btn { border:none; border-radius:100px; padding:.75rem; font-family:'DM Sans',sans-serif; font-size:.875rem; font-weight:700; cursor:pointer; transition:all .18s; display:flex; align-items:center; justify-content:center; gap:.4rem; }
+      .dw2-accept { background:#afff2d; color:#000; }
+      .dw2-accept:hover:not(:disabled) { background:#8fcc24; transform:translateY(-1px); }
+      .dw2-accept:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+      .dw2-reject { background:rgba(255,255,255,.04); border:1px solid #222; color:#555; }
+      .dw2-reject:hover:not(:disabled) { border-color:rgba(248,113,113,.3); color:#f87171; background:rgba(248,113,113,.06); }
+      .dw2-reject:disabled { opacity:.5; cursor:not-allowed; }
+
+      /* Toast de resultado */
+      .dw2-result { display:none; padding:1rem 1.25rem 1.25rem; text-align:center; }
+      .dw2-result-icon { font-size:1.75rem; margin-bottom:.5rem; }
+      .dw2-result-text { font-size:.875rem; font-weight:600; }
+      .dw2-result.accepted .dw2-result-icon { color:#afff2d; }
+      .dw2-result.accepted .dw2-result-text { color:#afff2d; }
+      .dw2-result.rejected .dw2-result-icon { color:#f87171; }
+      .dw2-result.rejected .dw2-result-text { color:#f87171; }
+
+      .dw2-spinner { width:16px; height:16px; border:2px solid rgba(0,0,0,.3); border-top-color:#000; border-radius:50%; animation:dw2Spin .7s linear infinite; display:inline-block; }
+      @keyframes dw2Spin { to{transform:rotate(360deg)} }
+    </style>
+
+    <div class="dw2" id="dw2-card">
+      <div class="dw2-progress"><div class="dw2-progress-fill" id="dw2-fill"></div></div>
+      <div class="dw2-header">
+        <div class="dw2-badge"><div class="dw2-badge-dot"></div>Disponível · Novo pedido</div>
+        <div class="dw2-timer" id="dw2-timer">3:00</div>
+      </div>
+      <div class="dw2-body">
+        <div class="dw2-title">Aceitar agendamento?</div>
+        <div class="dw2-client" id="dw2-client">—</div>
+        <div class="dw2-details" id="dw2-details">—</div>
+        <div class="dw2-price-row">
+          <div>
+            <div class="dw2-price-label">Valor do serviço</div>
+            <div class="dw2-price-val" id="dw2-price">R$0</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="dw2-price-label">Pré-pago</div>
+            <div class="dw2-prepay" id="dw2-prepay">—</div>
+          </div>
+        </div>
+      </div>
+      <div class="dw2-actions" id="dw2-actions">
+        <button class="dw2-btn dw2-accept" id="dw2-accept"><i class="fas fa-check"></i> Aceitar</button>
+        <button class="dw2-btn dw2-reject" id="dw2-reject"><i class="fas fa-times"></i> Recusar</button>
+      </div>
+      <div class="dw2-result" id="dw2-result">
+        <div class="dw2-result-icon" id="dw2-result-icon"></div>
+        <div class="dw2-result-text" id="dw2-result-text"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function() {
+  const CSRF   = document.querySelector('meta[name="csrf-token"]')?.content || '';
+  const WRAP   = document.getElementById('disp-widget-wrap');
+  const OVERLAY = document.getElementById('disp-widget-overlay');
+  const CARD   = document.getElementById('disp-widget-card');
+
+  let currentId    = null;
+  let totalSeconds = 180;
+  let secondsLeft  = 180;
+  let countTimer   = null;
+  let pollTimer    = null;
+  let acting       = false;
+
+  // ── POLLING ──────────────────────────────────────────────────────────────
+  function startPolling() {
+    fetch('/owner/disponivel_acceptance', { headers: { Accept: 'application/json' } })
+      .then(r => r.json())
+      .then(data => {
+        if (!data.length) { if (currentId) hide(); return; }
+        const appt = data[0];
+        if (appt.id !== currentId) { currentId = appt.id; show(appt); }
+      })
+      .catch(() => {});
+    pollTimer = setTimeout(startPolling, 3000);
+  }
+
+  // ── SHOW ─────────────────────────────────────────────────────────────────
+  function show(appt) {
+    acting = false;
+    secondsLeft  = appt.seconds_left || 180;
+    totalSeconds = 180;
+
+    document.getElementById('dw2-client').textContent  = appt.client_name || '—';
+    document.getElementById('dw2-details').textContent = appt.service_name + ' · ' + appt.scheduled_at;
+    document.getElementById('dw2-price').textContent   = 'R$' + Number(appt.service_price || 0).toFixed(0);
+    document.getElementById('dw2-prepay').textContent  = 'R$' + Number(appt.prepayment || 0).toFixed(2) + ' já autorizado';
+    document.getElementById('dw2-actions').style.display = 'grid';
+    document.getElementById('dw2-result').style.display  = 'none';
+    document.getElementById('dw2-accept').disabled = false;
+    document.getElementById('dw2-reject').disabled = false;
+    document.getElementById('dw2-accept').innerHTML = '<i class="fas fa-check"></i> Aceitar';
+    document.getElementById('dw2-reject').innerHTML = '<i class="fas fa-times"></i> Recusar';
+
+    updateTimer();
+
+    WRAP.style.display = 'block';
+    requestAnimationFrame(() => {
+      OVERLAY.style.opacity = '1';
+      CARD.style.opacity    = '1';
+      CARD.style.transform  = 'translate(-50%,-50%) scale(1)';
+    });
+
+    clearInterval(countTimer);
+    countTimer = setInterval(() => {
+      secondsLeft = Math.max(0, secondsLeft - 1);
+      updateTimer();
+      if (secondsLeft <= 0) { clearInterval(countTimer); setTimeout(hide, 1200); }
+    }, 1000);
+  }
+
+  function updateTimer() {
+    const m   = Math.floor(secondsLeft / 60);
+    const s   = secondsLeft % 60;
+    const pct = (secondsLeft / totalSeconds) * 100;
+    const urgent = secondsLeft <= 30;
+
+    document.getElementById('dw2-timer').textContent = m + ':' + String(s).padStart(2,'0');
+    document.getElementById('dw2-timer').className   = 'dw2-timer' + (urgent ? ' urgent' : '');
+    document.getElementById('dw2-fill').style.width  = pct + '%';
+    document.getElementById('dw2-fill').className    = 'dw2-progress-fill' + (urgent ? ' urgent' : '');
+  }
+
+  // ── HIDE ─────────────────────────────────────────────────────────────────
+  function hide() {
+    OVERLAY.style.opacity = '0';
+    CARD.style.opacity    = '0';
+    CARD.style.transform  = 'translate(-50%,-50%) scale(0.92)';
+    setTimeout(() => { WRAP.style.display = 'none'; currentId = null; }, 350);
+    clearInterval(countTimer);
+  }
+
+  // ── AÇÕES ─────────────────────────────────────────────────────────────────
+  function act(action) {
+    if (acting || !currentId) return;
+    acting = true;
+    clearInterval(countTimer);
+
+    const acceptBtn = document.getElementById('dw2-accept');
+    const rejectBtn = document.getElementById('dw2-reject');
+    acceptBtn.disabled = true;
+    rejectBtn.disabled = true;
+    acceptBtn.innerHTML = action === 'accept' ? '<span class="dw2-spinner"></span>' : acceptBtn.innerHTML;
+
+    fetch('/owner/disponivel_acceptance/' + currentId + '/' + action, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF, Accept: 'application/json' }
+    })
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('dw2-actions').style.display = 'none';
+      const result = document.getElementById('dw2-result');
+      result.style.display = 'block';
+
+      if (data.ok) {
+        if (action === 'accept') {
+          result.className = 'dw2-result accepted';
+          document.getElementById('dw2-result-icon').innerHTML = '<i class="fas fa-check-circle"></i>';
+          document.getElementById('dw2-result-text').textContent = 'Aceito! O cliente está a caminho.';
+        } else {
+          result.className = 'dw2-result rejected';
+          document.getElementById('dw2-result-icon').innerHTML = '<i class="fas fa-times-circle"></i>';
+          document.getElementById('dw2-result-text').textContent = 'Recusado. Cliente não será cobrado.';
+        }
+        currentId = null;
+        setTimeout(hide, 2000);
+      } else {
+        result.className = 'dw2-result rejected';
+        document.getElementById('dw2-result-icon').innerHTML = '<i class="fas fa-triangle-exclamation"></i>';
+        document.getElementById('dw2-result-text').textContent = data.error || 'Erro. Tente novamente.';
+        acting = false;
+      }
+    })
+    .catch(() => {
+      acting = false;
+      acceptBtn.disabled = false;
+      rejectBtn.disabled = false;
+      acceptBtn.innerHTML = '<i class="fas fa-check"></i> Aceitar';
+    });
+  }
+
+  document.getElementById('dw2-accept').addEventListener('click', () => act('accept'));
+  document.getElementById('dw2-reject').addEventListener('click', () => act('reject'));
+
+  document.addEventListener('DOMContentLoaded', startPolling);
+})();
+</script>

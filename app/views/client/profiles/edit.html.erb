@@ -1,230 +1,275 @@
 <% Rails.logger.info("Renderizando client/profiles/edit.html.erb") %>
 
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
+<div id="loov-cursor"></div>
+<div id="loov-cursor-trail"></div>
+<div id="page-transition"></div>
 
+<style>
   :root {
     --lime: #afff2d;
-    --black: #000000;
+    --lime-dim: #8fcc24;
+    --black: #000;
     --surface: #0a0a0a;
-    --surface-2: #111111;
-    --surface-3: #1a1a1a;
-    --border: #222222;
-    --text-muted: #666666;
-    --text-secondary: #999999;
-    --white: #ffffff;
+    --surface-2: #0d0d0d;
+    --surface-3: #141414;
+    --border: #1a1a1a;
+    --border-soft: #222;
+    --text-muted: #444;
+    --text-secondary: #777;
+    --white: #fff;
   }
+
+  #loov-cursor { position:fixed;width:8px;height:8px;background:var(--lime);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .18s ease,height .18s ease;mix-blend-mode:difference; }
+  #loov-cursor-trail { position:fixed;width:38px;height:38px;border:1px solid rgba(175,255,45,0.25);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:width .25s ease,height .25s ease,border-color .25s ease; }
+  body.cursor-hover #loov-cursor { width:14px;height:14px; }
+  body.cursor-hover #loov-cursor-trail { width:58px;height:58px;border-color:rgba(175,255,45,0.45); }
+  @media(hover:none){#loov-cursor,#loov-cursor-trail{display:none;}}
+
+  #page-transition { position:fixed;inset:0;z-index:10000;background:#000;transform:translateY(100%);pointer-events:none; }
+  #page-transition.enter { animation:pgEnter .42s cubic-bezier(.76,0,.24,1) forwards; }
+  #page-transition.exit  { animation:pgExit  .42s cubic-bezier(.76,0,.24,1) forwards; }
+  @keyframes pgEnter { from{transform:translateY(100%)}to{transform:translateY(0)} }
+  @keyframes pgExit  { from{transform:translateY(0)}to{transform:translateY(-100%)} }
+
+  * { box-sizing: border-box; }
+  body { cursor: none; }
 
   .profile-wrap {
-    min-height: 100vh;
-    background: var(--black);
+    min-height: 100vh; background: var(--black);
     font-family: 'DM Sans', sans-serif;
-    padding-top: 64px;
-    padding-bottom: 4rem;
+    padding-top: 60px; padding-bottom: 5rem;
   }
 
-  .profile-inner {
-    max-width: 600px;
-    margin: 0 auto;
-    padding: 3rem 1.5rem;
-  }
+  .profile-inner { max-width: 620px; margin: 0 auto; padding: 3.5rem 1.5rem; }
 
   .profile-eyebrow {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.7rem;
-    font-weight: 500;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--lime);
-    margin-bottom: 1rem;
-    opacity: 0;
-    animation: fadeUp 0.6s ease forwards 0.1s;
+    display: inline-flex; align-items: center; gap: .6rem;
+    font-size: .68rem; font-weight: 500; letter-spacing: .25em;
+    text-transform: uppercase; color: var(--lime); margin-bottom: .875rem;
+    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards .1s;
   }
-  .profile-eyebrow::before {
-    content: '';
-    display: block;
-    width: 24px;
-    height: 1px;
-    background: var(--lime);
-  }
+  .profile-eyebrow::before { content:''; display:block; width:28px; height:1px; background:var(--lime); }
 
   .profile-title {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(2.5rem, 8vw, 4rem);
-    line-height: 1;
-    color: var(--white);
-    margin: 0 0 0.5rem 0;
-    opacity: 0;
-    animation: fadeUp 0.6s ease forwards 0.2s;
+    font-size: clamp(2.5rem, 8vw, 4.5rem);
+    line-height: .92; color: var(--white); margin: 0 0 .5rem;
+    opacity: 0; animation: revealUp .9s cubic-bezier(.16,1,.3,1) forwards .2s;
   }
   .profile-title span { color: var(--lime); }
 
   .profile-sub {
-    font-size: 0.875rem;
-    color: var(--text-muted);
-    margin-bottom: 2.5rem;
-    opacity: 0;
-    animation: fadeUp 0.6s ease forwards 0.3s;
+    font-size: .9rem; color: var(--text-muted); margin-bottom: 2rem;
+    opacity: 0; animation: revealUp .9s cubic-bezier(.16,1,.3,1) forwards .3s;
+    line-height: 1.6;
   }
 
+  .profile-avatar-wrap {
+    display: flex; align-items: center; gap: 1.25rem; margin-bottom: 2rem;
+    opacity: 0; animation: revealUp .9s cubic-bezier(.16,1,.3,1) forwards .35s;
+  }
   .profile-avatar {
-    width: 72px;
-    height: 72px;
-    border-radius: 50%;
-    background: var(--lime);
-    color: var(--black);
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.75rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 2rem;
-    opacity: 0;
-    animation: fadeUp 0.6s ease forwards 0.25s;
+    width: 64px; height: 64px; border-radius: 16px;
+    background: linear-gradient(135deg, #141414, #1e1e1e);
+    border: 1px solid rgba(175,255,45,0.2);
+    color: var(--lime); font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
   }
+  .profile-avatar-info { display: flex; flex-direction: column; gap: .25rem; }
+  .profile-avatar-name { font-size: .9375rem; font-weight: 500; color: var(--white); }
+  .profile-avatar-email { font-size: .8rem; color: var(--text-muted); }
 
-  .profile-card {
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 2rem;
-    opacity: 0;
-    animation: fadeUp 0.6s ease forwards 0.35s;
+  /* ── TABS ── */
+  .profile-tabs {
+    display: flex; gap: 2px; margin-bottom: 1.75rem;
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 4px;
+    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards .38s;
   }
+  .profile-tab {
+    flex: 1; padding: .625rem 1rem; border-radius: 9px; border: none;
+    background: transparent; color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif; font-size: .8rem; font-weight: 500;
+    cursor: pointer; transition: all .2s ease;
+    display: flex; align-items: center; justify-content: center; gap: .4rem;
+  }
+  .profile-tab:hover { color: var(--white); }
+  .profile-tab.active {
+    background: var(--surface-3); color: var(--white);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+  }
+  .profile-tab.active i { color: var(--lime); }
+  .profile-tab i { font-size: .75rem; }
 
-  .profile-section-title {
-    font-size: 0.7rem;
-    font-weight: 500;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    margin-bottom: 1.25rem;
-    padding-bottom: 0.75rem;
+  /* Tab content */
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ── SEÇÕES ── */
+  .profile-section {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 20px; overflow: hidden; margin-bottom: 1rem;
+    opacity: 0; animation: revealUp .9s cubic-bezier(.16,1,.3,1) forwards;
+    position: relative;
+  }
+  .profile-section:nth-child(1) { animation-delay: .4s; }
+  .profile-section:nth-child(2) { animation-delay: .48s; }
+  .profile-section:nth-child(3) { animation-delay: .56s; }
+  .profile-section::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 2px; background: var(--lime); opacity: .5;
+  }
+  .profile-section-header {
+    padding: 1.25rem 1.5rem 1.25rem 1.75rem;
     border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: .625rem;
   }
+  .profile-section-title {
+    font-size: .68rem; font-weight: 600; letter-spacing: .18em;
+    text-transform: uppercase; color: var(--text-muted);
+  }
+  .profile-section-icon { color: var(--lime); font-size: .78rem; }
+  .profile-section-body { padding: 1.5rem 1.5rem 1.5rem 1.75rem; display: flex; flex-direction: column; gap: 1.125rem; }
 
-  .form-group { margin-bottom: 1.25rem; }
-
+  /* ── CAMPOS ── */
+  .form-group { display: flex; flex-direction: column; gap: .4rem; }
   .form-label {
-    display: block;
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--text-secondary);
-    margin-bottom: 0.4rem;
-    letter-spacing: 0.05em;
+    font-size: .72rem; font-weight: 500; color: var(--text-muted);
+    letter-spacing: .08em; text-transform: uppercase;
+    display: flex; align-items: center; gap: .4rem;
   }
-  .form-label span {
-    color: var(--lime);
-    margin-left: 0.25rem;
-    font-size: 0.65rem;
+  .form-label-badge {
+    font-size: .58rem; font-weight: 600; letter-spacing: .06em;
+    padding: .15rem .45rem; border-radius: 100px; text-transform: uppercase;
   }
-  .form-label span.optional {
-    color: var(--text-muted);
-  }
-
+  .badge-required { background: rgba(175,255,45,.1); color: var(--lime); border: 1px solid rgba(175,255,45,.2); }
+  .badge-optional  { background: transparent; color: #2a2a2a; border: 1px solid #1e1e1e; }
   .form-input {
-    width: 100%;
-    background: var(--surface-3);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 0.75rem 1rem;
-    font-size: 0.9rem;
-    color: var(--white);
-    font-family: 'DM Sans', sans-serif;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    box-sizing: border-box;
-  }
-  .form-input:focus {
-    outline: none;
-    border-color: var(--lime);
-    box-shadow: 0 0 0 3px rgba(175, 255, 45, 0.08);
+    background: var(--surface-3); border: 1px solid var(--border);
+    border-radius: 10px; padding: .875rem 1rem;
+    font-size: .9375rem; color: var(--white);
+    font-family: 'DM Sans', sans-serif; transition: all .2s ease;
+    width: 100%; cursor: none; outline: none;
   }
   .form-input::placeholder { color: var(--text-muted); }
-  .form-input[disabled] { opacity: 0.4; cursor: not-allowed; }
+  .form-input:focus { border-color: var(--lime); box-shadow: 0 0 0 3px rgba(175,255,45,0.07); }
+  .form-input:disabled { opacity: .35; cursor: not-allowed; }
+  .form-input.error { border-color: #f87171; box-shadow: 0 0 0 3px rgba(248,113,113,0.07); }
+  .form-hint { font-size: .72rem; color: var(--text-muted); margin-top: .2rem; line-height: 1.5; }
+  .field-error-msg { font-size: .72rem; color: #f87171; margin-top: .3rem; display: flex; align-items: center; gap: .3rem; }
 
-  .form-input.error {
-    border-color: #ff4d4d;
-    box-shadow: 0 0 0 3px rgba(255, 77, 77, 0.08);
-  }
-
-  .field-error-msg {
-    font-size: 0.72rem;
-    color: #ff4d4d;
-    margin-top: 0.4rem;
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-    animation: fadeUp 0.2s ease forwards;
-  }
-
-  .form-hint {
-    font-size: 0.72rem;
-    color: var(--text-muted);
-    margin-top: 0.35rem;
-  }
-
-  .divider {
-    border: none;
-    border-top: 1px solid var(--border);
-    margin: 1.75rem 0;
-  }
-
+  .profile-actions { opacity: 0; animation: revealUp .9s cubic-bezier(.16,1,.3,1) forwards .64s; }
   .btn-submit {
-    width: 100%;
-    background: var(--lime);
-    color: var(--black);
-    border: none;
-    border-radius: 10px;
-    padding: 0.9rem 1.5rem;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.1rem;
-    letter-spacing: 0.08em;
-    cursor: pointer;
-    transition: opacity 0.2s ease, transform 0.15s ease;
-    margin-top: 1.5rem;
+    width: 100%; background: var(--lime); color: var(--black); border: none;
+    border-radius: 100px; padding: .9rem 1.75rem;
+    font-family: 'DM Sans', sans-serif; font-size: .9375rem; font-weight: 600;
+    cursor: none; transition: all .22s ease;
   }
-  .btn-submit:hover { opacity: 0.88; transform: translateY(-1px); }
+  .btn-submit:hover { background: var(--lime-dim); transform: translateY(-2px); box-shadow: 0 10px 28px rgba(175,255,45,0.18); }
 
+  /* ── PAGAMENTO ── */
+  .payment-section {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 20px; overflow: hidden; margin-bottom: 1rem;
+    position: relative;
+    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards .4s;
+  }
+  .payment-section::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 2px; background: var(--lime); opacity: .5;
+  }
+  .payment-section-header {
+    padding: 1.25rem 1.5rem 1.25rem 1.75rem;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: .625rem;
+  }
+  .payment-section-body { padding: 1.5rem 1.5rem 1.5rem 1.75rem; }
+
+  /* Cartão já cadastrado */
+  .card-saved {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem; flex-wrap: wrap;
+  }
+  .card-saved-left { display: flex; align-items: center; gap: .875rem; }
+  .card-icon {
+    width: 44px; height: 44px; border-radius: 10px;
+    background: rgba(175,255,45,.06); border: 1px solid rgba(175,255,45,.15);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--lime); font-size: 1rem; flex-shrink: 0;
+  }
+  .card-info-label { font-size: .68rem; color: var(--text-muted); margin-bottom: .15rem; }
+  .card-info-val { font-size: .9375rem; font-weight: 500; color: var(--white); }
+  .btn-remove-card {
+    background: transparent; border: 1px solid #2a2a2a; border-radius: 100px;
+    color: #444; font-size: .78rem; padding: .4rem .875rem;
+    cursor: pointer; transition: all .15s; font-family: 'DM Sans', sans-serif;
+  }
+  .btn-remove-card:hover { border-color: #f87171; color: #f87171; }
+
+  /* Formulário de novo cartão */
+  .card-form-wrap { margin-top: 0; }
+  .card-form-label {
+    font-size: .72rem; font-weight: 500; color: var(--text-muted);
+    letter-spacing: .08em; text-transform: uppercase; margin-bottom: .5rem; display: block;
+  }
+  #stripe-card-element {
+    background: var(--surface-3); border: 1px solid var(--border);
+    border-radius: 10px; padding: .875rem 1rem; transition: border-color .2s;
+  }
+  #stripe-card-element.StripeElement--focus { border-color: var(--lime); }
+  #stripe-card-element.StripeElement--invalid { border-color: #f87171; }
+  #card-errors { color: #f87171; font-size: .75rem; margin-top: .4rem; min-height: 1rem; }
+
+  .btn-save-card {
+    width: 100%; margin-top: 1rem;
+    background: var(--lime); color: #000; border: none;
+    border-radius: 100px; padding: .875rem;
+    font-family: 'DM Sans', sans-serif; font-size: .875rem; font-weight: 700;
+    cursor: pointer; transition: all .2s; display: flex; align-items: center; justify-content: center; gap: .4rem;
+  }
+  .btn-save-card:hover:not(:disabled) { background: var(--lime-dim); transform: translateY(-1px); }
+  .btn-save-card:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+  .payment-note {
+    display: flex; align-items: center; gap: .5rem;
+    margin-top: .875rem; font-size: .72rem; color: var(--text-muted);
+  }
+  .payment-note i { color: var(--lime); font-size: .65rem; }
+
+  /* Alerta de cartão necessário */
+  .card-required-banner {
+    display: flex; align-items: flex-start; gap: .75rem;
+    background: rgba(175,255,45,.04); border: 1px solid rgba(175,255,45,.15);
+    border-radius: 12px; padding: 1rem 1.125rem; margin-bottom: 1.25rem;
+  }
+  .card-required-banner i { color: var(--lime); margin-top: .1rem; flex-shrink: 0; }
+  .card-required-banner-text { font-size: .8rem; color: var(--text-muted); line-height: 1.55; }
+  .card-required-banner-text strong { color: var(--white); }
+
+  .spinner { display:inline-block;width:14px;height:14px;border:2px solid rgba(0,0,0,.3);border-top-color:#000;border-radius:50%;animation:spin .7s linear infinite; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+
+  /* ── TOAST ── */
   .toast-bar {
-    position: fixed;
-    bottom: 2rem;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 0.85rem 1.5rem;
-    border-radius: 12px;
-    font-size: 0.875rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    z-index: 9999;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-    animation: slideUp 0.3s ease forwards;
-    white-space: nowrap;
+    position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%);
+    padding: .875rem 1.5rem; border-radius: 100px; font-size: .875rem;
+    display: flex; align-items: center; gap: .5rem; z-index: 9999;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    animation: toastUp .3s cubic-bezier(.16,1,.3,1) forwards; white-space: nowrap;
+    font-family: 'DM Sans', sans-serif;
   }
-  .toast-success {
-    background: rgba(175, 255, 45, 0.12);
-    border: 1px solid rgba(175, 255, 45, 0.3);
-    color: var(--lime);
-  }
-  .toast-error {
-    background: rgba(255, 77, 77, 0.12);
-    border: 1px solid rgba(255, 77, 77, 0.3);
-    color: #ff4d4d;
-  }
+  .toast-success { background: rgba(175,255,45,.1); border: 1px solid rgba(175,255,45,.25); color: var(--lime); }
+  .toast-error   { background: rgba(248,113,113,.1); border: 1px solid rgba(248,113,113,.25); color: #f87171; }
 
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(16px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes slideUp {
-    from { opacity: 0; transform: translateX(-50%) translateY(16px); }
-    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
-  }
+  @keyframes revealUp { from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)} }
+  @keyframes toastUp  { from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%) translateY(0)} }
 
-  @media (max-width: 640px) {
-    .profile-card { padding: 1.25rem; }
+  @media(max-width:640px) {
+    .profile-inner { padding: 2.5rem 1.25rem; }
+    .profile-section-body { padding: 1.25rem; }
+    .profile-section-header { padding: 1rem 1.25rem; }
+    .payment-section-body { padding: 1.25rem; }
   }
 </style>
 
@@ -233,184 +278,309 @@
 
     <div class="profile-eyebrow">Conta</div>
     <h1 class="profile-title">Meu <span>Perfil</span></h1>
-    <p class="profile-sub">Mantenha seus dados atualizados para uma experiência melhor.</p>
+    <p class="profile-sub">Seus dados, do seu jeito. Mantenha tudo atualizado.</p>
 
-    <div class="profile-avatar"><%= current_user.initials %></div>
+    <div class="profile-avatar-wrap">
+      <div class="profile-avatar"><%= current_user.initials %></div>
+      <div class="profile-avatar-info">
+        <div class="profile-avatar-name"><%= current_user.display_name %></div>
+        <div class="profile-avatar-email"><%= current_user.email %></div>
+      </div>
+    </div>
 
     <% if notice %>
-      <div class="toast-bar toast-success">
-        <i class="fas fa-check-circle"></i> <%= notice %>
-      </div>
+      <div class="toast-bar toast-success"><i class="fas fa-check-circle"></i> <%= notice %></div>
     <% end %>
-
     <% if flash[:errors] %>
       <% flash[:errors].each do |msg| %>
-        <div class="toast-bar toast-error">
-          <i class="fas fa-circle-exclamation"></i> <%= msg %>
-        </div>
+        <div class="toast-bar toast-error"><i class="fas fa-circle-exclamation"></i> <%= msg %></div>
       <% end %>
     <% end %>
+    <% if flash[:alert] %>
+      <div class="toast-bar toast-error"><i class="fas fa-circle-exclamation"></i> <%= flash[:alert] %></div>
+    <% end %>
 
-    <%= form_with model: current_user, url: client_profile_path, method: :patch, data: { turbo: false } do |f| %>
+    <!-- TABS -->
+    <div class="profile-tabs">
+      <button class="profile-tab <%= params[:add_card] ? '' : 'active' %>" data-tab="perfil" id="tab-perfil">
+        <i class="fas fa-user"></i> Perfil
+      </button>
+      <button class="profile-tab <%= params[:add_card] ? 'active' : '' %>" data-tab="pagamento" id="tab-pagamento">
+        <i class="fas fa-credit-card"></i> Pagamento
+        <% unless current_user.has_payment_method? %>
+          <span style="width:6px;height:6px;border-radius:50%;background:#f87171;display:inline-block;margin-left:.1rem;"></span>
+        <% end %>
+      </button>
+    </div>
 
-      <div class="profile-card">
-        <div class="profile-section-title">
-          <i class="fas fa-user" style="margin-right:0.4rem;"></i> Dados Pessoais
+    <!-- ── TAB: PERFIL ── -->
+    <div class="tab-content <%= params[:add_card] ? '' : 'active' %>" id="tab-content-perfil">
+      <%= form_with model: current_user, url: client_profile_path, method: :patch, data: { turbo: false } do |f| %>
+
+        <div class="profile-section">
+          <div class="profile-section-header">
+            <i class="fas fa-user profile-section-icon"></i>
+            <span class="profile-section-title">Dados Pessoais</span>
+          </div>
+          <div class="profile-section-body">
+            <div class="form-group">
+              <%= f.label :full_name, class: "form-label" do %>
+                Nome completo <span class="form-label-badge badge-required">obrigatório</span>
+              <% end %>
+              <%= f.text_field :full_name, class: "form-input", placeholder: "Seu nome completo", id: "full_name_field" %>
+            </div>
+            <div class="form-group">
+              <%= f.label :email, class: "form-label" do %>E-mail<% end %>
+              <%= f.email_field :email, class: "form-input", disabled: true, value: current_user.email %>
+              <div class="form-hint">O e-mail não pode ser alterado aqui.</div>
+            </div>
+            <div class="form-group">
+              <%= f.label :phone, class: "form-label" do %>
+                Telefone <span class="form-label-badge badge-required">obrigatório</span>
+              <% end %>
+              <%= f.text_field :phone, class: "form-input", placeholder: "(11) 99999-9999", id: "phone_field", maxlength: 15 %>
+            </div>
+            <div class="form-group">
+              <%= f.label :cpf, class: "form-label" do %>
+                CPF <span class="form-label-badge badge-optional">opcional</span>
+              <% end %>
+              <%= f.text_field :cpf, class: "form-input", placeholder: "000.000.000-00", id: "cpf_field", maxlength: 14 %>
+            </div>
+          </div>
         </div>
 
-        <div class="form-group">
-          <%= f.label :full_name, class: "form-label" do %>
-            Nome completo <span>obrigatório</span>
+        <div class="profile-section">
+          <div class="profile-section-header">
+            <i class="fas fa-car profile-section-icon"></i>
+            <span class="profile-section-title">Veículo</span>
+          </div>
+          <div class="profile-section-body">
+            <div class="form-group">
+              <%= f.label :vehicle_model, class: "form-label" do %>
+                Modelo <span class="form-label-badge badge-optional">opcional</span>
+              <% end %>
+              <%= f.text_field :vehicle_model, class: "form-input", placeholder: "Ex: Honda Civic Preto 2022" %>
+              <div class="form-hint">Ajuda o lava-rápido a te encontrar na fila. 🚗</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-actions">
+          <%= f.submit "Salvar perfil", class: "btn-submit" %>
+        </div>
+
+      <% end %>
+    </div>
+
+    <!-- ── TAB: PAGAMENTO ── -->
+    <div class="tab-content <%= params[:add_card] ? 'active' : '' %>" id="tab-content-pagamento">
+
+      <div class="payment-section">
+        <div class="payment-section-header">
+          <i class="fas fa-credit-card profile-section-icon"></i>
+          <span class="profile-section-title">Cartão de pagamento</span>
+        </div>
+        <div class="payment-section-body">
+
+          <% if current_user.has_payment_method? %>
+            <!-- Cartão já cadastrado -->
+            <div class="card-saved">
+              <div class="card-saved-left">
+                <div class="card-icon"><i class="fas fa-credit-card"></i></div>
+                <div>
+                  <div class="card-info-label">Cartão cadastrado</div>
+                  <div class="card-info-val"><%= current_user.card_display %></div>
+                </div>
+              </div>
+              <%= link_to "Remover cartão", remove_payment_method_client_profile_path,
+                          method: :delete,
+                          data: { turbo: false, confirm: "Tem certeza? Você não poderá usar a aba Disponíveis sem um cartão." },
+                          class: "btn-remove-card" %>
+            </div>
+            <div class="payment-note" style="margin-top:1.25rem;">
+              <i class="fas fa-shield-halved"></i>
+              Seu cartão é armazenado com segurança pelo Stripe. A Loov não guarda dados do cartão.
+            </div>
+          <% else %>
+            <!-- Sem cartão — banner explicativo + formulário -->
+            <% if params[:add_card] %>
+            <div class="card-required-banner">
+              <i class="fas fa-bolt"></i>
+              <div class="card-required-banner-text">
+                <strong>Cartão necessário para a aba Disponíveis.</strong>
+                Cadastre um cartão para reservar vagas em tempo real. O valor é autorizado mas só cobrado após o lava-rápido confirmar.
+              </div>
+            </div>
+            <% end %>
+
+            <div class="card-form-wrap">
+              <label class="card-form-label">Dados do cartão</label>
+              <div id="stripe-card-element"></div>
+              <div id="card-errors" role="alert"></div>
+              <button class="btn-save-card" id="btn-save-card">
+                <i class="fas fa-lock"></i> Salvar cartão
+              </button>
+              <div class="payment-note">
+                <i class="fas fa-shield-halved"></i>
+                Pagamento processado com segurança pelo Stripe. Não armazenamos dados do cartão.
+              </div>
+            </div>
           <% end %>
-          <%= f.text_field :full_name,
-              class: "form-input",
-              placeholder: "Seu nome completo",
-              id: "full_name_field" %>
+
         </div>
-
-        <div class="form-group">
-          <%= f.label :email, class: "form-label" do %>
-            E-mail
-          <% end %>
-          <%= f.email_field :email,
-              class: "form-input",
-              disabled: true,
-              value: current_user.email %>
-          <div class="form-hint">O e-mail não pode ser alterado aqui.</div>
-        </div>
-
-        <div class="form-group">
-          <%= f.label :phone, class: "form-label" do %>
-            WhatsApp / Telefone <span>obrigatório</span>
-          <% end %>
-          <%= f.text_field :phone,
-              class: "form-input",
-              placeholder: "(11) 99999-9999",
-              id: "phone_field",
-              maxlength: 15 %>
-        </div>
-
-        <div class="form-group">
-          <%= f.label :cpf, class: "form-label" do %>
-            CPF <span class="optional">opcional</span>
-          <% end %>
-          <%= f.text_field :cpf,
-              class: "form-input",
-              placeholder: "000.000.000-00",
-              id: "cpf_field",
-              maxlength: 14 %>
-        </div>
-
-        <hr class="divider">
-
-        <div class="profile-section-title">
-          <i class="fas fa-car" style="margin-right:0.4rem;"></i> Veículo
-        </div>
-
-        <div class="form-group">
-          <%= f.label :vehicle_model, class: "form-label" do %>
-            Modelo do veículo <span class="optional">opcional</span>
-          <% end %>
-          <%= f.text_field :vehicle_model,
-              class: "form-input",
-              placeholder: "ex: Honda Civic Preto 2022" %>
-          <div class="form-hint">Ajuda o lava-rápido a identificar seu carro na fila.</div>
-        </div>
-
-        <%= f.submit "Salvar Perfil", class: "btn-submit" %>
       </div>
 
-    <% end %>
+    </div><!-- /tab pagamento -->
 
   </div>
 </div>
 
+<!-- Dados para o JS -->
+<% if !current_user.has_payment_method? && @setup_client_secret.present? %>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+  const STRIPE_PK        = "<%= ENV['STRIPE_PUBLISHABLE_KEY'] %>";
+  const SETUP_SECRET     = "<%= @setup_client_secret %>";
+  const CSRF_TOKEN       = document.querySelector('meta[name="csrf-token"]').content;
+  const RETURN_TO        = "<%= session[:return_to_after_card] || edit_client_profile_path %>";
+  const HAS_SETUP_INTENT = true;
+</script>
+<% else %>
+<script>
+  const HAS_SETUP_INTENT = false;
+  const STRIPE_PK        = "<%= ENV['STRIPE_PUBLISHABLE_KEY'] %>";
+  const CSRF_TOKEN       = document.querySelector('meta[name="csrf-token"]').content;
+  const RETURN_TO        = "<%= edit_client_profile_path %>";
+</script>
+<% end %>
 
-  var nameField  = document.getElementById('full_name_field');
-  var phoneField = document.getElementById('phone_field');
-  var cpfField   = document.getElementById('cpf_field');
-
-  // Máscara telefone
-  if (phoneField) {
-    phoneField.addEventListener('input', function() {
-      var v = this.value.replace(/\D/g, '');
-      if (v.length <= 10) {
-        v = v.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
-      } else {
-        v = v.replace(/^(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
-      }
-      this.value = v;
-      if (this.classList.contains('error')) validateField(this);
-    });
-    phoneField.addEventListener('blur', function() { validateField(this); });
+<script>
+(function() {
+  // CURSOR
+  const cursor = document.getElementById('loov-cursor');
+  const trail  = document.getElementById('loov-cursor-trail');
+  if (cursor && trail) {
+    let mx=-100,my=-100,tx=-100,ty=-100;
+    document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cursor.style.left=mx+'px';cursor.style.top=my+'px';});
+    (function anim(){tx+=(mx-tx)*0.12;ty+=(my-ty)*0.12;trail.style.left=tx+'px';trail.style.top=ty+'px';requestAnimationFrame(anim);})();
+    document.addEventListener('mouseover',e=>{if(e.target.closest('a,button,input,select,textarea'))document.body.classList.add('cursor-hover');});
+    document.addEventListener('mouseout', e=>{if(e.target.closest('a,button,input,select,textarea'))document.body.classList.remove('cursor-hover');});
+    document.addEventListener('mouseleave',()=>{cursor.style.opacity='0';trail.style.opacity='0';});
+    document.addEventListener('mouseenter',()=>{cursor.style.opacity='1';trail.style.opacity='1';});
   }
 
-  // Máscara CPF
-  if (cpfField) {
-    cpfField.addEventListener('input', function() {
-      var v = this.value.replace(/\D/g, '');
-      v = v.replace(/^(\d{3})(\d{3})(\d{3})(\d{0,2})/, '$1.$2.$3-$4');
-      this.value = v;
-    });
+  // PAGE TRANSITION
+  const pt = document.getElementById('page-transition');
+  if (pt) {
+    document.addEventListener('click',e=>{const link=e.target.closest('a[href]');if(!link)return;const href=link.getAttribute('href');if(!href||href.startsWith('#')||href.startsWith('mailto')||link.target==='_blank')return;if(href.startsWith('http')&&!href.includes(window.location.hostname))return;e.preventDefault();pt.classList.add('enter');setTimeout(()=>window.location.href=href,400);});
+    window.addEventListener('pageshow',()=>{pt.classList.remove('enter');pt.classList.add('exit');setTimeout(()=>pt.classList.remove('exit'),440);});
   }
 
-  // Validação nome
-  if (nameField) {
-    nameField.addEventListener('blur', function() { validateField(this); });
-    nameField.addEventListener('input', function() {
-      if (this.classList.contains('error')) validateField(this);
+  document.addEventListener('DOMContentLoaded', function() {
+
+    // ── TABS ──────────────────────────────────────────────────────────────
+    document.querySelectorAll('.profile-tab').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        const tab = this.dataset.tab;
+        document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+        document.getElementById('tab-content-' + tab).classList.add('active');
+      });
     });
-  }
 
-  function validateField(field) {
-    var value = field.value.trim();
-    field.classList.remove('error');
-    var prev = field.parentElement.querySelector('.field-error-msg');
-    if (prev) prev.remove();
-
-    if (value === '') {
-      field.classList.add('error');
-      var msg = document.createElement('div');
-      msg.className = 'field-error-msg';
-      msg.innerHTML = '<i class="fas fa-circle-exclamation"></i> Campo obrigatório';
-      field.parentElement.appendChild(msg);
-      return false;
+    // ── MÁSCARAS ──────────────────────────────────────────────────────────
+    var phoneField = document.getElementById('phone_field');
+    var cpfField   = document.getElementById('cpf_field');
+    if (phoneField) {
+      phoneField.addEventListener('input', function() {
+        var v=this.value.replace(/\D/g,'');
+        v=v.length<=10?v.replace(/^(\d{2})(\d{4})(\d{0,4})/,'($1) $2-$3'):v.replace(/^(\d{2})(\d{5})(\d{0,4})/,'($1) $2-$3');
+        this.value=v;
+      });
     }
-    return true;
-  }
+    if (cpfField) {
+      cpfField.addEventListener('input', function() {
+        var v=this.value.replace(/\D/g,'');
+        this.value=v.replace(/^(\d{3})(\d{3})(\d{3})(\d{0,2})/,'$1.$2.$3-$4');
+      });
+    }
 
-  // Intercepta submit
-  var form = document.querySelector('form');
-  if (form) {
-    form.addEventListener('submit', function(e) {
-      var valid = true;
-      var firstInvalid = null;
+    // ── VALIDAÇÃO PERFIL ──────────────────────────────────────────────────
+    var nameField = document.getElementById('full_name_field');
+    function validateField(field) {
+      var val=field.value.trim();field.classList.remove('error');
+      var prev=field.parentElement.querySelector('.field-error-msg');if(prev)prev.remove();
+      if(val===''){field.classList.add('error');var msg=document.createElement('div');msg.className='field-error-msg';msg.innerHTML='<i class="fas fa-circle-exclamation"></i> Campo obrigatório';field.parentElement.appendChild(msg);return false;}
+      return true;
+    }
+    if(nameField)  nameField.addEventListener('blur',()=>validateField(nameField));
+    if(phoneField) phoneField.addEventListener('blur',()=>validateField(phoneField));
+    var form=document.querySelector('form');
+    if(form){form.addEventListener('submit',function(e){var valid=true,first=null;[nameField,phoneField].forEach(function(f){if(!f)return;if(!validateField(f)){if(!first)first=f;valid=false;}});if(!valid){e.preventDefault();first.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>first.focus(),400);}});}
 
-      [nameField, phoneField].forEach(function(field) {
-        if (!field) return;
-        var ok = validateField(field);
-        if (!ok && !firstInvalid) firstInvalid = field;
-        if (!ok) valid = false;
+    // ── STRIPE SETUP INTENT ───────────────────────────────────────────────
+    if (HAS_SETUP_INTENT && document.getElementById('stripe-card-element')) {
+      var stripe   = Stripe(STRIPE_PK);
+      var elements = stripe.elements();
+      var card     = elements.create('card', {
+        style: {
+          base: {
+            color: '#ffffff', fontFamily: 'DM Sans, sans-serif',
+            fontSize: '15px', '::placeholder': { color: '#444' },
+            iconColor: '#afff2d', backgroundColor: '#141414'
+          },
+          invalid: { color: '#f87171', iconColor: '#f87171' }
+        },
+        hidePostalCode: true
+      });
+      card.mount('#stripe-card-element');
+      card.on('change', function(e) {
+        document.getElementById('card-errors').textContent = e.error ? e.error.message : '';
       });
 
-      if (!valid) {
-        e.preventDefault();
-        firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        setTimeout(function() { firstInvalid.focus(); }, 400);
+      var saveBtn = document.getElementById('btn-save-card');
+      if (saveBtn) {
+        saveBtn.addEventListener('click', async function() {
+          saveBtn.disabled = true;
+          saveBtn.innerHTML = '<span class="spinner"></span> Salvando...';
+          document.getElementById('card-errors').textContent = '';
+
+          // Confirma o SetupIntent — gera um PaymentMethod
+          var result = await stripe.confirmCardSetup(SETUP_SECRET, {
+            payment_method: { card: card }
+          });
+
+          if (result.error) {
+            document.getElementById('card-errors').textContent = result.error.message;
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-lock"></i> Salvar cartão';
+            return;
+          }
+
+          // Envia o payment_method_id para o backend salvar no usuário
+          var res = await fetch('/client/profile/attach_payment_method', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN, 'Accept': 'application/json' },
+            body: JSON.stringify({ payment_method_id: result.setupIntent.payment_method })
+          });
+          var data = await res.json();
+
+          if (data.ok) {
+            // Se veio de aba Disponíveis, volta pro slot
+            window.location.href = data.return_to || window.location.href;
+          } else {
+            document.getElementById('card-errors').textContent = data.error || 'Erro ao salvar cartão.';
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-lock"></i> Salvar cartão';
+          }
+        });
       }
+    }
+
+    // ── AUTO-DISMISS TOASTS ───────────────────────────────────────────────
+    document.querySelectorAll('.toast-bar').forEach(function(t){
+      setTimeout(function(){t.style.transition='opacity .5s ease';t.style.opacity='0';setTimeout(()=>t.remove(),500);},3500);
     });
-  }
-
-  // Auto-dismiss toast
-  document.querySelectorAll('.toast-bar').forEach(function(toast) {
-    setTimeout(function() {
-      toast.style.transition = 'opacity 0.5s ease';
-      toast.style.opacity = '0';
-      setTimeout(function() { toast.remove(); }, 500);
-    }, 3000);
   });
-
-});
+})();
 </script>
