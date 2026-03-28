@@ -65,7 +65,7 @@
   .nav-avatar-wrap { display:inline-flex; align-items:center; gap:0.35rem; position:relative; }
   .nav-avatar-dot { width:7px; height:7px; border-radius:50%; background:#ffaa00; position:absolute; top:-1px; right:-1px; border:1.5px solid #000; }
 
-  /* ── SINO ── */
+  /* ── SINO CLIENTE ── */
   .nav-bell-wrap { position:relative; display:inline-flex; align-items:center; }
   .nav-bell-btn {
     position:relative; width:32px; height:32px; border-radius:8px;
@@ -120,6 +120,101 @@
   .nav-notif-footer a { font-size:.72rem; color:rgba(175,255,45,.5); text-decoration:none; transition:color .15s; }
   .nav-notif-footer a:hover { color:#afff2d; }
 
+  /* ── SUPORTE OWNER/ATTENDANT ── */
+  .nav-support-btn {
+    position:relative; width:32px; height:32px; border-radius:8px;
+    background:transparent; border:1px solid transparent;
+    display:flex; align-items:center; justify-content:center;
+    color:#444; font-size:.78rem; cursor:pointer; transition:all .2s;
+  }
+  .nav-support-btn:hover { color:var(--white); background:rgba(255,255,255,.05); border-color:rgba(255,255,255,.06); }
+  .nav-support-btn.has-reply { color:#60a5fa; border-color:rgba(96,165,250,.2); background:rgba(96,165,250,.06); }
+  .nav-support-badge {
+    position:absolute; top:-4px; right:-4px;
+    background:#60a5fa; color:#000;
+    font-family:'Montserrat',sans-serif; font-size:.48rem; font-weight:800;
+    width:14px; height:14px; border-radius:50%;
+    display:none; align-items:center; justify-content:center;
+    border:2px solid #000;
+  }
+  .nav-support-badge.visible { display:flex; }
+
+  /* Modal suporte */
+  .support-modal-overlay {
+    position:fixed; inset:0; z-index:300;
+    background:rgba(0,0,0,.85); backdrop-filter:blur(8px);
+    display:none; align-items:center; justify-content:center; padding:1rem;
+  }
+  .support-modal-overlay.open { display:flex; }
+  .support-modal {
+    background:#080808; border:1px solid #1e1e1e; border-radius:20px;
+    width:100%; max-width:480px; max-height:85vh;
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .support-modal-header {
+    padding:1.125rem 1.25rem; border-bottom:1px solid #111;
+    display:flex; align-items:center; justify-content:space-between; flex-shrink:0;
+  }
+  .support-modal-title {
+    font-family:'Montserrat',sans-serif; font-size:.62rem; font-weight:700;
+    letter-spacing:.15em; text-transform:uppercase; color:#60a5fa;
+  }
+  .support-modal-close {
+    background:none; border:none; color:#444; font-size:1rem; cursor:pointer;
+    width:28px; height:28px; display:flex; align-items:center; justify-content:center;
+    border-radius:6px; transition:all .15s;
+  }
+  .support-modal-close:hover { color:#f87171; background:rgba(248,113,113,.08); }
+  .support-modal-body { flex:1; overflow-y:auto; padding:1rem 1.25rem; }
+  .support-modal-body::-webkit-scrollbar { width:2px; }
+  .support-modal-body::-webkit-scrollbar-thumb { background:#1a1a1a; border-radius:99px; }
+  .support-thread { display:flex; flex-direction:column; gap:6px; margin-bottom:1rem; }
+  .support-msg { max-width:85%; padding:8px 12px; border-radius:10px; line-height:1.5; }
+  .support-msg-admin { align-self:flex-end; background:rgba(175,255,45,.07); border:1px solid rgba(175,255,45,.15); }
+  .support-msg-owner { align-self:flex-start; background:rgba(96,165,250,.07); border:1px solid rgba(96,165,250,.15); }
+  .support-msg-author { font-size:.58rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin-bottom:2px; }
+  .support-msg-admin .support-msg-author { color:rgba(175,255,45,.5); }
+  .support-msg-owner .support-msg-author { color:rgba(96,165,250,.5); }
+  .support-msg-body { font-size:.8rem; color:#ccc; white-space:pre-wrap; }
+  .support-modal-footer { padding:.875rem 1.25rem 1.25rem; border-top:1px solid #111; flex-shrink:0; }
+  .support-textarea {
+    width:100%; background:#0a0a0a; border:1px solid #1e1e1e; border-radius:8px;
+    color:#fff; font-family:'DM Sans',sans-serif; font-size:.8125rem;
+    padding:.75rem 1rem; outline:none; resize:vertical; min-height:68px;
+    transition:border-color .2s; margin-bottom:.625rem;
+  }
+  .support-textarea:focus { border-color:rgba(96,165,250,.35); }
+  .support-textarea::placeholder { color:#333; }
+  .support-footer-actions { display:flex; gap:.5rem; }
+  .support-btn-send {
+    flex:2; background:#60a5fa; border:none; border-radius:8px; color:#000;
+    font-family:'DM Sans',sans-serif; font-size:.8125rem; font-weight:700;
+    padding:.625rem; cursor:pointer; transition:background .15s;
+  }
+  .support-btn-send:hover { background:#3b82f6; }
+  .support-btn-close-ticket {
+    flex:1; background:transparent; border:1px solid #1e1e1e; border-radius:8px;
+    color:#444; font-family:'DM Sans',sans-serif; font-size:.8rem;
+    padding:.625rem; cursor:pointer; transition:all .15s;
+  }
+  .support-btn-close-ticket:hover { border-color:rgba(248,113,113,.3); color:#f87171; }
+
+  /* Formulário novo ticket */
+  .support-new-form { display:flex; flex-direction:column; gap:.875rem; }
+  .support-form-label { font-size:.6rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#444; margin-bottom:.25rem; display:block; }
+  .support-form-select {
+    width:100%; background:#0a0a0a; border:1px solid #1e1e1e; border-radius:8px;
+    color:#fff; font-family:'DM Sans',sans-serif; font-size:.8125rem;
+    padding:.75rem 1rem; outline:none; cursor:pointer;
+  }
+  .support-form-select option { background:#111; }
+  .support-btn-open {
+    width:100%; background:#60a5fa; border:none; border-radius:8px; color:#000;
+    font-family:'DM Sans',sans-serif; font-size:.875rem; font-weight:700;
+    padding:.75rem; cursor:pointer; transition:background .15s;
+  }
+  .support-btn-open:hover { background:#3b82f6; }
+
   .loov-hamburger {
     display:none; flex-direction:column; justify-content:center; align-items:center;
     gap:5px; width:36px; height:36px; background:none; border:none;
@@ -150,6 +245,22 @@
 </style>
 
 <% current_path = request.path %>
+
+<%# Modal de suporte — owner e attendant %>
+<% if user_signed_in? && (current_user.owner? || current_user.attendant?) %>
+<div class="support-modal-overlay" id="support-modal-overlay">
+  <div class="support-modal">
+    <div class="support-modal-header">
+      <span class="support-modal-title"><i class="fas fa-headset" style="margin-right:.4rem;"></i>Suporte Loov</span>
+      <button class="support-modal-close" id="support-modal-close"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="support-modal-body" id="support-modal-body">
+      <div style="text-align:center;padding:2rem;color:#333;font-size:.8rem;">Carregando...</div>
+    </div>
+    <div class="support-modal-footer" id="support-modal-footer" style="display:none;"></div>
+  </div>
+</div>
+<% end %>
 
 <div class="loov-drawer-overlay" id="drawer-overlay"></div>
 <div class="loov-drawer" id="loov-drawer">
@@ -213,7 +324,6 @@
     <% if user_signed_in? %>
       <% if current_user.client? %>
         <li><%= link_to "Meus Agendamentos", appointments_path, class: current_path == appointments_path ? 'active' : '' %></li>
-
         <li>
           <div class="nav-bell-wrap">
             <button class="nav-bell-btn" id="nav-bell-btn" title="Notificações">
@@ -222,26 +332,17 @@
             </button>
             <div class="nav-notif-dropdown" id="nav-notif-dropdown">
               <div class="nav-notif-header">Notificações</div>
-              <div id="nav-notif-list">
-                <div class="nav-notif-empty">Nenhuma notificação.</div>
-              </div>
-              <div class="nav-notif-footer">
-                <%= link_to "Ver todos os agendamentos", appointments_path %>
-              </div>
+              <div id="nav-notif-list"><div class="nav-notif-empty">Nenhuma notificação.</div></div>
+              <div class="nav-notif-footer"><%= link_to "Ver todos os agendamentos", appointments_path %></div>
             </div>
           </div>
         </li>
-
         <li>
           <div class="nav-avatar-wrap">
-            <%= link_to edit_client_profile_path,
-                class: "nav-avatar #{current_user.profile_complete? ? '' : 'incomplete'}",
-                title: current_user.profile_complete? ? current_user.display_name : "Complete seu perfil" do %>
+            <%= link_to edit_client_profile_path, class: "nav-avatar #{current_user.profile_complete? ? '' : 'incomplete'}", title: current_user.profile_complete? ? current_user.display_name : "Complete seu perfil" do %>
               <i class="fas fa-user" style="font-size:0.75rem;"></i>
             <% end %>
-            <% unless current_user.profile_complete? %>
-              <span class="nav-avatar-dot"></span>
-            <% end %>
+            <% unless current_user.profile_complete? %><span class="nav-avatar-dot"></span><% end %>
           </div>
         </li>
         <li><div class="loov-nav-sep"></div></li>
@@ -260,6 +361,12 @@
         <li><%= link_to "Financeiro", owner_monthly_costs_path, class: current_path.include?('monthly_costs') ? 'active' : '' %></li>
         <li><%= link_to "Relatórios", owner_financial_tracking_path, class: current_path.include?('financial_tracking') ? 'active' : '' %></li>
         <li><%= link_to "Equipe", owner_attendant_invitations_path, class: current_path.include?('attendant') ? 'active' : '' %></li>
+        <li>
+          <button class="nav-support-btn" id="nav-support-btn" title="Suporte">
+            <i class="fas fa-headset"></i>
+            <span class="nav-support-badge" id="nav-support-badge"></span>
+          </button>
+        </li>
         <li><div class="loov-nav-sep"></div></li>
         <li><%= link_to "Sair", destroy_user_session_path, method: :delete, class: "nav-exit" %></li>
 
@@ -269,6 +376,17 @@
           <li><%= link_to "Meu Negócio", manage_car_wash_path(_cw), class: current_path.include?('/manage') ? 'active' : '' %></li>
           <li><%= link_to "Financeiro", edit_owner_monthly_costs_path, class: current_path.include?('monthly_costs') ? 'active' : '' %></li>
         <% end %>
+        <li>
+          <button class="nav-support-btn" id="nav-support-btn" title="Suporte">
+            <i class="fas fa-headset"></i>
+            <span class="nav-support-badge" id="nav-support-badge"></span>
+          </button>
+        </li>
+        <li><div class="loov-nav-sep"></div></li>
+        <li><%= link_to "Sair", destroy_user_session_path, method: :delete, class: "nav-exit" %></li>
+
+      <% elsif current_user.admin? %>
+        <li><%= link_to "Admin", admin_dashboard_path, class: "active", style: "color:var(--lime);" %></li>
         <li><div class="loov-nav-sep"></div></li>
         <li><%= link_to "Sair", destroy_user_session_path, method: :delete, class: "nav-exit" %></li>
 
@@ -288,6 +406,8 @@
 
 <script>
 (function() {
+  const CSRF = document.querySelector('meta[name="csrf-token"]')?.content;
+
   // ── HAMBURGER ──────────────────────────────────────────────────────────
   const hamburger = document.getElementById('loov-hamburger');
   const drawer    = document.getElementById('loov-drawer');
@@ -300,110 +420,225 @@
   overlay.addEventListener('click', closeDrawer);
   drawer.querySelectorAll('a').forEach(a => a.addEventListener('click', closeDrawer));
 
-  // ── SINO (apenas cliente) ──────────────────────────────────────────────
+  // ── SINO CLIENTE ──────────────────────────────────────────────────────
   const bellBtn   = document.getElementById('nav-bell-btn');
   const bellBadge = document.getElementById('nav-bell-badge');
   const dropdown  = document.getElementById('nav-notif-dropdown');
   const notifList = document.getElementById('nav-notif-list');
 
-  if (!bellBtn) return;
+  if (bellBtn) {
+    const SEEN_KEY = 'loov_notif_seen_at';
+    function getSeenAt() { const v=localStorage.getItem(SEEN_KEY); return v?new Date(v):new Date(0); }
+    function markAsSeen() { localStorage.setItem(SEEN_KEY, new Date().toISOString()); }
 
-  // PONTO 4: chave no localStorage para guardar timestamp da última abertura
-  const SEEN_KEY = 'loov_notif_seen_at';
+    document.addEventListener('click', function(e) {
+      if (!bellBtn.closest('.nav-bell-wrap').contains(e.target)) dropdown.classList.remove('open');
+    });
 
-  function getSeenAt() {
-    const v = localStorage.getItem(SEEN_KEY);
-    return v ? new Date(v) : new Date(0);
-  }
+    bellBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const isOpen = dropdown.classList.contains('open');
+      dropdown.classList.toggle('open');
+      if (!isOpen) {
+        markAsSeen();
+        bellBtn.classList.remove('has-notif');
+        bellBadge.classList.remove('visible');
+        loadNotifications();
+      }
+    });
 
-  function markAsSeen() {
-    localStorage.setItem(SEEN_KEY, new Date().toISOString());
-  }
-
-  // Fecha ao clicar fora
-  document.addEventListener('click', function(e) {
-    if (!bellBtn.closest('.nav-bell-wrap').contains(e.target)) {
-      dropdown.classList.remove('open');
-    }
-  });
-
-  bellBtn.addEventListener('click', function(e) {
-    e.stopPropagation();
-    const isOpen = dropdown.classList.contains('open');
-    dropdown.classList.toggle('open');
-
-    if (!isOpen) {
-      // PONTO 4: grava o momento em que o cliente abriu — reseta a contagem
-      markAsSeen();
-      bellBtn.classList.remove('has-notif');
-      bellBadge.classList.remove('visible');
-      loadNotifications();
-    }
-  });
-
-  function loadNotifications() {
-    fetch('/client/notifications', { headers: { Accept: 'application/json' } })
-      .then(r => r.json())
-      .then(data => renderNotifications(data))
-      .catch(() => {});
-  }
-
-  function renderNotifications(items) {
-    if (!items.length) {
-      notifList.innerHTML = '<div class="nav-notif-empty">Nenhuma notificação.</div>';
-      return;
+    function loadNotifications() {
+      fetch('/client/notifications', { headers: { Accept: 'application/json' } })
+        .then(r => r.json()).then(data => renderNotifications(data)).catch(() => {});
     }
 
-    notifList.innerHTML = items.map(item => {
-      const iconClass = item.status === 'confirmed'  ? 'confirmed' :
-                        item.status === 'rejected' || item.status === 'cancelled' ? 'rejected' : 'pending';
-      const icon      = item.status === 'confirmed'  ? 'fa-check' :
-                        item.status === 'rejected' || item.status === 'cancelled' ? 'fa-times' : 'fa-clock';
-      const title     = item.status === 'confirmed'  ? 'Reserva confirmada!' :
-                        item.status === 'rejected'   ? 'Reserva recusada' :
-                        item.status === 'cancelled'  ? 'Reserva expirou' : 'Aguardando confirmação';
+    function renderNotifications(items) {
+      if (!items.length) { notifList.innerHTML='<div class="nav-notif-empty">Nenhuma notificação.</div>'; return; }
+      notifList.innerHTML = items.map(item => {
+        const iconClass = item.status==='confirmed'?'confirmed':item.status==='rejected'||item.status==='cancelled'?'rejected':'pending';
+        const icon = item.status==='confirmed'?'fa-check':item.status==='rejected'||item.status==='cancelled'?'fa-times':'fa-clock';
+        const title = item.status==='confirmed'?'Reserva confirmada!':item.status==='rejected'?'Reserva recusada':item.status==='cancelled'?'Reserva expirou':'Aguardando confirmação';
+        return `<a class="nav-notif-item" href="/appointments"><div class="nav-notif-icon ${iconClass}"><i class="fas ${icon}"></i></div><div><div class="nav-notif-title">${title}</div><div class="nav-notif-sub">${item.service_name} · ${item.car_wash_name}<br>${item.scheduled_at}</div></div></a>`;
+      }).join('');
+    }
 
-      return `
-        <a class="nav-notif-item" href="/appointments">
-          <div class="nav-notif-icon ${iconClass}"><i class="fas ${icon}"></i></div>
+    function pollBadge() {
+      if (dropdown.classList.contains('open')) return;
+      fetch('/client/notifications', { headers: { Accept: 'application/json' } })
+        .then(r => r.json()).then(data => {
+          const seenAt = getSeenAt();
+          const newCount = data.filter(i => i.created_at && new Date(i.created_at) > seenAt).length;
+          if (newCount > 0) { bellBtn.classList.add('has-notif'); bellBadge.textContent=newCount; bellBadge.classList.add('visible'); }
+          else { bellBtn.classList.remove('has-notif'); bellBadge.classList.remove('visible'); }
+        }).catch(() => {});
+    }
+
+    document.addEventListener('DOMContentLoaded', () => { pollBadge(); setInterval(pollBadge, 8000); });
+  }
+
+  // ── SUPORTE OWNER/ATTENDANT ───────────────────────────────────────────
+  const supportBtn     = document.getElementById('nav-support-btn');
+  const supportOverlay = document.getElementById('support-modal-overlay');
+  const supportClose   = document.getElementById('support-modal-close');
+  const supportBody    = document.getElementById('support-modal-body');
+  const supportFooter  = document.getElementById('support-modal-footer');
+  const supportBadge   = document.getElementById('nav-support-badge');
+
+  if (supportBtn) {
+    let currentTicket = null;
+
+    function openSupportModal() {
+      supportOverlay.classList.add('open');
+      document.body.style.overflow = 'hidden';
+      loadTicket();
+    }
+
+    function closeSupportModal() {
+      supportOverlay.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    supportBtn.addEventListener('click', openSupportModal);
+    supportClose.addEventListener('click', closeSupportModal);
+    supportOverlay.addEventListener('click', e => { if (e.target === supportOverlay) closeSupportModal(); });
+
+    function loadTicket() {
+      supportBody.innerHTML = '<div style="text-align:center;padding:2rem;color:#333;font-size:.8rem;">Carregando...</div>';
+      supportFooter.style.display = 'none';
+      fetch('/owner/support_tickets', { headers: { Accept: 'application/json' } })
+        .then(r => r.json())
+        .then(tickets => {
+          const open = tickets.find(t => t.status !== 'resolved');
+          currentTicket = open || null;
+          if (open) renderThread(open);
+          else renderNewForm();
+        }).catch(() => {
+          supportBody.innerHTML = '<div style="text-align:center;padding:2rem;color:#f87171;">Erro ao carregar suporte.</div>';
+        });
+    }
+
+    function renderThread(ticket) {
+      const statusColor = ticket.status === 'resolved' ? '#afff2d' : '#60a5fa';
+      const statusLabel = ticket.status === 'resolved' ? 'Resolvido' : ticket.status === 'in_progress' ? 'Em andamento' : 'Aberto';
+      const msgs = ticket.messages.map(m => `
+        <div class="support-msg ${m.from_admin ? 'support-msg-admin' : 'support-msg-owner'}">
+          <div class="support-msg-author">${m.author} · ${m.created_at}</div>
+          <div class="support-msg-body">${m.body}</div>
+        </div>`).join('');
+
+      supportBody.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.875rem;">
+          <span style="font-size:.62rem;color:#333;">#${ticket.id} · ${ticket.category}</span>
+          <span style="font-size:.62rem;font-weight:700;color:${statusColor};">${statusLabel}</span>
+        </div>
+        <div class="support-thread">${msgs || '<div style="font-size:.75rem;color:#333;padding:.5rem 0;">Nenhuma mensagem ainda.</div>'}</div>`;
+
+      // Scroll para o final
+      const thread = supportBody.querySelector('.support-thread');
+      if (thread) setTimeout(() => { thread.scrollTop = thread.scrollHeight; }, 50);
+
+      if (ticket.status !== 'resolved') {
+        supportFooter.style.display = 'block';
+        supportFooter.innerHTML = `
+          <textarea class="support-textarea" id="support-msg-input" placeholder="Escreva sua mensagem..."></textarea>
+          <div class="support-footer-actions">
+            <button class="support-btn-send" id="support-send-btn"><i class="fas fa-paper-plane"></i> Enviar</button>
+            <button class="support-btn-close-ticket" id="support-close-btn">Encerrar chamado</button>
+          </div>`;
+        document.getElementById('support-send-btn').addEventListener('click', sendMessage);
+        document.getElementById('support-close-btn').addEventListener('click', closeTicket);
+      } else {
+        supportFooter.style.display = 'block';
+        supportFooter.innerHTML = `<button class="support-btn-open" onclick="document.getElementById('support-modal-body').innerHTML='';renderNewForm();" style="background:transparent;border:1px solid #1e1e1e;color:#555;">Abrir novo chamado</button>`;
+      }
+    }
+
+    function renderNewForm() {
+      supportBody.innerHTML = `
+        <p style="font-size:.8rem;color:#444;margin-bottom:1rem;line-height:1.5;">Como podemos ajudar? Descreva o problema e nossa equipe responderá em breve.</p>
+        <div class="support-new-form">
           <div>
-            <div class="nav-notif-title">${title}</div>
-            <div class="nav-notif-sub">${item.service_name} · ${item.car_wash_name}<br>${item.scheduled_at}</div>
+            <label class="support-form-label">Categoria</label>
+            <select class="support-form-select" id="support-category">
+              <option value="financeiro">Financeiro / Relatórios</option>
+              <option value="agendamento">Agendamento</option>
+              <option value="cadastro">Cadastro e perfil</option>
+              <option value="tecnico">Técnico / Bug</option>
+              <option value="disponivel">Disponíveis</option>
+              <option value="atendente">Equipe / Atendentes</option>
+              <option value="cancelamento">Cancelamento</option>
+              <option value="outro">Outro</option>
+            </select>
           </div>
-        </a>
-      `;
-    }).join('');
+          <div>
+            <label class="support-form-label">Descreva o problema</label>
+            <textarea class="support-textarea" id="support-description" placeholder="Ex: Não consigo visualizar o relatório do mês de março..." style="min-height:100px;"></textarea>
+          </div>
+          <button class="support-btn-open" id="support-open-btn"><i class="fas fa-headset"></i> Abrir chamado</button>
+        </div>`;
+      supportFooter.style.display = 'none';
+      document.getElementById('support-open-btn').addEventListener('click', openTicket);
+    }
+
+    function openTicket() {
+      const category    = document.getElementById('support-category').value;
+      const description = document.getElementById('support-description').value.trim();
+      if (!description) { alert('Descreva o problema antes de abrir o chamado.'); return; }
+      const btn = document.getElementById('support-open-btn');
+      btn.disabled = true; btn.textContent = 'Abrindo...';
+      fetch('/owner/support_tickets', {
+        method: 'POST',
+        headers: { 'X-CSRF-Token': CSRF, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category, description })
+      }).then(r => r.json()).then(data => {
+        if (data.ok) { currentTicket = data.ticket; renderThread(data.ticket); }
+        else { alert(data.error || 'Erro ao abrir chamado.'); btn.disabled=false; btn.innerHTML='<i class="fas fa-headset"></i> Abrir chamado'; }
+      }).catch(() => { btn.disabled=false; btn.innerHTML='<i class="fas fa-headset"></i> Abrir chamado'; });
+    }
+
+    function sendMessage() {
+      const input = document.getElementById('support-msg-input');
+      const body  = input?.value.trim();
+      if (!body) return;
+      const btn = document.getElementById('support-send-btn');
+      btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
+      fetch(`/owner/support_tickets/${currentTicket.id}/message`, {
+        method: 'POST',
+        headers: { 'X-CSRF-Token': CSRF, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body })
+      }).then(r => r.json()).then(data => {
+        if (data.ok) { currentTicket = data.ticket; renderThread(data.ticket); }
+        else { alert(data.error || 'Erro ao enviar.'); }
+        btn.disabled=false; btn.innerHTML='<i class="fas fa-paper-plane"></i> Enviar';
+      }).catch(() => { btn.disabled=false; btn.innerHTML='<i class="fas fa-paper-plane"></i> Enviar'; });
+    }
+
+    function closeTicket() {
+      if (!confirm('Encerrar este chamado?')) return;
+      fetch(`/owner/support_tickets/${currentTicket.id}/close`, {
+        method: 'PATCH',
+        headers: { 'X-CSRF-Token': CSRF, 'Content-Type': 'application/json' }
+      }).then(r => r.json()).then(data => {
+        if (data.ok) loadTicket();
+      });
+    }
+
+    // Poll badge — verifica se há resposta do admin
+    function pollSupportBadge() {
+      fetch('/owner/support_tickets', { headers: { Accept: 'application/json' } })
+        .then(r => r.json()).then(tickets => {
+          const open = tickets.find(t => t.status !== 'resolved');
+          if (open && open.messages.some(m => m.from_admin)) {
+            const lastAdmin = open.messages.filter(m => m.from_admin).pop();
+            const lastOwner = open.messages.filter(m => !m.from_admin).pop();
+            const hasNew = lastAdmin && (!lastOwner || new Date(lastAdmin.created_at) > new Date(lastOwner.created_at));
+            if (hasNew) { supportBtn.classList.add('has-reply'); supportBadge.textContent='1'; supportBadge.classList.add('visible'); return; }
+          }
+          supportBtn.classList.remove('has-reply'); supportBadge.classList.remove('visible');
+        }).catch(() => {});
+    }
+
+    document.addEventListener('DOMContentLoaded', () => { pollSupportBadge(); setInterval(pollSupportBadge, 15000); });
   }
-
-  // PONTO 4: polling do badge — conta APENAS notificações após o último "visto"
-  function pollBadge() {
-    if (dropdown.classList.contains('open')) return;
-
-    fetch('/client/notifications', { headers: { Accept: 'application/json' } })
-      .then(r => r.json())
-      .then(data => {
-        const seenAt = getSeenAt();
-        // Conta apenas as novas: criadas DEPOIS da última vez que o cliente abriu
-        const newCount = data.filter(i => {
-          if (!i.created_at) return false;
-          return new Date(i.created_at) > seenAt;
-        }).length;
-
-        if (newCount > 0) {
-          bellBtn.classList.add('has-notif');
-          bellBadge.textContent = newCount;
-          bellBadge.classList.add('visible');
-        } else {
-          bellBtn.classList.remove('has-notif');
-          bellBadge.classList.remove('visible');
-        }
-      })
-      .catch(() => {});
-  }
-
-  document.addEventListener('DOMContentLoaded', function() {
-    pollBadge();
-    setInterval(pollBadge, 8000);
-  });
 })();
 </script>
