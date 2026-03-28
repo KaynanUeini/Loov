@@ -19,12 +19,8 @@ Rails.application.routes.draw do
 
   # ── ABA DISPONÍVEIS ───────────────────────────────────────────────────────
   resources :disponivel, only: [:index, :create, :show] do
-    member do
-      get :confirmacao
-    end
-    collection do
-      get :checkout
-    end
+    member { get :confirmacao }
+    collection { get :checkout }
   end
 
   # ── STRIPE WEBHOOK ────────────────────────────────────────────────────────
@@ -61,7 +57,9 @@ Rails.application.routes.draw do
       end
     end
 
+    resources :closures, only: [:create, :destroy]
     resources :car_wash_appointments, only: [:index, :show]
+
     get  'financial_tracking', to: 'financial_tracking#index'
     get  'ai_insights',        to: 'ai_insights#show'
     post 'ai_insights',        to: 'ai_insights#analyze'
@@ -85,6 +83,52 @@ Rails.application.routes.draw do
       member do
         patch :accept
         patch :reject
+      end
+    end
+
+    resources :support_tickets, only: [:index, :create] do
+      member do
+        post  :message
+        patch :close
+      end
+    end
+  end
+
+  namespace :admin do
+    get 'dashboard',          to: 'dashboard#index',    as: :dashboard
+    get 'dashboard/stats',    to: 'dashboard#stats',    as: :dashboard_stats
+    get 'dashboard/activity', to: 'dashboard#activity', as: :dashboard_activity
+
+    resources :users, only: [:index, :show] do
+      member do
+        patch :block
+        patch :unblock
+        patch :change_role
+      end
+    end
+
+    resources :car_washes, only: [:index, :show] do
+      member do
+        patch :deactivate
+        patch :activate
+      end
+    end
+
+    resources :appointments, only: [:index, :show] do
+      member { patch :cancel }
+    end
+
+    get  'financial',        to: 'financial#index',  as: :financial
+    get  'financial/export', to: 'financial#export', as: :financial_export
+
+    resources :support_tickets, only: [:index] do
+      member do
+        post   :message
+        patch  :resolve
+        patch  :reopen
+        post   :approve_draft
+        delete :discard_draft
+        post   :run_agent
       end
     end
   end
