@@ -1,0 +1,332 @@
+# BASE DE CONHECIMENTO — AGENTE DE SUPORTE LOOV
+# Versão completa — cobre todas as funcionalidades disponíveis para proprietários.
+# Atualize sempre que o app tiver novas funcionalidades.
+# ─────────────────────────────────────────────────────────────────────────────
+
+## O QUE É O LOOV
+Loov é um marketplace de agendamento de lava-rápidos no Brasil, similar ao iFood mas para
+serviços automotivos. Proprietários cadastram seus negócios e clientes agendam online.
+Durante a fase de testes, o uso é gratuito para proprietários.
+A única cobrança é 5% de comissão sobre agendamentos do tipo "Disponíveis".
+Agendamentos regulares não têm custo para o lava-rápido.
+
+## ACESSO AO PAINEL
+- Endereço: acesse o site Loov e faça login com seu e-mail e senha cadastrados.
+- O painel principal aparece assim que você entra — mostra o relógio grande no topo,
+  os KPIs do dia (caixa, total, aguardando, vieram) e a agenda de hoje.
+- A navegação completa fica na barra lateral esquerda.
+- Se esqueceu a senha: clique em "Esqueci minha senha" na tela de login.
+
+## PAINEL PRINCIPAL (HOME / DASHBOARD)
+O painel mostra em tempo real:
+- Relógio e data no topo.
+- KPI "Caixa do dia": receita dos clientes que compareceram hoje.
+- KPI "Total": quantidade de agendamentos hoje.
+- KPI "Aguardando": clientes confirmados que ainda não chegaram.
+- KPI "Vieram": clientes marcados como compareceu hoje.
+- Agenda de hoje: lista de todos os agendamentos do dia em ordem de horário.
+- Badge laranja com triângulo: agendamentos de dias anteriores sem fechamento.
+- Badge amarelo com sino: alterações de atendentes aguardando aprovação (só proprietários).
+
+## AGENDA DE HOJE — COMO USAR
+Cada agendamento na lista mostra: horário, nome do cliente, serviço, e o código de 4 dígitos
+do telefone (ex: "código 9821") para confirmar a identidade do cliente na chegada.
+
+Para marcar que o cliente COMPARECEU:
+- Clique no ícone de check verde (✓) no cartão do agendamento.
+- O KPI "Vieram" sobe e o valor entra no caixa do dia automaticamente.
+
+Para marcar que o cliente NÃO VEIO (no-show):
+- Clique no ícone X vermelho no cartão do agendamento.
+
+Para DESFAZER uma marcação errada:
+- Clique no ícone de voltar (seta curva) que aparece após marcar compareceu ou não veio.
+- O agendamento volta ao status "aguardando".
+
+Para EDITAR o serviço de um agendamento (trocar serviço ou ajustar valor):
+- Clique no ícone de lápis (caneta) no cartão do agendamento.
+- Um modal abre permitindo trocar o serviço e definir um valor personalizado.
+- Deixe o campo de valor em branco para usar o preço padrão do serviço.
+- Clique em "Salvar".
+
+## SERVIÇO AVULSO (WALK-IN)
+Para registrar um cliente que chegou sem agendamento prévio:
+- Clique no botão "+ Avulso" no canto superior direito do painel.
+- Preencha: nome do cliente, horário, serviço e valor (opcional).
+- Clique em "Registrar".
+- O serviço avulso aparece na agenda do dia já marcado como compareceu.
+- O valor entra no caixa do dia imediatamente.
+
+## PENDÊNCIAS DE DIAS ANTERIORES
+Se houver agendamentos de dias anteriores ainda sem fechamento (confirmados mas não marcados
+como compareceu ou não veio), um botão laranja com triângulo aparece no topo do painel.
+- Clique nele para abrir o painel de pendências.
+- Cada pendência mostra data, horário, cliente e serviço.
+- Clique em "Veio" ou "Faltou" para fechar cada pendência.
+- Isso é importante para manter o caixa correto e liberar avaliações dos clientes.
+
+## CADASTRO DO MEU NEGÓCIO
+Para acessar e editar as informações do lava-rápido:
+- No menu lateral, clique em "Meu Negócio".
+- Aqui você edita: nome, endereço, descrição, foto e informações de contato.
+- Após editar, clique em "Salvar".
+
+## SERVIÇOS — COMO CADASTRAR E GERENCIAR
+Para adicionar um novo serviço:
+- Vá em "Meu Negócio" e acesse a aba "Serviços".
+- Clique em "Adicionar serviço".
+- Preencha: título do serviço, descrição, preço e categoria.
+- Clique em "Salvar".
+
+Para editar um serviço existente:
+- Na mesma tela, clique no ícone de edição ao lado do serviço.
+- Altere os campos desejados e clique em "Salvar".
+
+Para remover um serviço:
+- Clique no ícone de exclusão ao lado do serviço.
+- Serviços com agendamentos futuros confirmados não podem ser removidos.
+
+Categorias disponíveis: Lavagem, Polimento, Higienização, Cristalização, Outros.
+
+## HORÁRIOS DE FUNCIONAMENTO
+Para configurar os horários em que o lava-rápido aceita agendamentos:
+- Vá em "Meu Negócio" e acesse a aba "Horários".
+- Para cada dia da semana, defina: se abre, horário de abertura e horário de fechamento.
+- Clique em "Salvar horários".
+- Dias sem horário configurado aparecem como "Fechado hoje" para os clientes.
+
+## BLOQUEIO DE HORÁRIOS (CLOSURES)
+Para bloquear um período específico em que o lava-rápido não vai atender
+(feriado, manutenção, ausência, folga):
+- Vá em "Meu Negócio" na seção de horários ou agenda.
+- Crie um bloqueio informando a data e horário de início e fim.
+- Durante o bloqueio, clientes não conseguem agendar nesse período.
+- O bloqueio não afeta agendamentos já confirmados — só impede novos.
+- Para remover o bloqueio, exclua-o na mesma tela onde foi criado.
+
+## AGENDA COMPLETA
+Para ver todos os agendamentos (não apenas os de hoje):
+- No menu lateral, clique em "Agenda".
+- Você pode filtrar por data, status e tipo de agendamento.
+- Agendamentos futuros confirmados aparecem aqui.
+- Para ver detalhes de um agendamento específico, clique sobre ele.
+
+## AI INSIGHTS (RELATÓRIO DE INTELIGÊNCIA ARTIFICIAL)
+O AI Insights é uma análise financeira e operacional gerada por inteligência artificial,
+exclusiva para proprietários. Ela analisa seus dados reais de agendamentos, receita,
+custos, padrão de clientes e ociosidade — e entrega recomendações práticas em R$/mês.
+
+Como acessar:
+- No menu lateral, clique em "IA Insights".
+
+Requisito:
+- O sistema precisa de pelo menos 30 agendamentos com status "compareceu" para gerar a análise.
+- Se você tem menos que 30, aguarde acumular mais atendimentos e volte depois.
+
+Como funciona o ciclo:
+- A análise é gerada automaticamente duas vezes por mês: no dia 1 (fechamento do mês anterior)
+  e no dia 15 (acompanhamento do mês em curso).
+- Fora desses momentos, a análise em cache é exibida até o próximo ciclo.
+- Para gerar manualmente fora do ciclo, clique no botão "Gerar análise agora".
+
+O que a análise contém:
+- Vendas: faturamento real, comparativo com mês anterior e mesmo período do ano passado.
+- Serviços: quais serviços têm melhor desempenho e variação de volume.
+- Clientes: taxa de retenção, clientes que vieram só uma vez, abandono por mês.
+- Demanda: dias e horários de pico, capacidade ociosa, impacto em R$/mês.
+- Retenção: clientes sumidos há 30-90 dias com nome real e dias de ausência.
+- Crescimento: novos clientes por mês e feriados próximos.
+- Decisão prioritária: a maior alavanca financeira com impacto em R$/mês e como executar.
+- Resumo do ciclo: avaliação da decisão anterior com base nos dados mais recentes.
+
+Como registrar o que você fez com base na análise:
+- Clique em "Registrar ação" e descreva o que foi feito no período.
+- Na próxima análise, a IA avalia com dados reais se a ação teve impacto positivo.
+
+## FINANCEIRO (DRE MENSAL)
+Para ver e registrar custos mensais e a Demonstração de Resultado (DRE):
+- No menu lateral, clique em "Financeiro".
+- A tela mostra os últimos 12 meses com: faturamento, custos, lucro e margem percentual.
+- O faturamento já desconta automaticamente a comissão de 5% dos agendamentos Disponíveis.
+
+Para lançar os custos do mês atual ou de meses anteriores:
+- Clique no mês desejado ou no botão de editar ao lado do mês.
+- Preencha os campos: aluguel, salários, energia/água, produtos, manutenção, outros fixos,
+  outros variáveis e observações.
+- Clique em "Salvar".
+- Com os custos lançados, o lucro e a margem são calculados automaticamente.
+
+Atenção: sem custos lançados, o DRE mostra apenas a receita e o lucro aparece igual ao faturamento
+(sem descontar custos). Lance os custos mensalmente para ter o DRE preciso.
+
+## RELATÓRIOS DETALHADOS
+Para ver análises detalhadas de desempenho financeiro e operacional:
+- No menu lateral, clique em "Relatórios".
+
+Filtros disponíveis:
+- Por período: hoje, semana, mês, ano, tudo, ou período personalizado.
+- Por serviço: filtra todos os dados para um serviço específico.
+
+O que os relatórios mostram:
+- Faturamento total e média (diária, mensal ou anual dependendo do filtro selecionado).
+- Gráfico de vendas ao longo do tempo com linha de projeção dos agendamentos confirmados.
+- Tabela detalhada de vendas por dia ou por mês.
+- Heatmap de demanda por dia da semana e por hora do dia.
+- Serviços: receita total e volume por serviço com variação mês a mês.
+- Clientes: recorrentes vs novos, top 5 clientes por visitas, clientes em risco de abandono.
+- Crescimento de base: novos clientes por mês nos últimos 6 meses.
+- Lista completa de transações com data, horário, cliente, serviço e valor.
+
+Para exportar os dados em planilha:
+- Clique em "Exportar CSV" no topo da página de relatórios.
+- O arquivo baixa automaticamente com todas as transações do período filtrado.
+
+## EQUIPE (ATENDENTES)
+Para convidar um atendente para trabalhar no seu lava-rápido:
+- No menu lateral, clique em "Equipe".
+- Clique em "Convidar Atendente".
+- Informe o e-mail da pessoa e clique em "Enviar convite".
+- O atendente receberá um e-mail com link para aceitar o convite e criar sua conta.
+- Após aceitar, o atendente aparece na lista da sua equipe.
+
+Para remover um atendente:
+- Na tela de Equipe, clique no botão de remover ao lado do atendente.
+
+O que atendentes PODEM fazer:
+- Ver e gerenciar a agenda do dia: marcar compareceu, não veio, desfazer, walk-in.
+- Editar serviços e horários do lava-rápido (sujeito à aprovação do proprietário).
+- Lançar custos mensais (sujeito à aprovação do proprietário).
+- Abrir chamados de suporte.
+
+O que atendentes NÃO podem fazer:
+- Ver relatórios financeiros detalhados e DRE completo.
+- Ver AI Insights.
+- Aprovar ou rejeitar alterações de outros.
+- Acessar dados financeiros sensíveis.
+- Convidar outros atendentes.
+
+## APROVAÇÕES DE ATENDENTES
+Quando um atendente edita serviços, horários ou lança custos, a alteração não é aplicada
+imediatamente — ela vai para aprovação do proprietário primeiro.
+
+Como ver e aprovar alterações pendentes:
+- Um badge amarelo com número aparece no ícone de sino no topo do painel.
+- Clique no sino para abrir o painel de aprovações.
+- Cada card mostra: descrição da alteração e o nome do atendente.
+- Clique no "+" para expandir e ver os detalhes exatos da alteração.
+- Clique em "Aprovar" para aplicar a alteração imediatamente.
+- Clique em "Rejeitar" para descartar a alteração.
+- Após aprovar ou rejeitar, o card some da lista.
+
+## DISPONÍVEIS (VAGAS DE ÚLTIMA HORA)
+"Disponíveis" são vagas de última hora que você libera para clientes próximos sem agendamento prévio.
+
+Como funciona para o cliente:
+- O cliente vê vagas disponíveis nos próximos 30 minutos num raio de 5km.
+- Clica em "Reservar" e paga 35% do valor do serviço com cartão (pré-autorização).
+- A Loov retém 5% do valor total como comissão da operação.
+- O restante (60%) é cobrado diretamente do cliente na chegada ao lava-rápido.
+
+Como funciona para o proprietário — aceitar ou recusar:
+- Quando um cliente faz uma reserva Disponível, um pop-up aparece no painel com timer de 3 minutos.
+- Você tem 3 minutos para aceitar ou recusar clicando nos botões.
+- Se aceitar: o pré-pagamento é confirmado e o cliente está a caminho.
+- Se recusar ou o timer de 3 minutos expirar: o cliente não é cobrado e a reserva é cancelada.
+
+Como identificar Disponíveis na agenda:
+- Agendamentos Disponíveis aparecem com badge verde "Disp." ao lado do nome do cliente.
+- O valor mostrado no card em verde é o valor restante a cobrar na porta (não o valor total).
+- O caixa do dia, ao marcar como compareceu, soma o valor total menos os 5% de comissão.
+
+Cálculo do valor para o proprietário (exemplo com serviço de R$100):
+- Cliente paga R$35 ao agendar (35% de pré-autorização).
+- Loov retém R$5 como comissão (5% do total).
+- Proprietário recebe R$30 do pré-pagamento + R$70 na chegada = R$95 líquido.
+
+Como ativar Disponíveis no seu lava-rápido:
+- Configure na seção "Disponíveis" dentro do seu perfil de lava-rápido.
+- Defina quais serviços ficam disponíveis e em quais horários.
+
+## SUPORTE — COMO ABRIR UM CHAMADO
+Para falar com o suporte da Loov:
+- Clique no ícone de balão/suporte na barra de navegação superior.
+- Um modal abre com o histórico de mensagens.
+- Se não tiver chamado aberto: selecione a categoria do problema, escreva a descrição
+  e clique em "Abrir chamado".
+- Se já tiver um chamado aberto: escreva sua mensagem no campo e clique em "Enviar".
+- Só é possível ter 1 chamado aberto por vez.
+
+Para responder mensagens do suporte:
+- Abra o mesmo modal de suporte na navbar.
+- Escreva sua resposta e clique em "Enviar".
+
+Para encerrar um chamado:
+- No modal de suporte, clique em "Encerrar chamado".
+- Após encerrado, você pode abrir um novo chamado se necessário.
+
+Categorias disponíveis ao abrir chamado:
+- Financeiro / Relatórios
+- Agendamento
+- Cadastro e perfil
+- Técnico / Bug
+- Disponíveis
+- Equipe / Atendentes
+- Cancelamento
+- Outro
+
+## PROBLEMAS FREQUENTES E SOLUÇÕES
+
+### Agendamento não aparece no painel de hoje
+- Atualize a página (F5 ou recarregar).
+- Verifique se o agendamento está agendado para hoje — a agenda do painel mostra apenas o dia atual.
+- Agendamentos de outros dias ficam em "Agenda" no menu lateral.
+- Agendamentos cancelados não aparecem na lista.
+
+### Valor do caixa parece incorreto
+- O caixa conta apenas clientes marcados como "compareceu" (check verde).
+- Agendamentos confirmados mas não marcados não entram no caixa.
+- Para Disponíveis, o valor que entra é o total do serviço menos a comissão de 5% da Loov.
+- Serviços avulsos (walk-in) entram no caixa imediatamente ao serem registrados.
+
+### O cliente não consegue agendar
+- Verifique se o horário solicitado está dentro do horário de funcionamento configurado.
+- Verifique se não há um bloqueio (closure) ativo no período.
+- Verifique se o serviço está cadastrado e ativo em "Meu Negócio".
+
+### Não recebi notificação de um Disponível
+- O pop-up de aceite aparece apenas enquanto o lava-rápido está com o painel aberto no navegador.
+- O timer é de 3 minutos — se passou, o pedido foi cancelado automaticamente.
+- Certifique-se de manter o painel aberto durante o horário de operação.
+
+### Não recebi o e-mail de convite do atendente
+- Peça ao atendente verificar a caixa de spam ou lixo eletrônico.
+- Re-envie o convite na tela de Equipe clicando em "Convidar Atendente" novamente com o mesmo e-mail.
+
+### Horários não aparecem para clientes no app
+- Verifique se os horários foram salvos corretamente em "Meu Negócio" > "Horários".
+- Certifique-se de que cada dia da semana está marcado como "aberto".
+- Verifique se não há um bloqueio (closure) cobrindo o período.
+
+### Não consigo gerar AI Insights
+- O sistema exige pelo menos 30 agendamentos com status "compareceu" para gerar a análise.
+- Se você tem menos que 30 atendimentos, aguarde acumular mais e volte depois.
+- A análise só é gerada automaticamente nos ciclos (dia 1 e dia 15 do mês).
+
+### Cliente não me encontra na busca
+- Verifique se seu endereço está correto e completo em "Meu Negócio".
+- O endereço precisa ser preciso para o sistema de geolocalização funcionar corretamente.
+- Aguarde alguns minutos após salvar o endereço para o sistema atualizar.
+
+### AI Insights mostra dados financeiros errados (margem ou break-even)
+- Verifique se os custos do mês atual já foram lançados em "Financeiro".
+- Sem custos lançados, a margem fica 100% (sem descontar custos) e o break-even fica zerado.
+- Lance aluguel, salários, energia e outros custos para a análise ficar precisa.
+
+## O QUE O SUPORTE AUTOMÁTICO NÃO RESOLVE
+Os casos abaixo são encaminhados para a equipe humana da Loov:
+- Problemas com cobranças, estornos ou pagamentos via cartão (Stripe).
+- Disputa entre proprietário e cliente sobre um serviço ou valor.
+- Solicitação de exclusão de conta ou remoção do lava-rápido da plataforma.
+- Bugs que impedem o funcionamento do app (tela em branco, erro 500, loop de login).
+- Alteração de dados cadastrais sensíveis (CPF, CNPJ, dados bancários).
+- Qualquer situação não coberta por este documento.
