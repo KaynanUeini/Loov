@@ -21,6 +21,13 @@ class HomeController < ApplicationController
       end
     end
 
+    # Seções da home para clientes/visitantes
+    @nearby_car_washes = @car_washes.first(8)
+    @top_car_washes    = CarWash.all.select { |cw| cw.reviews.any? }
+                                .sort_by { |cw| -cw.reviews.average(:rating).to_f }
+                                .first(8)
+    @location_name = params[:location_name].presence
+
     if user_signed_in? && (current_user.owner? || current_user.attendant?)
       @car_wash = current_car_wash
       if @car_wash
@@ -40,8 +47,7 @@ class HomeController < ApplicationController
     end
 
     # ── ABA DISPONÍVEIS ────────────────────────────────────────────────────
-    # Sempre inicializa — a seção aparece mesmo vazia (com mensagem)
-    @disponivel_slots       = []
+    @disponivel_slots        = []
     @disponivel_has_location = params[:latitude].present? && params[:longitude].present?
 
     if user_signed_in? && current_user.client? && @disponivel_has_location
@@ -51,14 +57,10 @@ class HomeController < ApplicationController
       window_end = now + 30.minutes
       today_dow  = Date.current.wday
 
-      # Próximo slot redondo de 30min (sem ceil_to que não existe no Rails)
       now_minutes   = now.hour * 60 + now.min
       next_slot_min = (now_minutes / 30.0).ceil * 30
       next_slot     = now.beginning_of_day + next_slot_min.minutes
 
-      # Verifica quais lava-rápidos estão abertos agora
-      # Compara usando o horário atual em segundos desde meia-noite
-      # para evitar problemas de tipo com a coluna time do PostgreSQL
       now_seconds = now.seconds_since_midnight.to_i
 
       open_car_wash_ids = OperatingHour
@@ -79,7 +81,6 @@ class HomeController < ApplicationController
         .first(6)
 
       nearby_open.each do |cw|
-        # Serviços de lavagem (duração ≤ 60min) — se duration for nil, inclui também
         wash_services = cw.services.where("duration IS NULL OR duration <= 60").order(:price)
         next if wash_services.empty?
 
