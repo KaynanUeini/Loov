@@ -98,6 +98,7 @@ Rails.application.routes.draw do
     get 'dashboard',          to: 'dashboard#index',    as: :dashboard
     get 'dashboard/stats',    to: 'dashboard#stats',    as: :dashboard_stats
     get 'dashboard/activity', to: 'dashboard#activity', as: :dashboard_activity
+    post 'ceo_assistant/analyze', to: 'ceo_assistant#analyze', as: :ceo_assistant_analyze
 
     resources :users, only: [:index, :show] do
       member do

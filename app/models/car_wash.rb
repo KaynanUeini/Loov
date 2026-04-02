@@ -7,6 +7,7 @@ class CarWash < ApplicationRecord
   has_many :reviews, through: :appointments
   has_many :attendant_invitations, dependent: :destroy
   has_many :pending_changes, dependent: :destroy
+  has_many :closures, class_name: "CarWashClosure", dependent: :destroy
 
   accepts_nested_attributes_for :operating_hours, allow_destroy: true, reject_if: :all_blank
   accepts_nested_attributes_for :services, allow_destroy: true, reject_if: :all_blank

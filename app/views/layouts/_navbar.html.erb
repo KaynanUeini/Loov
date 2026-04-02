@@ -215,6 +215,18 @@
   }
   .support-btn-open:hover { background:#3b82f6; }
 
+  /* Histórico colapsável */
+  .support-history-section { margin-top:1.25rem; border-top:1px solid rgba(255,255,255,.05); padding-top:1rem; }
+  .support-history-label { font-size:.58rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:#2a2a2a; margin-bottom:.75rem; }
+  .support-history-item { margin-bottom:.5rem; }
+  .support-history-item summary {
+    font-size:.72rem; color:#333; cursor:pointer; padding:.4rem .625rem;
+    border-radius:6px; border:1px solid #1a1a1a; list-style:none;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .support-history-item summary:hover { color:#555; border-color:#222; }
+  .support-history-item-body { padding:.625rem .5rem 0; }
+
   .loov-hamburger {
     display:none; flex-direction:column; justify-content:center; align-items:center;
     gap:5px; width:36px; height:36px; background:none; border:none;
@@ -408,7 +420,7 @@
 (function() {
   const CSRF = document.querySelector('meta[name="csrf-token"]')?.content;
 
-  // ── HAMBURGER ──────────────────────────────────────────────────────────
+  // ── HAMBURGER ─────────────────────────────────────────────────────────
   const hamburger = document.getElementById('loov-hamburger');
   const drawer    = document.getElementById('loov-drawer');
   const overlay   = document.getElementById('drawer-overlay');
@@ -420,7 +432,7 @@
   overlay.addEventListener('click', closeDrawer);
   drawer.querySelectorAll('a').forEach(a => a.addEventListener('click', closeDrawer));
 
-  // ── SINO CLIENTE ──────────────────────────────────────────────────────
+  // ── SINO CLIENTE ─────────────────────────────────────────────────────
   const bellBtn   = document.getElementById('nav-bell-btn');
   const bellBadge = document.getElementById('nav-bell-badge');
   const dropdown  = document.getElementById('nav-notif-dropdown');
@@ -439,12 +451,7 @@
       e.stopPropagation();
       const isOpen = dropdown.classList.contains('open');
       dropdown.classList.toggle('open');
-      if (!isOpen) {
-        markAsSeen();
-        bellBtn.classList.remove('has-notif');
-        bellBadge.classList.remove('visible');
-        loadNotifications();
-      }
+      if (!isOpen) { markAsSeen(); bellBtn.classList.remove('has-notif'); bellBadge.classList.remove('visible'); loadNotifications(); }
     });
 
     function loadNotifications() {
@@ -502,22 +509,43 @@
     supportClose.addEventListener('click', closeSupportModal);
     supportOverlay.addEventListener('click', e => { if (e.target === supportOverlay) closeSupportModal(); });
 
+    // ── BUG 1 CORRIGIDO: passa todos os tickets (abertos e resolvidos) ──
     function loadTicket() {
       supportBody.innerHTML = '<div style="text-align:center;padding:2rem;color:#333;font-size:.8rem;">Carregando...</div>';
       supportFooter.style.display = 'none';
       fetch('/owner/support_tickets', { headers: { Accept: 'application/json' } })
         .then(r => r.json())
         .then(tickets => {
-          const open = tickets.find(t => t.status !== 'resolved');
-          currentTicket = open || null;
-          if (open) renderThread(open);
-          else renderNewForm();
+          const open     = tickets.find(t => t.status !== 'resolved');
+          const resolved = tickets.filter(t => t.status === 'resolved');
+          currentTicket  = open || null;
+          if (open) renderThread(open, resolved);
+          else renderNewForm(resolved);
         }).catch(() => {
           supportBody.innerHTML = '<div style="text-align:center;padding:2rem;color:#f87171;">Erro ao carregar suporte.</div>';
         });
     }
 
-    function renderThread(ticket) {
+    function buildHistoryHtml(resolvedTickets) {
+      if (!resolvedTickets.length) return '';
+      return `
+        <div class="support-history-section">
+          <div class="support-history-label">Chamados anteriores</div>
+          ${resolvedTickets.map(t => `
+            <details class="support-history-item">
+              <summary>#${t.id} · ${t.category} · ${t.created_at} <span style="font-size:.58rem;color:#1e1e1e;">▼</span></summary>
+              <div class="support-history-item-body">
+                ${t.messages.map(m => `
+                  <div class="support-msg ${m.from_admin ? 'support-msg-admin' : 'support-msg-owner'}" style="margin-bottom:4px;">
+                    <div class="support-msg-author">${m.author} · ${m.created_at}</div>
+                    <div class="support-msg-body">${m.body}</div>
+                  </div>`).join('')}
+              </div>
+            </details>`).join('')}
+        </div>`;
+    }
+
+    function renderThread(ticket, resolvedTickets = []) {
       const statusColor = ticket.status === 'resolved' ? '#afff2d' : '#60a5fa';
       const statusLabel = ticket.status === 'resolved' ? 'Resolvido' : ticket.status === 'in_progress' ? 'Em andamento' : 'Aberto';
       const msgs = ticket.messages.map(m => `
@@ -531,10 +559,10 @@
           <span style="font-size:.62rem;color:#333;">#${ticket.id} · ${ticket.category}</span>
           <span style="font-size:.62rem;font-weight:700;color:${statusColor};">${statusLabel}</span>
         </div>
-        <div class="support-thread">${msgs || '<div style="font-size:.75rem;color:#333;padding:.5rem 0;">Nenhuma mensagem ainda.</div>'}</div>`;
+        <div class="support-thread" id="support-thread-msgs">${msgs || '<div style="font-size:.75rem;color:#333;padding:.5rem 0;">Nenhuma mensagem ainda.</div>'}</div>
+        ${buildHistoryHtml(resolvedTickets)}`;
 
-      // Scroll para o final
-      const thread = supportBody.querySelector('.support-thread');
+      const thread = supportBody.querySelector('#support-thread-msgs');
       if (thread) setTimeout(() => { thread.scrollTop = thread.scrollHeight; }, 50);
 
       if (ticket.status !== 'resolved') {
@@ -546,14 +574,16 @@
             <button class="support-btn-close-ticket" id="support-close-btn">Encerrar chamado</button>
           </div>`;
         document.getElementById('support-send-btn').addEventListener('click', sendMessage);
+        // ── BUG 3 CORRIGIDO: closeTicket usa rota owner ──
         document.getElementById('support-close-btn').addEventListener('click', closeTicket);
       } else {
         supportFooter.style.display = 'block';
-        supportFooter.innerHTML = `<button class="support-btn-open" onclick="document.getElementById('support-modal-body').innerHTML='';renderNewForm();" style="background:transparent;border:1px solid #1e1e1e;color:#555;">Abrir novo chamado</button>`;
+        supportFooter.innerHTML = `<button class="support-btn-open" id="support-new-btn" style="background:transparent;border:1px solid #1e1e1e;color:#555;">Abrir novo chamado</button>`;
+        document.getElementById('support-new-btn').addEventListener('click', () => renderNewForm(resolvedTickets));
       }
     }
 
-    function renderNewForm() {
+    function renderNewForm(resolvedTickets = []) {
       supportBody.innerHTML = `
         <p style="font-size:.8rem;color:#444;margin-bottom:1rem;line-height:1.5;">Como podemos ajudar? Descreva o problema e nossa equipe responderá em breve.</p>
         <div class="support-new-form">
@@ -574,8 +604,10 @@
             <label class="support-form-label">Descreva o problema</label>
             <textarea class="support-textarea" id="support-description" placeholder="Ex: Não consigo visualizar o relatório do mês de março..." style="min-height:100px;"></textarea>
           </div>
+          <div id="support-open-error" style="display:none;font-size:.72rem;color:#f87171;padding:.5rem .75rem;background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.15);border-radius:7px;"></div>
           <button class="support-btn-open" id="support-open-btn"><i class="fas fa-headset"></i> Abrir chamado</button>
-        </div>`;
+        </div>
+        ${buildHistoryHtml(resolvedTickets)}`;
       supportFooter.style.display = 'none';
       document.getElementById('support-open-btn').addEventListener('click', openTicket);
     }
@@ -583,7 +615,13 @@
     function openTicket() {
       const category    = document.getElementById('support-category').value;
       const description = document.getElementById('support-description').value.trim();
-      if (!description) { alert('Descreva o problema antes de abrir o chamado.'); return; }
+      const errEl       = document.getElementById('support-open-error');
+      if (!description) {
+        errEl.textContent = 'Descreva o problema antes de abrir o chamado.';
+        errEl.style.display = 'block';
+        return;
+      }
+      errEl.style.display = 'none';
       const btn = document.getElementById('support-open-btn');
       btn.disabled = true; btn.textContent = 'Abrindo...';
       fetch('/owner/support_tickets', {
@@ -591,9 +629,22 @@
         headers: { 'X-CSRF-Token': CSRF, 'Content-Type': 'application/json' },
         body: JSON.stringify({ category, description })
       }).then(r => r.json()).then(data => {
-        if (data.ok) { currentTicket = data.ticket; renderThread(data.ticket); }
-        else { alert(data.error || 'Erro ao abrir chamado.'); btn.disabled=false; btn.innerHTML='<i class="fas fa-headset"></i> Abrir chamado'; }
-      }).catch(() => { btn.disabled=false; btn.innerHTML='<i class="fas fa-headset"></i> Abrir chamado'; });
+        if (data.ok) {
+          currentTicket = data.ticket;
+          renderThread(data.ticket, []);
+        } else {
+          // ── BUG 2 CORRIGIDO: exibe erro do backend claramente ──
+          errEl.textContent = data.error || 'Erro ao abrir chamado.';
+          errEl.style.display = 'block';
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-headset"></i> Abrir chamado';
+        }
+      }).catch(() => {
+        errEl.textContent = 'Erro de conexão. Tente novamente.';
+        errEl.style.display = 'block';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-headset"></i> Abrir chamado';
+      });
     }
 
     function sendMessage() {
@@ -607,12 +658,13 @@
         headers: { 'X-CSRF-Token': CSRF, 'Content-Type': 'application/json' },
         body: JSON.stringify({ body })
       }).then(r => r.json()).then(data => {
-        if (data.ok) { currentTicket = data.ticket; renderThread(data.ticket); }
+        if (data.ok) { currentTicket = data.ticket; renderThread(data.ticket, []); }
         else { alert(data.error || 'Erro ao enviar.'); }
-        btn.disabled=false; btn.innerHTML='<i class="fas fa-paper-plane"></i> Enviar';
-      }).catch(() => { btn.disabled=false; btn.innerHTML='<i class="fas fa-paper-plane"></i> Enviar'; });
+        btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar';
+      }).catch(() => { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar'; });
     }
 
+    // ── BUG 3 CORRIGIDO: rota PATCH /owner/support_tickets/:id/close ──
     function closeTicket() {
       if (!confirm('Encerrar este chamado?')) return;
       fetch(`/owner/support_tickets/${currentTicket.id}/close`, {
@@ -620,10 +672,11 @@
         headers: { 'X-CSRF-Token': CSRF, 'Content-Type': 'application/json' }
       }).then(r => r.json()).then(data => {
         if (data.ok) loadTicket();
+        else alert(data.error || 'Erro ao encerrar chamado.');
       });
     }
 
-    // Poll badge — verifica se há resposta do admin
+    // Poll badge
     function pollSupportBadge() {
       fetch('/owner/support_tickets', { headers: { Accept: 'application/json' } })
         .then(r => r.json()).then(tickets => {

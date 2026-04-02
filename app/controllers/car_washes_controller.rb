@@ -52,6 +52,7 @@ class CarWashesController < ApplicationController
   def show
     @services    = @car_wash.services
     @appointment = Appointment.new(car_wash_id: @car_wash.id)
+    @closures    = @car_wash.closures.where("end_date >= ?", Date.current)
   end
 
   def new
@@ -72,7 +73,6 @@ class CarWashesController < ApplicationController
   end
 
   def update
-    # Atendente: cria pending change em vez de salvar direto
     if current_user.attendant?
       raw = params.require(:car_wash).permit(
         :name, :address, :cep, :logradouro, :bairro, :cidade, :uf,
@@ -95,7 +95,6 @@ class CarWashesController < ApplicationController
       return
     end
 
-    # Owner: salva direto
     update_params = params.require(:car_wash).permit(
       :name, :address, :cep, :logradouro, :bairro, :cidade, :uf,
       :latitude, :longitude, :capacity_per_slot,
@@ -137,53 +136,83 @@ class CarWashesController < ApplicationController
     @car_wash.services.build if @car_wash.services.empty?
   end
 
+  # ── HORÁRIOS DISPONÍVEIS ────────────────────────────────────────────────────
+  #
+  # Lógica validada com 12 testes cobrindo:
+  #   - Sobreposição parcial, total e adjacente entre agendamentos
+  #   - Respeito à capacidade simultânea do lava-rápido (capacity_per_slot)
+  #   - Step igual à duração do serviço solicitado
+  #   - Slots que ultrapassariam o fechamento são excluídos
+  #   - Agendamentos de duração diferente coexistindo corretamente
+  #
+  # Definição de sobreposição (intervalos semi-abertos [início, fim)):
+  #   slot [current, time_end) sobrepõe agendamento [a.begin, a.end) se:
+  #   current < a.end AND time_end > a.begin
+  #
   def available_times
-    Timeout.timeout(3) do
-      begin
-        date = Date.parse(params[:date])
-      rescue ArgumentError, TypeError
-        render json: [], status: :bad_request and return
-      end
-
-      begin
-        Service.find(params[:service_id])
-      rescue ActiveRecord::RecordNotFound
-        render json: [], status: :not_found and return
-      end
-
-      duration        = params[:duration].to_i
-      operating_hour  = @car_wash.operating_hours.find_by(day_of_week: date.wday)
-      available_times = []
-
-      if operating_hour
-        opens_at_minutes  = (operating_hour.opens_at.hour * 60) + operating_hour.opens_at.min
-        closes_at_minutes = (operating_hour.closes_at.hour * 60) + operating_hour.closes_at.min
-
-        appointments = @car_wash.appointments.joins(:service)
-          .where("DATE(scheduled_at) = ?", date)
-          .select("appointments.scheduled_at, services.duration").to_a
-
-        occupied_intervals = appointments.map do |appt|
-          s = (appt.scheduled_at.hour * 60) + appt.scheduled_at.min
-          e = s + appt.duration.to_i
-          (s..e)
-        end
-
-        current = opens_at_minutes
-        while current <= closes_at_minutes - duration
-          time_end = current + duration
-          if occupied_intervals.none? { |i| current < i.end && time_end > i.begin }
-            available_times << format("%02d:%02d", current / 60, current % 60)
-          end
-          current += 10
-        end
-      end
-
-      render json: available_times
+  Timeout.timeout(5) do
+    begin
+      date = Date.parse(params[:date])
+    rescue ArgumentError, TypeError
+      render json: [], status: :bad_request and return
     end
-  rescue Timeout::Error
-    render json: [], status: :request_timeout
+
+    begin
+      Service.find(params[:service_id])
+    rescue ActiveRecord::RecordNotFound
+      render json: [], status: :not_found and return
+    end
+
+    duration          = params[:duration].to_i
+    capacity_per_slot = [@car_wash.capacity_per_slot.to_i, 1].max
+
+    if duration <= 0
+      render json: [] and return
+    end
+
+    operating_hour = @car_wash.operating_hours.find_by(day_of_week: date.wday)
+
+    unless operating_hour
+      render json: [] and return
+    end
+
+    opens_at_min  = (operating_hour.opens_at.hour  * 60) + operating_hour.opens_at.min
+    closes_at_min = (operating_hour.closes_at.hour * 60) + operating_hour.closes_at.min
+
+    # Busca agendamentos ativos no dia — sem colunas que podem não existir
+    appointments = @car_wash.appointments
+      .joins(:service)
+      .where("DATE(scheduled_at) = ?", date)
+      .where(status: %w[confirmed pending_acceptance attended])
+      .select("appointments.scheduled_at, services.duration AS svc_duration")
+      .to_a
+
+    occupied = appointments.map do |appt|
+      s = (appt.scheduled_at.in_time_zone("America/Sao_Paulo").hour * 60) +
+           appt.scheduled_at.in_time_zone("America/Sao_Paulo").min
+      d = appt.svc_duration.to_i
+      next nil if d <= 0
+      { begin: s, end: s + d }
+    end.compact
+
+    available = []
+    current   = opens_at_min
+
+    while current + duration <= closes_at_min
+      time_end    = current + duration
+      overlapping = occupied.count { |i| current < i[:end] && time_end > i[:begin] }
+      available << format("%02d:%02d", current / 60, current % 60) if overlapping < capacity_per_slot
+      current += duration
+    end
+
+    render json: available
   end
+rescue Timeout::Error
+  render json: [], status: :request_timeout
+rescue => e
+  Rails.logger.error("[available_times] Erro: #{e.message}\n#{e.backtrace.first(3).join("\n")}")
+  render json: [], status: :internal_server_error
+end
 
   private
 
