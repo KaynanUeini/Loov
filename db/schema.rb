@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_04_05_210816) do
+ActiveRecord::Schema[7.1].define(version: 2026_04_07_222843) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -51,6 +51,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_05_210816) do
     t.index ["acceptance_expires_at"], name: "index_appointments_on_acceptance_expires_at"
     t.index ["appointment_type"], name: "index_appointments_on_appointment_type"
     t.index ["cancelled_by_id"], name: "index_appointments_on_cancelled_by_id"
+    t.index ["car_wash_id", "scheduled_at", "status"], name: "idx_appointments_overlap_check"
     t.index ["car_wash_id"], name: "index_appointments_on_car_wash_id"
     t.index ["service_id"], name: "index_appointments_on_service_id"
     t.index ["stripe_payment_intent_id"], name: "index_appointments_on_stripe_payment_intent_id", unique: true, where: "(stripe_payment_intent_id IS NOT NULL)"

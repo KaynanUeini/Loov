@@ -22,6 +22,9 @@ gem 'sassc-rails' # Adicionado para suporte a SCSS
 gem 'geocoder'
 gem 'dotenv-rails', groups: [:development, :test]
 gem 'rails-i18n', '~> 7.0' # Use a versão compatível com sua versão do Rails
+gem 'rack-attack'          # Rate limiting e proteção contra brute force
+gem 'rack-timeout'         # Previne slow loris attacks (timeout de requests longos)
+
 group :development, :test do
   gem 'debug', platforms: %i[mri mingw x64_mingw]
 end

@@ -1,8 +1,33 @@
-# Be sure to restart your server when you modify this file.
+# config/initializers/filter_parameter_logging.rb
+# Filtra dados sensíveis dos logs — NUNCA devem aparecer em log/production.log
 
-# Configure parameters to be partially matched (e.g. passw matches password) and filtered from the log file.
-# Use this to limit dissemination of sensitive information.
-# See the ActiveSupport::ParameterFilter documentation for supported notations and behaviors.
 Rails.application.config.filter_parameters += [
-  :passw, :secret, :token, :_key, :crypt, :salt, :certificate, :otp, :ssn
+  # Autenticação
+  :password,
+  :password_confirmation,
+  :current_password,
+  :token,
+  :secret,
+  :api_key,
+
+  # PII — Personally Identifiable Information
+  :email,
+  :phone,
+  :cpf,
+  :full_name,
+  :name,
+  :address,
+
+  # Pagamentos
+  :stripe_payment_intent_id,
+  :stripe_customer_id,
+  :payment_method_id,
+  :card_number,
+  :cvv,
+  :expiry,
+
+  # Outros
+  :authenticity_token,
+  :session,
+  :cookie
 ]

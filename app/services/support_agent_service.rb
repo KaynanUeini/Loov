@@ -216,6 +216,13 @@ class SupportAgentService
         refund_note = ""
         if appt.stripe_payment_intent_id.present?
           begin
+            # SEGURANÇA: verifica que o payment_intent pertence ao appointment
+            # antes de processar o estorno — previne estornos arbitrários via IDOR
+            intent = Stripe::PaymentIntent.retrieve(appt.stripe_payment_intent_id)
+            expected_appt_id = intent.metadata&.dig("appointment_id").to_s
+            if expected_appt_id.present? && expected_appt_id != appt.id.to_s
+              raise "Payment intent não pertence a este agendamento"
+            end
             stripe_service.refund(appt.stripe_payment_intent_id)
             refund_note = " (estorno processado)"
             Rails.logger.info("[SupportAgent] Estorno ok — ##{appt.id}")
@@ -290,7 +297,7 @@ class SupportAgentService
       status:      @ticket.status,
       opened_at:   @ticket.created_at.strftime("%d/%m/%Y %H:%M"),
       car_wash:    @car_wash&.name || "não identificado",
-      owner_email: @ticket.user.email,
+      owner_ref:   "USR_#{@ticket.user_id}",  # anonimizado — não envia PII à API externa
       messages:    messages.join("\n\n")
     }
   end
@@ -316,7 +323,7 @@ class SupportAgentService
       TICKET ##{ctx[:ticket_id]}:
       - Categoria: #{ctx[:category]}
       - Lava-rápido: #{ctx[:car_wash]}
-      - Proprietário: #{ctx[:owner_email]}
+      - Referência interna: #{ctx[:owner_ref]}
       - Aberto em: #{ctx[:opened_at]}
 
       HISTÓRICO COMPLETO DA CONVERSA:

@@ -187,25 +187,54 @@ class AppointmentsController < ApplicationController
       return
     end
 
-    overlapping = Appointment
-      .where(car_wash_id: @car_wash.id)
-      .where(status: ['pending', 'confirmed'])
-      .where("scheduled_at < ? AND scheduled_at >= ?", end_time, start_time - service.duration.minutes)
-      .count
+    # ── VERIFICAÇÃO DE CAPACIDADE + SAVE ATÔMICO ──────────────────────────
+    # Usa transaction + lock para evitar race condition entre clientes simultâneos
+    saved = false
+    conflict = false
 
-    if overlapping >= @car_wash.capacity_per_slot
+    ActiveRecord::Base.transaction do
+      # Lock no lava-rápido para serializar agendamentos simultâneos
+      @car_wash.lock!
+
+      # Query correta de overlap: junta com services para usar a duração REAL
+      # de cada agendamento existente, não a duração do serviço novo
+      overlapping = Appointment
+        .joins(:service)
+        .where(car_wash_id: @car_wash.id)
+        .where(status: %w[pending confirmed])
+        .where(
+          "appointments.scheduled_at < ? AND (appointments.scheduled_at + (services.duration * interval '1 minute')) > ?",
+          end_time,
+          start_time
+        )
+        .count
+
+      if overlapping >= @car_wash.capacity_per_slot
+        conflict = true
+        raise ActiveRecord::Rollback
+      end
+
+      @appointment.status = 'confirmed'
+      saved = @appointment.save
+      raise ActiveRecord::Rollback unless saved
+    end
+
+    if conflict
       redirect_to car_wash_path(@car_wash, anchor: 'booking'), alert: "Horário indisponível. Por favor, escolha outro."
       return
     end
 
-    @appointment.status = 'confirmed'
-
-    if @appointment.save
-      AppointmentMailer.confirmation(@appointment).deliver_now
-      redirect_to appointments_path, notice: "Agendamento criado com sucesso!"
-    else
+    unless saved
       redirect_to car_wash_path(@car_wash, anchor: 'booking'), alert: "Erro ao criar o agendamento: #{@appointment.errors.full_messages.join(', ')}"
+      return
     end
+
+    begin
+      AppointmentMailer.confirmation(@appointment).deliver_now
+    rescue => e
+      Rails.logger.error("[Appointments#create] Email falhou: #{e.message}")
+    end
+    redirect_to appointments_path, notice: "Agendamento criado com sucesso!"
   end
 
   def show
@@ -260,7 +289,9 @@ class AppointmentsController < ApplicationController
     @car_wash = nil
   end
 
-  def appointment_params
-    params.require(:appointment).permit(:car_wash_id, :service_id, :date, :time)
+    def appointment_params
+    # SEGURANÇA: nunca permitir status, appointment_type ou campos internos via params
+    # Data/hora são tratados separadamente e validados antes do save
+    params.require(:appointment).permit(:car_wash_id, :service_id)
   end
 end
