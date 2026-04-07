@@ -46,6 +46,8 @@
   .hdr-btn { position:relative; width:36px; height:36px; border-radius:10px; background:transparent; border:1px solid var(--border); display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:.78rem; cursor:pointer; transition:all .2s; }
   .hdr-btn:hover { color:var(--white); border-color:var(--border-soft); background:rgba(255,255,255,.03); }
   .hdr-btn.has-pending-approvals { border-color:rgba(251,191,36,.3); color:#fbbf24; background:rgba(251,191,36,.04); }
+  .hdr-btn.has-unresolved { border-color:rgba(249,115,22,.35); color:var(--orange); background:rgba(249,115,22,.05); animation:unresolvedPulse 2.5s ease-in-out infinite; }
+  @keyframes unresolvedPulse { 0%,100%{box-shadow:0 0 0 0 rgba(249,115,22,0)} 50%{box-shadow:0 0 0 4px rgba(249,115,22,.12)} }
   .hdr-badge { position:absolute; top:-5px; right:-5px; font-family:'Montserrat',sans-serif; font-size:.48rem; font-weight:800; width:15px; height:15px; border-radius:50%; display:none; align-items:center; justify-content:center; border:2px solid #000; }
   .hdr-badge.visible { display:flex; }
   .hdr-badge.yellow { background:var(--yellow); color:#000; }
@@ -104,6 +106,75 @@
   .appt-btn:hover.noshow-btn { background:rgba(248,113,113,.1); border-color:var(--red); color:var(--red); }
   .appt-btn:hover.revert-btn { background:rgba(251,191,36,.1); border-color:var(--yellow); color:var(--yellow); }
   .appt-btn:hover.edit-btn   { background:rgba(255,255,255,.04); border-color:#2a2a2a; color:#777; }
+  .appt-btn:hover.cancel-btn { background:rgba(248,113,113,.1); border-color:var(--red); color:var(--red); }
+
+  /* ── BOTÕES DE AÇÃO TEXTO ── */
+  .appt-action-row { display:flex; align-items:center; gap:5px; flex-shrink:0; }
+  .appt-action-sep { width:1px; height:18px; background:#1a1a1a; flex-shrink:0; }
+  .btn-text-attend {
+    display:inline-flex; align-items:center; gap:4px;
+    background:rgba(175,255,45,.08); border:1px solid rgba(175,255,45,.2);
+    color:var(--lime); border-radius:100px; padding:4px 10px;
+    font-family:'DM Sans',sans-serif; font-size:.7rem; font-weight:700;
+    cursor:pointer; white-space:nowrap; transition:all .15s;
+  }
+  .btn-text-attend:hover { background:rgba(175,255,45,.15); border-color:var(--lime); }
+  .btn-text-noshow {
+    display:inline-flex; align-items:center; gap:4px;
+    background:transparent; border:1px solid #1e1e1e;
+    color:#555; border-radius:100px; padding:4px 10px;
+    font-family:'DM Sans',sans-serif; font-size:.7rem; font-weight:500;
+    cursor:pointer; white-space:nowrap; transition:all .15s;
+  }
+  .btn-text-noshow:hover { border-color:rgba(248,113,113,.3); color:var(--red); }
+  .btn-text-revert {
+    display:inline-flex; align-items:center; gap:4px;
+    background:transparent; border:1px solid #1e1e1e;
+    color:#555; border-radius:100px; padding:4px 10px;
+    font-family:'DM Sans',sans-serif; font-size:.7rem; font-weight:500;
+    cursor:pointer; white-space:nowrap; transition:all .15s;
+  }
+  .btn-text-revert:hover { border-color:rgba(251,191,36,.3); color:var(--yellow); }
+
+  /* ── MODAL CANCELAMENTO ── */
+  .cancel-modal-overlay {
+    position:fixed; inset:0; z-index:200;
+    background:rgba(0,0,0,.88); backdrop-filter:blur(8px);
+    display:none; align-items:center; justify-content:center; padding:1rem;
+  }
+  .cancel-modal-overlay.open { display:flex; }
+  .cancel-modal {
+    background:#080808; border:1px solid #1e1e1e; border-radius:20px;
+    width:100%; max-width:400px; padding:1.5rem;
+  }
+  .cancel-modal-title {
+    font-family:'Montserrat',sans-serif; font-size:.62rem; font-weight:700;
+    letter-spacing:.15em; text-transform:uppercase; color:var(--red);
+    display:flex; align-items:center; gap:.5rem; margin-bottom:.625rem;
+  }
+  .cancel-modal-desc { font-size:.8rem; color:#555; margin-bottom:1rem; line-height:1.5; }
+  .cancel-modal-input {
+    width:100%; background:#0a0a0a; border:1px solid #1e1e1e; border-radius:8px;
+    color:#fff; font-family:'DM Sans',sans-serif; font-size:.8125rem;
+    padding:.75rem 1rem; outline:none; margin-bottom:1rem;
+    transition:border-color .2s;
+  }
+  .cancel-modal-input:focus { border-color:rgba(248,113,113,.3); }
+  .cancel-modal-input::placeholder { color:#333; }
+  .cancel-modal-actions { display:flex; gap:.5rem; }
+  .cancel-modal-back {
+    flex:1; background:transparent; border:1px solid #1e1e1e; border-radius:8px;
+    color:#444; font-family:'DM Sans',sans-serif; font-size:.8rem;
+    padding:.625rem; cursor:pointer; transition:all .15s;
+  }
+  .cancel-modal-back:hover { border-color:#333; color:#888; }
+  .cancel-modal-confirm {
+    flex:2; background:rgba(248,113,113,.08); border:1px solid rgba(248,113,113,.2);
+    border-radius:8px; color:var(--red); font-family:'DM Sans',sans-serif;
+    font-size:.8rem; font-weight:700; padding:.625rem; cursor:pointer; transition:all .15s;
+  }
+  .cancel-modal-confirm:hover { background:rgba(248,113,113,.15); border-color:var(--red); }
+  .cancel-modal-confirm:disabled { opacity:.5; cursor:not-allowed; }
 
   .appts-empty { padding:3rem 1.25rem; text-align:center; }
   .appts-empty-icon { width:48px; height:48px; border-radius:14px; background:rgba(255,255,255,.02); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; margin:0 auto .75rem; font-size:1.1rem; color:#1a1a1a; }
@@ -113,7 +184,6 @@
   .upcoming-bar { display:flex; align-items:center; justify-content:space-between; padding:.875rem 1.25rem; border-top:1px solid var(--border); font-size:.72rem; color:var(--text-muted); }
   .upcoming-val { color:rgba(175,255,45,.7); font-weight:700; }
 
-  /* Drawers */
   .drawer-overlay { position:fixed; inset:0; z-index:50; background:rgba(0,0,0,.75); backdrop-filter:blur(8px); opacity:0; pointer-events:none; transition:opacity .25s ease; }
   .drawer-overlay.open { opacity:1; pointer-events:all; }
   .side-drawer { position:fixed; top:0; right:0; bottom:0; z-index:51; width:min(400px,94vw); background:rgba(3,3,3,0.98); display:flex; flex-direction:column; transform:translateX(100%); transition:transform .32s cubic-bezier(.32,.72,0,1); box-shadow:-20px 0 60px rgba(0,0,0,.7); }
@@ -174,6 +244,298 @@
   @keyframes spin { to{transform:rotate(360deg)} }
   .spin { animation:spin .8s linear infinite; display:inline-block; }
 
+
+  /* ── CHECKLIST DE ATIVAÇÃO ── */
+  .activation-banner {
+    background: linear-gradient(135deg, rgba(175,255,45,.04), rgba(175,255,45,.02));
+    border: 1px solid rgba(175,255,45,.15);
+    border-radius: 16px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .activation-banner::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(175,255,45,.4), transparent);
+  }
+  .activation-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: .5rem;
+  }
+  .activation-title {
+    font-family: 'Montserrat', sans-serif;
+    font-size: .62rem;
+    font-weight: 700;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: rgba(175,255,45,.7);
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+  }
+  .activation-progress-text {
+    font-size: .68rem;
+    color: var(--text-muted);
+  }
+  .activation-bar-wrap {
+    height: 3px;
+    background: rgba(255,255,255,.05);
+    border-radius: 99px;
+    margin-bottom: 1.25rem;
+    overflow: hidden;
+  }
+  .activation-bar-fill {
+    height: 100%;
+    background: var(--lime);
+    border-radius: 99px;
+    transition: width .6s cubic-bezier(.16,1,.3,1);
+  }
+  .activation-steps {
+    display: flex;
+    flex-direction: column;
+    gap: .625rem;
+  }
+  .activation-step {
+    display: flex;
+    align-items: center;
+    gap: .875rem;
+    padding: .75rem 1rem;
+    border-radius: 10px;
+    background: rgba(0,0,0,.3);
+    border: 1px solid rgba(255,255,255,.04);
+    transition: border-color .15s;
+  }
+  .activation-step.done {
+    opacity: .45;
+  }
+  .activation-step:not(.done):hover {
+    border-color: rgba(175,255,45,.15);
+  }
+  .activation-step-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .75rem;
+    flex-shrink: 0;
+  }
+  .activation-step.done .activation-step-icon {
+    background: rgba(175,255,45,.1);
+    color: var(--lime);
+  }
+  .activation-step:not(.done) .activation-step-icon {
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.06);
+    color: #444;
+  }
+  .activation-step-label {
+    flex: 1;
+    font-size: .8125rem;
+    color: #ccc;
+    line-height: 1.3;
+  }
+  .activation-step.done .activation-step-label {
+    color: #444;
+    text-decoration: line-through;
+  }
+  .activation-step-cta {
+    background: rgba(175,255,45,.08);
+    border: 1px solid rgba(175,255,45,.2);
+    color: var(--lime);
+    border-radius: 100px;
+    padding: .3rem .875rem;
+    font-size: .7rem;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background .15s;
+    flex-shrink: 0;
+  }
+  .activation-step-cta:hover {
+    background: rgba(175,255,45,.15);
+  }
+  .activation-dismiss {
+    background: none;
+    border: none;
+    color: #2a2a2a;
+    font-size: .68rem;
+    cursor: pointer;
+    padding: 0;
+    transition: color .15s;
+  }
+  .activation-dismiss:hover { color: #555; }
+
+  /* ── CHECKLIST DE ATIVAÇÃO ── */
+  .activation-banner { background:rgba(175,255,45,.04); border:1px solid rgba(175,255,45,.12); border-radius:16px; padding:1.25rem 1.5rem; margin-bottom:2rem; position:relative; overflow:hidden; }
+  .activation-banner::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(to right,transparent,rgba(175,255,45,.3),transparent); }
+  .activation-banner-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; }
+  .activation-banner-title { font-family:'Montserrat',sans-serif; font-size:.62rem; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:rgba(175,255,45,.6); display:flex; align-items:center; gap:.5rem; }
+  .activation-progress-track { flex:1; max-width:120px; height:3px; background:rgba(255,255,255,.06); border-radius:99px; overflow:hidden; margin-left:1rem; }
+  .activation-progress-fill { height:100%; background:var(--lime); border-radius:99px; transition:width .4s ease; }
+  .activation-steps { display:flex; gap:.75rem; flex-wrap:wrap; }
+  .activation-step { display:flex; align-items:center; gap:.625rem; padding:.625rem 1rem; border-radius:10px; border:1px solid rgba(255,255,255,.05); background:rgba(255,255,255,.02); text-decoration:none; transition:all .2s; flex:1; min-width:180px; }
+  .activation-step:hover { background:rgba(255,255,255,.04); border-color:rgba(255,255,255,.1); }
+  .activation-step.done { border-color:rgba(175,255,45,.15); background:rgba(175,255,45,.04); }
+  .activation-step-icon { width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:.7rem; flex-shrink:0; }
+  .activation-step.done .activation-step-icon { background:rgba(175,255,45,.12); color:var(--lime); }
+  .activation-step:not(.done) .activation-step-icon { background:rgba(255,255,255,.04); color:#333; border:1px solid rgba(255,255,255,.06); }
+  .activation-step-text { flex:1; min-width:0; }
+  .activation-step-label { font-size:.75rem; font-weight:600; color:var(--white); line-height:1.2; }
+  .activation-step.done .activation-step-label { color:rgba(175,255,45,.8); }
+  .activation-step-sub { font-size:.62rem; color:var(--text-muted); margin-top:1px; }
+  .activation-step-arrow { font-size:.6rem; color:#333; flex-shrink:0; }
+  .activation-step.done .activation-step-arrow { color:var(--lime); }
+
+
+  /* ── MODAL MENSAGEM ── */
+  .msg-modal-overlay {
+    position:fixed; inset:0; z-index:200;
+    background:rgba(0,0,0,.88); backdrop-filter:blur(8px);
+    display:none; align-items:center; justify-content:center; padding:1rem;
+  }
+  .msg-modal-overlay.open { display:flex; }
+  .msg-modal {
+    background:#080808; border:1px solid #1e1e1e; border-radius:20px;
+    width:100%; max-width:440px;
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .msg-modal-hdr {
+    padding:1.125rem 1.25rem; border-bottom:1px solid #111;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .msg-modal-title {
+    font-family:'Montserrat',sans-serif; font-size:.62rem; font-weight:700;
+    letter-spacing:.15em; text-transform:uppercase; color:var(--lime);
+    display:flex; align-items:center; gap:.5rem;
+  }
+  .msg-modal-close {
+    background:none; border:1px solid rgba(255,255,255,.06); border-radius:8px;
+    width:30px; height:30px; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; color:#444; font-size:.75rem; transition:all .15s;
+  }
+  .msg-modal-close:hover { border-color:var(--red); color:var(--red); }
+  .msg-modal-body { padding:1.25rem; display:flex; flex-direction:column; gap:.875rem; }
+  .msg-field-label {
+    font-size:.6rem; font-weight:700; letter-spacing:.12em;
+    text-transform:uppercase; color:#444; display:block; margin-bottom:.375rem;
+  }
+  .msg-target-row { display:flex; gap:.5rem; }
+  .msg-target-btn {
+    flex:1; padding:.625rem; border-radius:8px; border:1px solid #1e1e1e;
+    background:transparent; color:#444; font-family:'DM Sans',sans-serif;
+    font-size:.78rem; cursor:pointer; transition:all .15s; text-align:center;
+  }
+  .msg-target-btn.active {
+    border-color:rgba(175,255,45,.3); color:var(--lime);
+    background:rgba(175,255,45,.06);
+  }
+  .msg-select {
+    width:100%; background:#0a0a0a; border:1px solid #1e1e1e; border-radius:8px;
+    color:#fff; font-family:'DM Sans',sans-serif; font-size:.8125rem;
+    padding:.75rem 1rem; outline:none; cursor:pointer; display:none;
+  }
+  .msg-select option { background:#111; }
+  .msg-textarea {
+    width:100%; background:#0a0a0a; border:1px solid #1e1e1e; border-radius:8px;
+    color:#fff; font-family:'DM Sans',sans-serif; font-size:.8125rem;
+    padding:.75rem 1rem; outline:none; resize:none; height:100px;
+    transition:border-color .2s;
+  }
+  .msg-textarea:focus { border-color:rgba(175,255,45,.3); }
+  .msg-textarea::placeholder { color:#333; }
+  .msg-char-count { font-size:.62rem; color:#333; text-align:right; margin-top:-.5rem; }
+  .msg-error {
+    font-size:.72rem; color:var(--red); padding:.5rem .75rem;
+    background:rgba(248,113,113,.06); border:1px solid rgba(248,113,113,.15);
+    border-radius:7px; display:none;
+  }
+  .msg-send-btn {
+    width:100%; background:var(--lime); border:none; border-radius:10px;
+    color:#000; font-family:'DM Sans',sans-serif; font-size:.875rem;
+    font-weight:700; padding:.75rem; cursor:pointer; transition:background .15s;
+    display:flex; align-items:center; justify-content:center; gap:.4rem;
+  }
+  .msg-send-btn:hover { background:var(--lime-dim); }
+  .msg-send-btn:disabled { opacity:.5; cursor:not-allowed; }
+
+
+  /* ── LOYALTY ── */
+  .loyalty-dots { display:flex; align-items:center; gap:3px; margin-top:4px; }
+  .loyalty-dot {
+    width:7px; height:7px; border-radius:50%;
+    background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.06);
+    transition:background .2s;
+  }
+  .loyalty-dot.filled { background:var(--lime); border-color:var(--lime); }
+  .loyalty-dot.milestone { background:#fbbf24; border-color:#fbbf24; animation:milestonePulse 1s ease-in-out 3; }
+  @keyframes milestonePulse { 0%,100%{box-shadow:0 0 0 0 rgba(251,191,36,0)} 50%{box-shadow:0 0 0 4px rgba(251,191,36,.3)} }
+  .loyalty-label { font-size:.55rem; color:#444; margin-top:2px; letter-spacing:.04em; }
+  .loyalty-milestone-badge {
+    display:inline-flex; align-items:center; gap:.25rem;
+    background:rgba(251,191,36,.1); border:1px solid rgba(251,191,36,.3);
+    color:#fbbf24; border-radius:100px; padding:1px 6px;
+    font-size:.55rem; font-weight:700; margin-top:3px;
+  }
+
+  /* ── MODAL LOYALTY ── */
+  .loyalty-modal-overlay {
+    position:fixed; inset:0; z-index:200;
+    background:rgba(0,0,0,.88); backdrop-filter:blur(8px);
+    display:none; align-items:center; justify-content:center; padding:1rem;
+  }
+  .loyalty-modal-overlay.open { display:flex; }
+  .loyalty-modal {
+    background:#080808; border:1px solid #1e1e1e; border-radius:20px;
+    width:100%; max-width:420px; overflow:hidden;
+  }
+  .loyalty-modal-hdr {
+    padding:1.125rem 1.25rem; border-bottom:1px solid #111;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .loyalty-modal-title {
+    font-family:'Montserrat',sans-serif; font-size:.62rem; font-weight:700;
+    letter-spacing:.15em; text-transform:uppercase; color:#fbbf24;
+    display:flex; align-items:center; gap:.5rem;
+  }
+  .loyalty-modal-body { padding:1.25rem; display:flex; flex-direction:column; gap:1rem; }
+  .loyalty-toggle-row {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:.875rem 1rem; background:rgba(255,255,255,.02);
+    border:1px solid rgba(255,255,255,.04); border-radius:10px;
+  }
+  .loyalty-toggle-label { font-size:.8125rem; color:#ccc; }
+  .loyalty-toggle-sub { font-size:.68rem; color:#444; margin-top:2px; }
+  .toggle-switch {
+    position:relative; width:40px; height:22px; cursor:pointer;
+  }
+  .toggle-switch input { opacity:0; width:0; height:0; }
+  .toggle-slider {
+    position:absolute; inset:0; background:#1a1a1a; border-radius:100px;
+    border:1px solid #2a2a2a; transition:.3s;
+  }
+  .toggle-slider:before {
+    content:''; position:absolute; width:16px; height:16px;
+    border-radius:50%; background:#444; bottom:2px; left:2px; transition:.3s;
+  }
+  .toggle-switch input:checked + .toggle-slider { background:rgba(175,255,45,.15); border-color:rgba(175,255,45,.3); }
+  .toggle-switch input:checked + .toggle-slider:before { background:var(--lime); transform:translateX(18px); }
+  .loyalty-save-btn {
+    width:100%; background:#fbbf24; border:none; border-radius:10px;
+    color:#000; font-family:'DM Sans',sans-serif; font-size:.875rem;
+    font-weight:700; padding:.75rem; cursor:pointer; transition:background .15s;
+  }
+  .loyalty-save-btn:hover { background:#f59e0b; }
+
   @media(max-width:900px) { .owner-sidebar{display:none;} .owner-content{margin-left:0;} .kpi-grid{grid-template-columns:repeat(2,1fr);} }
   @media(max-width:600px) { .owner-content{padding:1rem;} .kpi-grid{grid-template-columns:1fr 1fr;} }
 </style>
@@ -201,6 +563,105 @@
 </div>
 
 <div class="toast-container" id="toast-container"></div>
+<%# ── MODAL CANCELAMENTO INDIVIDUAL ── %>
+<div class="cancel-modal-overlay" id="cancel-appt-overlay">
+  <div class="cancel-modal">
+    <div class="cancel-modal-title"><i class="fas fa-ban"></i>Cancelar agendamento</div>
+    <div class="cancel-modal-desc" id="cancel-appt-desc">Carregando...</div>
+    <input class="cancel-modal-input" id="cancel-appt-reason" placeholder="Motivo do cancelamento (opcional)" />
+    <div id="cancel-appt-error" style="display:none;font-size:.72rem;color:var(--red);margin-bottom:.75rem;"></div>
+    <div class="cancel-modal-actions">
+      <button class="cancel-modal-back" onclick="closeCancelApptModal()">Voltar</button>
+      <button class="cancel-modal-confirm" id="cancel-appt-confirm">Confirmar cancelamento</button>
+    </div>
+  </div>
+</div>
+
+
+
+<%# ── MODAL LOYALTY ── %>
+<% if current_user.owner? %>
+<div class="loyalty-modal-overlay" id="loyalty-modal-overlay">
+  <div class="loyalty-modal">
+    <div class="loyalty-modal-hdr">
+      <div class="loyalty-modal-title"><i class="fas fa-star"></i>Programa de Fidelidade</div>
+      <button class="msg-modal-close" id="loyalty-modal-close"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="loyalty-modal-body">
+      <div class="loyalty-toggle-row">
+        <div>
+          <div class="loyalty-toggle-label">Ativar programa</div>
+          <div class="loyalty-toggle-sub">Clientes acumulam visitas e ganham recompensas</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="loyalty-active" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div>
+        <label class="msg-field-label">Visitas necessárias para a recompensa</label>
+        <input type="number" id="loyalty-visits" min="1" max="50" value="5"
+          style="width:100%;background:#0a0a0a;border:1px solid #1e1e1e;border-radius:8px;color:#fff;font-family:'DM Sans',sans-serif;font-size:.8125rem;padding:.75rem 1rem;outline:none;">
+      </div>
+      <div>
+        <label class="msg-field-label">Descrição da recompensa</label>
+        <input type="text" id="loyalty-reward" maxlength="120"
+          placeholder="Ex: Lavagem simples grátis, 20% de desconto..."
+          style="width:100%;background:#0a0a0a;border:1px solid #1e1e1e;border-radius:8px;color:#fff;font-family:'DM Sans',sans-serif;font-size:.8125rem;padding:.75rem 1rem;outline:none;">
+        <div style="font-size:.62rem;color:#2a2a2a;margin-top:.375rem;">Isso aparece para o cliente ao atingir a meta</div>
+      </div>
+      <div id="loyalty-error" style="display:none;font-size:.72rem;color:var(--red);padding:.5rem .75rem;background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.15);border-radius:7px;"></div>
+      <button class="loyalty-save-btn" id="loyalty-save-btn" onclick="saveLoyaltyProgram()">
+        <i class="fas fa-check"></i> Salvar configuração
+      </button>
+    </div>
+  </div>
+</div>
+<% end %>
+
+
+
+<%# ── MODAL MENSAGEM AO CLIENTE ── %>
+<% if current_user.owner? || current_user.attendant? %>
+<div class="msg-modal-overlay" id="msg-modal-overlay">
+  <div class="msg-modal">
+    <div class="msg-modal-hdr">
+      <div class="msg-modal-title"><i class="fas fa-paper-plane"></i>Enviar mensagem</div>
+      <button class="msg-modal-close" id="msg-modal-close"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="msg-modal-body">
+      <div>
+        <label class="msg-field-label">Destinatário</label>
+        <div class="msg-target-row">
+          <button class="msg-target-btn active" id="msg-target-all" onclick="setMsgTarget('all')">
+            <i class="fas fa-users" style="margin-right:.3rem;"></i>Todos de hoje
+          </button>
+          <button class="msg-target-btn" id="msg-target-user" onclick="setMsgTarget('user')">
+            <i class="fas fa-user" style="margin-right:.3rem;"></i>Cliente específico
+          </button>
+        </div>
+      </div>
+      <div id="msg-client-wrap">
+        <label class="msg-field-label">Selecionar cliente</label>
+        <select class="msg-select" id="msg-client-select">
+          <option value="">Carregando...</option>
+        </select>
+      </div>
+      <div>
+        <label class="msg-field-label">Mensagem</label>
+        <textarea class="msg-textarea" id="msg-body" placeholder="Ex: Chegue 10 minutos antes, por favor." maxlength="300" oninput="updateMsgCount()"></textarea>
+        <div class="msg-char-count"><span id="msg-count">0</span>/300</div>
+      </div>
+      <div class="msg-error" id="msg-error"></div>
+      <button class="msg-send-btn" id="msg-send-btn" onclick="sendOwnerMessage()">
+        <i class="fas fa-paper-plane"></i> Enviar mensagem
+      </button>
+    </div>
+  </div>
+</div>
+<% end %>
+
+
 
 <div class="owner-wrap">
   <aside class="owner-sidebar">
@@ -239,6 +700,42 @@
   </aside>
 
   <main class="owner-content">
+
+    <%# ── CHECKLIST DE ATIVAÇÃO ──────────────────────────────────────────── %>
+    <% if current_user.owner? && @activation_steps.present? %>
+    <% done_count = @activation_steps.count { |s| s[:done] } %>
+    <% total = @activation_steps.size %>
+    <% pct = (done_count.to_f / total * 100).round %>
+    <div class="activation-banner" id="activation-banner">
+      <div class="activation-header">
+        <div class="activation-title">
+          <i class="fas fa-rocket"></i>
+          Configure seu lava-rápido
+        </div>
+        <div style="display:flex;align-items:center;gap:.875rem;">
+          <span class="activation-progress-text"><%= done_count %>/<%= total %> concluídos</span>
+          <button class="activation-dismiss" onclick="dismissActivation()" title="Ocultar">Ocultar</button>
+        </div>
+      </div>
+      <div class="activation-bar-wrap">
+        <div class="activation-bar-fill" style="width:<%= pct %>%;"></div>
+      </div>
+      <div class="activation-steps">
+        <% @activation_steps.each do |step| %>
+        <div class="activation-step <%= step[:done] ? 'done' : '' %>">
+          <div class="activation-step-icon">
+            <i class="fas <%= step[:done] ? 'fa-check' : step[:icon] %>"></i>
+          </div>
+          <span class="activation-step-label"><%= step[:label] %></span>
+          <% unless step[:done] %>
+            <%= link_to step[:cta], step[:url], class: "activation-step-cta" %>
+          <% end %>
+        </div>
+        <% end %>
+      </div>
+    </div>
+    <% end %>
+
     <div class="owner-header">
       <div class="owner-clock-wrap">
         <div class="owner-clock" id="owner-clock">00:00</div>
@@ -255,9 +752,91 @@
           <span class="hdr-badge yellow" id="approval-hdr-badge"></span>
         </button>
         <% end %>
+        <button class="hdr-walkin-btn" id="btn-message" onclick="openMsgModal()" style="background:transparent;border:1px solid var(--border);color:#888;margin-right:.25rem;" title="Enviar mensagem ao cliente"><i class="fas fa-paper-plane"></i></button>
+        <% if current_user.owner? %>
+        <button class="hdr-walkin-btn" id="btn-loyalty" onclick="openLoyaltyModal()" style="background:transparent;border:1px solid var(--border);color:#888;margin-right:.25rem;" title="Programa de fidelidade"><i class="fas fa-star"></i></button>
+        <% end %>
         <button class="hdr-walkin-btn" id="btn-walk-in"><i class="fas fa-plus"></i> Avulso</button>
       </div>
     </div>
+
+    <%# ── CHECKLIST DE ATIVAÇÃO ── %>
+    <% if current_user.owner? && @checklist && !@checklist_done %>
+    <div class="activation-banner">
+      <div class="activation-banner-header">
+        <div class="activation-banner-title">
+          <i class="fas fa-rocket"></i>
+          Configure seu negócio
+          <div class="activation-progress-track">
+            <div class="activation-progress-fill" style="width:<%= (@checklist_progress / 3.0 * 100).round %>%;"></div>
+          </div>
+          <span style="font-size:.58rem;color:rgba(175,255,45,.4);"><%= @checklist_progress %>/3</span>
+        </div>
+        <span style="font-size:.62rem;color:var(--text-muted);">Complete para liberar seu perfil aos clientes</span>
+      </div>
+      <div class="activation-steps">
+        <% if @checklist[:hours] %>
+          <div class="activation-step done">
+            <div class="activation-step-icon"><i class="fas fa-check"></i></div>
+            <div class="activation-step-text">
+              <div class="activation-step-label">Horários cadastrados</div>
+              <div class="activation-step-sub">Clientes já sabem quando você abre</div>
+            </div>
+            <i class="fas fa-check activation-step-arrow"></i>
+          </div>
+        <% else %>
+          <%= link_to manage_car_wash_path(@car_wash, anchor: 'hours'), class: "activation-step" do %>
+            <div class="activation-step-icon"><i class="fas fa-clock"></i></div>
+            <div class="activation-step-text">
+              <div class="activation-step-label">Cadastrar horários</div>
+              <div class="activation-step-sub">Defina quando você funciona</div>
+            </div>
+            <i class="fas fa-arrow-right activation-step-arrow"></i>
+          <% end %>
+        <% end %>
+
+        <% if @checklist[:service] %>
+          <div class="activation-step done">
+            <div class="activation-step-icon"><i class="fas fa-check"></i></div>
+            <div class="activation-step-text">
+              <div class="activation-step-label">Serviços cadastrados</div>
+              <div class="activation-step-sub">Clientes já podem agendar</div>
+            </div>
+            <i class="fas fa-check activation-step-arrow"></i>
+          </div>
+        <% else %>
+          <%= link_to manage_car_wash_path(@car_wash, anchor: 'services'), class: "activation-step" do %>
+            <div class="activation-step-icon"><i class="fas fa-car-wash"></i></div>
+            <div class="activation-step-text">
+              <div class="activation-step-label">Cadastrar serviços</div>
+              <div class="activation-step-sub">Adicione preços e durações</div>
+            </div>
+            <i class="fas fa-arrow-right activation-step-arrow"></i>
+          <% end %>
+        <% end %>
+
+        <% if @checklist[:checkin] %>
+          <div class="activation-step done">
+            <div class="activation-step-icon"><i class="fas fa-check"></i></div>
+            <div class="activation-step-text">
+              <div class="activation-step-label">Primeiro atendimento</div>
+              <div class="activation-step-sub">Negócio ativo e funcionando</div>
+            </div>
+            <i class="fas fa-check activation-step-arrow"></i>
+          </div>
+        <% else %>
+          <div class="activation-step" style="cursor:default;">
+            <div class="activation-step-icon"><i class="fas fa-flag-checkered"></i></div>
+            <div class="activation-step-text">
+              <div class="activation-step-label">Primeiro atendimento</div>
+              <div class="activation-step-sub">Marque o comparecimento de um cliente</div>
+            </div>
+            <i class="fas fa-hourglass activation-step-arrow"></i>
+          </div>
+        <% end %>
+      </div>
+    </div>
+    <% end %>
 
     <div class="kpi-grid">
       <div class="kpi-card">
@@ -306,6 +885,7 @@
 (function() {
   const CSRF = document.querySelector('meta[name="csrf-token"]')?.content;
   let allServices = [];
+  let unresolvedData = [];
 
   function updateClock() {
     const now = new Date();
@@ -407,14 +987,23 @@
     let metaHtml = '';
     if (a.phone_last4 || a.vehicle) {
       const parts = [];
-      if (a.phone_last4) parts.push(
-        `<span style="display:inline-flex;align-items:center;gap:.25rem;">` +
-        `<span style="font-size:.55rem;color:#2a2a2a;text-transform:uppercase;letter-spacing:.1em;font-weight:700;">código</span>` +
-        `<span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:#afff2d;letter-spacing:.08em;">${a.phone_last4}</span>` +
-        `</span>`
-      );
+      if (a.phone_last4) parts.push(`<span style="display:inline-flex;align-items:center;gap:.25rem;"><span style="font-size:.55rem;color:#2a2a2a;text-transform:uppercase;letter-spacing:.1em;font-weight:700;">código</span><span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:#afff2d;letter-spacing:.08em;">${a.phone_last4}</span></span>`);
       if (a.vehicle) parts.push(`<span style="font-size:.65rem;color:#444;">${a.vehicle}</span>`);
       metaHtml = `<div style="display:flex;align-items:center;gap:.5rem;margin-top:3px;">${parts.join('')}</div>`;
+    }
+
+    // Loyalty dots — usa filled (posição no ciclo) e não o total de visitas
+    let loyaltyHtml = '';
+    if (a.loyalty && a.loyalty.goal > 0) {
+      const { filled, goal, milestone, reward } = a.loyalty;
+      const dots = Array.from({ length: goal }, (_, i) =>
+        `<span class="loyalty-dot ${i < filled ? (milestone ? 'milestone' : 'filled') : ''}"></span>`
+      ).join('');
+      if (milestone) {
+        loyaltyHtml = `<div class="loyalty-dots" style="display:flex;gap:3px;">${dots}</div><div class="loyalty-milestone-badge"><i class="fas fa-trophy" style="font-size:.5rem;"></i>${reward}</div>`;
+      } else {
+        loyaltyHtml = `<div class="loyalty-dots">${dots}</div><div class="loyalty-label">${filled}/${goal} visitas</div>`;
+      }
     }
     const dispBadge = a.is_disponivel ? `<span class="disp-tag"><i class="fas fa-bolt"></i>Disp.</span>` : '';
     let priceHtml;
@@ -434,92 +1023,74 @@
       <div class="appt-info">
         <div class="appt-client">${a.client}${dispBadge}${a.walk_in?'<span class="appt-walkin-tag">avulso</span>':''}</div>
         <div class="appt-service">${a.service}</div>
-        ${metaHtml}
+        ${metaHtml}${loyaltyHtml}
       </div>
       ${priceHtml}
-      <div class="appt-actions">
-        <button class="appt-btn edit-btn" data-action="edit" title="Editar serviço"><i class="fas fa-pen"></i></button>
+      <div class="appt-action-row">
         ${settled
-          ? `<button class="appt-btn revert-btn" data-action="revert" title="Desfazer"><i class="fas fa-rotate-left"></i></button>`
-          : `<button class="appt-btn attend-btn" data-action="attend" title="Compareceu"><i class="fas fa-check"></i></button>
-             <button class="appt-btn noshow-btn" data-action="noshow" title="Não veio"><i class="fas fa-xmark"></i></button>`
+          ? `<button class="btn-text-revert" data-action="revert"><i class="fas fa-rotate-left" style="font-size:.6rem;"></i> Desfazer</button>`
+          : `<button class="btn-text-attend" data-action="attend"><i class="fas fa-check" style="font-size:.6rem;"></i> Atendido</button>
+             <button class="btn-text-noshow" data-action="noshow"><i class="fas fa-xmark" style="font-size:.6rem;"></i> Ausente</button>
+             <div class="appt-action-sep"></div>
+             <button class="appt-btn edit-btn" data-action="edit" title="Editar serviço"><i class="fas fa-pen"></i></button>
+             <button class="appt-btn cancel-btn" data-action="cancel" title="Cancelar agendamento"><i class="fas fa-ban"></i></button>`
         }
       </div>`;
-    row.querySelectorAll('.appt-btn').forEach(btn=>{
+    row.querySelectorAll('.appt-btn, .btn-text-attend, .btn-text-noshow, .btn-text-revert').forEach(btn=>{
       btn.addEventListener('click', async e=>{
         e.stopPropagation();
-        if(btn.dataset.action==='edit'){showEditModal(a);return;}
-        btn.disabled=true; btn.innerHTML='<i class="fas fa-circle-notch spin"></i>';
+        if(btn.dataset.action==='cancel'){ openCancelApptModal(a, btn); return; }
+        if(btn.dataset.action==='edit'){ showEditModal(a); return; }
+        btn.disabled=true;
+        const origHtml = btn.innerHTML;
+        btn.innerHTML='<i class="fas fa-circle-notch spin"></i>';
         const urls={attend:`/owner/checkins/${a.id}/attend`,noshow:`/owner/checkins/${a.id}/no_show`,revert:`/owner/checkins/${a.id}/revert`};
         const data=await patch(urls[btn.dataset.action]);
         if(data.ok){
           if(btn.dataset.action==='attend') row.classList.add('flash-green');
           else if(btn.dataset.action==='noshow') row.classList.add('flash-red');
           setTimeout(()=>loadToday(),420);
+        } else {
+          btn.disabled=false; btn.innerHTML=origHtml;
         }
       });
     });
     return row;
   }
 
-  async function loadToday() {
-    const res = await fetch('/owner/checkins/today',{headers:{Accept:'application/json'}});
-    const data = await res.json();
-    const appts=data.appointments||[], summary=data.summary||{};
-    allServices = data.services||[];
-    animateCounter(document.getElementById('kpi-total'),    summary.total||0,    false);
-    animateCounter(document.getElementById('kpi-pending'),  summary.pending||0,  false);
-    animateCounter(document.getElementById('kpi-attended'), summary.attended||0, false);
-    animateCounter(document.getElementById('kpi-revenue'),  summary.revenue_today||0, true, 600);
-    const avg7=summary.avg_7_days||0, rev=summary.revenue_today||0;
-    if (avg7 > 0) {
-      const diff=rev-avg7, sign=diff>=0?'+':'';
-      document.getElementById('kpi-revenue-sub').textContent=`${sign}R$${Math.abs(diff).toFixed(0)} vs média 7 dias`;
-    }
-    document.getElementById('agenda-count').textContent = `${appts.length} agendamento${appts.length===1?'':'s'}`;
-    const list = document.getElementById('appts-list');
-    list.innerHTML = '';
-    if (!appts.length) {
-      const h=new Date().getHours();
-      const sub=h<8?'O movimento começa mais tarde.':h<12?'A manhã ainda está tranquila.':h<18?'Sem agendamentos esta tarde.':'Fim de expediente tranquilo.';
-      list.innerHTML=`<div class="appts-empty"><div class="appts-empty-icon"><i class="fas fa-calendar-xmark"></i></div><div class="appts-empty-title">Nenhum agendamento</div><div class="appts-empty-sub">${sub}</div></div>`;
-    } else {
-      appts.forEach(a => list.appendChild(renderRow(a)));
-    }
-    updatePendingBadge(data.pending_days||[]);
-  }
-
-  function updatePendingBadge(pendingDays) {
-    const hdrBtn=document.getElementById('pending-hdr-btn');
-    const navBtn=document.getElementById('pending-nav-btn');
-    const hdrBadge=document.getElementById('pending-hdr-badge');
-    const snavBadge=document.getElementById('snav-pending-badge');
+  function updateUnresolvedBadge(items) {
+    const hdrBtn=document.getElementById('pending-hdr-btn'), navBtn=document.getElementById('pending-nav-btn');
+    const hdrBadge=document.getElementById('pending-hdr-badge'), snavBadge=document.getElementById('snav-pending-badge');
     const drawerBadge=document.getElementById('pending-drawer-badge');
-    if (pendingDays.length > 0) {
-      if(hdrBtn){hdrBtn.style.display='flex';hdrBadge.textContent=pendingDays.length;hdrBadge.classList.add('visible');}
-      if(navBtn){navBtn.style.display='flex';snavBadge.textContent=pendingDays.length;snavBadge.classList.add('visible');}
-      if(drawerBadge) drawerBadge.textContent=pendingDays.length;
-      if(!hdrBtn?.dataset.notified){if(hdrBtn)hdrBtn.dataset.notified='1';showToast(`${pendingDays.length} agendamento${pendingDays.length>1?'s':''} de dias anteriores aguardando.`,'warning');}
+    unresolvedData = items;
+    if (items.length > 0) {
+      if(hdrBtn){hdrBtn.style.display='flex';hdrBtn.classList.add('has-unresolved');}
+      if(hdrBadge){hdrBadge.textContent=items.length;hdrBadge.classList.add('visible');}
+      if(navBtn)navBtn.style.display='flex';
+      if(snavBadge){snavBadge.textContent=items.length;snavBadge.classList.add('visible');}
+      if(drawerBadge)drawerBadge.textContent=items.length;
+      if(hdrBtn&&!hdrBtn.dataset.notified){hdrBtn.dataset.notified='1';showToast(`${items.length} agendamento${items.length>1?'s':''} de dias anteriores sem fechamento.`,'warning');}
     } else {
-      if(hdrBtn) hdrBtn.style.display='none';
-      if(navBtn) navBtn.style.display='none';
+      if(hdrBtn){hdrBtn.style.display='none';hdrBtn.classList.remove('has-unresolved');delete hdrBtn.dataset.notified;}
+      if(hdrBadge)hdrBadge.classList.remove('visible');
+      if(navBtn)navBtn.style.display='none';
+      if(snavBadge)snavBadge.classList.remove('visible');
     }
-    if(hdrBtn) hdrBtn.dataset.pendingData = JSON.stringify(pendingDays);
   }
 
-  function renderPendingDrawer(pendingDays) {
+  function renderPendingDrawer(items) {
     const body=document.getElementById('pending-drawer-body');
-    if(!pendingDays.length){body.innerHTML='<div class="drawer-empty"><i class="fas fa-check-circle" style="display:block;font-size:1.5rem;margin-bottom:8px;color:#1a1a1a;"></i>Nenhuma pendência.</div>';return;}
+    if(!items.length){body.innerHTML='<div class="drawer-empty"><i class="fas fa-check-circle" style="display:block;font-size:1.5rem;margin-bottom:8px;color:#1a1a1a;"></i>Nenhuma pendência.</div>';return;}
     const grouped={};
-    pendingDays.forEach(a=>{const key=a.date||a.scheduled_at?.split('T')[0]||'Sem data';if(!grouped[key])grouped[key]=[];grouped[key].push(a);});
+    items.forEach(a=>{const key=a.date||'Sem data';if(!grouped[key])grouped[key]=[];grouped[key].push(a);});
     body.innerHTML='';
-    Object.keys(grouped).sort().forEach(date=>{
-      const group=document.createElement('div'); group.className='pending-day-group';
-      const [y,m,d]=date.split('-');
-      const label=d&&m&&y?new Date(y,m-1,d).toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'}):date;
+    Object.keys(grouped).sort().forEach(dateKey=>{
+      const group=document.createElement('div');group.className='pending-day-group';
+      let label=dateKey;
+      if(dateKey.match(/^\d{4}-\d{2}-\d{2}$/)){const[y,m,d]=dateKey.split('-');label=new Date(y,m-1,d).toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'});}
       group.innerHTML=`<div class="pending-day-label">${label}</div>`;
-      grouped[date].forEach(a=>{
-        const card=document.createElement('div'); card.className='pending-appt-card'; card.id=`pcard-${a.id}`;
+      grouped[dateKey].forEach(a=>{
+        const card=document.createElement('div');card.className='pending-appt-card';card.id=`pcard-${a.id}`;
         card.innerHTML=`<div class="pending-appt-time">${a.time}</div><div class="pending-appt-info"><div class="pending-appt-client">${a.client}</div><div class="pending-appt-service">${a.service}</div></div><div class="pending-appt-price">R$${parseFloat(a.price).toFixed(0)}</div><div class="pending-appt-actions"><button class="pending-btn-attend"><i class="fas fa-check"></i> Veio</button><button class="pending-btn-noshow"><i class="fas fa-xmark"></i> Faltou</button></div>`;
         card.querySelector('.pending-btn-attend').addEventListener('click',async function(){await resolvePending(a.id,'attend',this,card);});
         card.querySelector('.pending-btn-noshow').addEventListener('click',async function(){await resolvePending(a.id,'no_show',this,card);});
@@ -530,95 +1101,296 @@
   }
 
   async function resolvePending(id, action, btn, card) {
-    btn.disabled=true; btn.innerHTML='<i class="fas fa-circle-notch spin"></i>';
+    btn.disabled=true;btn.innerHTML='<i class="fas fa-circle-notch spin"></i>';
     const url=action==='attend'?`/owner/checkins/${id}/attend`:`/owner/checkins/${id}/no_show`;
     const data=await patch(url);
     if(data.ok){card.classList.add('removing');setTimeout(()=>{card.remove();showToast(action==='attend'?'Marcado como compareceu.':'Marcado como não veio.',action==='attend'?'success':'error');loadToday();},220);}
     else{btn.disabled=false;btn.innerHTML=action==='attend'?'<i class="fas fa-check"></i> Veio':'<i class="fas fa-xmark"></i> Faltou';showToast('Erro ao atualizar.','error');}
   }
 
-  window.openPendingDrawer = function() {
-    const btn=document.getElementById('pending-hdr-btn');
-    const pendingDays=JSON.parse(btn?.dataset.pendingData||'[]');
-    renderPendingDrawer(pendingDays);
-    document.getElementById('pending-drawer').classList.add('open');
-    document.getElementById('pending-overlay').classList.add('open');
-    document.body.style.overflow='hidden';
-  };
-  function closePendingDrawer() {
-    document.getElementById('pending-drawer').classList.remove('open');
-    document.getElementById('pending-overlay').classList.remove('open');
-    document.body.style.overflow='';
+  window.openPendingDrawer=function(){renderPendingDrawer(unresolvedData);document.getElementById('pending-drawer').classList.add('open');document.getElementById('pending-overlay').classList.add('open');document.body.style.overflow='hidden';};
+  function closePendingDrawer(){document.getElementById('pending-drawer').classList.remove('open');document.getElementById('pending-overlay').classList.remove('open');document.body.style.overflow='';}
+
+  let _firstLoad = true;
+  async function loadToday() {
+    try {
+      const res=await fetch('/owner/checkins/today',{headers:{Accept:'application/json'}});
+      const data=await res.json();
+      const appts=data.appointments||[],summary=data.summary||{};
+      allServices=data.services||[];
+      if (_firstLoad) {
+        animateCounter(document.getElementById('kpi-total'),    summary.total||0,    false);
+        animateCounter(document.getElementById('kpi-pending'),  summary.pending||0,  false);
+        animateCounter(document.getElementById('kpi-attended'), summary.attended||0, false);
+        animateCounter(document.getElementById('kpi-revenue'),  summary.revenue_today||0, true, 600);
+        _firstLoad = false;
+      } else {
+        const kTotal    = document.getElementById('kpi-total');
+        const kPending  = document.getElementById('kpi-pending');
+        const kAttended = document.getElementById('kpi-attended');
+        const kRevenue  = document.getElementById('kpi-revenue');
+        if(kTotal)    kTotal.textContent    = summary.total||0;
+        if(kPending)  kPending.textContent  = summary.pending||0;
+        if(kAttended) kAttended.textContent = summary.attended||0;
+        if(kRevenue)  kRevenue.textContent  = 'R$ ' + (summary.revenue_today||0).toLocaleString('pt-BR');
+      }
+      const avg7=summary.avg_7_days||0,rev=summary.revenue_today||0;
+      if(avg7>0){const diff=rev-avg7,sign=diff>=0?'+':'';document.getElementById('kpi-revenue-sub').textContent=`${sign}R$${Math.abs(diff).toFixed(0)} vs média 7 dias`;}
+      document.getElementById('agenda-count').textContent=`${appts.length} agendamento${appts.length===1?'':'s'}`;
+      const list=document.getElementById('appts-list');list.innerHTML='';
+      if(!appts.length){const h=new Date().getHours();const sub=h<8?'O movimento começa mais tarde.':h<12?'A manhã ainda está tranquila.':h<18?'Sem agendamentos esta tarde.':'Fim de expediente tranquilo.';list.innerHTML=`<div class="appts-empty"><div class="appts-empty-icon"><i class="fas fa-calendar-xmark"></i></div><div class="appts-empty-title">Nenhum agendamento</div><div class="appts-empty-sub">${sub}</div></div>`;}
+      else{appts.forEach(a=>list.appendChild(renderRow(a)));}
+      updateUnresolvedBadge(data.unresolved_past||[]);
+    } catch(e){console.error('loadToday error:',e);}
   }
 
   const costLabels={rent:'Aluguel',salaries:'Salários',utilities:'Energia/Água',products:'Produtos',maintenance:'Manutenção',other_fixed:'Outros fixos',other_variable:'Outros variáveis',notes:'Observações'};
-  function formatPayload(ct, payload) {
-    if(!payload)return'<em style="color:#333">Sem detalhes.</em>';
-    if(ct==='monthly_costs'){const cp=payload.cost_params||{},month=payload.month?`${String(payload.month).padStart(2,'0')}/${payload.year}`:'';let rows=`<div style="font-size:.6rem;color:#fbbf24;margin-bottom:6px;font-weight:700;letter-spacing:.1em;">CUSTOS — ${month}</div>`;rows+=Object.entries(cp).map(([k,v])=>{if(v===''||v===null||v===undefined)return'';const label=costLabels[k]||k;const val=k==='notes'?`<span style="color:#555">${v||'—'}</span>`:`<span style="color:#e0e0e0">R$ ${parseFloat(v).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>`;return`<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #0f0f0f;"><span style="color:#333">${label}</span>${val}</div>`;}).join('');return rows;}
-    return`<pre style="font-size:.62rem;color:#444;white-space:pre-wrap;margin:0;">${JSON.stringify(payload,null,2)}</pre>`;
-  }
+  function formatPayload(ct,payload){if(!payload)return'<em style="color:#333">Sem detalhes.</em>';if(ct==='monthly_costs'){const cp=payload.cost_params||{},month=payload.month?`${String(payload.month).padStart(2,'0')}/${payload.year}`:'';let rows=`<div style="font-size:.6rem;color:#fbbf24;margin-bottom:6px;font-weight:700;letter-spacing:.1em;">CUSTOS — ${month}</div>`;rows+=Object.entries(cp).map(([k,v])=>{if(v===''||v===null||v===undefined)return'';const label=costLabels[k]||k;const val=k==='notes'?`<span style="color:#555">${v||'—'}</span>`:`<span style="color:#e0e0e0">R$ ${parseFloat(v).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>`;return`<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #0f0f0f;"><span style="color:#333">${label}</span>${val}</div>`;}).join('');return rows;}return`<pre style="font-size:.62rem;color:#444;white-space:pre-wrap;margin:0;">${JSON.stringify(payload,null,2)}</pre>`;}
   function toggleDetail(id){const el=document.getElementById(id),icon=document.getElementById('icon-'+id);if(!el)return;const open=el.style.display==='none';el.style.display=open?'block':'none';icon.className=open?'fas fa-minus':'fas fa-plus';}
   window.toggleDetail=toggleDetail;
-  function removeCard(cardEl, cb){cardEl.classList.add('removing');setTimeout(cb,220);}
+  function removeCard(cardEl,cb){cardEl.classList.add('removing');setTimeout(cb,220);}
 
-  async function loadApprovals() {
-    const btn=document.getElementById('approval-hdr-btn'); if(!btn)return;
-    try {
+  async function loadApprovals(){
+    const btn=document.getElementById('approval-hdr-btn');if(!btn)return;
+    try{
       const res=await fetch('/owner/pending_changes',{headers:{Accept:'application/json'}});
       const data=await res.json();
-      const hdrBadge=document.getElementById('approval-hdr-badge');
-      const snavBadge=document.getElementById('snav-approval-badge');
-      const navBtn=document.getElementById('approval-nav-btn');
+      const hdrBadge=document.getElementById('approval-hdr-badge'),snavBadge=document.getElementById('snav-approval-badge'),navBtn=document.getElementById('approval-nav-btn');
       if(data.length>0){btn.classList.add('has-pending-approvals');hdrBadge.textContent=data.length;hdrBadge.classList.add('visible');if(snavBadge){snavBadge.textContent=data.length;snavBadge.classList.add('visible');}if(navBtn)navBtn.style.display='flex';}
       else{btn.classList.remove('has-pending-approvals');hdrBadge.classList.remove('visible');if(navBtn)navBtn.style.display='none';}
       renderApprovalDrawer(data);
-    } catch(e) {}
+    }catch(e){}
   }
 
-  function renderApprovalDrawer(data) {
-    const body=document.getElementById('drawer-body'), badge=document.getElementById('drawer-badge');
+  function renderApprovalDrawer(data){
+    const body=document.getElementById('drawer-body'),badge=document.getElementById('drawer-badge');
     badge.textContent=data.length;
     if(!data.length){body.innerHTML='<div class="drawer-empty"><i class="fas fa-check-circle" style="display:block;font-size:1.5rem;margin-bottom:8px;color:#1a1a1a;"></i>Nenhuma alteração pendente.</div>';return;}
     body.innerHTML='';
-    data.forEach(pc=>{
-      const did=`detail-${pc.id}`, card=document.createElement('div');
-      card.className='approval-card'; card.id=`acard-${pc.id}`;
-      card.innerHTML=`<div class="approval-card-header"><div class="approval-card-desc">${pc.description}</div><button class="approval-toggle" onclick="toggleDetail('${did}')"><i class="fas fa-plus" id="icon-${did}"></i></button></div><div class="approval-card-meta"><i class="fas fa-user" style="margin-right:4px;color:#2a2a2a;"></i>${pc.attendant} · ${pc.created_at}</div><div id="${did}" class="approval-detail">${formatPayload(pc.change_type,pc.payload)}</div><div class="approval-actions"><button class="btn-approve" onclick="approveChange(${pc.id},this)"><i class="fas fa-check"></i> Aprovar</button><button class="btn-reject" onclick="rejectChange(${pc.id},this)"><i class="fas fa-times"></i> Rejeitar</button></div>`;
-      body.appendChild(card);
-    });
+    data.forEach(pc=>{const did=`detail-${pc.id}`,card=document.createElement('div');card.className='approval-card';card.id=`acard-${pc.id}`;card.innerHTML=`<div class="approval-card-header"><div class="approval-card-desc">${pc.description}</div><button class="approval-toggle" onclick="toggleDetail('${did}')"><i class="fas fa-plus" id="icon-${did}"></i></button></div><div class="approval-card-meta"><i class="fas fa-user" style="margin-right:4px;color:#2a2a2a;"></i>${pc.attendant} · ${pc.created_at}</div><div id="${did}" class="approval-detail">${formatPayload(pc.change_type,pc.payload)}</div><div class="approval-actions"><button class="btn-approve" onclick="approveChange(${pc.id},this)"><i class="fas fa-check"></i> Aprovar</button><button class="btn-reject" onclick="rejectChange(${pc.id},this)"><i class="fas fa-times"></i> Rejeitar</button></div>`;body.appendChild(card);});
   }
 
-  window.approveChange = async function(id, btn) {
-    if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-circle-notch spin"></i>';}
-    try{await fetch(`/owner/pending_changes/${id}/approve`,{method:'PATCH',headers:{'X-CSRF-Token':CSRF,'Content-Type':'application/json'}});const card=document.getElementById(`acard-${id}`);if(card)removeCard(card,()=>loadApprovals());else loadApprovals();showToast('Alteração aprovada.','success');}
-    catch(e){showToast('Erro ao aprovar.','error');if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-check"></i> Aprovar';}}
-  };
-  window.rejectChange = async function(id, btn) {
-    if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-circle-notch spin"></i>';}
-    try{await fetch(`/owner/pending_changes/${id}/reject`,{method:'PATCH',headers:{'X-CSRF-Token':CSRF,'Content-Type':'application/json'}});const card=document.getElementById(`acard-${id}`);if(card)removeCard(card,()=>loadApprovals());else loadApprovals();showToast('Alteração rejeitada.','error');}
-    catch(e){showToast('Erro ao rejeitar.','error');if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-times"></i> Rejeitar';}}
-  };
+  window.approveChange=async function(id,btn){if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-circle-notch spin"></i>';}try{await fetch(`/owner/pending_changes/${id}/approve`,{method:'PATCH',headers:{'X-CSRF-Token':CSRF,'Content-Type':'application/json'}});const card=document.getElementById(`acard-${id}`);if(card)removeCard(card,()=>loadApprovals());else loadApprovals();showToast('Alteração aprovada.','success');}catch(e){showToast('Erro ao aprovar.','error');if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-check"></i> Aprovar';}}};
+  window.rejectChange=async function(id,btn){if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-circle-notch spin"></i>';}try{await fetch(`/owner/pending_changes/${id}/reject`,{method:'PATCH',headers:{'X-CSRF-Token':CSRF,'Content-Type':'application/json'}});const card=document.getElementById(`acard-${id}`);if(card)removeCard(card,()=>loadApprovals());else loadApprovals();showToast('Alteração rejeitada.','error');}catch(e){showToast('Erro ao rejeitar.','error');if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-times"></i> Rejeitar';}}};
 
-  window.openApprovalDrawer = function() {
-    document.getElementById('approval-drawer').classList.add('open');
-    document.getElementById('approval-overlay').classList.add('open');
-    document.body.style.overflow='hidden';
+  window.openApprovalDrawer=function(){document.getElementById('approval-drawer').classList.add('open');document.getElementById('approval-overlay').classList.add('open');document.body.style.overflow='hidden';};
+  function closeApprovalDrawer(){document.getElementById('approval-drawer').classList.remove('open');document.getElementById('approval-overlay').classList.remove('open');document.body.style.overflow='';}
+
+  // Checklist dismiss
+  window.dismissActivation = function() {
+    const el = document.getElementById('activation-banner');
+    if (el) { el.style.transition = 'opacity .3s,transform .3s'; el.style.opacity = '0'; el.style.transform = 'translateY(-8px)'; setTimeout(() => el.remove(), 320); }
+    sessionStorage.setItem('loov_activation_dismissed', '1');
   };
-  function closeApprovalDrawer() {
-    document.getElementById('approval-drawer').classList.remove('open');
-    document.getElementById('approval-overlay').classList.remove('open');
-    document.body.style.overflow='';
+  if (sessionStorage.getItem('loov_activation_dismissed')) {
+    document.addEventListener('DOMContentLoaded', () => { document.getElementById('activation-banner')?.remove(); });
   }
 
-  document.getElementById('pending-drawer-close')?.addEventListener('click', closePendingDrawer);
-  document.getElementById('pending-overlay')?.addEventListener('click', closePendingDrawer);
-  document.getElementById('drawer-close')?.addEventListener('click', closeApprovalDrawer);
-  document.getElementById('approval-overlay')?.addEventListener('click', closeApprovalDrawer);
+  document.getElementById('pending-drawer-close')?.addEventListener('click',closePendingDrawer);
+  document.getElementById('pending-overlay')?.addEventListener('click',closePendingDrawer);
+  document.getElementById('drawer-close')?.addEventListener('click',closeApprovalDrawer);
+  document.getElementById('approval-overlay')?.addEventListener('click',closeApprovalDrawer);
 
-  document.addEventListener('DOMContentLoaded', () => {
-    loadToday();
-    loadApprovals();
-    document.getElementById('btn-walk-in')?.addEventListener('click', showWalkInModal);
+  // ── MENSAGEM AO CLIENTE ──────────────────────────────────────────────────
+  let msgTarget = 'all';
+
+  window.openMsgModal = function() {
+    document.getElementById('msg-modal-overlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    document.getElementById('msg-body').value = '';
+    document.getElementById('msg-count').textContent = '0';
+    document.getElementById('msg-error').style.display = 'none';
+    setMsgTarget('all');
+    loadMsgClients();
+  };
+
+  function closeMsgModal() {
+    document.getElementById('msg-modal-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  window.setMsgTarget = function(t) {
+    msgTarget = t;
+    document.getElementById('msg-target-all').classList.toggle('active', t === 'all');
+    document.getElementById('msg-target-user').classList.toggle('active', t === 'user');
+    document.getElementById('msg-client-wrap').style.display = t === 'user' ? 'block' : 'none';
+    document.getElementById('msg-client-select').style.display = t === 'user' ? 'block' : 'none';
+  };
+
+  window.updateMsgCount = function() {
+    const v = document.getElementById('msg-body').value.length;
+    document.getElementById('msg-count').textContent = v;
+  };
+
+  async function loadMsgClients() {
+    const sel = document.getElementById('msg-client-select');
+    sel.innerHTML = '<option value="">Carregando...</option>';
+    try {
+      const res = await fetch('/owner/messages/clients_today', { headers: { Accept: 'application/json' } });
+      const data = await res.json();
+      if (!data.length) {
+        sel.innerHTML = '<option value="">Nenhum cliente hoje</option>';
+      } else {
+        sel.innerHTML = data.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+      }
+    } catch(e) {
+      sel.innerHTML = '<option value="">Erro ao carregar</option>';
+    }
+  }
+
+  window.sendOwnerMessage = async function() {
+    const body   = document.getElementById('msg-body').value.trim();
+    const errEl  = document.getElementById('msg-error');
+    const btn    = document.getElementById('msg-send-btn');
+    const recip  = msgTarget === 'user' ? document.getElementById('msg-client-select').value : null;
+
+    errEl.style.display = 'none';
+    if (!body) { errEl.textContent = 'Escreva uma mensagem antes de enviar.'; errEl.style.display = 'block'; return; }
+    if (msgTarget === 'user' && !recip) { errEl.textContent = 'Selecione um cliente.'; errEl.style.display = 'block'; return; }
+
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch spin"></i> Enviando...';
+
+    try {
+      const payload = { target: msgTarget, body };
+      if (msgTarget === 'user') payload.recipient_id = recip;
+
+      const res = await fetch('/owner/messages', {
+        method: 'POST',
+        headers: { 'X-CSRF-Token': CSRF, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.ok) {
+        closeMsgModal();
+        showToast('Mensagem enviada!', 'success');
+      } else {
+        errEl.textContent = data.error || 'Erro ao enviar.';
+        errEl.style.display = 'block';
+      }
+    } catch(e) {
+      errEl.textContent = 'Erro de conexão.';
+      errEl.style.display = 'block';
+    }
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar mensagem';
+  };
+
+
+  // ── LOYALTY ────────────────────────────────────────────────────────────────
+  window.openLoyaltyModal = function() {
+    fetch('/owner/loyalty_program', { headers: { Accept: 'application/json' } })
+      .then(r => r.json()).then(data => {
+        if (data.exists) {
+          document.getElementById('loyalty-active').checked  = data.active;
+          document.getElementById('loyalty-visits').value    = data.visits_required;
+          document.getElementById('loyalty-reward').value    = data.reward_description;
+        }
+        document.getElementById('loyalty-modal-overlay').classList.add('open');
+        document.body.style.overflow = 'hidden';
+      });
+  };
+
+  function closeLoyaltyModal() {
+    document.getElementById('loyalty-modal-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  window.saveLoyaltyProgram = async function() {
+    const btn    = document.getElementById('loyalty-save-btn');
+    const errEl  = document.getElementById('loyalty-error');
+    const visits = parseInt(document.getElementById('loyalty-visits').value);
+    const reward = document.getElementById('loyalty-reward').value.trim();
+    const active = document.getElementById('loyalty-active').checked;
+
+    errEl.style.display = 'none';
+    if (!reward) { errEl.textContent = 'Descreva a recompensa.'; errEl.style.display = 'block'; return; }
+    if (!visits || visits < 1) { errEl.textContent = 'Informe o número de visitas (mínimo 1).'; errEl.style.display = 'block'; return; }
+
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch spin"></i> Salvando...';
+    try {
+      const res = await fetch('/owner/loyalty_program', {
+        method: 'POST',
+        headers: { 'X-CSRF-Token': CSRF, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visits_required: visits, reward_description: reward, active })
+      });
+      const data = await res.json();
+      if (data.ok) { closeLoyaltyModal(); showToast('Programa de fidelidade salvo!', 'success'); loadToday(); }
+      else { errEl.textContent = data.error || 'Erro ao salvar.'; errEl.style.display = 'block'; }
+    } catch(e) { errEl.textContent = 'Erro de conexão.'; errEl.style.display = 'block'; }
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Salvar configuração';
+  };
+
+  document.getElementById('loyalty-modal-close')?.addEventListener('click', closeLoyaltyModal);
+  document.getElementById('loyalty-modal-overlay')?.addEventListener('click', e => { if (e.target.id === 'loyalty-modal-overlay') closeLoyaltyModal(); });
+
+  document.getElementById('msg-modal-close')?.addEventListener('click', closeMsgModal);
+  document.getElementById('msg-modal-overlay')?.addEventListener('click', e => { if (e.target.id === 'msg-modal-overlay') closeMsgModal(); });
+
+  // ── MODAL CANCELAMENTO INDIVIDUAL ────────────────────────────────────────
+  let _cancelApptId = null;
+
+  window.openCancelApptModal = function(a, btn) {
+    _cancelApptId = a.id;
+    const time = a.time || '';
+    const client = a.client || 'Cliente';
+    const service = a.service || '';
+    document.getElementById('cancel-appt-desc').textContent =
+      `${client} · ${service} · ${time} — O cliente será notificado por e-mail e no app.`;
+    document.getElementById('cancel-appt-reason').value = '';
+    document.getElementById('cancel-appt-error').style.display = 'none';
+    const confirmBtn = document.getElementById('cancel-appt-confirm');
+    confirmBtn.disabled = false;
+    confirmBtn.textContent = 'Confirmar cancelamento';
+    document.getElementById('cancel-appt-overlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => document.getElementById('cancel-appt-reason').focus(), 100);
+  };
+
+  window.closeCancelApptModal = function() {
+    document.getElementById('cancel-appt-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+    _cancelApptId = null;
+  };
+
+  document.getElementById('cancel-appt-overlay')?.addEventListener('click', function(e) {
+    if (e.target === this) closeCancelApptModal();
+  });
+
+  document.getElementById('cancel-appt-confirm')?.addEventListener('click', async function() {
+    if (!_cancelApptId) return;
+    const reason = document.getElementById('cancel-appt-reason').value.trim();
+    const errEl  = document.getElementById('cancel-appt-error');
+    errEl.style.display = 'none';
+    this.disabled = true;
+    this.textContent = 'Cancelando...';
+    try {
+      const res  = await fetch(`/owner/checkins/${_cancelApptId}/cancel`, {
+        method: 'PATCH',
+        headers: { 'X-CSRF-Token': CSRF, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        closeCancelApptModal();
+        showToast('Agendamento cancelado.', 'error');
+        loadToday();
+      } else {
+        errEl.textContent = data.error || 'Erro ao cancelar.';
+        errEl.style.display = 'block';
+        this.disabled = false;
+        this.textContent = 'Confirmar cancelamento';
+      }
+    } catch(e) {
+      errEl.textContent = 'Erro de conexão.';
+      errEl.style.display = 'block';
+      this.disabled = false;
+      this.textContent = 'Confirmar cancelamento';
+    }
+  });
+
+  document.addEventListener('DOMContentLoaded',()=>{
+    loadToday();loadApprovals();
+    setInterval(loadToday,30000);setInterval(loadApprovals,60000);
+    document.getElementById('btn-walk-in')?.addEventListener('click',showWalkInModal);
   });
 })();
 </script>
@@ -742,7 +1514,7 @@
     <div class="home-search-row">
       <div class="home-search-field" style="position:relative;">
         <i class="fas fa-magnifying-glass home-search-icon"></i>
-        <%= text_field_tag :search, params[:search], placeholder: "Buscar lava-rápido ou bairro...", class: "home-search-input", id: "search-input", autocomplete: "off" %>
+        <%= text_field_tag :search, params[:search], placeholder: "Buscar lava-rápido, bairro ou serviço...", class: "home-search-input", id: "search-input", autocomplete: "off" %>
         <% if params[:latitude].present? %>
           <%= hidden_field_tag :latitude, params[:latitude] %>
           <%= hidden_field_tag :longitude, params[:longitude] %>
@@ -760,10 +1532,35 @@
     <% end %>
   </div>
 
+  <%# ── RESULTADOS DE BUSCA — aparece antes de tudo quando há busca ── %>
+  <% if params[:search].present? %>
+  <div class="home-section" id="search-results-section">
+    <div class="home-section-header">
+      <span class="home-section-title">Resultados para "<%= params[:search] %>"</span>
+      <span style="font-size:.78rem;color:var(--text-muted);"><%= @search_results.count %> encontrado<%= @search_results.count == 1 ? '' : 's' %></span>
+    </div>
+    <% if @search_results.empty? %>
+      <div class="empty-banner"><i class="fas fa-magnifying-glass"></i><div><div class="empty-banner-title">Nenhum resultado</div><div class="empty-banner-text">Tente outro nome, bairro ou serviço.</div></div></div>
+    <% else %>
+    <div class="h-scroll">
+      <% @search_results.each do |cw| %>
+      <% reviews=cw.reviews; avg_rating=reviews.any? ? reviews.average(:rating).to_f : nil; is_open=@open_car_wash_ids&.include?(cw.id); opens_today=cw.operating_hours.find_by(day_of_week: Time.current.in_time_zone("America/Sao_Paulo").wday) %>
+      <div class="cw-card" onclick="window.location='<%= car_wash_path(cw) %>'" style="cursor:none;">
+        <div class="cw-card-top"><div class="cw-card-avatar"><%= cw.name.first(2).upcase %></div><div class="cw-card-avatar-info"><div class="cw-card-name"><%= cw.name %></div><% if avg_rating %><div style="display:flex;align-items:center;gap:.2rem;flex-wrap:wrap;"><div class="cw-card-stars"><% 5.times do |s| %><i class="fas fa-star" style="color:<%= s < avg_rating.round ? '#afff2d' : '#333' %>;"></i><% end %></div><span class="cw-card-rating-val"><%= sprintf('%.1f', avg_rating) %></span><span class="cw-card-rating-ct">(<%= reviews.count %>)</span></div><% end %></div></div>
+        <div class="cw-card-meta"><div class="cw-card-addr"><i class="fas fa-location-dot"></i><span><%= cw.address || "Endereço não informado" %></span></div><div class="cw-card-row"><% if is_open %><div class="cw-status-open"><div class="cw-status-open-dot"></div>ABERTO</div><% elsif opens_today %><div class="cw-status-closed">ABRE ÀS <%= opens_today.opens_at.strftime("%H:%M") %></div><% else %><div class="cw-status-closed">FECHADO</div><% end %><% if params[:latitude].present? && cw.latitude && cw.longitude %><span class="cw-card-dist"><%= number_with_precision(cw.distance_to([params[:latitude].to_f, params[:longitude].to_f], :km), precision: 1) %> KM</span><% end %></div></div>
+        <%= link_to "Ver detalhes", car_wash_path(cw), class: "cw-card-btn" %>
+      </div>
+      <% end %>
+    </div>
+    <% end %>
+  </div>
+  <div class="home-divider"><div class="home-divider-line"></div></div>
+  <% end %>
+
   <% if user_signed_in? && current_user.client? %>
   <div class="home-section">
     <div class="home-section-header">
-      <span class="home-section-title">Disponíveis agora</span>
+      <span class="home-section-title">Disponíveis</span>
       <% if @disponivel_has_location %><%= link_to "Ver mais", disponivel_index_path(latitude: params[:latitude], longitude: params[:longitude]), class: "home-section-link" %><% end %>
     </div>
     <% if !@disponivel_has_location %>
@@ -805,10 +1602,10 @@
     <% if @nearby_car_washes.any? %>
     <div class="h-scroll">
       <% @nearby_car_washes.each do |cw| %>
-      <% min_price=cw.services.minimum(:price); reviews=cw.reviews; avg_rating=reviews.any? ? reviews.average(:rating).to_f : nil; today_dow=Date.current.wday; is_open=cw.operating_hours.exists?(day_of_week: today_dow); opens_today=cw.operating_hours.find_by(day_of_week: today_dow) %>
+      <% min_price=cw.services.minimum(:price); reviews=cw.reviews; avg_rating=reviews.any? ? reviews.average(:rating).to_f : nil; is_open=@open_car_wash_ids&.include?(cw.id); opens_today=cw.operating_hours.find_by(day_of_week: Time.current.in_time_zone("America/Sao_Paulo").wday) %>
       <div class="cw-card" onclick="window.location='<%= car_wash_path(cw) %>'" style="cursor:none;">
         <div class="cw-card-top"><div class="cw-card-avatar"><%= cw.name.first(2).upcase %></div><div class="cw-card-avatar-info"><div class="cw-card-name"><%= cw.name %></div><% if avg_rating %><div style="display:flex;align-items:center;gap:.2rem;flex-wrap:wrap;"><div class="cw-card-stars"><% 5.times do |s| %><i class="fas fa-star" style="color:<%= s < avg_rating.round ? '#afff2d' : '#333' %>;"></i><% end %></div><span class="cw-card-rating-val"><%= sprintf('%.1f', avg_rating) %></span><span class="cw-card-rating-ct">(<%= reviews.count %>)</span></div><% end %></div></div>
-        <div class="cw-card-meta"><div class="cw-card-addr"><i class="fas fa-location-dot"></i><span><%= cw.address || "Endereço não informado" %></span></div><div class="cw-card-row"><% if is_open %><div class="cw-status-open"><div class="cw-status-open-dot"></div>ABERTO AGORA</div><% elsif opens_today %><div class="cw-status-closed">ABRE ÀS <%= opens_today.opens_at.strftime("%H:%M") %></div><% else %><div class="cw-status-closed">FECHADO HOJE</div><% end %><% if params[:latitude].present? && cw.latitude && cw.longitude %><span class="cw-card-dist"><%= number_with_precision(cw.distance_to([params[:latitude].to_f, params[:longitude].to_f], :km), precision: 1) %> KM</span><% end %></div></div>
+        <div class="cw-card-meta"><div class="cw-card-addr"><i class="fas fa-location-dot"></i><span><%= cw.address || "Endereço não informado" %></span></div><div class="cw-card-row"><% if is_open %><div class="cw-status-open"><div class="cw-status-open-dot"></div>ABERTO</div><% elsif opens_today %><div class="cw-status-closed">ABRE ÀS <%= opens_today.opens_at.strftime("%H:%M") %></div><% else %><div class="cw-status-closed">FECHADO</div><% end %><% if params[:latitude].present? && cw.latitude && cw.longitude %><span class="cw-card-dist"><%= number_with_precision(cw.distance_to([params[:latitude].to_f, params[:longitude].to_f], :km), precision: 1) %> KM</span><% end %></div></div>
         <%= link_to "Ver detalhes", car_wash_path(cw), class: "cw-card-btn" %>
       </div>
       <% end %>
@@ -826,37 +1623,16 @@
     <% if @top_car_washes.any? %>
     <div class="h-scroll">
       <% @top_car_washes.each do |cw| %>
-      <% min_price=cw.services.minimum(:price); reviews=cw.reviews; avg_rating=reviews.any? ? reviews.average(:rating).to_f : nil; today_dow=Date.current.wday; is_open=cw.operating_hours.exists?(day_of_week: today_dow); opens_today=cw.operating_hours.find_by(day_of_week: today_dow) %>
+      <% min_price=cw.services.minimum(:price); reviews=cw.reviews; avg_rating=reviews.any? ? reviews.average(:rating).to_f : nil; is_open=@open_car_wash_ids&.include?(cw.id); opens_today=cw.operating_hours.find_by(day_of_week: Time.current.in_time_zone("America/Sao_Paulo").wday) %>
       <div class="cw-card" onclick="window.location='<%= car_wash_path(cw) %>'" style="cursor:none;">
         <div class="cw-card-top"><div class="cw-card-avatar"><%= cw.name.first(2).upcase %></div><div class="cw-card-avatar-info"><div class="cw-card-name"><%= cw.name %></div><% if avg_rating %><div style="display:flex;align-items:center;gap:.2rem;flex-wrap:wrap;"><div class="cw-card-stars"><% 5.times do |s| %><i class="fas fa-star" style="color:<%= s < avg_rating.round ? '#afff2d' : '#333' %>;"></i><% end %></div><span class="cw-card-rating-val"><%= sprintf('%.1f', avg_rating) %></span><span class="cw-card-rating-ct">(<%= reviews.count %>)</span></div><% else %><div style="font-size:.68rem;color:#333;margin-top:.15rem;">Sem avaliações ainda</div><% end %></div></div>
-        <div class="cw-card-meta"><div class="cw-card-addr"><i class="fas fa-location-dot"></i><span><%= cw.address || "Endereço não informado" %></span></div><% if min_price %><div style="font-size:.75rem;color:var(--text-muted);display:flex;align-items:center;gap:.3rem;"><i class="fas fa-tag" style="font-size:.6rem;"></i>A partir de <strong style="color:var(--white);margin-left:.2rem;">R$ <%= number_with_precision(min_price, precision: 0) %></strong></div><% end %><div class="cw-card-row"><% if is_open %><div class="cw-status-open"><div class="cw-status-open-dot"></div>ABERTO AGORA</div><% elsif opens_today %><div class="cw-status-closed">ABRE ÀS <%= opens_today.opens_at.strftime("%H:%M") %></div><% else %><div class="cw-status-closed">FECHADO HOJE</div><% end %></div></div>
+        <div class="cw-card-meta"><div class="cw-card-addr"><i class="fas fa-location-dot"></i><span><%= cw.address || "Endereço não informado" %></span></div><% if min_price %><div style="font-size:.75rem;color:var(--text-muted);display:flex;align-items:center;gap:.3rem;"><i class="fas fa-tag" style="font-size:.6rem;"></i>A partir de <strong style="color:var(--white);margin-left:.2rem;">R$ <%= number_with_precision(min_price, precision: 0) %></strong></div><% end %><div class="cw-card-row"><% if is_open %><div class="cw-status-open"><div class="cw-status-open-dot"></div>ABERTO</div><% elsif opens_today %><div class="cw-status-closed">ABRE ÀS <%= opens_today.opens_at.strftime("%H:%M") %></div><% else %><div class="cw-status-closed">FECHADO</div><% end %></div></div>
         <%= link_to "Ver detalhes", car_wash_path(cw), class: "cw-card-btn" %>
       </div>
       <% end %>
     </div>
     <% end %>
   </div>
-
-  <% if params[:search].present? %>
-  <div class="home-divider"><div class="home-divider-line"></div></div>
-  <div class="home-section">
-    <div class="home-section-header"><span class="home-section-title">Resultados para "<%= params[:search] %>"</span><span style="font-size:.78rem;color:var(--text-muted);"><%= @car_washes.count %> encontrado<%= @car_washes.count == 1 ? '' : 's' %></span></div>
-    <% if @car_washes.empty? %>
-      <div class="empty-banner"><i class="fas fa-magnifying-glass"></i><div><div class="empty-banner-title">Nenhum resultado</div><div class="empty-banner-text">Tente outro nome ou bairro.</div></div></div>
-    <% else %>
-    <div class="h-scroll">
-      <% @car_washes.each do |cw| %>
-      <% reviews=cw.reviews; avg_rating=reviews.any? ? reviews.average(:rating).to_f : nil; today_dow=Date.current.wday; is_open=cw.operating_hours.exists?(day_of_week: today_dow) %>
-      <div class="cw-card" onclick="window.location='<%= car_wash_path(cw) %>'" style="cursor:none;">
-        <div class="cw-card-top"><div class="cw-card-avatar"><%= cw.name.first(2).upcase %></div><div class="cw-card-avatar-info"><div class="cw-card-name"><%= cw.name %></div><% if avg_rating %><div style="display:flex;align-items:center;gap:.2rem;"><div class="cw-card-stars"><% 5.times do |s| %><i class="fas fa-star" style="color:<%= s < avg_rating.round ? '#afff2d' : '#333' %>;"></i><% end %></div><span class="cw-card-rating-val"><%= sprintf('%.1f', avg_rating) %></span></div><% end %></div></div>
-        <div class="cw-card-meta"><div class="cw-card-addr"><i class="fas fa-location-dot"></i><span><%= cw.address || "Endereço não informado" %></span></div><div class="cw-card-row"><% if is_open %><div class="cw-status-open"><div class="cw-status-open-dot"></div>ABERTO AGORA</div><% else %><div class="cw-status-closed">FECHADO HOJE</div><% end %></div></div>
-        <%= link_to "Ver detalhes", car_wash_path(cw), class: "cw-card-btn" %>
-      </div>
-      <% end %>
-    </div>
-    <% end %>
-  </div>
-  <% end %>
 
   <div class="home-divider"><div class="home-divider-line"></div></div>
   <footer class="loov-footer">
@@ -877,7 +1653,14 @@
   const up=new URLSearchParams(window.location.search);
   if(!up.has('latitude')){if(saved){try{const coords=JSON.parse(saved);const url=new URL(window.location);url.searchParams.set('latitude',coords.lat);url.searchParams.set('longitude',coords.lng);window.location.href=url.toString();}catch(e){localStorage.removeItem('loov_last_coords');}}else if(navigator.geolocation){navigator.geolocation.getCurrentPosition(pos=>{localStorage.setItem('loov_last_coords',JSON.stringify({lat:pos.coords.latitude,lng:pos.coords.longitude}));const url=new URL(window.location);url.searchParams.set('latitude',pos.coords.latitude);url.searchParams.set('longitude',pos.coords.longitude);window.location.href=url.toString();},()=>{},{enableHighAccuracy:false,timeout:10000,maximumAge:300000});}}
   <% end %>
+  // Scroll automático para resultados de busca
+  <% if params[:search].present? && @search_results.any? %>
+  document.addEventListener('DOMContentLoaded',function(){var el=document.getElementById('search-results-section');if(el)setTimeout(function(){el.scrollIntoView({behavior:'smooth',block:'start'});},200);});
+  <% end %>
 })();
+</script>
+
+<script>
 function requestGeo(){if(!navigator.geolocation)return;navigator.geolocation.getCurrentPosition(function(pos){localStorage.setItem('loov_last_coords',JSON.stringify({lat:pos.coords.latitude,lng:pos.coords.longitude}));var url=new URL(window.location.href);url.searchParams.set('latitude',pos.coords.latitude);url.searchParams.set('longitude',pos.coords.longitude);window.location.href=url.toString();},function(){alert('Não foi possível obter sua localização.');},{enableHighAccuracy:true,timeout:10000});}
 </script>
 

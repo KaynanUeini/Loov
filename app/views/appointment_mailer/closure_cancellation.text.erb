@@ -1,0 +1,16 @@
+Agendamento Cancelado — <%= @car_wash.name %>
+
+Olá, <%= @user.display_name.split(' ').first %>!
+
+Seu agendamento foi cancelado.
+
+Lava-rápido: <%= @car_wash.name %>
+Serviço: <%= @service.title %>
+Data: <%= @appointment.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%d/%m/%Y") %>
+Horário: <%= @appointment.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%H:%M") %>
+
+<% if @closure.reason.present? %>Motivo: <%= @closure.reason %><% else %>O estabelecimento estará fechado no período de <%= @closure.display_period %>.<% end %>
+
+Acesse seus agendamentos em: <%= appointments_url %>
+
+— Loov

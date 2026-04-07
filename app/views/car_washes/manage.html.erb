@@ -99,6 +99,7 @@
   .form-section:nth-child(2) { animation-delay: .38s; }
   .form-section:nth-child(3) { animation-delay: .46s; }
   .form-section:nth-child(4) { animation-delay: .54s; }
+  .form-section:nth-child(5) { animation-delay: .62s; }
 
   .form-section::before {
     content: ''; position: absolute; left: 0; top: 0; bottom: 0;
@@ -311,6 +312,20 @@
     animation: spinAnim .8s linear infinite;
   }
   .loading-text { color: var(--lime); font-size: .8rem; margin-top: 1rem; letter-spacing: .1em; text-transform: uppercase; }
+
+  /* ── CLOSURES ────────────────────────────────────────── */
+  .closure-list { display:flex; flex-direction:column; gap:.5rem; margin-bottom:1rem; }
+  .closure-item { display:flex; align-items:center; justify-content:space-between; padding:.75rem 1rem; background:var(--surface-3); border:1px solid var(--border); border-radius:10px; gap:1rem; }
+  .closure-item-info { flex:1; min-width:0; }
+  .closure-item-period { font-size:.875rem; font-weight:500; color:var(--white); }
+  .closure-item-reason { font-size:.75rem; color:var(--text-muted); margin-top:.15rem; }
+  .closure-remove { background:none; border:1px solid rgba(239,68,68,.2); border-radius:8px; width:30px; height:30px; display:flex; align-items:center; justify-content:center; color:#f87171; font-size:.7rem; cursor:pointer; transition:all .15s ease; flex-shrink:0; }
+  .closure-remove:hover { background:rgba(239,68,68,.08); border-color:rgba(239,68,68,.4); }
+  .closure-empty { font-size:.8rem; color:var(--text-muted); padding:.5rem 0; }
+  .closure-add-panel { background:var(--surface-3); border:1px dashed rgba(175,255,45,.2); border-radius:12px; padding:1.25rem; margin-top:.75rem; display:none; }
+  .closure-add-panel.open { display:block; }
+  .closure-form-row { display:flex; gap:.75rem; flex-wrap:wrap; margin-bottom:.75rem; }
+  .closure-form-row .form-field { flex:1; min-width:140px; }
 
   @keyframes revealUp { from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)} }
   @keyframes spinAnim { to{transform:rotate(360deg)} }
@@ -601,6 +616,70 @@
         </div>
       </div>
 
+      <!-- Fechamentos -->
+      <div class="form-section">
+        <div class="section-header" onclick="toggleSection(this)">
+          <div class="section-header-left"><i class="fas fa-calendar-xmark"></i> Fechamentos</div>
+          <i class="fas fa-chevron-down section-chevron"></i>
+        </div>
+        <div class="section-body">
+          <div class="section-body-inner">
+            <p style="font-size:.8rem;color:var(--text-muted);margin-bottom:1rem;line-height:1.6;">
+              Bloqueie datas em que o estabelecimento estará fechado. Nenhum agendamento será aceito nesses períodos.
+            </p>
+
+            <div class="closure-list" id="closure-list">
+              <% if @car_wash.car_wash_closures.upcoming_or_active.any? %>
+                <% @car_wash.car_wash_closures.upcoming_or_active.each do |c| %>
+                  <div class="closure-item" id="closure-<%= c.id %>">
+                    <div class="closure-item-info">
+                      <div class="closure-item-period">
+                        <i class="fas fa-ban" style="color:#f87171;font-size:.65rem;margin-right:.4rem;"></i>
+                        <%= c.display_period %>
+                      </div>
+                      <% if c.reason.present? %>
+                        <div class="closure-item-reason"><%= c.reason %></div>
+                      <% end %>
+                    </div>
+                    <button type="button" class="closure-remove" onclick="removeClosure(<%= c.id %>, this)" title="Remover fechamento">
+                      <i class="fas fa-trash-can"></i>
+                    </button>
+                  </div>
+                <% end %>
+              <% else %>
+                <div class="closure-empty" id="closure-empty">Nenhum fechamento programado.</div>
+              <% end %>
+            </div>
+
+            <button type="button" class="btn-add-row" id="toggle-add-closure">
+              <i class="fas fa-plus"></i> Adicionar fechamento
+            </button>
+
+            <div class="closure-add-panel" id="closure-add-panel">
+              <div class="closure-form-row">
+                <div class="form-field">
+                  <label class="form-label">Data de início</label>
+                  <input type="date" class="form-input" id="closure-start" min="<%= Date.current.strftime('%Y-%m-%d') %>">
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Data de fim</label>
+                  <input type="date" class="form-input" id="closure-end" min="<%= Date.current.strftime('%Y-%m-%d') %>">
+                </div>
+              </div>
+              <div class="form-field" style="margin-bottom:.75rem;">
+                <label class="form-label">Motivo (opcional)</label>
+                <input type="text" class="form-input" id="closure-reason" placeholder="Ex.: Férias, Reforma, Feriado local">
+              </div>
+              <div style="display:flex;gap:.5rem;">
+                <button type="button" class="btn-lime" id="confirm-add-closure"><i class="fas fa-check"></i> Confirmar</button>
+                <button type="button" class="btn-ghost" id="cancel-add-closure"><i class="fas fa-times"></i> Cancelar</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
       <div class="form-actions">
         <%= link_to root_path, class: "btn-ghost", id: "cancel-button" do %>
           <i class="fas fa-arrow-left"></i> Cancelar
@@ -746,6 +825,120 @@ document.addEventListener('DOMContentLoaded',function(){
   };
 
   function resetAddService(){document.getElementById('new-service-category').value='';document.getElementById('new-service-title').value='';document.getElementById('new-service-description').value='';document.getElementById('new-service-price').value='';document.getElementById('new-service-duration').value='';}
+
+  // ── FECHAMENTOS ──────────────────────────────────────────────
+  var CSRF = document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').content : '';
+
+  document.getElementById('toggle-add-closure').onclick = function() {
+    document.getElementById('closure-add-panel').classList.toggle('open');
+  };
+
+  document.getElementById('cancel-add-closure').onclick = function() {
+    resetClosureForm();
+    document.getElementById('closure-add-panel').classList.remove('open');
+  };
+
+  document.getElementById('confirm-add-closure').onclick = function() {
+    var start  = document.getElementById('closure-start').value;
+    var end    = document.getElementById('closure-end').value;
+    var reason = document.getElementById('closure-reason').value.trim();
+
+    if (!start) { showFlash('error', 'Informe a data de início.'); return; }
+    if (!end)   { showFlash('error', 'Informe a data de fim.'); return; }
+    if (end < start) { showFlash('error', 'A data de fim deve ser igual ou posterior ao início.'); return; }
+
+    var btn = document.getElementById('confirm-add-closure');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
+
+    fetch('/owner/closures', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF },
+      body: JSON.stringify({ closure: { car_wash_id: <%= @car_wash.id %>, start_date: start, end_date: end, reason: reason } })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-check"></i> Confirmar';
+      if (data.ok) {
+        appendClosure(data.id, data.period, data.reason);
+        resetClosureForm();
+        document.getElementById('closure-add-panel').classList.remove('open');
+        showFlash('success', 'Fechamento adicionado com sucesso.');
+        document.getElementById('flash-messages').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        showFlash('error', (data.errors || ['Erro ao salvar.']).join(', '));
+      }
+    })
+    .catch(function() {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-check"></i> Confirmar';
+      showFlash('error', 'Erro de conexão. Tente novamente.');
+    });
+  };
+
+  window.removeClosure = function(id, btn) {
+    if (!confirm('Remover este fechamento?')) return;
+    btn.disabled = true;
+
+    fetch('/owner/closures/' + id, {
+      method: 'DELETE',
+      headers: { 'X-CSRF-Token': CSRF }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.ok) {
+        var el = document.getElementById('closure-' + id);
+        if (el) {
+          el.style.transition = 'opacity .3s ease';
+          el.style.opacity = '0';
+          setTimeout(function() {
+            el.remove();
+            if (!document.querySelector('.closure-item')) {
+              var list = document.getElementById('closure-list');
+              var empty = document.createElement('div');
+              empty.className = 'closure-empty';
+              empty.id = 'closure-empty';
+              empty.textContent = 'Nenhum fechamento programado.';
+              list.appendChild(empty);
+            }
+          }, 300);
+        }
+        showFlash('success', 'Fechamento removido.');
+      } else {
+        btn.disabled = false;
+        showFlash('error', 'Erro ao remover.');
+      }
+    })
+    .catch(function() {
+      btn.disabled = false;
+      showFlash('error', 'Erro de conexão.');
+    });
+  };
+
+  function appendClosure(id, period, reason) {
+    var empty = document.getElementById('closure-empty');
+    if (empty) empty.remove();
+    var list = document.getElementById('closure-list');
+    var item = document.createElement('div');
+    item.className = 'closure-item';
+    item.id = 'closure-' + id;
+    item.innerHTML =
+      '<div class="closure-item-info">' +
+        '<div class="closure-item-period"><i class="fas fa-ban" style="color:#f87171;font-size:.65rem;margin-right:.4rem;"></i>' + period + '</div>' +
+        (reason && reason !== 'Fechamento' ? '<div class="closure-item-reason">' + reason + '</div>' : '') +
+      '</div>' +
+      '<button type="button" class="closure-remove" onclick="removeClosure(' + id + ', this)" title="Remover fechamento">' +
+        '<i class="fas fa-trash-can"></i>' +
+      '</button>';
+    list.appendChild(item);
+  }
+
+  function resetClosureForm() {
+    document.getElementById('closure-start').value  = '';
+    document.getElementById('closure-end').value    = '';
+    document.getElementById('closure-reason').value = '';
+  }
 
   // Form
   var form=document.getElementById('car-wash-form');

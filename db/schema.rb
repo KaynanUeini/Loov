@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_03_20_000001) do
+ActiveRecord::Schema[7.1].define(version: 2026_04_05_210816) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -45,8 +45,12 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_20_000001) do
     t.decimal "prepayment_amount", precision: 10, scale: 2
     t.string "stripe_payment_intent_id"
     t.decimal "commission_amount", precision: 10, scale: 2
+    t.integer "cancelled_by_id"
+    t.string "cancellation_reason"
+    t.string "cancelled_by_role"
     t.index ["acceptance_expires_at"], name: "index_appointments_on_acceptance_expires_at"
     t.index ["appointment_type"], name: "index_appointments_on_appointment_type"
+    t.index ["cancelled_by_id"], name: "index_appointments_on_cancelled_by_id"
     t.index ["car_wash_id"], name: "index_appointments_on_car_wash_id"
     t.index ["service_id"], name: "index_appointments_on_service_id"
     t.index ["stripe_payment_intent_id"], name: "index_appointments_on_stripe_payment_intent_id", unique: true, where: "(stripe_payment_intent_id IS NOT NULL)"
@@ -62,6 +66,16 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_20_000001) do
     t.string "status"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "car_wash_closures", force: :cascade do |t|
+    t.bigint "car_wash_id", null: false
+    t.date "start_date"
+    t.date "end_date"
+    t.string "reason"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["car_wash_id"], name: "index_car_wash_closures_on_car_wash_id"
   end
 
   create_table "car_washes", force: :cascade do |t|
@@ -80,7 +94,19 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_20_000001) do
     t.string "uf"
     t.string "numero"
     t.integer "num_employees"
+    t.boolean "active", default: true, null: false
+    t.index ["active"], name: "index_car_washes_on_active"
     t.index ["user_id"], name: "index_car_washes_on_user_id"
+  end
+
+  create_table "loyalty_programs", force: :cascade do |t|
+    t.bigint "car_wash_id", null: false
+    t.integer "visits_required", default: 5, null: false
+    t.string "reward_description", default: "Serviço gratuito", null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["car_wash_id"], name: "index_loyalty_programs_on_car_wash_id"
   end
 
   create_table "monthly_costs", force: :cascade do |t|
@@ -108,6 +134,21 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_20_000001) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["car_wash_id"], name: "index_operating_hours_on_car_wash_id"
+  end
+
+  create_table "owner_messages", force: :cascade do |t|
+    t.bigint "car_wash_id", null: false
+    t.bigint "sender_id", null: false
+    t.bigint "recipient_id"
+    t.string "body", null: false
+    t.string "target", default: "all", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["car_wash_id", "created_at"], name: "index_owner_messages_on_car_wash_id_and_created_at"
+    t.index ["car_wash_id"], name: "index_owner_messages_on_car_wash_id"
+    t.index ["recipient_id", "created_at"], name: "index_owner_messages_on_recipient_id_and_created_at"
+    t.index ["recipient_id"], name: "index_owner_messages_on_recipient_id"
+    t.index ["sender_id"], name: "index_owner_messages_on_sender_id"
   end
 
   create_table "payments", force: :cascade do |t|
@@ -158,6 +199,36 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_20_000001) do
     t.index ["car_wash_id"], name: "index_services_on_car_wash_id"
   end
 
+  create_table "support_ticket_messages", force: :cascade do |t|
+    t.bigint "support_ticket_id", null: false
+    t.bigint "user_id", null: false
+    t.text "body", null: false
+    t.boolean "from_admin", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["support_ticket_id"], name: "index_support_ticket_messages_on_support_ticket_id"
+    t.index ["user_id"], name: "index_support_ticket_messages_on_user_id"
+  end
+
+  create_table "support_tickets", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "car_wash_id"
+    t.string "category", null: false
+    t.text "description", null: false
+    t.string "status", default: "open", null: false
+    t.text "admin_reply"
+    t.datetime "replied_at"
+    t.datetime "resolved_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.text "agent_draft"
+    t.datetime "agent_drafted_at"
+    t.boolean "agent_sent", default: false, null: false
+    t.index ["car_wash_id"], name: "index_support_tickets_on_car_wash_id"
+    t.index ["status"], name: "index_support_tickets_on_status"
+    t.index ["user_id"], name: "index_support_tickets_on_user_id"
+  end
+
   create_table "users", force: :cascade do |t|
     t.string "email", default: "", null: false
     t.string "encrypted_password", default: "", null: false
@@ -175,6 +246,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_20_000001) do
     t.string "stripe_payment_method_id"
     t.string "stripe_card_last4"
     t.string "stripe_card_brand"
+    t.datetime "blocked_at"
+    t.index ["blocked_at"], name: "index_users_on_blocked_at"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["stripe_customer_id"], name: "index_users_on_stripe_customer_id", unique: true, where: "(stripe_customer_id IS NOT NULL)"
@@ -184,12 +257,21 @@ ActiveRecord::Schema[7.1].define(version: 2026_03_20_000001) do
   add_foreign_key "appointments", "car_washes"
   add_foreign_key "appointments", "services"
   add_foreign_key "appointments", "users"
+  add_foreign_key "car_wash_closures", "car_washes"
   add_foreign_key "car_washes", "users"
+  add_foreign_key "loyalty_programs", "car_washes"
   add_foreign_key "monthly_costs", "car_washes"
   add_foreign_key "operating_hours", "car_washes"
+  add_foreign_key "owner_messages", "car_washes"
+  add_foreign_key "owner_messages", "users", column: "recipient_id"
+  add_foreign_key "owner_messages", "users", column: "sender_id"
   add_foreign_key "payments", "appointments"
   add_foreign_key "reviews", "appointments"
   add_foreign_key "reviews", "car_washes"
   add_foreign_key "reviews", "users"
   add_foreign_key "services", "car_washes"
+  add_foreign_key "support_ticket_messages", "support_tickets"
+  add_foreign_key "support_ticket_messages", "users"
+  add_foreign_key "support_tickets", "car_washes"
+  add_foreign_key "support_tickets", "users"
 end

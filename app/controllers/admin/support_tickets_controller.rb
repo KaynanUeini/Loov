@@ -1,13 +1,9 @@
 module Admin
   class SupportTicketsController < Admin::BaseController
-
     def index
-      tickets = SupportTicket.all.order(updated_at: :desc)
-
-      tickets = tickets.where(status: params[:status]) if params[:status].present?
-
-      users     = User.where(id: tickets.map(&:user_id).uniq).index_by(&:id)
-      car_washes = CarWash.where(id: users.values.map { |u| u.car_washes.first&.id }.compact).index_by(&:id)
+      tickets    = SupportTicket.all.order(updated_at: :desc)
+      tickets    = tickets.where(status: params[:status]) if params[:status].present?
+      users      = User.where(id: tickets.map(&:user_id).uniq).index_by(&:id)
 
       render json: tickets.map { |t|
         user     = users[t.user_id]
@@ -21,7 +17,6 @@ module Admin
             created_at: m.created_at.strftime("%d/%m %H:%M")
           }
         end
-
         {
           id:               t.id,
           category:         t.category,
@@ -33,7 +28,6 @@ module Admin
           car_wash_name:    car_wash&.name,
           messages:         messages,
           message_count:    messages.count,
-          # Campos do agente autônomo
           agent_draft:      t.agent_draft,
           agent_drafted_at: t.agent_drafted_at&.strftime("%d/%m %H:%M"),
           agent_sent:       t.agent_sent
@@ -43,11 +37,7 @@ module Admin
 
     def message
       ticket = SupportTicket.find(params[:id])
-      ticket.messages.create!(
-        user:       current_user,
-        body:       params[:body],
-        from_admin: true
-      )
+      ticket.messages.create!(user: current_user, body: params[:body], from_admin: true)
       ticket.update_columns(status: "in_progress", updated_at: Time.current)
       render json: { ok: true }
     rescue => e
@@ -66,16 +56,11 @@ module Admin
       render json: { ok: true, message: "Ticket ##{ticket.id} reaberto." }
     end
 
-    # Aprova o rascunho do agente e envia como resposta oficial
     def approve_draft
-      ticket = SupportTicket.find(params[:id])
-
-      # Permite editar o rascunho antes de aprovar
+      ticket      = SupportTicket.find(params[:id])
       custom_body = params[:body].presence
-
-      service = SupportAgentService.new(ticket)
-      success = service.approve_and_send!(current_user, custom_body)
-
+      service     = SupportAgentService.new(ticket)
+      success     = service.approve_and_send!(current_user, custom_body)
       if success
         render json: { ok: true, message: "Rascunho enviado como resposta oficial." }
       else
@@ -83,27 +68,36 @@ module Admin
       end
     end
 
-    # Descarta o rascunho do agente (admin vai responder manualmente)
     def discard_draft
       ticket = SupportTicket.find(params[:id])
       ticket.update_columns(agent_draft: nil, agent_drafted_at: nil)
       render json: { ok: true }
     end
 
-    # Dispara o agente manualmente para um ticket específico
+    # ── Dispara o agente — agora usa service.run que executa ações autônomas
     def run_agent
-      ticket = SupportTicket.find(params[:id])
+      ticket  = SupportTicket.find(params[:id])
       service = SupportAgentService.new(ticket)
-      result  = service.generate_draft
+      result  = service.run
 
-      if result.nil?
-        render json: { ok: false, message: "Agente não conseguiu gerar rascunho." }
+      if result[:autonomous]
+        # Agente executou ação real — retorna o ticket atualizado
+        render json: {
+          ok:         true,
+          autonomous: true,
+          action:     result[:action],
+          message:    "Agente executou: #{result[:action]}. Ticket atualizado.",
+          ticket:     ticket.reload.slice(:id, :status, :agent_sent)
+        }
+      elsif result[:error]
+        render json: { ok: false, message: "Erro no agente: #{result[:error]}" }
       elsif result[:escalate]
         render json: { ok: false, escalate: true, message: "Agente indica escalação: #{result[:reason]}" }
-      else
+      elsif result[:draft]
         render json: { ok: true, draft: ticket.reload.agent_draft }
+      else
+        render json: { ok: false, message: "Agente não conseguiu gerar resposta." }
       end
     end
-
   end
 end

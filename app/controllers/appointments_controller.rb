@@ -4,7 +4,6 @@ class AppointmentsController < ApplicationController
   before_action :set_car_wash, only: [:new, :create]
 
   def new
-    Rails.logger.info("AppointmentsController#new: car_wash_id=#{params[:car_wash_id]}")
     if @car_wash.nil?
       redirect_to car_washes_path, alert: "Lava-rápido não encontrado."
       return
@@ -19,21 +18,64 @@ class AppointmentsController < ApplicationController
   def index
     respond_to do |format|
       format.html do
-        all_appointments = current_user&.appointments || Appointment.none
-        current_time = DateTime.now.in_time_zone("America/Sao_Paulo")
+        current_time = Time.current.in_time_zone("America/Sao_Paulo")
+        all          = current_user.appointments.includes(:service, :car_wash, :review)
 
-        @upcoming_appointments = all_appointments
-        .where(status: ['pending', 'confirmed'])
-        .select { |a| (a.scheduled_at + a.service.duration.minutes) >= current_time }
-        .sort_by(&:scheduled_at)
+        @upcoming_appointments = all
+          .select { |a| active_status?(a) && end_time(a) >= current_time }
+          .sort_by(&:scheduled_at)
 
-        @past_appointments = all_appointments
-        .select { |a| (a.scheduled_at + a.service.duration.minutes) < current_time || a.status == 'cancelled' }
-        .sort_by(&:scheduled_at).reverse
+        @past_appointments = all
+          .reject { |a| %w[cancelled no_show].include?(a.status) }
+          .select { |a| end_time(a) < current_time || a.status == 'attended' }
+          .uniq(&:id)
+          .sort_by(&:scheduled_at)
+          .reverse
 
-        @ongoing_appointments = @upcoming_appointments.select do |a|
-          current_time.between?(a.scheduled_at, a.scheduled_at + a.service.duration.minutes)
-        end.map(&:id)
+        @ongoing_appointments = @upcoming_appointments
+          .select { |a| current_time.between?(a.scheduled_at, end_time(a)) }
+          .map(&:id)
+
+        phone = current_user.phone.to_s.gsub(/\D/, '')
+        @client_code = phone.length >= 4 ? phone.last(4) : nil
+
+        # ── LOYALTY por lava-rápido ──────────────────────────────────────
+        car_wash_ids = all.map(&:car_wash_id).uniq
+        active_programs = LoyaltyProgram
+          .where(car_wash_id: car_wash_ids, active: true)
+          .index_by(&:car_wash_id)
+
+        if active_programs.any?
+          # Conta visitas attended POR lava-rápido, apenas após criação do programa
+          @loyalty_by_car_wash = {}
+
+          active_programs.each do |car_wash_id, prog|
+            visits = current_user.appointments
+              .where(car_wash_id: car_wash_id, status: "attended")
+              .where("scheduled_at >= ?", prog.created_at)
+              .count
+
+            goal   = prog.visits_required
+            # cycle = posição no ciclo atual (0..goal-1)
+            # Se visits=5 e goal=5: cycle=0 → novo ciclo começou
+            cycle  = visits % goal
+            # milestone = completou exatamente um ciclo na última visita
+            last_milestone = visits > 0 && cycle == 0
+
+            @loyalty_by_car_wash[car_wash_id] = {
+              visits:         visits,
+              goal:           goal,
+              # filled = dots preenchidos no ciclo atual
+              # se acabou de bater a meta, mostra todos preenchidos (ciclo completo)
+              filled:         last_milestone ? goal : cycle,
+              milestone:      last_milestone,
+              reward:         prog.reward_description,
+              program_active: true
+            }
+          end
+        else
+          @loyalty_by_car_wash = {}
+        end
       end
 
       format.json do
@@ -42,28 +84,25 @@ class AppointmentsController < ApplicationController
           render json: { error: "CarWash ID não fornecido." }, status: :bad_request
           return
         end
-
         begin
           car_wash = CarWash.find(car_wash_id)
         rescue ActiveRecord::RecordNotFound
           render json: { error: "Lava-rápido não encontrado." }, status: :not_found
           return
         end
-
         unless params[:date].present?
           render json: { error: "Data não fornecida." }, status: :bad_request
           return
         end
-
         begin
-          start_date = Date.parse(params[:date]).beginning_of_day
-          end_date   = start_date.end_of_day
+          start_date   = Date.parse(params[:date]).beginning_of_day
+          end_date     = start_date.end_of_day
           appointments = car_wash.appointments
-          .where(scheduled_at: start_date..end_date)
-          .where(status: ['pending', 'confirmed'])
-          .includes(:service)
+            .where(scheduled_at: start_date..end_date)
+            .where(status: ['pending', 'confirmed'])
+            .includes(:service)
           render json: { appointments: appointments.as_json(include: :service) }
-        rescue ArgumentError, TypeError => e
+        rescue ArgumentError, TypeError
           render json: { error: "Formato de data inválido." }, status: :bad_request
         end
       end
@@ -74,7 +113,7 @@ class AppointmentsController < ApplicationController
   end
 
   def create
-    @appointment = Appointment.new(appointment_params.except(:date, :time))
+    @appointment        = Appointment.new(appointment_params.except(:date, :time))
     @appointment.user   = current_user
     @appointment.status = 'pending'
 
@@ -82,7 +121,7 @@ class AppointmentsController < ApplicationController
     scheduled_time = params[:appointment][:time]
 
     unless scheduled_date.present? && scheduled_time.present?
-      redirect_to new_appointment_path(car_wash_id: @car_wash&.id), alert: "Data e horário são obrigatórios."
+      redirect_to car_wash_path(@car_wash, anchor: 'booking'), alert: "Data e horário são obrigatórios."
       return
     end
 
@@ -92,66 +131,80 @@ class AppointmentsController < ApplicationController
       @appointment.scheduled_at = DateTime.new(
         date_parts[0], date_parts[1], date_parts[2],
         time_parts[0], time_parts[1], 0, '-03:00'
-        )
-    rescue => e
-      redirect_to new_appointment_path(car_wash_id: @car_wash&.id), alert: "Data ou horário inválidos."
+      )
+    rescue
+      redirect_to car_wash_path(@car_wash, anchor: 'booking'), alert: "Data ou horário inválidos."
       return
     end
 
     unless params[:appointment][:service_id].present?
-      redirect_to new_appointment_path(car_wash_id: @car_wash&.id), alert: "Por favor, selecione um serviço."
+      redirect_to car_wash_path(@car_wash, anchor: 'booking'), alert: "Por favor, selecione um serviço."
       return
     end
 
     current_time_with_tolerance = DateTime.now.in_time_zone("America/Sao_Paulo") - 5.minutes
     if @appointment.scheduled_at < current_time_with_tolerance
-      redirect_to new_appointment_path(car_wash_id: @car_wash&.id), alert: "Não é possível agendar para um horário no passado."
+      redirect_to car_wash_path(@car_wash, anchor: 'booking'), alert: "Não é possível agendar para um horário no passado."
       return
     end
 
-    service = Service.find(params[:appointment][:service_id])
+    # ── JANELA DE 45MIN — só pelo Disponível ─────────────────────────────
+    minutes_until = ((@appointment.scheduled_at.in_time_zone("America/Sao_Paulo") - Time.current.in_time_zone("America/Sao_Paulo")) / 60).to_i
+    if @appointment.regular? && minutes_until < 45 && minutes_until >= 0
+      redirect_to disponivel_index_path,
+        alert: "Este horário só pode ser reservado pelo Disponível — pagamento antecipado e entrada garantida."
+      return
+    end
+
+    service    = Service.find(params[:appointment][:service_id])
     start_time = @appointment.scheduled_at
     end_time   = start_time + service.duration.minutes
 
     operating_hours = @car_wash.operating_hours.where(day_of_week: start_time.wday)
     unless operating_hours.any?
-      redirect_to new_appointment_path(car_wash_id: @car_wash&.id), alert: "O lava-rápido não está disponível no dia selecionado."
+      redirect_to car_wash_path(@car_wash, anchor: 'booking'), alert: "O lava-rápido não está disponível no dia selecionado."
       return
     end
 
     within_operating_hours = operating_hours.any? do |oh|
-      start_min  = start_time.hour * 60 + start_time.min
-      end_min    = end_time.hour * 60 + end_time.min
-      opens_at   = oh.opens_at.hour * 60 + oh.opens_at.min
-      closes_at  = oh.closes_at.hour * 60 + oh.closes_at.min
+      start_min = start_time.hour * 60 + start_time.min
+      end_min   = end_time.hour * 60   + end_time.min
+      opens_at  = oh.opens_at.hour * 60  + oh.opens_at.min
+      closes_at = oh.closes_at.hour * 60 + oh.closes_at.min
       start_min >= opens_at && end_min <= closes_at
     end
 
     unless within_operating_hours
-      redirect_to new_appointment_path(car_wash_id: @car_wash&.id), alert: "O horário selecionado está fora do horário de funcionamento."
+      redirect_to car_wash_path(@car_wash, anchor: 'booking'), alert: "O horário selecionado está fora do horário de funcionamento."
+      return
+    end
+
+    closure = @car_wash.car_wash_closures.upcoming_or_active.find { |c| c.covers?(start_time.to_date) }
+    if closure
+      motivo = closure.reason.present? ? " (#{closure.reason})" : ""
+      redirect_to car_wash_path(@car_wash, anchor: 'booking'),
+                  alert: "O lava-rápido está fechado nesta data#{motivo}. Por favor, escolha outra data."
       return
     end
 
     overlapping = Appointment
-    .where(car_wash_id: @car_wash.id)
-    .where(status: ['pending', 'confirmed'])
-    .where("scheduled_at < ? AND scheduled_at >= ?", end_time, start_time - service.duration.minutes)
-    .count
+      .where(car_wash_id: @car_wash.id)
+      .where(status: ['pending', 'confirmed'])
+      .where("scheduled_at < ? AND scheduled_at >= ?", end_time, start_time - service.duration.minutes)
+      .count
 
     if overlapping >= @car_wash.capacity_per_slot
-      redirect_to new_appointment_path(car_wash_id: @car_wash&.id), alert: "Horário indisponível. Por favor, escolha outro."
+      redirect_to car_wash_path(@car_wash, anchor: 'booking'), alert: "Horário indisponível. Por favor, escolha outro."
       return
     end
 
     @appointment.status = 'confirmed'
 
     if @appointment.save
-      Rails.logger.info("Agendamento ##{@appointment.id} criado com sucesso")
       AppointmentMailer.confirmation(@appointment).deliver_now
       redirect_to appointments_path, notice: "Agendamento criado com sucesso!"
     else
-      Rails.logger.error("Erro ao salvar: #{@appointment.errors.full_messages.join(', ')}")
-      redirect_to new_appointment_path(car_wash_id: @car_wash&.id), alert: "Erro ao criar o agendamento: #{@appointment.errors.full_messages.join(', ')}"
+      redirect_to car_wash_path(@car_wash, anchor: 'booking'), alert: "Erro ao criar o agendamento: #{@appointment.errors.full_messages.join(', ')}"
     end
   end
 
@@ -160,23 +213,22 @@ class AppointmentsController < ApplicationController
 
   def cancel
     current_time = DateTime.now.in_time_zone("America/Sao_Paulo")
-
     unless @appointment.status != 'cancelled' && @appointment.scheduled_at > current_time
       redirect_to appointments_path, alert: "Não é possível cancelar este agendamento."
       return
     end
-
-    # Cancelamento permitido apenas com mais de 30 minutos de antecedência
-    # e somente se o serviço ainda não começou
-    minutes_until = ((@appointment.scheduled_at - current_time) / 60).to_i
-
-    if minutes_until <= 30
-      redirect_to appointments_path, alert: "Não é possível cancelar com menos de 30 minutos de antecedência."
+    if @appointment.disponivel?
+      redirect_to appointments_path, alert: "Agendamentos Disponíveis não podem ser cancelados por aqui."
       return
     end
-
+    minutes_until = ((@appointment.scheduled_at - current_time) / 60).to_i
+    if minutes_until <= 120
+      deadline = @appointment.scheduled_at.in_time_zone("America/Sao_Paulo") - 2.hours
+      redirect_to appointments_path, alert: "O prazo de cancelamento (até #{deadline.strftime('%H:%M')} do dia #{deadline.strftime('%d/%m')}) já encerrou."
+      return
+    end
     @appointment.update_columns(status: 'cancelled')
-    redirect_to appointments_path, notice: "Agendamento cancelado com sucesso."
+    redirect_to appointments_path, notice: "Agendamento cancelado. O horário foi liberado."
   end
 
   def help
@@ -185,6 +237,14 @@ class AppointmentsController < ApplicationController
   end
 
   private
+
+  def end_time(a)
+    a.scheduled_at + a.service.duration.minutes
+  end
+
+  def active_status?(a)
+    %w[pending confirmed pending_acceptance].include?(a.status)
+  end
 
   def set_appointment
     @appointment = Appointment.find(params[:id])
@@ -195,7 +255,7 @@ class AppointmentsController < ApplicationController
 
   def set_car_wash
     car_wash_id = params[:car_wash_id] || params[:appointment]&.dig(:car_wash_id)
-    @car_wash = CarWash.find(car_wash_id) if car_wash_id.present?
+    @car_wash   = CarWash.find(car_wash_id) if car_wash_id.present?
   rescue ActiveRecord::RecordNotFound
     @car_wash = nil
   end

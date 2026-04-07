@@ -42,11 +42,20 @@ Rails.application.routes.draw do
     post 'onboarding/car_wash', to: 'onboarding#save_car_wash', as: :onboarding_car_wash
     post 'onboarding/hours',    to: 'onboarding#save_hours',    as: :onboarding_hours
     post 'onboarding/services', to: 'onboarding#save_services', as: :onboarding_services
+    get  'loyalty_program', to: 'loyalty_programs#show'
+    post 'loyalty_program', to: 'loyalty_programs#upsert'
+    patch 'checkins/:id/cancel', to: 'checkins#cancel', as: :checkin_cancel
 
     resources :attendant_invitations, only: [:index, :create, :destroy] do
       collection do
         get  ':token/accept', to: 'attendant_invitations#accept',    as: :accept
         post ':token/accept', to: 'attendant_invitations#do_accept', as: :do_accept
+      end
+    end
+
+    resources :messages, only: [:create] do
+      collection do
+        get :clients_today
       end
     end
 

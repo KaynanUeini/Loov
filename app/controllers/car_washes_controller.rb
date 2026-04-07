@@ -13,7 +13,6 @@ class CarWashesController < ApplicationController
 
     if params[:group].present? && Service::GROUPS[params[:group]]
       group_categories = Service::GROUPS[params[:group]]
-
       if params[:service_title].present?
         @car_washes = @car_washes.joins(:services).where(services: { title: params[:service_title] }).distinct
       elsif params[:category].present? && group_categories.include?(params[:category])
@@ -35,7 +34,7 @@ class CarWashesController < ApplicationController
       end
     end
 
-    @groups = Service::GROUPS
+    @groups                 = Service::GROUPS
     @selected_group         = params[:group]
     @selected_category      = params[:category]
     @selected_service_title = params[:service_title]
@@ -52,7 +51,7 @@ class CarWashesController < ApplicationController
   def show
     @services    = @car_wash.services
     @appointment = Appointment.new(car_wash_id: @car_wash.id)
-    @closures    = @car_wash.closures.where("end_date >= ?", Date.current)
+    @closures    = @car_wash.car_wash_closures.where("end_date >= ?", Date.current)
   end
 
   def new
@@ -79,7 +78,7 @@ class CarWashesController < ApplicationController
         :latitude, :longitude, :capacity_per_slot,
         operating_hours_attributes: [:id, :day_of_week, :opens_at, :closes_at, :_destroy],
         services_attributes: [:id, :title, :description, :price, :duration, :category, :_destroy]
-      ).to_h
+        ).to_h
 
       PendingChange.create!(
         car_wash:    @car_wash,
@@ -88,10 +87,10 @@ class CarWashesController < ApplicationController
         status:      "pending",
         description: "Alterações no gerenciamento do lava-rápido",
         payload:     { car_wash_params: raw }.to_json
-      )
+        )
 
       redirect_to manage_car_wash_path(@car_wash),
-        notice: "✅ Alterações enviadas para aprovação do proprietário."
+      notice: "✅ Alterações enviadas para aprovação do proprietário."
       return
     end
 
@@ -100,7 +99,7 @@ class CarWashesController < ApplicationController
       :latitude, :longitude, :capacity_per_slot,
       operating_hours_attributes: [:id, :day_of_week, :opens_at, :closes_at, :_destroy],
       services_attributes: [:id, :title, :description, :price, :duration, :category, :_destroy]
-    )
+      )
 
     if update_params[:operating_hours_attributes].present?
       seen_days = []
@@ -136,83 +135,91 @@ class CarWashesController < ApplicationController
     @car_wash.services.build if @car_wash.services.empty?
   end
 
-  # ── HORÁRIOS DISPONÍVEIS ────────────────────────────────────────────────────
-  #
-  # Lógica validada com 12 testes cobrindo:
-  #   - Sobreposição parcial, total e adjacente entre agendamentos
-  #   - Respeito à capacidade simultânea do lava-rápido (capacity_per_slot)
-  #   - Step igual à duração do serviço solicitado
-  #   - Slots que ultrapassariam o fechamento são excluídos
-  #   - Agendamentos de duração diferente coexistindo corretamente
-  #
-  # Definição de sobreposição (intervalos semi-abertos [início, fim)):
-  #   slot [current, time_end) sobrepõe agendamento [a.begin, a.end) se:
-  #   current < a.end AND time_end > a.begin
-  #
+  # ── HORÁRIOS DISPONÍVEIS ─────────────────────────────────────────────────
+  # Retorna array de objetos: { time: "HH:MM", disponivel_only: bool }
+  # disponivel_only = true quando o slot está dentro da janela de 45min
+  # e só pode ser reservado pelo fluxo Disponível (com pagamento antecipado)
   def available_times
-  Timeout.timeout(5) do
-    begin
-      date = Date.parse(params[:date])
-    rescue ArgumentError, TypeError
-      render json: [], status: :bad_request and return
-    end
+    lock_minutes = 45
+    Timeout.timeout(5) do
+      begin
+        date = Date.parse(params[:date])
+      rescue ArgumentError, TypeError
+        render json: [], status: :bad_request and return
+      end
+      begin
+        Service.find(params[:service_id])
+      rescue ActiveRecord::RecordNotFound
+        render json: [], status: :not_found and return
+      end
 
-    begin
-      Service.find(params[:service_id])
-    rescue ActiveRecord::RecordNotFound
-      render json: [], status: :not_found and return
-    end
+      duration          = params[:duration].to_i
+      capacity_per_slot = [@car_wash.capacity_per_slot.to_i, 1].max
 
-    duration          = params[:duration].to_i
-    capacity_per_slot = [@car_wash.capacity_per_slot.to_i, 1].max
+      if duration <= 0
+        render json: [] and return
+      end
 
-    if duration <= 0
-      render json: [] and return
-    end
+      operating_hour = @car_wash.operating_hours.find_by(day_of_week: date.wday)
+      unless operating_hour
+        render json: [] and return
+      end
 
-    operating_hour = @car_wash.operating_hours.find_by(day_of_week: date.wday)
+      opens_at_min  = (operating_hour.opens_at.hour  * 60) + operating_hour.opens_at.min
+      closes_at_min = (operating_hour.closes_at.hour * 60) + operating_hour.closes_at.min
 
-    unless operating_hour
-      render json: [] and return
-    end
+      now            = Time.current.in_time_zone("America/Sao_Paulo")
+      now_minutes    = now.hour * 60 + now.min
+      is_today       = date == Date.current
+      lock_threshold = now_minutes + lock_minutes
 
-    opens_at_min  = (operating_hour.opens_at.hour  * 60) + operating_hour.opens_at.min
-    closes_at_min = (operating_hour.closes_at.hour * 60) + operating_hour.closes_at.min
+      if is_today && now_minutes >= opens_at_min
+        slots_passed = ((now_minutes - opens_at_min).to_f / duration).ceil
+        opens_at_min = opens_at_min + (slots_passed * duration)
+      end
 
-    # Busca agendamentos ativos no dia — sem colunas que podem não existir
-    appointments = @car_wash.appointments
+      appointments = @car_wash.appointments
       .joins(:service)
       .where("DATE(scheduled_at) = ?", date)
       .where(status: %w[confirmed pending_acceptance attended])
       .select("appointments.scheduled_at, services.duration AS svc_duration")
       .to_a
 
-    occupied = appointments.map do |appt|
-      s = (appt.scheduled_at.in_time_zone("America/Sao_Paulo").hour * 60) +
-           appt.scheduled_at.in_time_zone("America/Sao_Paulo").min
-      d = appt.svc_duration.to_i
-      next nil if d <= 0
-      { begin: s, end: s + d }
-    end.compact
+      occupied = appointments.map do |appt|
+        s = (appt.scheduled_at.in_time_zone("America/Sao_Paulo").hour * 60) +
+        appt.scheduled_at.in_time_zone("America/Sao_Paulo").min
+        d = appt.svc_duration.to_i
+        next nil if d <= 0
+        { begin: s, end: s + d }
+        end.compact
 
-    available = []
-    current   = opens_at_min
+        available = []
+        current   = opens_at_min
 
-    while current + duration <= closes_at_min
-      time_end    = current + duration
-      overlapping = occupied.count { |i| current < i[:end] && time_end > i[:begin] }
-      available << format("%02d:%02d", current / 60, current % 60) if overlapping < capacity_per_slot
-      current += duration
+        while current + duration <= closes_at_min
+          time_end    = current + duration
+          overlapping = occupied.count { |i| current < i[:end] && time_end > i[:begin] }
+
+          if overlapping < capacity_per_slot
+          # Slot dentro da janela de 45min → disponivel_only
+          disponivel_only = is_today && current < lock_threshold
+          available << {
+            time:           format("%02d:%02d", current / 60, current % 60),
+            disponivel_only: disponivel_only
+          }
+        end
+
+        current += duration
+      end
+
+      render json: available
     end
-
-    render json: available
+  rescue Timeout::Error
+    render json: [], status: :request_timeout
+  rescue => e
+    Rails.logger.error("[available_times] Erro: #{e.message}\n#{e.backtrace.first(3).join("\n")}")
+    render json: [], status: :internal_server_error
   end
-rescue Timeout::Error
-  render json: [], status: :request_timeout
-rescue => e
-  Rails.logger.error("[available_times] Erro: #{e.message}\n#{e.backtrace.first(3).join("\n")}")
-  render json: [], status: :internal_server_error
-end
 
   private
 
@@ -242,6 +249,6 @@ end
       :latitude, :longitude, :capacity_per_slot,
       operating_hours_attributes: [:id, :day_of_week, :opens_at, :closes_at, :_destroy],
       services_attributes: [:id, :title, :description, :price, :duration, :category, :_destroy]
-    )
+      )
   end
 end

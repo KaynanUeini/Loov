@@ -1,12 +1,30 @@
 class HomeController < ApplicationController
   def index
     Rails.logger.info("Renderizando Home#index para usuário: #{current_user&.email}")
+
+    # ── IDs de lava-rápidos abertos AGORA ─────────────────────────────────
+    now       = Time.current.in_time_zone("America/Sao_Paulo")
+    now_sec   = now.seconds_since_midnight.to_i
+    today_dow = now.wday
+
+    @open_car_wash_ids = OperatingHour
+      .where(day_of_week: today_dow)
+      .select do |oh|
+        opens  = oh.opens_at.seconds_since_midnight.to_i  rescue 0
+        closes = oh.closes_at.seconds_since_midnight.to_i rescue 86400
+        now_sec >= opens && now_sec < closes
+      end
+      .map(&:car_wash_id)
+      .to_set
+
+    # ── BASE ───────────────────────────────────────────────────────────────
     @car_washes = CarWash.all
 
+    # ── ORDENAR POR DISTÂNCIA ──────────────────────────────────────────────
     if params[:latitude].present? && params[:longitude].present?
       begin
-        latitude  = params[:latitude].to_f
-        longitude = params[:longitude].to_f
+        latitude       = params[:latitude].to_f
+        longitude      = params[:longitude].to_f
         with_coords    = @car_washes.select(&:has_valid_coordinates?).sort_by { |cw| cw.distance_to([latitude, longitude], :km) }
         without_coords = @car_washes.reject(&:has_valid_coordinates?)
         @car_washes    = with_coords + without_coords
@@ -15,19 +33,38 @@ class HomeController < ApplicationController
       end
     end
 
+    # ── BUSCA: nome, endereço e serviço ───────────────────────────────────
+    @search_results = []
     if params[:search].present?
-      @car_washes = @car_washes.select do |cw|
-        cw.name.match?(/#{params[:search]}/i) || cw.address.to_s.match?(/#{params[:search]}/i)
+      term = params[:search].strip
+      cw_ids_by_service = Service
+        .where("title ILIKE ?", "%#{term}%")
+        .pluck(:car_wash_id)
+        .uniq
+
+      matched = @car_washes.select do |cw|
+        cw.name.match?(/#{Regexp.escape(term)}/i) ||
+        cw.address.to_s.match?(/#{Regexp.escape(term)}/i) ||
+        cw_ids_by_service.include?(cw.id)
       end
+
+      @search_results = matched.sort_by { |cw| @open_car_wash_ids.include?(cw.id) ? 0 : 1 }
     end
 
-    # Seções da home para clientes/visitantes
-    @nearby_car_washes = @car_washes.first(8)
-    @top_car_washes    = CarWash.all.select { |cw| cw.reviews.any? }
-                                .sort_by { |cw| -cw.reviews.average(:rating).to_f }
-                                .first(8)
+    # ── SEÇÕES: abertos primeiro ───────────────────────────────────────────
+    @nearby_car_washes = @car_washes
+      .first(16)
+      .sort_by { |cw| @open_car_wash_ids.include?(cw.id) ? 0 : 1 }
+      .first(8)
+
+    @top_car_washes = CarWash.all
+      .select { |cw| cw.reviews.any? }
+      .sort_by { |cw| [@open_car_wash_ids.include?(cw.id) ? 0 : 1, -cw.reviews.average(:rating).to_f] }
+      .first(8)
+
     @location_name = params[:location_name].presence
 
+    # ── DASHBOARD OWNER/ATTENDANT ──────────────────────────────────────────
     if user_signed_in? && (current_user.owner? || current_user.attendant?)
       @car_wash = current_car_wash
       if @car_wash
@@ -43,6 +80,34 @@ class HomeController < ApplicationController
                             .where(status: "confirmed")
                             .where(scheduled_at: Time.current..7.days.from_now)
                             .count
+
+        # ── CHECKLIST DE ATIVAÇÃO ─────────────────────────────────────────
+        if current_user.owner?
+          step_hours   = @car_wash.operating_hours.any?
+          step_service = @car_wash.services.any?
+          @activation_complete = step_hours && step_service
+
+          unless @activation_complete
+            @activation_steps = [
+              {
+                key:   :hours,
+                done:  step_hours,
+                label: "Cadastre seus horários de funcionamento",
+                cta:   "Configurar",
+                url:   manage_car_wash_path(@car_wash, anchor: "hours"),
+                icon:  "fa-clock"
+              },
+              {
+                key:   :service,
+                done:  step_service,
+                label: "Adicione pelo menos um serviço",
+                cta:   "Adicionar",
+                url:   manage_car_wash_path(@car_wash, anchor: "services"),
+                icon:  "fa-tag"
+              }
+            ]
+          end
+        end
       end
     end
 
@@ -53,28 +118,14 @@ class HomeController < ApplicationController
     if user_signed_in? && current_user.client? && @disponivel_has_location
       lat        = params[:latitude].to_f
       lon        = params[:longitude].to_f
-      now        = Time.current
       window_end = now + 30.minutes
-      today_dow  = Date.current.wday
 
       now_minutes   = now.hour * 60 + now.min
       next_slot_min = (now_minutes / 30.0).ceil * 30
       next_slot     = now.beginning_of_day + next_slot_min.minutes
 
-      now_seconds = now.seconds_since_midnight.to_i
-
-      open_car_wash_ids = OperatingHour
-        .where(day_of_week: today_dow)
-        .select { |oh|
-          opens_sec  = oh.opens_at.seconds_since_midnight.to_i  rescue 0
-          closes_sec = oh.closes_at.seconds_since_midnight.to_i rescue 86400
-          now_seconds >= opens_sec && now_seconds <= closes_sec
-        }
-        .map(&:car_wash_id)
-        .uniq
-
       nearby_open = CarWash
-        .where(id: open_car_wash_ids)
+        .where(id: @open_car_wash_ids.to_a)
         .select(&:has_valid_coordinates?)
         .select { |cw| cw.distance_to([lat, lon], :km) <= 5.0 }
         .sort_by { |cw| cw.distance_to([lat, lon], :km) }

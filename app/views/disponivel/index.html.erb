@@ -210,7 +210,7 @@
           <div class="svc-select-overlay">
             <div class="svc-select-label">Escolha o serviço</div>
             <% slot_data[:services].each do |svc| %>
-            <%= link_to disponivel_checkout_path(car_wash_id: slot_data[:car_wash].id, service_id: svc.id, slot: slot_time.iso8601), class: "svc-btn" do %>
+            <%= link_to checkout_disponivel_index_path(car_wash_id: slot_data[:car_wash].id, service_id: svc.id, slot: slot_time.iso8601), class: "svc-btn" do %>
               <span class="svc-btn-name"><%= svc.title %></span>
               <div class="svc-btn-right">
                 <span class="svc-btn-dur"><%= svc.duration %>min</span>

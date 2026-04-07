@@ -11,8 +11,9 @@ module Client
         return
       end
 
-      unless appointment.status == "confirmed" && appointment.scheduled_at < Time.current
-        redirect_to appointments_path, alert: "Só é possível avaliar agendamentos concluídos."
+      # Só permite avaliar agendamentos marcados como attended pelo owner
+      unless appointment.status == "attended"
+        redirect_to appointments_path, alert: "Só é possível avaliar agendamentos concluídos pelo estabelecimento."
         return
       end
 
@@ -28,7 +29,7 @@ module Client
       if @review.save
         redirect_to appointments_path, notice: "Avaliação enviada! Obrigado pelo feedback."
       else
-        redirect_to appointments_path, alert: "Erro ao enviar avaliação."
+        redirect_to appointments_path, alert: "Erro ao enviar avaliação: #{@review.errors.full_messages.join(', ')}"
       end
     end
 

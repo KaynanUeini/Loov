@@ -87,7 +87,7 @@
 
   .nav-notif-dropdown {
     position:absolute; top:calc(100% + 8px); right:0;
-    width:300px; background:rgba(8,8,8,0.98);
+    width:310px; background:rgba(8,8,8,0.98);
     border:1px solid rgba(255,255,255,.07); border-radius:16px;
     overflow:hidden; box-shadow:0 16px 48px rgba(0,0,0,.9);
     opacity:0; pointer-events:none; transform:translateY(-8px);
@@ -113,6 +113,8 @@
   .nav-notif-icon.pending   { background:rgba(175,255,45,.08); color:#afff2d; border:1px solid rgba(175,255,45,.15); }
   .nav-notif-icon.confirmed { background:rgba(175,255,45,.12); color:#afff2d; }
   .nav-notif-icon.rejected  { background:rgba(248,113,113,.08); color:#f87171; }
+  .nav-notif-icon.cancelled { background:rgba(249,115,22,.08); color:#f97316; border:1px solid rgba(249,115,22,.2); }
+  .nav-notif-icon.regular   { background:rgba(96,165,250,.08); color:#60a5fa; border:1px solid rgba(96,165,250,.15); }
   .nav-notif-title { font-size:.8rem; font-weight:600; color:var(--white); margin-bottom:.15rem; }
   .nav-notif-sub { font-size:.72rem; color:#444; line-height:1.4; }
   .nav-notif-empty { padding:1.5rem 1rem; text-align:center; font-size:.78rem; color:#333; }
@@ -199,7 +201,6 @@
   }
   .support-btn-close-ticket:hover { border-color:rgba(248,113,113,.3); color:#f87171; }
 
-  /* Formulário novo ticket */
   .support-new-form { display:flex; flex-direction:column; gap:.875rem; }
   .support-form-label { font-size:.6rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#444; margin-bottom:.25rem; display:block; }
   .support-form-select {
@@ -215,7 +216,6 @@
   }
   .support-btn-open:hover { background:#3b82f6; }
 
-  /* Histórico colapsável */
   .support-history-section { margin-top:1.25rem; border-top:1px solid rgba(255,255,255,.05); padding-top:1rem; }
   .support-history-label { font-size:.58rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:#2a2a2a; margin-bottom:.75rem; }
   .support-history-item { margin-bottom:.5rem; }
@@ -258,7 +258,6 @@
 
 <% current_path = request.path %>
 
-<%# Modal de suporte — owner e attendant %>
 <% if user_signed_in? && (current_user.owner? || current_user.attendant?) %>
 <div class="support-modal-overlay" id="support-modal-overlay">
   <div class="support-modal">
@@ -451,32 +450,68 @@
       e.stopPropagation();
       const isOpen = dropdown.classList.contains('open');
       dropdown.classList.toggle('open');
-      if (!isOpen) { markAsSeen(); bellBtn.classList.remove('has-notif'); bellBadge.classList.remove('visible'); loadNotifications(); }
+      if (!isOpen) { markAsSeen(); bellBtn.classList.remove('has-notif'); bellBadge.classList.remove('visible'); bellBadge.textContent=''; loadNotifications(); }
     });
+
+    const PAGE_SIZE = 8;
+    let allNotifs   = [];
 
     function loadNotifications() {
       fetch('/client/notifications', { headers: { Accept: 'application/json' } })
-        .then(r => r.json()).then(data => renderNotifications(data)).catch(() => {});
+        .then(r => r.json()).then(data => { allNotifs = data; renderNotifications(data, PAGE_SIZE); }).catch(() => {});
     }
 
-    function renderNotifications(items) {
-      if (!items.length) { notifList.innerHTML='<div class="nav-notif-empty">Nenhuma notificação.</div>'; return; }
-      notifList.innerHTML = items.map(item => {
-        const iconClass = item.status==='confirmed'?'confirmed':item.status==='rejected'||item.status==='cancelled'?'rejected':'pending';
-        const icon = item.status==='confirmed'?'fa-check':item.status==='rejected'||item.status==='cancelled'?'fa-times':'fa-clock';
-        const title = item.status==='confirmed'?'Reserva confirmada!':item.status==='rejected'?'Reserva recusada':item.status==='cancelled'?'Reserva expirou':'Aguardando confirmação';
-        return `<a class="nav-notif-item" href="/appointments"><div class="nav-notif-icon ${iconClass}"><i class="fas ${icon}"></i></div><div><div class="nav-notif-title">${title}</div><div class="nav-notif-sub">${item.service_name} · ${item.car_wash_name}<br>${item.scheduled_at}</div></div></a>`;
-      }).join('');
+    function notifMeta(item) {
+      let iconClass, icon, title;
+      if (item.type === 'cancelled_by_establishment') {
+        iconClass = 'cancelled'; icon = 'fa-calendar-xmark'; title = 'Reserva cancelada';
+      } else if (item.type === 'regular_confirmed') {
+        iconClass = 'regular'; icon = 'fa-calendar-check'; title = 'Agendamento confirmado';
+      } else if (item.type === 'disponivel') {
+        if (item.status === 'confirmed')      { iconClass='confirmed'; icon='fa-check';    title='Reserva confirmada!'; }
+        else if (item.status === 'rejected')  { iconClass='rejected';  icon='fa-times';    title='Reserva recusada'; }
+        else if (item.status === 'cancelled') { iconClass='rejected';  icon='fa-times';    title='Reserva expirou'; }
+        else                                  { iconClass='pending';   icon='fa-clock';    title='Aguardando confirmação'; }
+      } else {
+        iconClass = 'pending'; icon = 'fa-clock'; title = 'Notificação';
+      }
+      return { iconClass, icon, title };
     }
+
+    function renderNotifications(items, limit) {
+      if (!items.length) { notifList.innerHTML='<div class="nav-notif-empty">Nenhuma notificação.</div>'; return; }
+      const visible  = items.slice(0, limit);
+      const hasMore  = items.length > limit;
+      notifList.innerHTML = visible.map(item => {
+        const { iconClass, icon, title } = notifMeta(item);
+        return `<a class="nav-notif-item" href="/appointments">
+          <div class="nav-notif-icon ${iconClass}"><i class="fas ${icon}"></i></div>
+          <div style="min-width:0;">
+            <div class="nav-notif-title">${title}</div>
+            <div class="nav-notif-sub">${item.service_name} · ${item.car_wash_name}<br>${item.scheduled_at}</div>
+          </div>
+        </a>`;
+      }).join('') + (hasMore
+        ? `<button onclick="expandNotifs()" style="width:100%;padding:.625rem;background:none;border:none;border-top:1px solid rgba(255,255,255,.04);color:rgba(175,255,45,.45);font-size:.72rem;cursor:pointer;transition:color .15s;" onmouseover="this.style.color='#afff2d'" onmouseout="this.style.color='rgba(175,255,45,.45)'">Ver mais ${items.length - limit} notificação${items.length - limit > 1 ? 'ões' : ''}</button>`
+        : '');
+    }
+
+    window.expandNotifs = function() { renderNotifications(allNotifs, allNotifs.length); };
 
     function pollBadge() {
       if (dropdown.classList.contains('open')) return;
       fetch('/client/notifications', { headers: { Accept: 'application/json' } })
         .then(r => r.json()).then(data => {
-          const seenAt = getSeenAt();
-          const newCount = data.filter(i => i.created_at && new Date(i.created_at) > seenAt).length;
-          if (newCount > 0) { bellBtn.classList.add('has-notif'); bellBadge.textContent=newCount; bellBadge.classList.add('visible'); }
-          else { bellBtn.classList.remove('has-notif'); bellBadge.classList.remove('visible'); }
+          const seenAt   = getSeenAt();
+          const newCount = data.filter(i => i.notif_at && new Date(i.notif_at) > seenAt).length;
+          if (newCount > 0) {
+            bellBtn.classList.add('has-notif');
+            bellBadge.textContent = newCount;
+            bellBadge.classList.add('visible');
+          } else {
+            bellBtn.classList.remove('has-notif');
+            bellBadge.classList.remove('visible');
+          }
         }).catch(() => {});
     }
 
@@ -509,7 +544,6 @@
     supportClose.addEventListener('click', closeSupportModal);
     supportOverlay.addEventListener('click', e => { if (e.target === supportOverlay) closeSupportModal(); });
 
-    // ── BUG 1 CORRIGIDO: passa todos os tickets (abertos e resolvidos) ──
     function loadTicket() {
       supportBody.innerHTML = '<div style="text-align:center;padding:2rem;color:#333;font-size:.8rem;">Carregando...</div>';
       supportFooter.style.display = 'none';
@@ -574,7 +608,6 @@
             <button class="support-btn-close-ticket" id="support-close-btn">Encerrar chamado</button>
           </div>`;
         document.getElementById('support-send-btn').addEventListener('click', sendMessage);
-        // ── BUG 3 CORRIGIDO: closeTicket usa rota owner ──
         document.getElementById('support-close-btn').addEventListener('click', closeTicket);
       } else {
         supportFooter.style.display = 'block';
@@ -616,11 +649,7 @@
       const category    = document.getElementById('support-category').value;
       const description = document.getElementById('support-description').value.trim();
       const errEl       = document.getElementById('support-open-error');
-      if (!description) {
-        errEl.textContent = 'Descreva o problema antes de abrir o chamado.';
-        errEl.style.display = 'block';
-        return;
-      }
+      if (!description) { errEl.textContent='Descreva o problema antes de abrir o chamado.'; errEl.style.display='block'; return; }
       errEl.style.display = 'none';
       const btn = document.getElementById('support-open-btn');
       btn.disabled = true; btn.textContent = 'Abrindo...';
@@ -629,22 +658,9 @@
         headers: { 'X-CSRF-Token': CSRF, 'Content-Type': 'application/json' },
         body: JSON.stringify({ category, description })
       }).then(r => r.json()).then(data => {
-        if (data.ok) {
-          currentTicket = data.ticket;
-          renderThread(data.ticket, []);
-        } else {
-          // ── BUG 2 CORRIGIDO: exibe erro do backend claramente ──
-          errEl.textContent = data.error || 'Erro ao abrir chamado.';
-          errEl.style.display = 'block';
-          btn.disabled = false;
-          btn.innerHTML = '<i class="fas fa-headset"></i> Abrir chamado';
-        }
-      }).catch(() => {
-        errEl.textContent = 'Erro de conexão. Tente novamente.';
-        errEl.style.display = 'block';
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-headset"></i> Abrir chamado';
-      });
+        if (data.ok) { currentTicket = data.ticket; renderThread(data.ticket, []); }
+        else { errEl.textContent = data.error || 'Erro ao abrir chamado.'; errEl.style.display='block'; btn.disabled=false; btn.innerHTML='<i class="fas fa-headset"></i> Abrir chamado'; }
+      }).catch(() => { errEl.textContent='Erro de conexão. Tente novamente.'; errEl.style.display='block'; btn.disabled=false; btn.innerHTML='<i class="fas fa-headset"></i> Abrir chamado'; });
     }
 
     function sendMessage() {
@@ -664,19 +680,46 @@
       }).catch(() => { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar'; });
     }
 
-    // ── BUG 3 CORRIGIDO: rota PATCH /owner/support_tickets/:id/close ──
     function closeTicket() {
-      if (!confirm('Encerrar este chamado?')) return;
-      fetch(`/owner/support_tickets/${currentTicket.id}/close`, {
-        method: 'PATCH',
-        headers: { 'X-CSRF-Token': CSRF, 'Content-Type': 'application/json' }
-      }).then(r => r.json()).then(data => {
-        if (data.ok) loadTicket();
-        else alert(data.error || 'Erro ao encerrar chamado.');
-      });
+      openConfirmModal(
+        'Encerrar chamado',
+        'Tem certeza que deseja encerrar este chamado? Ele ficará no histórico.',
+        function() {
+          fetch(`/owner/support_tickets/${currentTicket.id}/close`, {
+            method: 'PATCH',
+            headers: { 'X-CSRF-Token': CSRF, 'Content-Type': 'application/json' }
+          }).then(r => r.json()).then(data => {
+            if (data.ok) loadTicket();
+          });
+        }
+      );
     }
 
-    // Poll badge
+    // ── MODAL CONFIRM GENÉRICO ─────────────────────────────────────────
+    function openConfirmModal(title, message, onConfirm) {
+      let overlay = document.getElementById('loov-confirm-overlay');
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'loov-confirm-overlay';
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.88);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:1rem;';
+        overlay.innerHTML = `<div style="background:#080808;border:1px solid #1e1e1e;border-radius:20px;width:100%;max-width:360px;padding:1.5rem;">
+          <div id="loov-confirm-title" style="font-family:'Montserrat',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#f87171;margin-bottom:.5rem;"></div>
+          <div id="loov-confirm-msg" style="font-size:.8rem;color:#555;margin-bottom:1.25rem;line-height:1.5;"></div>
+          <div style="display:flex;gap:.5rem;">
+            <button id="loov-confirm-cancel" style="flex:1;background:transparent;border:1px solid #1e1e1e;border-radius:8px;color:#444;font-family:'DM Sans',sans-serif;font-size:.8rem;padding:.625rem;cursor:pointer;">Voltar</button>
+            <button id="loov-confirm-ok" style="flex:2;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:8px;color:#f87171;font-family:'DM Sans',sans-serif;font-size:.8rem;font-weight:700;padding:.625rem;cursor:pointer;">Confirmar</button>
+          </div>
+        </div>`;
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', e => { if(e.target===overlay) overlay.style.display='none'; });
+        overlay.querySelector('#loov-confirm-cancel').addEventListener('click', () => overlay.style.display='none');
+      }
+      overlay.querySelector('#loov-confirm-title').textContent = title;
+      overlay.querySelector('#loov-confirm-msg').textContent   = message;
+      overlay.querySelector('#loov-confirm-ok').onclick = () => { overlay.style.display='none'; onConfirm(); };
+      overlay.style.display = 'flex';
+    }
+
     function pollSupportBadge() {
       fetch('/owner/support_tickets', { headers: { Accept: 'application/json' } })
         .then(r => r.json()).then(tickets => {
