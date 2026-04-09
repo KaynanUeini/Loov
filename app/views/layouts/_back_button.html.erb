@@ -1,0 +1,9 @@
+<%# Partial reutilizável — botão de voltar padronizado Loov
+    Uso: <%= render 'layouts/back_button', path: root_path %>
+    Ou:  <%= render 'layouts/back_button', path: :back %>
+%>
+<div class="loov-back-bar">
+  <%= link_to path, class: "loov-back-link" do %>
+    <i class="fas fa-arrow-left"></i> Voltar
+  <% end %>
+</div>
