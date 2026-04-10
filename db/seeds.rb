@@ -29,8 +29,10 @@ def create_clients(count, prefix)
     last  = Faker::Name.last_name.downcase.gsub(/[^a-z]/, '')
     email = "#{prefix}_#{first}#{i}@gmail.com"
     user  = User.find_or_create_by!(email: email) do |u|
-      u.password = "123456"
-      u.role     = "client"
+      u.password  = "123456"
+      u.role      = "client"
+      u.full_name = "#{first.capitalize} #{last.capitalize}"
+      u.phone     = "11#{rand(900000000) + 100000000}"
     end
     clients << user
   end
@@ -38,30 +40,57 @@ def create_clients(count, prefix)
 end
 
 def create_appointments(car_wash:, clients:, services:, count:, period_months: 12,
-                        loyalty_clients: [], loyalty_visits: 2..5,
-                        no_show_rate: 0.12, cancelled_rate: 0.08,
-                        service_weights: nil)
-  start_range = period_months.months.ago.to_date
-  end_range   = 30.days.from_now.to_date
-  valid_dates = (start_range..end_range).select { |d| DAY_WEIGHTS.key?(d.wday) }
-  svc_weights = service_weights || services.each_with_index.map { |_, i| [i, [40, 25, 15, 8, 5, 4, 2, 1][i] || 2] }.to_h
+  loyalty_clients: [], loyalty_visits: 2..5,
+  no_show_rate: 0.12, cancelled_rate: 0.08,
+  service_weights: nil)
+start_range = period_months.months.ago.to_date
+end_range   = 30.days.from_now.to_date
+valid_dates = (start_range..end_range).select { |d| DAY_WEIGHTS.key?(d.wday) }
+svc_weights = service_weights || services.each_with_index.map { |_, i| [i, [40, 25, 15, 8, 5, 4, 2, 1][i] || 2] }.to_h
 
-  count.times do
+count.times do
+  date    = valid_dates.sample
+  hour    = weighted_sample(HOUR_WEIGHTS)
+  minute  = [0, 30].sample
+  next if date.wday == 6 && hour >= 14
+
+  scheduled_at = Time.zone.local(date.year, date.month, date.day, hour, minute)
+  client       = clients.sample
+  svc_idx      = weighted_sample(svc_weights)
+  service      = services[svc_idx] || services.first
+
+  status = if scheduled_at > Time.current
+    "confirmed"
+  elsif rand < cancelled_rate
+    "cancelled"
+  elsif rand < no_show_rate
+    "no_show"
+  else
+    "attended"
+  end
+
+  begin
+    Appointment.create!(
+      user: client, car_wash: car_wash,
+      service: service, scheduled_at: scheduled_at, status: status
+      )
+  rescue ActiveRecord::RecordInvalid
+  end
+end
+
+loyalty_clients.each do |client|
+  rand(loyalty_visits).times do
     date    = valid_dates.sample
     hour    = weighted_sample(HOUR_WEIGHTS)
     minute  = [0, 30].sample
     next if date.wday == 6 && hour >= 14
 
     scheduled_at = Time.zone.local(date.year, date.month, date.day, hour, minute)
-    client       = clients.sample
-    svc_idx      = weighted_sample(svc_weights)
-    service      = services[svc_idx] || services.first
+    service      = services.sample
 
     status = if scheduled_at > Time.current
       "confirmed"
-    elsif rand < cancelled_rate
-      "cancelled"
-    elsif rand < no_show_rate
+    elsif rand < 0.06
       "no_show"
     else
       "attended"
@@ -71,38 +100,11 @@ def create_appointments(car_wash:, clients:, services:, count:, period_months: 1
       Appointment.create!(
         user: client, car_wash: car_wash,
         service: service, scheduled_at: scheduled_at, status: status
-      )
+        )
     rescue ActiveRecord::RecordInvalid
     end
   end
-
-  loyalty_clients.each do |client|
-    rand(loyalty_visits).times do
-      date    = valid_dates.sample
-      hour    = weighted_sample(HOUR_WEIGHTS)
-      minute  = [0, 30].sample
-      next if date.wday == 6 && hour >= 14
-
-      scheduled_at = Time.zone.local(date.year, date.month, date.day, hour, minute)
-      service      = services.sample
-
-      status = if scheduled_at > Time.current
-        "confirmed"
-      elsif rand < 0.06
-        "no_show"
-      else
-        "attended"
-      end
-
-      begin
-        Appointment.create!(
-          user: client, car_wash: car_wash,
-          service: service, scheduled_at: scheduled_at, status: status
-        )
-      rescue ActiveRecord::RecordInvalid
-      end
-    end
-  end
+end
 end
 
 def create_monthly_costs_12m(car_wash:, base_costs:, variation: 0.08, spikes: {})
@@ -182,14 +184,14 @@ create_appointments(
   car_wash: car_wash, clients: clients_1, services: services_1,
   count: 300, loyalty_clients: clients_1.first(20), loyalty_visits: 3..8,
   no_show_rate: 0.10, cancelled_rate: 0.08
-)
+  )
 puts "✅ #{Appointment.where(car_wash: car_wash).count} agendamentos Premium"
 
 create_monthly_costs_12m(
   car_wash: car_wash,
   base_costs: {rent: 3500, salaries: 4200, utilities: 600, products: 800, maintenance: 400, other_fixed: 300, other_variable: 200},
   spikes: {3 => {maintenance: 800}, 9 => {maintenance: 600}}
-)
+  )
 puts "✅ 12 meses custos Premium"
 
 # ── 2. LAVA RÁPIDO ESTRELA ────────────────────────────────────────────────────
@@ -240,14 +242,14 @@ create_appointments(
   count: 450, loyalty_clients: clients_top.first(50), loyalty_visits: 4..10,
   no_show_rate: 0.07, cancelled_rate: 0.05,
   service_weights: {0 => 20, 1 => 25, 2 => 20, 3 => 10, 4 => 12, 5 => 5, 6 => 3, 7 => 5}
-)
+  )
 puts "✅ #{Appointment.where(car_wash: cw_top).count} agendamentos Estrela"
 
 create_monthly_costs_12m(
   car_wash: cw_top,
   base_costs: {rent: 4500, salaries: 5500, utilities: 700, products: 1200, maintenance: 300, other_fixed: 400, other_variable: 300},
   spikes: {5 => {maintenance: 1200}, 11 => {other_variable: 800}}
-)
+  )
 puts "✅ 12 meses custos Estrela"
 
 # ── 3. AUTO CENTER BEIRA RIO ──────────────────────────────────────────────────
@@ -296,7 +298,7 @@ create_appointments(
   count: 200, loyalty_clients: clients_mid.first(15), loyalty_visits: 2..5,
   no_show_rate: 0.15, cancelled_rate: 0.10,
   service_weights: {0 => 45, 1 => 30, 2 => 12, 3 => 5, 4 => 5, 5 => 3}
-)
+  )
 puts "✅ #{Appointment.where(car_wash: cw_mid).count} agendamentos Beira Rio"
 
 create_monthly_costs_12m(
@@ -304,7 +306,7 @@ create_monthly_costs_12m(
   base_costs: {rent: 2200, salaries: 2800, utilities: 450, products: 500, maintenance: 250, other_fixed: 200, other_variable: 150},
   variation: 0.10,
   spikes: {2 => {maintenance: 700}, 8 => {salaries: 500}}
-)
+  )
 puts "✅ 12 meses custos Beira Rio"
 
 # ── 4. LAVA RÁPIDO DO ZEZINHO ─────────────────────────────────────────────────
@@ -351,7 +353,7 @@ create_appointments(
   count: 100, loyalty_clients: clients_bad.first(5), loyalty_visits: 1..3,
   no_show_rate: 0.22, cancelled_rate: 0.15,
   service_weights: {0 => 65, 1 => 25, 2 => 7, 3 => 3}
-)
+  )
 puts "✅ #{Appointment.where(car_wash: cw_bad).count} agendamentos Zezinho"
 
 create_monthly_costs_12m(
@@ -359,7 +361,7 @@ create_monthly_costs_12m(
   base_costs: {rent: 2800, salaries: 2200, utilities: 400, products: 400, maintenance: 200, other_fixed: 150, other_variable: 0},
   variation: 0.05,
   spikes: {1 => {maintenance: 900}, 4 => {maintenance: 600}, 7 => {salaries: 400}, 10 => {maintenance: 500}}
-)
+  )
 puts "✅ 12 meses custos Zezinho"
 
 # ── RESUMO ────────────────────────────────────────────────────────────────────
