@@ -381,3 +381,13 @@ puts "  • Lava Rápido Estrela:    #{Appointment.where(car_wash: cw_top).count
 puts "  • Auto Center Beira Rio:  #{Appointment.where(car_wash: cw_mid).count}"
 puts "  • Lava Rápido do Zezinho: #{Appointment.where(car_wash: cw_bad).count}"
 puts "  Total: #{Appointment.count} agendamentos | #{User.count} usuários"
+
+# ── USUÁRIO MOBILE ────────────────────────────────────────────────────────────
+User.find_or_create_by!(email: 'kaynan_alves@hotmail.com') do |u|
+  u.password = '123456'
+  u.password_confirmation = '123456'
+  u.role = 'admin'
+  u.full_name = 'Kaynan'
+  u.phone = '11999999999'
+end
+puts "✅ Usuário mobile criado"
