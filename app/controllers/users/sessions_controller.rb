@@ -1,16 +1,9 @@
-class SessionsController < Devise::SessionsController
-  respond_to :json, :html
-
-  def after_sign_in_path_for(resource)
-    flash.clear
-    root_path
-  end
+class Users::SessionsController < Devise::SessionsController
+  respond_to :json
 
   private
 
   def respond_with(resource, _opts = {})
-    return super unless request.format.json?
-
     if resource.persisted?
       render json: {
         token: request.env['warden-jwt_auth.token'],
@@ -25,7 +18,6 @@ class SessionsController < Devise::SessionsController
   end
 
   def respond_to_on_destroy
-    return super unless request.format.json?
     render json: { message: 'Logout realizado.' }, status: :ok
   end
 end

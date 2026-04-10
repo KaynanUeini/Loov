@@ -1,6 +1,7 @@
 class User < ApplicationRecord
   devise :database_authenticatable, :registerable,
-         :recoverable, :rememberable, :validatable
+  :recoverable, :rememberable, :validatable,
+  :jwt_authenticatable, jwt_revocation_strategy: Devise::JWT::RevocationStrategies::Null
 
   has_many :appointments,          dependent: :destroy
   has_many :car_washes,            dependent: :destroy
@@ -58,7 +59,7 @@ class User < ApplicationRecord
         email:    email,
         name:     display_name,
         metadata: { loov_user_id: id }
-      )
+        )
       update_column(:stripe_customer_id, customer.id)
       customer
     end
@@ -76,7 +77,7 @@ class User < ApplicationRecord
       stripe_payment_method_id: pm.id,
       stripe_card_last4:        pm.card&.last4,
       stripe_card_brand:        pm.card&.brand&.capitalize
-    )
+      )
     pm
   rescue Stripe::StripeError => e
     Rails.logger.error("User#attach_payment_method! error: #{e.message}")
