@@ -1,6 +1,8 @@
 class SessionsController < Devise::SessionsController
   respond_to :json, :html
 
+  skip_before_action :verify_authenticity_token, if: :json_request?
+
   def after_sign_in_path_for(resource)
     flash.clear
     root_path
@@ -8,8 +10,12 @@ class SessionsController < Devise::SessionsController
 
   private
 
+  def json_request?
+    request.format.json?
+  end
+
   def respond_with(resource, _opts = {})
-    return super unless request.format.json?
+    return super unless json_request?
 
     if resource.persisted?
       render json: {
@@ -25,7 +31,7 @@ class SessionsController < Devise::SessionsController
   end
 
   def respond_to_on_destroy
-    return super unless request.format.json?
+    return super unless json_request?
     render json: { message: 'Logout realizado.' }, status: :ok
   end
 end
