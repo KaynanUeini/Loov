@@ -72,32 +72,26 @@ class AppointmentsController < ApplicationController
       end
 
       format.json do
-        car_wash_id = params[:car_wash_id]
-        unless car_wash_id.present?
-          render json: { error: "CarWash ID não fornecido." }, status: :bad_request
-          return
-        end
-        begin
-          car_wash = CarWash.find(car_wash_id)
-        rescue ActiveRecord::RecordNotFound
-          render json: { error: "Lava-rápido não encontrado." }, status: :not_found
-          return
-        end
-        unless params[:date].present?
-          render json: { error: "Data não fornecida." }, status: :bad_request
-          return
-        end
-        begin
-          start_date   = Date.parse(params[:date]).beginning_of_day
-          end_date     = start_date.end_of_day
-          appointments = car_wash.appointments
-            .where(scheduled_at: start_date..end_date)
-            .where(status: ['pending', 'confirmed'])
-            .includes(:service)
-          render json: { appointments: appointments.as_json(include: :service) }
-        rescue ArgumentError, TypeError
-          render json: { error: "Formato de data inválido." }, status: :bad_request
-        end
+        all = current_user.appointments
+          .includes(:service, :car_wash)
+          .order(scheduled_at: :desc)
+
+        render json: all.map { |a|
+          {
+            id:           a.id,
+            status:       a.status,
+            scheduled_at: a.scheduled_at,
+            car_wash: {
+              id:   a.car_wash.id,
+              name: a.car_wash.name
+            },
+            service: {
+              id:    a.service.id,
+              title: a.service.title,
+              price: a.service.price
+            }
+          }
+        }
       end
     end
   rescue StandardError => e
