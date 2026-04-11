@@ -22,19 +22,19 @@ class AppointmentsController < ApplicationController
         all          = current_user.appointments.includes(:service, :car_wash, :review)
 
         @upcoming_appointments = all
-          .select { |a| active_status?(a) && end_time(a) >= current_time }
-          .sort_by(&:scheduled_at)
+        .select { |a| active_status?(a) && end_time(a) >= current_time }
+        .sort_by(&:scheduled_at)
 
         @past_appointments = all
-          .reject { |a| %w[cancelled no_show].include?(a.status) }
-          .select { |a| end_time(a) < current_time || a.status == 'attended' }
-          .uniq(&:id)
-          .sort_by(&:scheduled_at)
-          .reverse
+        .reject { |a| %w[cancelled no_show].include?(a.status) }
+        .select { |a| end_time(a) < current_time || a.status == 'attended' }
+        .uniq(&:id)
+        .sort_by(&:scheduled_at)
+        .reverse
 
         @ongoing_appointments = @upcoming_appointments
-          .select { |a| current_time.between?(a.scheduled_at, end_time(a)) }
-          .map(&:id)
+        .select { |a| current_time.between?(a.scheduled_at, end_time(a)) }
+        .map(&:id)
 
         phone = current_user.phone.to_s.gsub(/\D/, '')
         @client_code = phone.length >= 4 ? phone.last(4) : nil
@@ -42,8 +42,8 @@ class AppointmentsController < ApplicationController
         # ── LOYALTY por lava-rápido ──────────────────────────────────────
         car_wash_ids = all.map(&:car_wash_id).uniq
         active_programs = LoyaltyProgram
-          .where(car_wash_id: car_wash_ids, active: true)
-          .index_by(&:car_wash_id)
+        .where(car_wash_id: car_wash_ids, active: true)
+        .index_by(&:car_wash_id)
 
         if active_programs.any?
           # Conta visitas attended POR lava-rápido, apenas após criação do programa
@@ -51,9 +51,9 @@ class AppointmentsController < ApplicationController
 
           active_programs.each do |car_wash_id, prog|
             visits = current_user.appointments
-              .where(car_wash_id: car_wash_id, status: "attended")
-              .where("scheduled_at >= ?", prog.created_at)
-              .count
+            .where(car_wash_id: car_wash_id, status: "attended")
+            .where("scheduled_at >= ?", prog.created_at)
+            .count
 
             goal   = prog.visits_required
             # cycle = posição no ciclo atual (0..goal-1)
@@ -98,9 +98,9 @@ class AppointmentsController < ApplicationController
           start_date   = Date.parse(params[:date]).beginning_of_day
           end_date     = start_date.end_of_day
           appointments = car_wash.appointments
-            .where(scheduled_at: start_date..end_date)
-            .where(status: ['pending', 'confirmed'])
-            .includes(:service)
+          .where(scheduled_at: start_date..end_date)
+          .where(status: ['pending', 'confirmed'])
+          .includes(:service)
           render json: { appointments: appointments.as_json(include: :service) }
         rescue ArgumentError, TypeError
           render json: { error: "Formato de data inválido." }, status: :bad_request
@@ -121,7 +121,10 @@ class AppointmentsController < ApplicationController
     scheduled_time = params[:appointment][:time]
 
     unless scheduled_date.present? && scheduled_time.present?
-      redirect_to car_wash_path(@car_wash, anchor: 'booking'), alert: "Data e horário são obrigatórios."
+      respond_to do |format|
+        format.html { redirect_to car_wash_path(@car_wash, anchor: 'booking'), alert: "Data e horário são obrigatórios." }
+        format.json { render json: { error: "Data e horário são obrigatórios." }, status: :unprocessable_entity }
+      end
       return
     end
 
@@ -131,28 +134,38 @@ class AppointmentsController < ApplicationController
       @appointment.scheduled_at = DateTime.new(
         date_parts[0], date_parts[1], date_parts[2],
         time_parts[0], time_parts[1], 0, '-03:00'
-      )
+        )
     rescue
-      redirect_to car_wash_path(@car_wash, anchor: 'booking'), alert: "Data ou horário inválidos."
+      respond_to do |format|
+        format.html { redirect_to car_wash_path(@car_wash, anchor: 'booking'), alert: "Data ou horário inválidos." }
+        format.json { render json: { error: "Data ou horário inválidos." }, status: :unprocessable_entity }
+      end
       return
     end
 
     unless params[:appointment][:service_id].present?
-      redirect_to car_wash_path(@car_wash, anchor: 'booking'), alert: "Por favor, selecione um serviço."
+      respond_to do |format|
+        format.html { redirect_to car_wash_path(@car_wash, anchor: 'booking'), alert: "Por favor, selecione um serviço." }
+        format.json { render json: { error: "Selecione um serviço." }, status: :unprocessable_entity }
+      end
       return
     end
 
     current_time_with_tolerance = DateTime.now.in_time_zone("America/Sao_Paulo") - 5.minutes
     if @appointment.scheduled_at < current_time_with_tolerance
-      redirect_to car_wash_path(@car_wash, anchor: 'booking'), alert: "Não é possível agendar para um horário no passado."
+      respond_to do |format|
+        format.html { redirect_to car_wash_path(@car_wash, anchor: 'booking'), alert: "Não é possível agendar para um horário no passado." }
+        format.json { render json: { error: "Não é possível agendar para um horário no passado." }, status: :unprocessable_entity }
+      end
       return
     end
 
-    # ── JANELA DE 45MIN — só pelo Disponível ─────────────────────────────
     minutes_until = ((@appointment.scheduled_at.in_time_zone("America/Sao_Paulo") - Time.current.in_time_zone("America/Sao_Paulo")) / 60).to_i
     if @appointment.regular? && minutes_until < 45 && minutes_until >= 0
-      redirect_to disponivel_index_path,
-        alert: "Este horário só pode ser reservado pelo Disponível — pagamento antecipado e entrada garantida."
+      respond_to do |format|
+        format.html { redirect_to disponivel_index_path, alert: "Este horário só pode ser reservado pelo Disponível." }
+        format.json { render json: { error: "Este horário só pode ser reservado pelo Disponível." }, status: :unprocessable_entity }
+      end
       return
     end
 
@@ -162,7 +175,10 @@ class AppointmentsController < ApplicationController
 
     operating_hours = @car_wash.operating_hours.where(day_of_week: start_time.wday)
     unless operating_hours.any?
-      redirect_to car_wash_path(@car_wash, anchor: 'booking'), alert: "O lava-rápido não está disponível no dia selecionado."
+      respond_to do |format|
+        format.html { redirect_to car_wash_path(@car_wash, anchor: 'booking'), alert: "O lava-rápido não está disponível no dia selecionado." }
+        format.json { render json: { error: "O lava-rápido não está disponível no dia selecionado." }, status: :unprocessable_entity }
+      end
       return
     end
 
@@ -175,17 +191,66 @@ class AppointmentsController < ApplicationController
     end
 
     unless within_operating_hours
-      redirect_to car_wash_path(@car_wash, anchor: 'booking'), alert: "O horário selecionado está fora do horário de funcionamento."
+      respond_to do |format|
+        format.html { redirect_to car_wash_path(@car_wash, anchor: 'booking'), alert: "O horário selecionado está fora do horário de funcionamento." }
+        format.json { render json: { error: "Horário fora do funcionamento." }, status: :unprocessable_entity }
+      end
       return
     end
 
-    closure = @car_wash.car_wash_closures.upcoming_or_active.find { |c| c.covers?(start_time.to_date) }
-    if closure
-      motivo = closure.reason.present? ? " (#{closure.reason})" : ""
-      redirect_to car_wash_path(@car_wash, anchor: 'booking'),
-                  alert: "O lava-rápido está fechado nesta data#{motivo}. Por favor, escolha outra data."
+    saved    = false
+    conflict = false
+
+    ActiveRecord::Base.transaction do
+      @car_wash.lock!
+
+      overlapping = Appointment
+      .joins(:service)
+      .where(car_wash_id: @car_wash.id)
+      .where(status: %w[pending confirmed])
+      .where(
+        "appointments.scheduled_at < ? AND (appointments.scheduled_at + (services.duration * interval '1 minute')) > ?",
+        end_time, start_time
+        )
+      .count
+
+      if overlapping >= @car_wash.capacity_per_slot
+        conflict = true
+        raise ActiveRecord::Rollback
+      end
+
+      @appointment.status = 'confirmed'
+      saved = @appointment.save
+      raise ActiveRecord::Rollback unless saved
+    end
+
+    if conflict
+      respond_to do |format|
+        format.html { redirect_to car_wash_path(@car_wash, anchor: 'booking'), alert: "Horário indisponível. Por favor, escolha outro." }
+        format.json { render json: { error: "Horário indisponível. Escolha outro." }, status: :conflict }
+      end
       return
     end
+
+    unless saved
+      respond_to do |format|
+        format.html { redirect_to car_wash_path(@car_wash, anchor: 'booking'), alert: "Erro ao criar o agendamento." }
+        format.json { render json: { error: @appointment.errors.full_messages.join(', ') }, status: :unprocessable_entity }
+      end
+      return
+    end
+
+    begin
+      AppointmentMailer.confirmation(@appointment).deliver_now
+    rescue => e
+      Rails.logger.error("[Appointments#create] Email falhou: #{e.message}")
+    end
+
+    respond_to do |format|
+      format.html { redirect_to appointments_path, notice: "Agendamento criado com sucesso!" }
+      format.json { render json: { message: "Agendamento confirmado!", appointment_id: @appointment.id }, status: :created }
+    end
+  end
 
     # ── VERIFICAÇÃO DE CAPACIDADE + SAVE ATÔMICO ──────────────────────────
     # Usa transaction + lock para evitar race condition entre clientes simultâneos
@@ -199,15 +264,15 @@ class AppointmentsController < ApplicationController
       # Query correta de overlap: junta com services para usar a duração REAL
       # de cada agendamento existente, não a duração do serviço novo
       overlapping = Appointment
-        .joins(:service)
-        .where(car_wash_id: @car_wash.id)
-        .where(status: %w[pending confirmed])
-        .where(
-          "appointments.scheduled_at < ? AND (appointments.scheduled_at + (services.duration * interval '1 minute')) > ?",
-          end_time,
-          start_time
+      .joins(:service)
+      .where(car_wash_id: @car_wash.id)
+      .where(status: %w[pending confirmed])
+      .where(
+        "appointments.scheduled_at < ? AND (appointments.scheduled_at + (services.duration * interval '1 minute')) > ?",
+        end_time,
+        start_time
         )
-        .count
+      .count
 
       if overlapping >= @car_wash.capacity_per_slot
         conflict = true
@@ -289,7 +354,7 @@ class AppointmentsController < ApplicationController
     @car_wash = nil
   end
 
-    def appointment_params
+  def appointment_params
     # SEGURANÇA: nunca permitir status, appointment_type ou campos internos via params
     # Data/hora são tratados separadamente e validados antes do save
     params.require(:appointment).permit(:car_wash_id, :service_id)
