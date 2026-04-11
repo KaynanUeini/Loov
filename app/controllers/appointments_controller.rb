@@ -1,6 +1,6 @@
 class AppointmentsController < ApplicationController
   before_action :authenticate_user!
-  skip_before_action :verify_authenticity_token, if: -> { request.format.json? }
+  skip_before_action :verify_authenticity_token, only: [:create]
   before_action :set_appointment, only: [:show, :cancel, :help]
   before_action :set_car_wash, only: [:new, :create]
 
