@@ -1,5 +1,6 @@
 class AppointmentsController < ApplicationController
   before_action :authenticate_user!
+  skip_before_action :verify_authenticity_token, if: -> { request.format.json? }
   before_action :set_appointment, only: [:show, :cancel, :help]
   before_action :set_car_wash, only: [:new, :create]
 
@@ -22,51 +23,43 @@ class AppointmentsController < ApplicationController
         all          = current_user.appointments.includes(:service, :car_wash, :review)
 
         @upcoming_appointments = all
-        .select { |a| active_status?(a) && end_time(a) >= current_time }
-        .sort_by(&:scheduled_at)
+          .select { |a| active_status?(a) && end_time(a) >= current_time }
+          .sort_by(&:scheduled_at)
 
         @past_appointments = all
-        .reject { |a| %w[cancelled no_show].include?(a.status) }
-        .select { |a| end_time(a) < current_time || a.status == 'attended' }
-        .uniq(&:id)
-        .sort_by(&:scheduled_at)
-        .reverse
+          .reject { |a| %w[cancelled no_show].include?(a.status) }
+          .select { |a| end_time(a) < current_time || a.status == 'attended' }
+          .uniq(&:id)
+          .sort_by(&:scheduled_at)
+          .reverse
 
         @ongoing_appointments = @upcoming_appointments
-        .select { |a| current_time.between?(a.scheduled_at, end_time(a)) }
-        .map(&:id)
+          .select { |a| current_time.between?(a.scheduled_at, end_time(a)) }
+          .map(&:id)
 
         phone = current_user.phone.to_s.gsub(/\D/, '')
         @client_code = phone.length >= 4 ? phone.last(4) : nil
 
-        # ── LOYALTY por lava-rápido ──────────────────────────────────────
         car_wash_ids = all.map(&:car_wash_id).uniq
         active_programs = LoyaltyProgram
-        .where(car_wash_id: car_wash_ids, active: true)
-        .index_by(&:car_wash_id)
+          .where(car_wash_id: car_wash_ids, active: true)
+          .index_by(&:car_wash_id)
 
         if active_programs.any?
-          # Conta visitas attended POR lava-rápido, apenas após criação do programa
           @loyalty_by_car_wash = {}
-
           active_programs.each do |car_wash_id, prog|
             visits = current_user.appointments
-            .where(car_wash_id: car_wash_id, status: "attended")
-            .where("scheduled_at >= ?", prog.created_at)
-            .count
+              .where(car_wash_id: car_wash_id, status: "attended")
+              .where("scheduled_at >= ?", prog.created_at)
+              .count
 
-            goal   = prog.visits_required
-            # cycle = posição no ciclo atual (0..goal-1)
-            # Se visits=5 e goal=5: cycle=0 → novo ciclo começou
-            cycle  = visits % goal
-            # milestone = completou exatamente um ciclo na última visita
+            goal           = prog.visits_required
+            cycle          = visits % goal
             last_milestone = visits > 0 && cycle == 0
 
             @loyalty_by_car_wash[car_wash_id] = {
               visits:         visits,
               goal:           goal,
-              # filled = dots preenchidos no ciclo atual
-              # se acabou de bater a meta, mostra todos preenchidos (ciclo completo)
               filled:         last_milestone ? goal : cycle,
               milestone:      last_milestone,
               reward:         prog.reward_description,
@@ -98,9 +91,9 @@ class AppointmentsController < ApplicationController
           start_date   = Date.parse(params[:date]).beginning_of_day
           end_date     = start_date.end_of_day
           appointments = car_wash.appointments
-          .where(scheduled_at: start_date..end_date)
-          .where(status: ['pending', 'confirmed'])
-          .includes(:service)
+            .where(scheduled_at: start_date..end_date)
+            .where(status: ['pending', 'confirmed'])
+            .includes(:service)
           render json: { appointments: appointments.as_json(include: :service) }
         rescue ArgumentError, TypeError
           render json: { error: "Formato de data inválido." }, status: :bad_request
@@ -134,7 +127,7 @@ class AppointmentsController < ApplicationController
       @appointment.scheduled_at = DateTime.new(
         date_parts[0], date_parts[1], date_parts[2],
         time_parts[0], time_parts[1], 0, '-03:00'
-        )
+      )
     rescue
       respond_to do |format|
         format.html { redirect_to car_wash_path(@car_wash, anchor: 'booking'), alert: "Data ou horário inválidos." }
@@ -205,14 +198,14 @@ class AppointmentsController < ApplicationController
       @car_wash.lock!
 
       overlapping = Appointment
-      .joins(:service)
-      .where(car_wash_id: @car_wash.id)
-      .where(status: %w[pending confirmed])
-      .where(
-        "appointments.scheduled_at < ? AND (appointments.scheduled_at + (services.duration * interval '1 minute')) > ?",
-        end_time, start_time
+        .joins(:service)
+        .where(car_wash_id: @car_wash.id)
+        .where(status: %w[pending confirmed])
+        .where(
+          "appointments.scheduled_at < ? AND (appointments.scheduled_at + (services.duration * interval '1 minute')) > ?",
+          end_time, start_time
         )
-      .count
+        .count
 
       if overlapping >= @car_wash.capacity_per_slot
         conflict = true
@@ -250,56 +243,6 @@ class AppointmentsController < ApplicationController
       format.html { redirect_to appointments_path, notice: "Agendamento criado com sucesso!" }
       format.json { render json: { message: "Agendamento confirmado!", appointment_id: @appointment.id }, status: :created }
     end
-  end
-
-    # ── VERIFICAÇÃO DE CAPACIDADE + SAVE ATÔMICO ──────────────────────────
-    # Usa transaction + lock para evitar race condition entre clientes simultâneos
-    saved = false
-    conflict = false
-
-    ActiveRecord::Base.transaction do
-      # Lock no lava-rápido para serializar agendamentos simultâneos
-      @car_wash.lock!
-
-      # Query correta de overlap: junta com services para usar a duração REAL
-      # de cada agendamento existente, não a duração do serviço novo
-      overlapping = Appointment
-      .joins(:service)
-      .where(car_wash_id: @car_wash.id)
-      .where(status: %w[pending confirmed])
-      .where(
-        "appointments.scheduled_at < ? AND (appointments.scheduled_at + (services.duration * interval '1 minute')) > ?",
-        end_time,
-        start_time
-        )
-      .count
-
-      if overlapping >= @car_wash.capacity_per_slot
-        conflict = true
-        raise ActiveRecord::Rollback
-      end
-
-      @appointment.status = 'confirmed'
-      saved = @appointment.save
-      raise ActiveRecord::Rollback unless saved
-    end
-
-    if conflict
-      redirect_to car_wash_path(@car_wash, anchor: 'booking'), alert: "Horário indisponível. Por favor, escolha outro."
-      return
-    end
-
-    unless saved
-      redirect_to car_wash_path(@car_wash, anchor: 'booking'), alert: "Erro ao criar o agendamento: #{@appointment.errors.full_messages.join(', ')}"
-      return
-    end
-
-    begin
-      AppointmentMailer.confirmation(@appointment).deliver_now
-    rescue => e
-      Rails.logger.error("[Appointments#create] Email falhou: #{e.message}")
-    end
-    redirect_to appointments_path, notice: "Agendamento criado com sucesso!"
   end
 
   def show
@@ -355,8 +298,6 @@ class AppointmentsController < ApplicationController
   end
 
   def appointment_params
-    # SEGURANÇA: nunca permitir status, appointment_type ou campos internos via params
-    # Data/hora são tratados separadamente e validados antes do save
     params.require(:appointment).permit(:car_wash_id, :service_id)
   end
 end
