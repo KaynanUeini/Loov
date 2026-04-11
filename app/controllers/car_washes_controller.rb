@@ -67,10 +67,32 @@ class CarWashesController < ApplicationController
   end
 
   def show
-    @services    = @car_wash.services
-    @appointment = Appointment.new(car_wash_id: @car_wash.id)
-    @closures    = @car_wash.car_wash_closures.where("end_date >= ?", Date.current)
+  @services    = @car_wash.services
+  @appointment = Appointment.new(car_wash_id: @car_wash.id)
+  @closures    = @car_wash.car_wash_closures.where("end_date >= ?", Date.current)
+
+  respond_to do |format|
+    format.html
+    format.json do
+      render json: {
+        id:       @car_wash.id,
+        name:     @car_wash.name,
+        address:  @car_wash.address,
+        city:     @car_wash.cidade,
+        state:    @car_wash.uf,
+        lat:      @car_wash.latitude,
+        lng:      @car_wash.longitude,
+        capacity_per_slot: @car_wash.capacity_per_slot,
+        operating_hours: @car_wash.operating_hours.map { |oh|
+          { day_of_week: oh.day_of_week, opens_at: oh.opens_at, closes_at: oh.closes_at }
+        },
+        services: @car_wash.services.map { |s|
+          { id: s.id, title: s.title, description: s.description, price: s.price, duration: s.duration, category: s.category }
+        }
+      }
+    end
   end
+end
 
   def new
     @car_wash = CarWash.new
