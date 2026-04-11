@@ -46,6 +46,24 @@ class CarWashesController < ApplicationController
     else
       @subcategories = []
     end
+
+    respond_to do |format|
+      format.html
+      format.json do
+        render json: @car_washes.map { |cw|
+          {
+            id:       cw.id,
+            name:     cw.name,
+            address:  cw.address,
+            city:     cw.cidade,
+            state:    cw.uf,
+            lat:      cw.latitude,
+            lng:      cw.longitude,
+            services: cw.services.map { |s| { id: s.id, title: s.title, price: s.price, category: s.category } }
+          }
+        }
+      end
+    end
   end
 
   def show
@@ -135,10 +153,6 @@ class CarWashesController < ApplicationController
     @car_wash.services.build if @car_wash.services.empty?
   end
 
-  # ── HORÁRIOS DISPONÍVEIS ─────────────────────────────────────────────────
-  # Retorna array de objetos: { time: "HH:MM", disponivel_only: bool }
-  # disponivel_only = true quando o slot está dentro da janela de 45min
-  # e só pode ser reservado pelo fluxo Disponível (com pagamento antecipado)
   def available_times
     lock_minutes = 45
     Timeout.timeout(5) do
@@ -201,18 +215,17 @@ class CarWashesController < ApplicationController
           overlapping = occupied.count { |i| current < i[:end] && time_end > i[:begin] }
 
           if overlapping < capacity_per_slot
-          # Slot dentro da janela de 45min → disponivel_only
-          disponivel_only = is_today && current < lock_threshold
-          available << {
-            time:           format("%02d:%02d", current / 60, current % 60),
-            disponivel_only: disponivel_only
-          }
+            disponivel_only = is_today && current < lock_threshold
+            available << {
+              time:            format("%02d:%02d", current / 60, current % 60),
+              disponivel_only: disponivel_only
+            }
+          end
+
+          current += duration
         end
 
-        current += duration
-      end
-
-      render json: available
+        render json: available
     end
   rescue Timeout::Error
     render json: [], status: :request_timeout
