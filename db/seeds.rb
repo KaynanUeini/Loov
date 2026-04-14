@@ -411,7 +411,7 @@ end
 7.times do |i|
   cw_osasco.operating_hours.find_or_create_by!(day_of_week: i) do |oh|
     oh.opens_at = '00:00'
-    oh.closes_at = '23:00'
+    oh.closes_at = '23:59'
   end
 end
 
