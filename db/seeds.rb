@@ -393,3 +393,35 @@ User.find_or_create_by!(email: 'kaynan_alves@hotmail.com') do |u|
   u.phone = '11999999999'
 end
 puts "✅ Usuário mobile criado"
+
+# ── LAVA CAR OSASCO (TESTE LOCALIZAÇÃO) ──────────────────────────────────────
+cw_osasco = CarWash.find_or_create_by!(name: 'Lava Car Osasco') do |cw|
+  cw.address = 'Rua Visconde de Taunay, 100 - Centro, Osasco - SP'
+  cw.cep = '06018010'
+  cw.logradouro = 'Rua Visconde de Taunay'
+  cw.bairro = 'Centro'
+  cw.cidade = 'Osasco'
+  cw.uf = 'SP'
+  cw.capacity_per_slot = 3
+  cw.latitude = -23.5659523
+  cw.longitude = -46.7789023
+  cw.user = User.find_by(email: 'dono@lavacar.com')
+end
+
+7.times do |i|
+  cw_osasco.operating_hours.find_or_create_by!(day_of_week: i) do |oh|
+    oh.opens_at = '00:00'
+    oh.closes_at = '23:00'
+  end
+end
+
+['Lavagem Simples', 'Lavagem Completa', 'Polimento Simples'].each_with_index do |title, i|
+  cw_osasco.services.find_or_create_by!(title: title) do |s|
+    s.category = 'Lavagem'
+    s.description = 'Servico de qualidade'
+    s.price = [35.00, 65.00, 120.00][i]
+    s.duration = [30, 60, 90][i]
+  end
+end
+
+puts "✅ Lava Car Osasco criado/atualizado — ID: #{cw_osasco.id}"
