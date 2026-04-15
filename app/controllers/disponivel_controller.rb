@@ -12,13 +12,13 @@ class DisponivelController < ApplicationController
     now_seconds  = Time.current.seconds_since_midnight.to_i
 
     open_car_wash_ids = OperatingHour
-      .where(day_of_week: today_dow)
-      .select { |oh|
-        opens_sec  = oh.opens_at.seconds_since_midnight.to_i  rescue 0
-        closes_sec = oh.closes_at.seconds_since_midnight.to_i rescue 86400
-        now_seconds >= opens_sec && now_seconds <= closes_sec
-      }
-      .map(&:car_wash_id).uniq
+    .where(day_of_week: today_dow)
+    .select { |oh|
+      opens_sec  = oh.opens_at.seconds_since_midnight.to_i  rescue 0
+      closes_sec = oh.closes_at.seconds_since_midnight.to_i rescue 86400
+      now_seconds >= opens_sec && now_seconds <= closes_sec
+    }
+    .map(&:car_wash_id).uniq
 
     car_washes = CarWash.where(id: open_car_wash_ids)
     car_washes = car_washes.near([@lat, @lon], 5, units: :km) if @lat && @lon
@@ -90,7 +90,7 @@ class DisponivelController < ApplicationController
         car_wash_id: params[:car_wash_id],
         service_id:  params[:service_id],
         slot:        params[:slot]
-      )
+        )
       render json: {
         error:    "Nenhum cartão cadastrado.",
         redirect: edit_client_profile_path(add_card: true)
@@ -136,7 +136,7 @@ class DisponivelController < ApplicationController
       appointment_type:         "disponivel",
       acceptance_expires_at:    expires_at,
       stripe_payment_intent_id: intent.id
-    )
+      )
     appointment.calculate_disponivel_amounts!
 
     if appointment.save
@@ -190,15 +190,17 @@ class DisponivelController < ApplicationController
     now_minutes   = from.hour * 60 + from.min
     next_slot_min = (now_minutes / 30.0).ceil * 30
     current       = from.beginning_of_day + next_slot_min.minutes
-    slots         = []
+
     while current <= to
-      booked = Appointment.where(car_wash: car_wash, scheduled_at: current).where(status: %w[confirmed pending_acceptance]).count
-      slots << current if booked < capacity
+      booked = Appointment.where(car_wash: car_wash, scheduled_at: current)
+      .where(status: %w[confirmed pending_acceptance]).count
+      if booked < capacity
+        return [current]
+      end
       current += 30.minutes
     end
-    slots
+    []
   end
-
   def slot_available?(car_wash, slot)
     capacity = [car_wash.capacity_per_slot.to_i, 1].max
     booked   = Appointment.where(car_wash: car_wash, scheduled_at: slot).where(status: %w[confirmed pending_acceptance]).count
