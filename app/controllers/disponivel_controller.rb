@@ -7,7 +7,7 @@ class DisponivelController < ApplicationController
     @lon = params[:longitude].presence&.to_f
 
     window_start = Time.current
-    window_end   = 2.hours.from_now
+    window_end = 30.minutes.from_now
     today_dow    = Date.current.wday
     now_seconds  = Time.current.seconds_since_midnight.to_i
 
@@ -21,7 +21,7 @@ class DisponivelController < ApplicationController
       .map(&:car_wash_id).uniq
 
     car_washes = CarWash.where(id: open_car_wash_ids)
-    car_washes = car_washes.near([@lat, @lon], 20, units: :km) if @lat && @lon
+    car_washes = car_washes.near([@lat, @lon], 5, units: :km) if @lat && @lon
 
     @available_slots = []
 
