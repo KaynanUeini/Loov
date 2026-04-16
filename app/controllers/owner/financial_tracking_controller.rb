@@ -1,5 +1,6 @@
 module Owner
   class FinancialTrackingController < ApplicationController
+    skip_before_action :verify_authenticity_token
     before_action :authenticate_user!
     before_action :ensure_owner
 

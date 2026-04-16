@@ -1,5 +1,6 @@
 module Owner
   class DisponivelAcceptanceController < ApplicationController
+    skip_before_action :verify_authenticity_token
     before_action :authenticate_user!
     before_action :ensure_owner_or_attendant
     before_action :set_car_wash

@@ -1,5 +1,6 @@
 module Owner
   class CheckinsController < ApplicationController
+    skip_before_action :verify_authenticity_token
     before_action :authenticate_user!
     before_action :ensure_owner_or_attendant
     before_action :load_appointment, only: [:attend, :no_show, :revert, :update_service, :cancel]
