@@ -70,10 +70,12 @@ Rails.application.routes.draw do
     resources :car_wash_appointments, only: [:index, :show]
 
     get  'financial_tracking', to: 'financial_tracking#index'
-    get  'ai_insights/status', to: 'ai_insights#status'
-    get  'ai_insights',        to: 'ai_insights#show'
-    post 'ai_insights',        to: 'ai_insights#analyze'
-    post 'ai_insights/input',  to: 'ai_insights#owner_input'
+    resources :ai_insights, only: [:show, :create] do
+      collection do
+        get  :status
+        post :input
+      end
+    end
 
     resources :monthly_costs, only: [:index, :destroy] do
       collection do

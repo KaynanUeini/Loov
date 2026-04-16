@@ -19,7 +19,7 @@ module Owner
     end
 
     # POST /owner/ai_insights — enqueues generation job or returns cached data
-    def analyze
+    def create
       car_wash = current_user.car_washes.first
       return render json: { error: "Lava-rápido não encontrado." }, status: :not_found if car_wash.nil?
 
@@ -69,7 +69,7 @@ module Owner
     end
 
     # POST /owner/ai_insights/input — save owner focus text
-    def owner_input
+    def input
       car_wash = current_user.car_washes.first
       existing = AiInsight.current_for(car_wash)
       return render json: { error: "Nenhuma análise encontrada." }, status: :not_found unless existing
