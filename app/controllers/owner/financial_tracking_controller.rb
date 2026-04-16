@@ -304,6 +304,45 @@ module Owner
         send_data generate_csv(@transactions),
         filename:    "transacoes_#{Date.current}.csv",
         type:        "text/csv"
+        return
+      end
+
+      # ── TAXA DE COMPARECIMENTO (para app mobile) ───────────────────────────
+      # Total de agendamentos no período excluindo apenas cancelados/rejeitados
+      total_in_period = car_wash.appointments
+        .where(scheduled_at: @start_date.beginning_of_day..@end_date.end_of_day)
+        .where(status: %w[attended no_show confirmed])
+        .count
+
+      @attendance = {
+        attended: @total_appointments,
+        total:    total_in_period,
+        rate:     total_in_period > 0 ? (@total_appointments.to_f / total_in_period * 100).round(1) : 0.0
+      }
+
+      # ── RESPOSTA JSON (consumida pelo app mobile) ──────────────────────────
+      respond_to do |format|
+        format.html   # renderiza view erb normalmente
+        format.json do
+          render json: {
+            period:       params[:period] || "month",
+            start_date:   @start_date.iso8601,
+            end_date:     @end_date.iso8601,
+            # KPIs de receita
+            total_sales:        @total_sales.round(2),
+            total_appointments: @total_appointments,
+            average_value:      @average_value,
+            average_label:      @average_label,
+            # Série temporal para o gráfico de barras
+            chart_data:         @chart_data,
+            # Desempenho por serviço
+            services_performance: @services_performance,
+            # Taxa de comparecimento
+            attendance:    @attendance,
+            # Demanda por dia da semana (0 = Dom … 6 = Sáb)
+            demand_by_dow: @demand_by_dow,
+          }
+        end
       end
     end
 
