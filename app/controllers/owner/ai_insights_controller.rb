@@ -50,15 +50,15 @@ module Owner
         }
       end
 
-      previous_action = existing&.action_of_the_week
-      existing&.archive_input!
-
-      context         = build_context(car_wash)
-      owner_input     = existing&.owner_input
-      previous_inputs = existing&.previous_inputs_parsed || []
-      prompt          = build_prompt(context, owner_input, previous_inputs, previous_action)
-
       begin
+        previous_action = existing&.action_of_the_week
+        existing&.archive_input!
+
+        context         = build_context(car_wash)
+        owner_input     = existing&.owner_input
+        previous_inputs = existing&.previous_inputs_parsed || []
+        prompt          = build_prompt(context, owner_input, previous_inputs, previous_action)
+
         raw_response = call_claude(prompt)
         sections     = parse_sections(raw_response)
 
@@ -85,8 +85,8 @@ module Owner
           cached:             false
         }
       rescue => e
-        Rails.logger.error("AI Insights error: #{e.message}")
-        render json: { error: "Não foi possível gerar o insight agora." }, status: :unprocessable_entity
+        Rails.logger.error("AI Insights error: #{e.message}\n#{e.backtrace&.first(5)&.join("\n")}")
+        render json: { error: "Não foi possível gerar o insight agora.", detail: e.message }, status: :unprocessable_entity
       end
     end
 
@@ -743,8 +743,8 @@ module Owner
         .select("services.title, COUNT(*) AS total_count, SUM(services.price) AS total_revenue")
         .order(Arel.sql("total_revenue DESC"))
         .map do |s|
-          last_m   = base.joins(:service).where(services: { title: s.title }, scheduled_at: 30.days.ago..Time.current).count
-          prev_m   = base.joins(:service).where(services: { title: s.title }, scheduled_at: 60.days.ago..30.days.ago).count
+          last_m   = base.where(services: { title: s.title }, scheduled_at: 30.days.ago..Time.current).count
+          prev_m   = base.where(services: { title: s.title }, scheduled_at: 60.days.ago..30.days.ago).count
           variacao = prev_m > 0 ? (((last_m.to_f / prev_m) - 1) * 100).round(1) : nil
           { servico: s.title, total_atendimentos: s.total_count.to_i,
             receita_total: s.total_revenue.to_f.round(2),
@@ -753,7 +753,7 @@ module Owner
             variacao_volume: variacao ? "#{variacao}%" : "sem dados" }
         end
 
-      price_changes = base.joins(:service).group("services.title")
+      price_changes = base.group("services.title")
         .pluck("services.title, MIN(services.price), MAX(services.price)")
         .map { |t, mn, mx| { servico: t, preco_minimo: mn.to_f, preco_maximo: mx.to_f, houve_aumento: mx.to_f > mn.to_f } }
 
