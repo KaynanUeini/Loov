@@ -4,7 +4,7 @@ module Owner
     before_action :authenticate_user!
     before_action :ensure_owner
 
-    # GET /owner/ai_insights — initial load
+    # GET /owner/ai_insights — carrega análise existente
     def show
       car_wash = current_user.car_washes.first
       return render json: { error: "Lava-rápido não encontrado." }, status: :not_found if car_wash.nil?
@@ -12,7 +12,7 @@ module Owner
       render json: insight_status_response(car_wash, cached: true)
     end
 
-    # POST /owner/ai_insights — synchronous generation or return cached
+    # POST /owner/ai_insights — enqueue generation or return cached
     def create
       car_wash = current_user.car_washes.first
       return render json: { error: "Lava-rápido não encontrado." }, status: :not_found if car_wash.nil?
@@ -20,39 +20,40 @@ module Owner
       force    = params[:force] == "true"
       existing = AiInsight.current_for(car_wash)
 
+      # Already running — don't double-enqueue
+      if existing&.processing?
+        return render json: { status: "processing" }
+      end
+
+      # Return valid cached result when not forced
       if existing&.ready? && !cycle_expired?(existing) && !force
         return render json: full_insight_response(existing, cached: true)
       end
 
+      # Capture owner_input before archive_input! clears it
       owner_input = existing&.owner_input
       existing&.archive_input!
 
-      begin
-        Rack::Timeout.timeout(180) do
-          sections = AiInsightsService.new(car_wash).generate(
-            previous_action: existing&.action_of_the_week,
-            owner_input:     owner_input,
-            previous_inputs: existing&.previous_inputs_parsed || []
-          )
-
-          if existing
-            existing.update!(content: sections.to_json, status: "ready", generated_at: Time.current, error_message: nil)
-          else
-            existing = AiInsight.create!(
-              car_wash:     car_wash,
-              insight_type: "unified",
-              status:       "ready",
-              generated_at: Time.current,
-              content:      sections.to_json
-            )
-          end
-
-          render json: full_insight_response(existing, cached: false)
-        end
-      rescue => e
-        Rails.logger.error("AI Insights error: #{e.message}")
-        render json: { error: "Não foi possível gerar a análise.", detail: e.message }, status: :unprocessable_entity
+      if existing
+        existing.update_columns(status: "processing", error_message: nil, generated_at: Time.current)
+      else
+        existing = AiInsight.create!(
+          car_wash:     car_wash,
+          insight_type: "unified",
+          status:       "processing",
+          generated_at: Time.current,
+          content:      "{}"
+        )
       end
+
+      car_wash_id = car_wash.id
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          AiInsightsJob.new.perform(car_wash_id, owner_input)
+        end
+      end
+
+      render json: { status: "processing" }
     end
 
     # GET /owner/ai_insights/status — polling endpoint
