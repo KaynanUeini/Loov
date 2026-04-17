@@ -43,7 +43,7 @@ module Owner
           status:       "processing",
           generated_at: Time.current,
           content:      "{}"
-          )
+        )
       end
 
       car_wash_id = car_wash.id
@@ -52,7 +52,9 @@ module Owner
           AiInsightsJob.new.perform(car_wash_id, owner_input)
         end
       end
+
       render json: { status: "processing" }
+    end
 
     # GET /owner/ai_insights/status — polling endpoint
     def status
@@ -103,7 +105,6 @@ module Owner
 
     # ── HELPERS ───────────────────────────────────────────────────────────────
 
-    # Shared logic for show and status endpoints
     def insight_status_response(car_wash, cached:)
       existing = AiInsight.current_for(car_wash)
 
