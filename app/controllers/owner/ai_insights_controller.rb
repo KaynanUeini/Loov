@@ -4,21 +4,15 @@ module Owner
     before_action :authenticate_user!
     before_action :ensure_owner
 
-    # GET /owner/ai_insights — initial load, returns all sections at once
+    # GET /owner/ai_insights — initial load
     def show
       car_wash = current_user.car_washes.first
       return render json: { error: "Lava-rápido não encontrado." }, status: :not_found if car_wash.nil?
 
-      existing = AiInsight.current_for(car_wash)
-
-      if existing && !cycle_expired?(existing)
-        render json: full_insight_response(existing, cached: true)
-      else
-        render json: { status: "needs_generation", days_remaining: 0 }
-      end
+      render json: insight_status_response(car_wash, cached: true)
     end
 
-    # POST /owner/ai_insights — enqueues generation job or returns cached data
+    # POST /owner/ai_insights — enqueue generation or return cached
     def create
       car_wash = current_user.car_washes.first
       return render json: { error: "Lava-rápido não encontrado." }, status: :not_found if car_wash.nil?
@@ -26,18 +20,31 @@ module Owner
       force    = params[:force] == "true"
       existing = AiInsight.current_for(car_wash)
 
-      # Return cached immediately when valid and not forced
-      if existing && !cycle_expired?(existing) && !force
+      # Already running — don't double-enqueue
+      if existing&.processing?
+        return render json: { status: "processing" }
+      end
+
+      # Return valid cached result when not forced
+      if existing&.ready? && !cycle_expired?(existing) && !force
         return render json: full_insight_response(existing, cached: true)
       end
 
-      # Capture owner_input before archiving clears it
+      # Capture owner_input before archive_input! clears it
       owner_input = existing&.owner_input
       existing&.archive_input!
 
-      redis = redis_client
-      redis.set("ai_insights:processing:#{car_wash.id}", "1", ex: 600)
-      redis.del("ai_insights:error:#{car_wash.id}")
+      if existing
+        existing.update_columns(status: "processing", error_message: nil, generated_at: Time.current)
+      else
+        existing = AiInsight.create!(
+          car_wash:     car_wash,
+          insight_type: "unified",
+          status:       "processing",
+          generated_at: Time.current,
+          content:      "{}"
+        )
+      end
 
       AiInsightsJob.perform_later(car_wash.id, owner_input)
 
@@ -49,23 +56,7 @@ module Owner
       car_wash = current_user.car_washes.first
       return render json: { error: "Lava-rápido não encontrado." }, status: :not_found if car_wash.nil?
 
-      redis = redis_client
-
-      if redis.get("ai_insights:processing:#{car_wash.id}")
-        return render json: { status: "processing" }
-      end
-
-      if (err = redis.get("ai_insights:error:#{car_wash.id}"))
-        return render json: { status: "error", message: err }
-      end
-
-      existing = AiInsight.current_for(car_wash)
-
-      if existing && !cycle_expired?(existing)
-        render json: full_insight_response(existing, cached: false)
-      else
-        render json: { status: "needs_generation" }
-      end
+      render json: insight_status_response(car_wash, cached: false)
     end
 
     # POST /owner/ai_insights/input — save owner focus text
@@ -109,6 +100,23 @@ module Owner
 
     # ── HELPERS ───────────────────────────────────────────────────────────────
 
+    # Shared logic for show and status endpoints
+    def insight_status_response(car_wash, cached:)
+      existing = AiInsight.current_for(car_wash)
+
+      return { status: "needs_generation" } unless existing
+
+      if existing.processing?
+        { status: "processing" }
+      elsif existing.error?
+        { status: "error", message: existing.error_message || "Não foi possível gerar a análise." }
+      elsif cycle_expired?(existing)
+        { status: "needs_generation" }
+      else
+        full_insight_response(existing, cached: cached)
+      end
+    end
+
     def full_insight_response(insight, cached:)
       content  = JSON.parse(insight.content) rescue {}
       sections = {}
@@ -132,10 +140,6 @@ module Owner
         has_input:           insight.owner_input.present?,
         cached:              cached
       }
-    end
-
-    def redis_client
-      Redis.new(url: ENV.fetch("REDIS_URL", "redis://localhost:6379/0"))
     end
   end
 end

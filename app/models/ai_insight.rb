@@ -2,6 +2,11 @@ class AiInsight < ApplicationRecord
   belongs_to :car_wash
 
   REFRESH_DAYS = 15
+  STATUSES     = %w[processing ready error].freeze
+
+  def processing? = status == "processing"
+  def ready?      = status == "ready"
+  def error?      = status == "error"
 
   def self.current_for(car_wash)
     where(car_wash: car_wash, insight_type: "unified")

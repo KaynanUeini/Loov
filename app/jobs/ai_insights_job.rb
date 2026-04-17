@@ -2,15 +2,22 @@ class AiInsightsJob < ApplicationJob
   queue_as :default
 
   def perform(car_wash_id, owner_input = nil)
-    car_wash  = CarWash.find(car_wash_id)
-    redis     = Redis.new(url: ENV.fetch("REDIS_URL", "redis://localhost:6379/0"))
-    proc_key  = "ai_insights:processing:#{car_wash_id}"
-    error_key = "ai_insights:error:#{car_wash_id}"
+    car_wash = CarWash.find_by(id: car_wash_id)
+    unless car_wash
+      Rails.logger.error("AiInsightsJob: car_wash #{car_wash_id} not found")
+      return
+    end
+
+    insight = AiInsight.current_for(car_wash)
+    unless insight
+      Rails.logger.error("AiInsightsJob: no AiInsight record for car_wash #{car_wash_id}")
+      return
+    end
 
     begin
-      existing        = AiInsight.current_for(car_wash)
-      previous_action = existing&.action_of_the_week
-      previous_inputs = existing&.previous_inputs_parsed || []
+      # Read previous data from the still-intact content field before overwriting
+      previous_action = insight.action_of_the_week
+      previous_inputs = insight.previous_inputs_parsed
 
       sections = AiInsightsService.new(car_wash).generate(
         previous_action: previous_action,
@@ -18,23 +25,15 @@ class AiInsightsJob < ApplicationJob
         previous_inputs: previous_inputs
       )
 
-      if existing
-        existing.update!(content: sections.to_json, generated_at: Time.current)
-      else
-        AiInsight.create!(
-          car_wash:     car_wash,
-          insight_type: "unified",
-          content:      sections.to_json,
-          generated_at: Time.current
-        )
-      end
-
-      redis.del(error_key)
+      insight.update!(
+        content:       sections.to_json,
+        generated_at:  Time.current,
+        status:        "ready",
+        error_message: nil
+      )
     rescue => e
       Rails.logger.error("AiInsightsJob error for car_wash #{car_wash_id}: #{e.message}\n#{e.backtrace&.first(5)&.join("\n")}")
-      redis.set(error_key, e.message, ex: 300)
-    ensure
-      redis.del(proc_key)
+      insight.update_columns(status: "error", error_message: e.message)
     end
   end
 end
