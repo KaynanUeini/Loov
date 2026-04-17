@@ -43,13 +43,16 @@ module Owner
           status:       "processing",
           generated_at: Time.current,
           content:      "{}"
-        )
+          )
       end
 
-      AiInsightsJob.perform_later(car_wash.id, owner_input)
-
+      car_wash_id = car_wash.id
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          AiInsightsJob.new.perform(car_wash_id, owner_input)
+        end
+      end
       render json: { status: "processing" }
-    end
 
     # GET /owner/ai_insights/status — polling endpoint
     def status
