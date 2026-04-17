@@ -1,1 +1,1 @@
-Rack::Timeout.service_timeout = 15 # padrão global
+Rack::Timeout.timeout = 180
