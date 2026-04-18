@@ -105,6 +105,15 @@ Rails.application.routes.draw do
         patch :close
       end
     end
+
+    resources :notifications, only: [:index] do
+      member do
+        patch :read
+      end
+      collection do
+        post :read_all
+      end
+    end
   end
 
   namespace :admin do
