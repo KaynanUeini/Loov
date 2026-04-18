@@ -1,6 +1,9 @@
 Rails.application.routes.draw do
   root "home#index"
-  devise_for :users, controllers: { sessions: 'sessions' }
+  devise_for :users, controllers: {
+    sessions:      'sessions',
+    registrations: 'users/registrations'
+  }
 
   resources :car_washes do
     resources :appointments, only: [:create]

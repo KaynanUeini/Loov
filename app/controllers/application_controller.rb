@@ -13,7 +13,7 @@ class ApplicationController < ActionController::Base
   protected
 
   def configure_permitted_parameters
-    devise_parameter_sanitizer.permit(:sign_up, keys: [:role, :full_name, :phone])
+    devise_parameter_sanitizer.permit(:sign_up, keys: [:role, :full_name, :phone, :cpf, :vehicle_model])
   end
 
   def redirect_owner_without_car_wash
