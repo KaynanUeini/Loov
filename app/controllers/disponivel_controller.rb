@@ -21,7 +21,7 @@ class DisponivelController < ApplicationController
     }
     .map(&:car_wash_id).uniq
 
-    car_washes = CarWash.where(id: open_car_wash_ids)
+    car_washes = CarWash.where(id: open_car_wash_ids).distinct
     car_washes = car_washes.near([@lat, @lon], 5, units: :km) if @lat && @lon
 
     @available_slots = []
@@ -57,6 +57,8 @@ class DisponivelController < ApplicationController
               id:          cw.id,
               name:        cw.name,
               address:     cw.address,
+              logradouro:  cw.logradouro,
+              bairro:      cw.bairro,
               cidade:      cw.cidade,
               uf:          cw.uf,
               latitude:    cw.latitude,
@@ -140,7 +142,15 @@ class DisponivelController < ApplicationController
     appointment.calculate_disponivel_amounts!
 
     if appointment.save
-      ExpireDisponivelAcceptanceJob.set(wait: Appointment::ACCEPTANCE_TTL).perform_later(appointment.id)
+      # A job apenas expira a reserva se o owner não aceitar a tempo.
+      # Se a fila falhar (ex.: adapter :async morre entre requests em tier free),
+      # não aborta a reserva — o owner ainda pode aceitar/rejeitar normalmente.
+      begin
+        ExpireDisponivelAcceptanceJob.set(wait: Appointment::ACCEPTANCE_TTL).perform_later(appointment.id)
+      rescue => job_err
+        Rails.logger.warn("Disponivel#create: falha ao enfileirar ExpireDisponivelAcceptanceJob: #{job_err.message}")
+      end
+
       render json: {
         ok:             true,
         appointment_id: appointment.id,
@@ -155,8 +165,11 @@ class DisponivelController < ApplicationController
   rescue ActiveRecord::RecordNotFound
     render json: { error: "Lava-rápido ou serviço não encontrado." }, status: :not_found
   rescue => e
-    Rails.logger.error("Disponivel#create error: #{e.message}")
-    render json: { error: "Erro inesperado." }, status: :internal_server_error
+    Rails.logger.error("Disponivel#create error: #{e.class}: #{e.message}\n#{e.backtrace&.first(5)&.join("\n")}")
+    render json: {
+      error: e.message,
+      trace: e.backtrace&.first(3)
+    }, status: :internal_server_error
   end
 
   # GET /disponivel/:id/confirmacao
