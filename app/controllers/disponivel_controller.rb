@@ -77,83 +77,46 @@ class DisponivelController < ApplicationController
   end
 
   # POST /disponivel
-  # Cria o agendamento usando o cartão salvo.
-  # Se não tiver cartão, retorna redirect para o perfil.
+  # Cria o agendamento sem pagamento no app — o cliente paga presencialmente
+  # (dinheiro, PIX direto com o dono ou maquininha) no lava-rápido.
   def create
     car_wash = CarWash.find(params[:car_wash_id])
     service  = car_wash.services.find(params[:service_id])
     slot     = Time.zone.parse(params[:slot])
-
-    # Sem cartão → informa o cliente para cadastrar
-    unless current_user.has_payment_method?
-      session[:return_to_after_card] = checkout_disponivel_index_path(
-        car_wash_id: params[:car_wash_id],
-        service_id:  params[:service_id],
-        slot:        params[:slot]
-        )
-      render json: {
-        error:    "Nenhum cartão cadastrado.",
-        redirect: edit_client_profile_path(add_card: true)
-      }, status: :unprocessable_entity
-      return
-    end
 
     unless slot_available?(car_wash, slot)
       render json: { error: "Este horário acabou de ser ocupado. Escolha outro." }, status: :unprocessable_entity
       return
     end
 
-    total      = service.price.to_f
-    prepayment = (total * Appointment::PREPAYMENT_PCT).round(2)
-
-    customer = current_user.stripe_customer!
-
-    intent = Stripe::PaymentIntent.create({
-      amount:               (prepayment * 100).to_i,
-      currency:             "brl",
-      customer:             customer.id,
-      payment_method:       current_user.stripe_payment_method_id,
-      capture_method:       :manual,
-      confirm:              true,
-      off_session:          true,
-      metadata: {
-        car_wash_id: car_wash.id,
-        service_id:  service.id,
-        slot:        slot.iso8601,
-        user_id:     current_user.id,
-        total_price: total,
-        source:      "loov_disponivel"
-      }
-    })
-
     expires_at  = Time.current + Appointment::ACCEPTANCE_TTL
     appointment = Appointment.new(
-      user:                     current_user,
-      car_wash:                 car_wash,
-      service:                  service,
-      scheduled_at:             slot,
-      status:                   "pending_acceptance",
-      appointment_type:         "disponivel",
-      acceptance_expires_at:    expires_at,
-      stripe_payment_intent_id: intent.id
-      )
+      user:                  current_user,
+      car_wash:              car_wash,
+      service:               service,
+      scheduled_at:          slot,
+      status:                "pending_acceptance",
+      appointment_type:      "disponivel",
+      acceptance_expires_at: expires_at
+    )
+    # Mantém os valores informativos (pré-pagamento teórico, comissão) — úteis para DRE/relatórios
     appointment.calculate_disponivel_amounts!
 
     if appointment.save
       ExpireDisponivelAcceptanceJob.set(wait: Appointment::ACCEPTANCE_TTL).perform_later(appointment.id)
-      render json: { ok: true, appointment_id: appointment.id, expires_at: expires_at.iso8601, seconds: Appointment::ACCEPTANCE_TTL.to_i }
+      render json: {
+        ok:             true,
+        appointment_id: appointment.id,
+        expires_at:     expires_at.iso8601,
+        seconds:        Appointment::ACCEPTANCE_TTL.to_i,
+        payment_status: "pending" # pagamento será feito presencialmente
+      }
     else
-      Stripe::PaymentIntent.cancel(intent.id) rescue nil
       render json: { error: appointment.errors.full_messages.join(", ") }, status: :unprocessable_entity
     end
 
-  rescue Stripe::CardError => e
-    render json: { error: "Cartão recusado: #{e.message}", redirect: edit_client_profile_path(add_card: true) }, status: :unprocessable_entity
   rescue ActiveRecord::RecordNotFound
     render json: { error: "Lava-rápido ou serviço não encontrado." }, status: :not_found
-  rescue Stripe::StripeError => e
-    Rails.logger.error("Disponivel#create Stripe error: #{e.message}")
-    render json: { error: "Erro no pagamento. Tente novamente." }, status: :unprocessable_entity
   rescue => e
     Rails.logger.error("Disponivel#create error: #{e.message}")
     render json: { error: "Erro inesperado." }, status: :internal_server_error
