@@ -48,9 +48,17 @@ module Owner
       end
 
       car_wash_id = car_wash.id
+      insight_id  = existing.id
       Thread.new do
         ActiveRecord::Base.connection_pool.with_connection do
           AiInsightsJob.new.perform(car_wash_id, owner_input)
+        end
+      rescue => e
+        Rails.logger.error("AiInsights thread error car_wash=#{car_wash_id}: #{e.message}\n#{e.backtrace&.first(5)&.join("\n")}")
+        begin
+          AiInsight.find(insight_id).update_columns(status: "error", error_message: e.message)
+        rescue => inner
+          Rails.logger.error("AiInsights failed to mark error: #{inner.message}")
         end
       end
 
