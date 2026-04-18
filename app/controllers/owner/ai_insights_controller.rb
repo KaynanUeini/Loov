@@ -26,7 +26,8 @@ module Owner
       end
 
       # Return valid cached result when not forced
-      if existing&.ready? && !cycle_expired?(existing) && !force
+      content_valid = existing&.content.present? && existing.content != '{}' && existing.content != '{}'
+      if existing&.ready? && !cycle_expired?(existing) && !force && content_valid
         return render json: full_insight_response(existing, cached: true)
       end
 
