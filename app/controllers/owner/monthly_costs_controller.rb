@@ -32,22 +32,27 @@ module Owner
         margin     = revenue > 0 ? ((profit / revenue) * 100).round(1) : nil
 
         {
-          mes:             date.strftime("%b/%Y"),
-          mes_label:       MonthlyCost::MONTH_NAMES[month - 1],
-          ano:             year,
-          mes_num:         month,
-          faturamento:     revenue.round(2),
-          receita_aberto:  pending_revenue.round(2),
-          custos:          total_cost.round(2),
-          lucro:           profit.round(2),
-          margem:          margin,
-          tem_custo:       cost.present?
+          mes:            date.strftime("%b/%Y"),
+          mes_label:      MonthlyCost::MONTH_NAMES[month - 1],
+          ano:            year,
+          mes_num:        month,
+          faturamento:    revenue.round(2),
+          receita_aberto: pending_revenue.round(2),
+          custos:         total_cost.round(2),
+          lucro:          profit.round(2),
+          margem:         margin,
+          tem_custo:      cost.present?
         }
       end.reverse
 
       @current_year  = Date.current.year
       @current_month = Date.current.month
       @current_cost  = MonthlyCost.for_month(@car_wash, @current_year, @current_month)
+
+      respond_to do |format|
+        format.html
+        format.json { render json: { dre: @dre } }
+      end
     end
 
     def edit
@@ -66,6 +71,28 @@ module Owner
         @pending_fields = pending.flat_map { |pc| pc.payload_data["cost_params"]&.keys || [] }.uniq
         @has_pending    = @pending_fields.any?
       end
+
+      respond_to do |format|
+        format.html
+        format.json do
+          render json: {
+            year:           @cost.year,
+            month:          @cost.month,
+            month_label:    MonthlyCost::MONTH_NAMES[@cost.month - 1],
+            rent:           @cost.rent.to_f,
+            salaries:       @cost.salaries.to_f,
+            utilities:      @cost.utilities.to_f,
+            products:       @cost.products.to_f,
+            maintenance:    @cost.maintenance.to_f,
+            other_fixed:    @cost.other_fixed.to_f,
+            other_variable: @cost.other_variable.to_f,
+            notes:          @cost.notes.to_s,
+            pending_fields: @pending_fields,
+            has_pending:    @has_pending,
+            is_attendant:   current_user.attendant?
+          }
+        end
+      end
     end
 
     def upsert
@@ -79,7 +106,6 @@ module Owner
           :maintenance, :other_fixed, :other_variable, :notes
         ).to_h
 
-        # Remove campos já bloqueados por pendência
         pending = @car_wash.pending_changes
                     .where(change_type: "monthly_costs", status: "pending")
                     .select { |pc| pc.payload_data["year"].to_i == year && pc.payload_data["month"].to_i == month }
@@ -88,8 +114,6 @@ module Owner
 
         existing = MonthlyCost.for_month(@car_wash, year, month)
 
-        # ── FIX: comparação float para numéricos evita falso positivo ──
-        # "5000.0".to_s != "5000" mas 5000.0.round(2) == 5000.0.round(2)
         changed = raw.select do |k, v|
           if k == "notes"
             existing.send(k).to_s.strip != v.to_s.strip
@@ -99,9 +123,13 @@ module Owner
         end
 
         if changed.empty?
-          redirect_to edit_owner_monthly_costs_path(year: year, month: month),
-            notice: "Nenhuma alteração detectada."
-          return
+          if request.format.json?
+            return render json: { ok: false, message: "Nenhuma alteração detectada." }
+          else
+            redirect_to edit_owner_monthly_costs_path(year: year, month: month),
+              notice: "Nenhuma alteração detectada."
+            return
+          end
         end
 
         field_names = {
@@ -125,17 +153,30 @@ module Owner
           payload:     { cost_params: changed, year: year, month: month }.to_json
         )
 
-        redirect_to edit_owner_monthly_costs_path(year: year, month: month),
-          notice: "✅ Alterações enviadas para aprovação do proprietário."
+        if request.format.json?
+          render json: { ok: true, pending: true, message: "Alterações enviadas para aprovação do proprietário." }
+        else
+          redirect_to edit_owner_monthly_costs_path(year: year, month: month),
+            notice: "✅ Alterações enviadas para aprovação do proprietário."
+        end
         return
       end
 
       # Owner: salva direto
       @cost = MonthlyCost.for_month(@car_wash, year, month)
       if @cost.update(cost_params.merge(year: year, month: month))
-        redirect_to edit_owner_monthly_costs_path, notice: "Custos de #{MonthlyCost::MONTH_NAMES[month - 1]}/#{year} salvos com sucesso."
+        if request.format.json?
+          render json: { ok: true, message: "Custos de #{MonthlyCost::MONTH_NAMES[month - 1]}/#{year} salvos." }
+        else
+          redirect_to edit_owner_monthly_costs_path,
+            notice: "Custos de #{MonthlyCost::MONTH_NAMES[month - 1]}/#{year} salvos com sucesso."
+        end
       else
-        render :edit, status: :unprocessable_entity
+        if request.format.json?
+          render json: { error: @cost.errors.full_messages.join(', ') }, status: :unprocessable_entity
+        else
+          render :edit, status: :unprocessable_entity
+        end
       end
     end
 
@@ -149,11 +190,21 @@ module Owner
     private
 
     def ensure_owner_or_attendant
-      redirect_to root_path unless current_user&.owner? || current_user&.attendant?
+      return if current_user&.owner? || current_user&.attendant?
+      if request.format.json?
+        render json: { error: 'Acesso negado.' }, status: :forbidden
+      else
+        redirect_to root_path
+      end
     end
 
     def ensure_owner_only
-      redirect_to edit_owner_monthly_costs_path, alert: "Acesso não autorizado." unless current_user&.owner?
+      return if current_user&.owner?
+      if request.format.json?
+        render json: { error: 'Acesso negado.' }, status: :forbidden
+      else
+        redirect_to edit_owner_monthly_costs_path, alert: "Acesso não autorizado."
+      end
     end
 
     def cost_params
