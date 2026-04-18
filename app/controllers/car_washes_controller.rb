@@ -75,20 +75,45 @@ class CarWashesController < ApplicationController
         @closures = @car_wash.car_wash_closures.where("end_date >= ?", Date.current)
       end
       format.json do
-        render json: @car_washes.map { |cw|
-          dist = if params[:latitude].present? && cw.has_valid_coordinates?
-            cw.distance_to([params[:latitude].to_f, params[:longitude].to_f], :km).round(1)
-          end
-          {
-            id:          cw.id,
-            name:        cw.name,
-            address:     cw.address,
-            city:        cw.cidade,
-            state:       cw.uf,
-            lat:         cw.latitude,
-            lng:         cw.longitude,
-            distance_km: dist,
-            services:    cw.services.map { |s| { id: s.id, title: s.title, price: s.price, category: s.category } }
+        cw   = @car_wash
+        dist = if params[:latitude].present? && params[:longitude].present? && cw.has_valid_coordinates?
+          cw.distance_to([params[:latitude].to_f, params[:longitude].to_f], :km).round(1)
+        end
+
+        render json: {
+          id:                cw.id,
+          name:              cw.name,
+          address:           cw.address,
+          cep:               cw.cep,
+          logradouro:        cw.logradouro,
+          bairro:            cw.bairro,
+          cidade:            cw.cidade,
+          uf:                cw.uf,
+          city:              cw.cidade,
+          state:             cw.uf,
+          lat:               cw.latitude,
+          lng:               cw.longitude,
+          latitude:          cw.latitude,
+          longitude:         cw.longitude,
+          distance_km:       dist,
+          capacity_per_slot: cw.capacity_per_slot,
+          operating_hours: (cw.operating_hours || []).order(:day_of_week).map { |oh|
+            {
+              id:          oh.id,
+              day_of_week: oh.day_of_week,
+              opens_at:    oh.opens_at&.strftime('%H:%M'),
+              closes_at:   oh.closes_at&.strftime('%H:%M')
+            }
+          },
+          services: (cw.services || []).order(:title).map { |s|
+            {
+              id:          s.id,
+              title:       s.title,
+              category:    s.category,
+              description: s.description,
+              price:       s.price.to_f,
+              duration:    s.duration
+            }
           }
         }
       end
