@@ -73,7 +73,7 @@ class AppointmentsController < ApplicationController
 
       format.json do
         all = current_user.appointments
-          .includes(:service, :car_wash)
+          .includes(:service, :car_wash, :review)
           .order(scheduled_at: :desc)
 
         render json: all.map { |a|
@@ -81,14 +81,17 @@ class AppointmentsController < ApplicationController
             id:           a.id,
             status:       a.status,
             scheduled_at: a.scheduled_at,
+            reviewed:     a.review.present?,
+            review_id:    a.review&.id,
             car_wash: {
               id:   a.car_wash.id,
               name: a.car_wash.name
             },
             service: {
-              id:    a.service.id,
-              title: a.service.title,
-              price: a.service.price
+              id:       a.service.id,
+              title:    a.service.title,
+              price:    a.service.price,
+              duration: a.service.duration
             }
           }
         }
