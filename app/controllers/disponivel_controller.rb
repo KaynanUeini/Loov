@@ -1,4 +1,5 @@
 class DisponivelController < ApplicationController
+  skip_before_action :verify_authenticity_token
   before_action :authenticate_user!, except: [:index]
 
   # GET /disponivel
@@ -32,15 +33,51 @@ class DisponivelController < ApplicationController
       slots = build_available_slots(cw, window_start, window_end)
       next if slots.empty?
 
+      distance_km = (@lat && @lon && cw.has_valid_coordinates?) ?
+        cw.distance_to([@lat, @lon], :km).round(2) : nil
+
       @available_slots << {
-        car_wash:  cw,
-        services:  entry_services,
-        slots:     slots,
-        min_price: entry_services.minimum(:price)
+        car_wash:    cw,
+        services:    entry_services,
+        slots:       slots,
+        min_price:   entry_services.minimum(:price),
+        distance_km: distance_km
       }
     end
 
     @available_slots.sort_by! { |s| [s[:slots].first, s[:min_price]] }
+
+    respond_to do |format|
+      format.html
+      format.json do
+        render json: @available_slots.map { |s|
+          cw = s[:car_wash]
+          {
+            car_wash: {
+              id:          cw.id,
+              name:        cw.name,
+              address:     cw.address,
+              cidade:      cw.cidade,
+              uf:          cw.uf,
+              latitude:    cw.latitude,
+              longitude:   cw.longitude,
+              distance_km: s[:distance_km]
+            },
+            services:  s[:services].map { |svc|
+              {
+                id:       svc.id,
+                title:    svc.title,
+                price:    svc.price.to_f,
+                duration: svc.duration,
+                category: svc.category
+              }
+            },
+            slots:     s[:slots].map(&:iso8601),
+            min_price: s[:min_price].to_f
+          }
+        }
+      end
+    end
   end
 
   # GET /disponivel/checkout
