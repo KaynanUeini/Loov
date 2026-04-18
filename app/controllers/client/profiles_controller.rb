@@ -1,42 +1,76 @@
 module Client
   class ProfilesController < ApplicationController
+    skip_before_action :verify_authenticity_token
     before_action :authenticate_user!
     before_action :ensure_client
 
     def show
-      redirect_to edit_client_profile_path
+      if request.format.json?
+        render json: profile_payload
+      else
+        redirect_to edit_client_profile_path
+      end
     end
 
     def edit
-      # setup_intent para cadastrar cartão novo
       if current_user.stripe_customer_id.present? || params[:add_card]
         customer = current_user.stripe_customer!
         @setup_intent = Stripe::SetupIntent.create(
-          customer:            customer.id,
+          customer:             customer.id,
           payment_method_types: ["card"],
-          usage:               "off_session"  # para cobranças futuras sem o cliente presente
+          usage:                "off_session"
         )
         @setup_client_secret = @setup_intent.client_secret
       end
+
+      respond_to do |format|
+        format.html
+        format.json do
+          render json: profile_payload.merge(
+            setup_intent_id:     @setup_intent&.id,
+            setup_client_secret: @setup_client_secret,
+            stripe_customer_id:  current_user.stripe_customer_id,
+            publishable_key:     stripe_publishable_key
+          )
+        end
+      end
     rescue Stripe::StripeError => e
       Rails.logger.error("ProfilesController#edit Stripe error: #{e.message}")
-      @setup_client_secret = nil
+      respond_to do |format|
+        format.html { @setup_client_secret = nil; render :edit }
+        format.json { render json: profile_payload.merge(stripe_error: e.message) }
+      end
     end
 
     def update
       if current_user.update(profile_params)
-        redirect_to edit_client_profile_path, notice: "Perfil atualizado com sucesso."
+        respond_to do |format|
+          format.html { redirect_to edit_client_profile_path, notice: "Perfil atualizado com sucesso." }
+          format.json { render json: { ok: true, profile: profile_payload } }
+        end
       else
-        flash.now[:errors] = current_user.errors.full_messages
-        render :edit, status: :unprocessable_entity
+        respond_to do |format|
+          format.html do
+            flash.now[:errors] = current_user.errors.full_messages
+            render :edit, status: :unprocessable_entity
+          end
+          format.json do
+            render json: { ok: false, error: current_user.errors.full_messages.join(", ") },
+                   status: :unprocessable_entity
+          end
+        end
       end
     end
 
     # POST /client/profile/attach_payment_method
-    # Recebe o payment_method_id confirmado pelo Stripe.js no frontend
-    # e salva no usuário
+    # Aceita payment_method_id direto OU setup_intent_id (mobile PaymentSheet)
     def attach_payment_method
-      payment_method_id = params[:payment_method_id]
+      payment_method_id = params[:payment_method_id].presence
+
+      if payment_method_id.blank? && params[:setup_intent_id].present?
+        si = Stripe::SetupIntent.retrieve(params[:setup_intent_id])
+        payment_method_id = si.payment_method
+      end
 
       if payment_method_id.blank?
         render json: { error: "payment_method_id é obrigatório" }, status: :unprocessable_entity
@@ -45,7 +79,6 @@ module Client
 
       current_user.attach_payment_method!(payment_method_id)
 
-      # Se veio de um redirecionamento da aba Disponíveis, volta para lá
       return_to = session.delete(:return_to_after_card)
 
       render json: {
@@ -60,17 +93,44 @@ module Client
     # DELETE /client/profile/remove_payment_method
     def remove_payment_method
       current_user.detach_payment_method!
-      redirect_to edit_client_profile_path, notice: "Cartão removido."
+      respond_to do |format|
+        format.html { redirect_to edit_client_profile_path, notice: "Cartão removido." }
+        format.json { render json: { ok: true } }
+      end
     end
 
     private
 
     def ensure_client
-      redirect_to root_path unless current_user&.client?
+      return if current_user&.client?
+      if request.format.json?
+        render json: { error: "Acesso negado." }, status: :forbidden
+      else
+        redirect_to root_path
+      end
     end
 
     def profile_params
       params.require(:user).permit(:full_name, :phone, :cpf, :vehicle_model)
+    end
+
+    def profile_payload
+      {
+        id:            current_user.id,
+        email:         current_user.email,
+        full_name:     current_user.full_name,
+        phone:         current_user.phone,
+        cpf:           current_user.cpf,
+        vehicle_model: current_user.vehicle_model,
+        has_card:      current_user.stripe_payment_method_id.present?,
+        card_display:  current_user.card_display,
+        card_brand:    current_user.stripe_card_brand,
+        card_last4:    current_user.stripe_card_last4
+      }
+    end
+
+    def stripe_publishable_key
+      Rails.application.credentials.dig(:stripe, :publishable_key)
     end
   end
 end
