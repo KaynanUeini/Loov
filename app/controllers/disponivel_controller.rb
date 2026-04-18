@@ -21,12 +21,20 @@ class DisponivelController < ApplicationController
     }
     .map(&:car_wash_id).uniq
 
-    car_washes = CarWash.where(id: open_car_wash_ids).distinct
-    car_washes = car_washes.near([@lat, @lon], 5, units: :km) if @lat && @lon
+    car_washes_scope = CarWash.where(id: open_car_wash_ids).distinct
+    car_washes_scope = car_washes_scope.near([@lat, @lon], 5, units: :km) if @lat && @lon
+
+    # Dedup em Ruby como rede de segurança — geocoder .near pode adicionar
+    # JOINs que fazem o mesmo car_wash aparecer mais de uma vez no .each.
+    raw_car_washes    = car_washes_scope.to_a
+    dedup_car_washes  = raw_car_washes.uniq(&:id)
+    if raw_car_washes.size != dedup_car_washes.size
+      Rails.logger.warn("[Disponivel#index] duplicata detectada: raw=#{raw_car_washes.size} dedup=#{dedup_car_washes.size} ids=#{raw_car_washes.map(&:id)}")
+    end
 
     @available_slots = []
 
-    car_washes.each do |cw|
+    dedup_car_washes.each do |cw|
       entry_services = cw.services.where("duration IS NULL OR duration <= 60").order(:price)
       next if entry_services.empty?
 
@@ -45,6 +53,8 @@ class DisponivelController < ApplicationController
       }
     end
 
+    # Belt-and-suspenders: dedup final pelo id do car_wash
+    @available_slots.uniq! { |s| s[:car_wash].id }
     @available_slots.sort_by! { |s| [s[:slots].first, s[:min_price]] }
 
     respond_to do |format|
