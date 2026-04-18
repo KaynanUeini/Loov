@@ -20,8 +20,8 @@ module Owner
       force    = params[:force] == "true"
       existing = AiInsight.current_for(car_wash)
 
-      # Already running — don't double-enqueue
-      if existing&.processing?
+      # Already running — don't double-enqueue (force bypasses this)
+      if existing&.processing? && !force
         return render json: { status: "processing" }
       end
 
