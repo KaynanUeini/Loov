@@ -39,8 +39,18 @@ Rails.application.routes.draw do
         delete :remove_payment_method
       end
     end
-    resources :reviews,       only: [:create]
-    resources :notifications, only: [:index]
+    resources :reviews,    only: [:create]
+    resources :favorites,  only: [:index, :create, :destroy]
+    get 'loyalty_cards', to: 'loyalty_cards#index'
+
+    resources :notifications, only: [:index] do
+      member do
+        patch :read
+      end
+      collection do
+        post :read_all
+      end
+    end
   end
 
   namespace :owner do

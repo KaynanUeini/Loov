@@ -133,10 +133,14 @@ class CarWashesController < ApplicationController
           cw.distance_to([params[:latitude].to_f, params[:longitude].to_f], :km).round(1)
         end
 
+        favorited = user_signed_in? && current_user.client? &&
+          current_user.favorite_car_washes.exists?(car_wash_id: cw.id)
+
         render json: {
           id:                cw.id,
           name:              cw.name,
           address:           cw.address,
+          favorited:         favorited,
           cep:               cw.cep,
           logradouro:        cw.logradouro,
           bairro:            cw.bairro,
