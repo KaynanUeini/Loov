@@ -50,17 +50,46 @@ class CarWashesController < ApplicationController
     respond_to do |format|
       format.html
       format.json do
+        lat_param = params[:latitude].presence&.to_f
+        lng_param = params[:longitude].presence&.to_f
+
         render json: @car_washes.map { |cw|
-          {
-            id:       cw.id,
-            name:     cw.name,
-            address:  cw.address,
-            city:     cw.cidade,
-            state:    cw.uf,
-            lat:      cw.latitude,
-            lng:      cw.longitude,
-            services: cw.services.map { |s| { id: s.id, title: s.title, price: s.price, category: s.category } }
+          data = {
+            id:         cw.id,
+            name:       cw.name,
+            address:    cw.address,
+            logradouro: cw.logradouro,
+            bairro:     cw.bairro,
+            cidade:     cw.cidade,
+            uf:         cw.uf,
+            city:       cw.cidade,
+            state:      cw.uf,
+            lat:        cw.latitude,
+            lng:        cw.longitude,
+            latitude:   cw.latitude,
+            longitude:  cw.longitude,
+            services: cw.services.order(:title).map { |s|
+              {
+                id:          s.id,
+                title:       s.title,
+                price:       s.price.to_f,
+                duration:    s.duration,
+                category:    s.category,
+                description: s.description
+              }
+            },
+            operating_hours: cw.operating_hours.order(:day_of_week).map { |oh|
+              {
+                day_of_week: oh.day_of_week,
+                opens_at:    oh.opens_at&.strftime('%H:%M'),
+                closes_at:   oh.closes_at&.strftime('%H:%M')
+              }
+            }
           }
+          if lat_param && lng_param && cw.has_valid_coordinates?
+            data[:distance_km] = cw.distance_to([lat_param, lng_param], :km).round(2)
+          end
+          data
         }
       end
     end
