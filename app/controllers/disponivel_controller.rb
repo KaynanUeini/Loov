@@ -134,44 +134,67 @@ class DisponivelController < ApplicationController
     service  = car_wash.services.find(params[:service_id])
     slot     = Time.zone.parse(params[:slot])
 
-    unless slot_available?(car_wash, slot)
+    appointment   = nil
+    slot_taken    = false
+    save_error    = nil
+
+    # Transação + row-level lock na car_wash serializa todas as tentativas
+    # de reserva concorrentes para o mesmo lava-rápido. Sem isso, dois
+    # clientes clicando "Reservar" ao mesmo tempo poderiam passar pelo
+    # slot_available? simultaneamente e ambos criar agendamento no mesmo
+    # slot → overbooking.
+    ActiveRecord::Base.transaction do
+      car_wash.lock!
+
+      unless slot_available?(car_wash, slot)
+        slot_taken = true
+        raise ActiveRecord::Rollback
+      end
+
+      expires_at  = Time.current + Appointment::ACCEPTANCE_TTL
+      appointment = Appointment.new(
+        user:                  current_user,
+        car_wash:              car_wash,
+        service:               service,
+        scheduled_at:          slot,
+        status:                "pending_acceptance",
+        appointment_type:      "disponivel",
+        acceptance_expires_at: expires_at
+      )
+      # Valores informativos (pré-pagamento teórico, comissão) — úteis para DRE/relatórios
+      appointment.calculate_disponivel_amounts!
+
+      unless appointment.save
+        save_error = appointment.errors.full_messages.join(", ")
+        raise ActiveRecord::Rollback
+      end
+    end
+
+    if slot_taken
       render json: { error: "Este horário acabou de ser ocupado. Escolha outro." }, status: :unprocessable_entity
       return
     end
 
-    expires_at  = Time.current + Appointment::ACCEPTANCE_TTL
-    appointment = Appointment.new(
-      user:                  current_user,
-      car_wash:              car_wash,
-      service:               service,
-      scheduled_at:          slot,
-      status:                "pending_acceptance",
-      appointment_type:      "disponivel",
-      acceptance_expires_at: expires_at
-    )
-    # Mantém os valores informativos (pré-pagamento teórico, comissão) — úteis para DRE/relatórios
-    appointment.calculate_disponivel_amounts!
-
-    if appointment.save
-      # A job apenas expira a reserva se o owner não aceitar a tempo.
-      # Se a fila falhar (ex.: adapter :async morre entre requests em tier free),
-      # não aborta a reserva — o owner ainda pode aceitar/rejeitar normalmente.
-      begin
-        ExpireDisponivelAcceptanceJob.set(wait: Appointment::ACCEPTANCE_TTL).perform_later(appointment.id)
-      rescue => job_err
-        Rails.logger.warn("Disponivel#create: falha ao enfileirar ExpireDisponivelAcceptanceJob: #{job_err.message}")
-      end
-
-      render json: {
-        ok:             true,
-        appointment_id: appointment.id,
-        expires_at:     expires_at.iso8601,
-        seconds:        Appointment::ACCEPTANCE_TTL.to_i,
-        payment_status: "pending" # pagamento será feito presencialmente
-      }
-    else
-      render json: { error: appointment.errors.full_messages.join(", ") }, status: :unprocessable_entity
+    if save_error
+      render json: { error: save_error }, status: :unprocessable_entity
+      return
     end
+
+    # Job é enfileirado fora da transação — se falhar, a lazy expiration
+    # (expire_stale_acceptances!) ainda cobre o caso.
+    begin
+      ExpireDisponivelAcceptanceJob.set(wait: Appointment::ACCEPTANCE_TTL).perform_later(appointment.id)
+    rescue => job_err
+      Rails.logger.warn("Disponivel#create: falha ao enfileirar ExpireDisponivelAcceptanceJob: #{job_err.message}")
+    end
+
+    render json: {
+      ok:             true,
+      appointment_id: appointment.id,
+      expires_at:     appointment.acceptance_expires_at.iso8601,
+      seconds:        Appointment::ACCEPTANCE_TTL.to_i,
+      payment_status: "pending" # pagamento será feito presencialmente
+    }
 
   rescue ActiveRecord::RecordNotFound
     render json: { error: "Lava-rápido ou serviço não encontrado." }, status: :not_found

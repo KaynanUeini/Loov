@@ -25,6 +25,7 @@ class Appointment < ApplicationRecord
 
   validate :within_operating_hours, unless: :walk_in?
   validate :service_duration_allows_disponivel, if: :disponivel?
+  validate :not_during_closure, unless: :walk_in?
 
   # ── SCOPES ────────────────────────────────────────────────────────────────
   scope :regular,            -> { where(appointment_type: "regular") }
@@ -204,6 +205,22 @@ class Appointment < ApplicationRecord
     return unless service.present?
     if service.duration.to_i > 60
       errors.add(:service, "não disponível na aba Disponíveis — duração acima de 60 minutos. Use o agendamento normal.")
+    end
+  end
+
+  # Bloqueia agendamentos em dias que o owner marcou como fechado (ex: férias,
+  # manutenção). Roda em todos os paths de criação (regular, disponível, API)
+  # porque é validação de model — controllers não precisam duplicar.
+  def not_during_closure
+    return unless scheduled_at && car_wash
+    closing = car_wash.car_wash_closures.where(
+      "start_date <= ? AND end_date >= ?",
+      scheduled_at.to_date,
+      scheduled_at.to_date
+    ).first
+    if closing
+      reason = closing.reason.presence || "fechamento programado"
+      errors.add(:scheduled_at, "lava-rápido fechado neste dia: #{reason}")
     end
   end
 end

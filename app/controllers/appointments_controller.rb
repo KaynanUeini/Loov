@@ -125,9 +125,10 @@ class AppointmentsController < ApplicationController
   end
 
   def create
-    @appointment        = Appointment.new(appointment_params.except(:date, :time))
-    @appointment.user   = current_user
-    @appointment.status = 'pending'
+    @appointment      = Appointment.new(appointment_params.except(:date, :time))
+    @appointment.user = current_user
+    # status é setado para 'confirmed' dentro da transação (linha ~237)
+    # após o lock e o check de overlap — evita persistir em estado inválido.
 
     scheduled_date = params[:appointment][:date]
     scheduled_time = params[:appointment][:time]
@@ -216,10 +217,13 @@ class AppointmentsController < ApplicationController
     ActiveRecord::Base.transaction do
       @car_wash.lock!
 
+      # Inclui pending_acceptance (reserva Disponível em trânsito) e attended
+      # (slot já foi usado) — sem eles, dois fluxos paralelos (regular vs
+      # disponível, ou um attended histórico) colidiriam no mesmo horário.
       overlapping = Appointment
         .joins(:service)
         .where(car_wash_id: @car_wash.id)
-        .where(status: %w[pending confirmed])
+        .where(status: %w[confirmed pending_acceptance attended])
         .where(
           "appointments.scheduled_at < ? AND (appointments.scheduled_at + (services.duration * interval '1 minute')) > ?",
           end_time, start_time
