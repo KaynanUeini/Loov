@@ -76,13 +76,27 @@ class AppointmentsController < ApplicationController
           .includes(:service, :car_wash, :review)
           .order(scheduled_at: :desc)
 
+        # Último 4 dígitos do próprio telefone do cliente — usado no card do
+        # app pro cliente ver qual código dizer ao lava-rápido quando chegar.
+        phone_digits = current_user.phone.to_s.gsub(/\D/, "")
+        phone_last4  = phone_digits.length >= 4 ? phone_digits.last(4) : nil
+
         render json: all.map { |a|
+          # show_code: de 15 min antes do horário agendado até 5 min depois
+          # (buffer pequeno pra quando o cliente chega atrasado). Só em
+          # confirmed — depois de attended/no_show/cancelled não faz sentido.
+          show_code = a.status == "confirmed" &&
+                      a.scheduled_at <= Time.current + 15.minutes &&
+                      a.scheduled_at >= Time.current - 5.minutes
+
           {
             id:           a.id,
             status:       a.status,
             scheduled_at: a.scheduled_at,
             reviewed:     a.review.present?,
             review_id:    a.review&.id,
+            phone_last4:  phone_last4,
+            show_code:    show_code,
             car_wash: {
               id:   a.car_wash.id,
               name: a.car_wash.name
