@@ -1,6 +1,7 @@
 class DisponivelController < ApplicationController
   skip_before_action :verify_authenticity_token
   before_action :authenticate_user!, except: [:index]
+  before_action :expire_stale_acceptances!
 
   # GET /disponivel
   def index
@@ -237,6 +238,20 @@ class DisponivelController < ApplicationController
   end
 
   private
+
+  # Render (free tier) não tem um worker confiável pra rodar o
+  # ExpireDisponivelAcceptanceJob. Então expiramos lazy, on-read:
+  # qualquer leitura dessa tela primeiro marca como "cancelled" tudo que
+  # já passou do acceptance_expires_at mas ainda está pending_acceptance.
+  # Custo: 1 UPDATE barato (indexado por status + acceptance_expires_at).
+  def expire_stale_acceptances!
+    Appointment
+      .where(status: "pending_acceptance", appointment_type: "disponivel")
+      .where("acceptance_expires_at < ?", Time.current)
+      .update_all(status: "cancelled", updated_at: Time.current)
+  rescue => e
+    Rails.logger.warn("expire_stale_acceptances! failed: #{e.message}")
+  end
 
   def build_available_slots(car_wash, from, to)
     capacity      = [car_wash.capacity_per_slot.to_i, 1].max

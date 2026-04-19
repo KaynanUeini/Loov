@@ -4,6 +4,7 @@ module Owner
     before_action :authenticate_user!
     before_action :ensure_owner_or_attendant
     before_action :set_car_wash
+    before_action :expire_stale_acceptances!
     before_action :set_appointment, only: [:show, :accept, :reject]
 
     # GET /owner/disponivel_acceptance
@@ -71,6 +72,18 @@ module Owner
         .find(params[:id])
     rescue ActiveRecord::RecordNotFound
       render json: { error: "Agendamento não encontrado." }, status: :not_found
+    end
+
+    # Purga "lazy" de pendentes que já venceram o TTL de 3 min. Render free
+    # tier não roda o job de expiração de forma confiável, então o owner
+    # não deve enxergar reservas vencidas na fila.
+    def expire_stale_acceptances!
+      Appointment
+        .where(status: "pending_acceptance", appointment_type: "disponivel")
+        .where("acceptance_expires_at < ?", Time.current)
+        .update_all(status: "cancelled", updated_at: Time.current)
+    rescue => e
+      Rails.logger.warn("expire_stale_acceptances! failed: #{e.message}")
     end
 
     def ensure_owner_or_attendant
