@@ -26,8 +26,11 @@ class CarWashesController < ApplicationController
       begin
         latitude  = params[:latitude].to_f
         longitude = params[:longitude].to_f
-        with_coords    = @car_washes.select(&:has_valid_coordinates?).sort_by { |cw| cw.distance_to([latitude, longitude], :km) }
-        without_coords = @car_washes.reject(&:has_valid_coordinates?)
+        # Eager-load antes de converter em Array — caso contrário o bloco JSON
+        # fica N+1 (ou, se chamar .includes no Array, quebra com NoMethodError).
+        preloaded = @car_washes.includes(:services, :operating_hours)
+        with_coords    = preloaded.select(&:has_valid_coordinates?).sort_by { |cw| cw.distance_to([latitude, longitude], :km) }
+        without_coords = preloaded.reject(&:has_valid_coordinates?)
         @car_washes    = with_coords + without_coords
       rescue => e
         Rails.logger.error("Erro ao calcular distância: #{e.message}")
@@ -57,7 +60,13 @@ class CarWashesController < ApplicationController
         today_dow    = now_br.wday
         now_seconds  = now_br.seconds_since_midnight.to_i
 
-        render json: @car_washes.includes(:services, :operating_hours).map { |cw|
+        # @car_washes pode ser Relation (sem coords) ou Array (ordenado por
+        # distância acima). Só chama .includes se ainda é Relation.
+        collection = @car_washes.respond_to?(:includes) ?
+          @car_washes.includes(:services, :operating_hours) :
+          @car_washes
+
+        render json: collection.map { |cw|
           # Hora de hoje do lava-rápido (pode não existir se fechado no dia)
           today_oh = cw.operating_hours.find { |oh| oh.day_of_week.to_i == today_dow }
 
