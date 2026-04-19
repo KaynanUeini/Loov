@@ -66,6 +66,15 @@ class CarWashesController < ApplicationController
           @car_washes.includes(:services, :operating_hours) :
           @car_washes
 
+        # Agrega rating em batch (evita N+1 ao somar/avg por lava-rápido).
+        cw_ids = collection.map(&:id)
+        rating_map = Review.where(car_wash_id: cw_ids)
+                           .group(:car_wash_id)
+                           .pluck(:car_wash_id, Arel.sql("AVG(rating)"), Arel.sql("COUNT(*)"))
+                           .each_with_object({}) { |(id, avg, count), h|
+                             h[id] = { avg: avg.to_f.round(1), count: count.to_i }
+                           }
+
         render json: collection.map { |cw|
           # Hora de hoje do lava-rápido (pode não existir se fechado no dia)
           today_oh = cw.operating_hours.find { |oh| oh.day_of_week.to_i == today_dow }
@@ -77,21 +86,26 @@ class CarWashesController < ApplicationController
             open_now   = now_seconds >= opens_sec && now_seconds <= closes_sec
           end
 
+          rating_info = rating_map[cw.id] || { avg: 0.0, count: 0 }
+
           data = {
-            id:         cw.id,
-            name:       cw.name,
-            address:    cw.address,
-            logradouro: cw.logradouro,
-            bairro:     cw.bairro,
-            cidade:     cw.cidade,
-            uf:         cw.uf,
-            city:       cw.cidade,
-            state:      cw.uf,
-            lat:        cw.latitude,
-            lng:        cw.longitude,
-            latitude:   cw.latitude,
-            longitude:  cw.longitude,
-            open_now:   open_now,
+            id:            cw.id,
+            name:          cw.name,
+            address:       cw.address,
+            logradouro:    cw.logradouro,
+            numero:        cw.numero,
+            bairro:        cw.bairro,
+            cidade:        cw.cidade,
+            uf:            cw.uf,
+            city:          cw.cidade,
+            state:         cw.uf,
+            lat:           cw.latitude,
+            lng:           cw.longitude,
+            latitude:      cw.latitude,
+            longitude:     cw.longitude,
+            open_now:      open_now,
+            rating_avg:    rating_info[:avg],
+            reviews_count: rating_info[:count],
             services: cw.services.sort_by { |s| s.title.to_s }.map { |s|
               {
                 id:          s.id,
