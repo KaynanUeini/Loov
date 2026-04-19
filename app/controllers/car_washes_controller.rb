@@ -53,7 +53,21 @@ class CarWashesController < ApplicationController
         lat_param = params[:latitude].presence&.to_f
         lng_param = params[:longitude].presence&.to_f
 
-        render json: @car_washes.map { |cw|
+        now_br       = Time.current.in_time_zone("America/Sao_Paulo")
+        today_dow    = now_br.wday
+        now_seconds  = now_br.seconds_since_midnight.to_i
+
+        render json: @car_washes.includes(:services, :operating_hours).map { |cw|
+          # Hora de hoje do lava-rápido (pode não existir se fechado no dia)
+          today_oh = cw.operating_hours.find { |oh| oh.day_of_week.to_i == today_dow }
+
+          open_now = false
+          if today_oh && today_oh.opens_at && today_oh.closes_at
+            opens_sec  = today_oh.opens_at.seconds_since_midnight.to_i  rescue 0
+            closes_sec = today_oh.closes_at.seconds_since_midnight.to_i rescue 86400
+            open_now   = now_seconds >= opens_sec && now_seconds <= closes_sec
+          end
+
           data = {
             id:         cw.id,
             name:       cw.name,
@@ -68,7 +82,8 @@ class CarWashesController < ApplicationController
             lng:        cw.longitude,
             latitude:   cw.latitude,
             longitude:  cw.longitude,
-            services: cw.services.order(:title).map { |s|
+            open_now:   open_now,
+            services: cw.services.sort_by { |s| s.title.to_s }.map { |s|
               {
                 id:          s.id,
                 title:       s.title,
@@ -78,9 +93,9 @@ class CarWashesController < ApplicationController
                 description: s.description
               }
             },
-            operating_hours: cw.operating_hours.order(:day_of_week).map { |oh|
+            operating_hours: cw.operating_hours.sort_by { |oh| oh.day_of_week.to_i }.map { |oh|
               {
-                day_of_week: oh.day_of_week,
+                day_of_week: oh.day_of_week.to_i,
                 opens_at:    oh.opens_at&.strftime('%H:%M'),
                 closes_at:   oh.closes_at&.strftime('%H:%M')
               }
