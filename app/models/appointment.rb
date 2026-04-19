@@ -244,8 +244,14 @@ class Appointment < ApplicationRecord
   # Bloqueia agendamentos em dias que o owner marcou como fechado (ex: férias,
   # manutenção). Roda em todos os paths de criação (regular, disponível, API)
   # porque é validação de model — controllers não precisam duplicar.
+  #
+  # Fail-open: se a tabela car_wash_closures não existir (migration pendente
+  # no ambiente) ou outra falha de schema, permite o agendamento e loga. Não
+  # queremos derrubar o fluxo de reserva por causa de uma validação opcional.
   def not_during_closure
     return unless scheduled_at && car_wash
+    return unless closures_table_present?
+
     closing = car_wash.car_wash_closures.where(
       "start_date <= ? AND end_date >= ?",
       scheduled_at.to_date,
@@ -255,5 +261,18 @@ class Appointment < ApplicationRecord
       reason = closing.reason.presence || "fechamento programado"
       errors.add(:scheduled_at, "lava-rápido fechado neste dia: #{reason}")
     end
+  rescue => e
+    Rails.logger.warn("not_during_closure skipped: #{e.class}: #{e.message}")
+  end
+
+  def closures_table_present?
+    # Memoizado no process — só consulta information_schema uma vez.
+    self.class.closures_table_present?
+  end
+
+  def self.closures_table_present?
+    @closures_table_present ||= ActiveRecord::Base.connection.data_source_exists?("car_wash_closures")
+  rescue
+    false
   end
 end
