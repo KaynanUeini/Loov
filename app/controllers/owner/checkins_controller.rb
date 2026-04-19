@@ -268,6 +268,8 @@ module Owner
         id:               a.id,
         date:             a.scheduled_at.strftime("%Y-%m-%d"),
         time:             a.scheduled_at.strftime("%H:%M"),
+        scheduled_at:     a.scheduled_at.iso8601,
+        duration:         a.service.duration.to_i,
         client:           a.walk_in? ? (a.walk_in_name.presence || "Avulso") : first_name,
         service:          a.service.title,
         service_id:       a.service_id,
