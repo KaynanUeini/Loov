@@ -22,7 +22,10 @@ Rails.application.routes.draw do
 
   # ── ABA DISPONÍVEIS ───────────────────────────────────────────────────────
   resources :disponivel, only: [:index, :create, :show] do
-    member { get :confirmacao }
+    member do
+      get   :confirmacao
+      patch :cancel
+    end
     collection { get :checkout }
   end
 

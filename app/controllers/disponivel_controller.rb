@@ -188,6 +188,36 @@ class DisponivelController < ApplicationController
     redirect_to root_path, alert: "Acesso negado." unless @appointment.user == current_user
   end
 
+  # PATCH /disponivel/:id/cancel
+  # Cliente desiste da reserva antes do dono aceitar. Só permite enquanto o
+  # status ainda é pending_acceptance — depois disso (confirmed/cancelled/
+  # rejected) a transição não faz sentido e retorna 422.
+  def cancel
+    appointment = Appointment.find(params[:id])
+
+    unless appointment.user_id == current_user.id
+      render json: { error: "Acesso negado." }, status: :forbidden
+      return
+    end
+
+    unless appointment.status == "pending_acceptance"
+      render json: {
+        error: "Esta reserva não pode mais ser cancelada.",
+        status: appointment.status
+      }, status: :unprocessable_entity
+      return
+    end
+
+    appointment.update!(status: "cancelled")
+    render json: { ok: true, status: appointment.status }
+
+  rescue ActiveRecord::RecordNotFound
+    render json: { error: "Reserva não encontrada." }, status: :not_found
+  rescue => e
+    Rails.logger.error("Disponivel#cancel error: #{e.class}: #{e.message}")
+    render json: { error: e.message }, status: :internal_server_error
+  end
+
   # GET /disponivel/:id (JSON polling)
   def show
     appointment = Appointment.find(params[:id])
