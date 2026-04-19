@@ -89,12 +89,20 @@ class AppointmentsController < ApplicationController
                       a.scheduled_at <= Time.current + 15.minutes &&
                       a.scheduled_at >= Time.current - 5.minutes
 
+          review_data = a.review ? {
+            id:      a.review.id,
+            rating:  a.review.rating,
+            tags:    a.review.tags_list,
+            comment: a.review.comment
+          } : nil
+
           {
             id:           a.id,
             status:       a.status,
             scheduled_at: a.scheduled_at,
             reviewed:     a.review.present?,
             review_id:    a.review&.id,
+            review:       review_data,
             phone_last4:  phone_last4,
             show_code:    show_code,
             car_wash: {
