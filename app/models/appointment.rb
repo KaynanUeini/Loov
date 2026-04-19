@@ -181,7 +181,7 @@ class Appointment < ApplicationRecord
 
   def within_operating_hours
     return unless scheduled_at && car_wash
-    day_of_week   = scheduled_at.wday
+    day_of_week    = scheduled_at.wday
     operating_hour = car_wash.operating_hours.find_by(day_of_week: day_of_week)
 
     unless operating_hour
@@ -189,12 +189,17 @@ class Appointment < ApplicationRecord
       return
     end
 
-    scheduled_time    = scheduled_at.to_time
     opens_at          = Time.parse(operating_hour.opens_at.to_s).seconds_since_midnight
     closes_at         = Time.parse(operating_hour.closes_at.to_s).seconds_since_midnight
-    scheduled_seconds = scheduled_time.seconds_since_midnight
+    scheduled_seconds = scheduled_at.to_time.seconds_since_midnight
 
-    unless scheduled_seconds.between?(opens_at, closes_at)
+    # Considera a duração do serviço: o fim do atendimento também precisa caber
+    # dentro do horário de funcionamento. Ex: fecha 17:00, serviço de 60 min;
+    # 16:30 seria rejeitado porque termina 17:30.
+    duration_seconds = service&.duration.to_i * 60
+    end_seconds      = scheduled_seconds + duration_seconds
+
+    unless scheduled_seconds >= opens_at && end_seconds <= closes_at
       errors.add(:scheduled_at, "fora do intervalo de funcionamento")
     end
   end

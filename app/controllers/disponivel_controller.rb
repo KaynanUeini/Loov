@@ -106,7 +106,7 @@ class DisponivelController < ApplicationController
       return
     end
 
-    if @slot < Time.current
+    if @slot < Time.current.in_time_zone("America/Sao_Paulo")
       redirect_to disponivel_index_path, alert: "Este horário já passou."
       return
     end

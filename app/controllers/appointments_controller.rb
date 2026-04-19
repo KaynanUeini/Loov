@@ -97,14 +97,15 @@ class AppointmentsController < ApplicationController
           } : nil
 
           {
-            id:           a.id,
-            status:       a.status,
-            scheduled_at: a.scheduled_at,
-            reviewed:     a.review.present?,
-            review_id:    a.review&.id,
-            review:       review_data,
-            phone_last4:  phone_last4,
-            show_code:    show_code,
+            id:               a.id,
+            status:            a.status,
+            appointment_type:  a.appointment_type,
+            scheduled_at:      a.scheduled_at,
+            reviewed:          a.review.present?,
+            review_id:         a.review&.id,
+            review:            review_data,
+            phone_last4:       phone_last4,
+            show_code:         show_code,
             car_wash: {
               id:   a.car_wash.id,
               name: a.car_wash.name
@@ -272,23 +273,44 @@ class AppointmentsController < ApplicationController
   end
 
   def cancel
-    current_time = DateTime.now.in_time_zone("America/Sao_Paulo")
-    unless @appointment.status != 'cancelled' && @appointment.scheduled_at > current_time
-      redirect_to appointments_path, alert: "Não é possível cancelar este agendamento."
+    current_time = Time.current.in_time_zone("America/Sao_Paulo")
+
+    # Só confirmados podem ser cancelados. Impede cancelar attended/no_show/
+    # rejected/cancelled (edge cases em que status != 'cancelled' deixava passar).
+    unless @appointment.status == 'confirmed'
+      message = "Apenas agendamentos confirmados podem ser cancelados."
+      respond_to do |format|
+        format.html { redirect_to appointments_path, alert: message }
+        format.json { render json: { error: message }, status: :unprocessable_entity }
+      end
       return
     end
+
     if @appointment.disponivel?
-      redirect_to appointments_path, alert: "Agendamentos Disponíveis não podem ser cancelados por aqui."
+      message = "Agendamentos Disponíveis não podem ser cancelados por aqui."
+      respond_to do |format|
+        format.html { redirect_to appointments_path, alert: message }
+        format.json { render json: { error: message }, status: :unprocessable_entity }
+      end
       return
     end
+
     minutes_until = ((@appointment.scheduled_at - current_time) / 60).to_i
     if minutes_until <= 120
       deadline = @appointment.scheduled_at.in_time_zone("America/Sao_Paulo") - 2.hours
-      redirect_to appointments_path, alert: "O prazo de cancelamento (até #{deadline.strftime('%H:%M')} do dia #{deadline.strftime('%d/%m')}) já encerrou."
+      message = "Prazo de cancelamento encerrou em #{deadline.strftime('%H:%M')} de #{deadline.strftime('%d/%m')}."
+      respond_to do |format|
+        format.html { redirect_to appointments_path, alert: message }
+        format.json { render json: { error: message }, status: :unprocessable_entity }
+      end
       return
     end
+
     @appointment.update_columns(status: 'cancelled')
-    redirect_to appointments_path, notice: "Agendamento cancelado. O horário foi liberado."
+    respond_to do |format|
+      format.html { redirect_to appointments_path, notice: "Agendamento cancelado. O horário foi liberado." }
+      format.json { render json: { ok: true, status: 'cancelled' } }
+    end
   end
 
   def help
