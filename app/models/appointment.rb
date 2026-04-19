@@ -44,6 +44,34 @@ class Appointment < ApplicationRecord
       .where("acceptance_expires_at < ?", Time.current)
   }
 
+  # Expira aceites pendentes que já passaram do TTL de 3 min. Em Render free
+  # tier o ActiveJob :async não é confiável (jobs morrem entre requests), então
+  # a expiração é lazy: qualquer request relevante pode chamar este método
+  # como rede de segurança. Throttled via cache pra não martelar o banco.
+  # Retorna o número de registros expirados (0 se throttled ou nada a fazer).
+  def self.expire_stale_disponivel_acceptances!
+    # Throttle: no máximo uma execução por 30 segundos, app-wide. Se o cache
+    # não estiver configurado ou falhar, roda mesmo assim (fail-open).
+    if Rails.cache.respond_to?(:exist?) && Rails.cache.exist?("appointments:expire_stale:last_run")
+      return 0
+    end
+
+    count = where(status: "pending_acceptance", appointment_type: "disponivel")
+              .where("acceptance_expires_at < ?", Time.current)
+              .update_all(status: "cancelled", updated_at: Time.current)
+
+    begin
+      Rails.cache.write("appointments:expire_stale:last_run", Time.current, expires_in: 30.seconds)
+    rescue
+      # cache indisponível — sem problema, na próxima chamada roda de novo
+    end
+
+    count
+  rescue => e
+    Rails.logger.warn("Appointment.expire_stale_disponivel_acceptances! failed: #{e.message}")
+    0
+  end
+
   # ── HELPERS DE TIPO ───────────────────────────────────────────────────────
   def disponivel?
     appointment_type == "disponivel"

@@ -262,18 +262,10 @@ class DisponivelController < ApplicationController
 
   private
 
-  # Render (free tier) não tem um worker confiável pra rodar o
-  # ExpireDisponivelAcceptanceJob. Então expiramos lazy, on-read:
-  # qualquer leitura dessa tela primeiro marca como "cancelled" tudo que
-  # já passou do acceptance_expires_at mas ainda está pending_acceptance.
-  # Custo: 1 UPDATE barato (indexado por status + acceptance_expires_at).
+  # Delega para Appointment.expire_stale_disponivel_acceptances! — método
+  # throttled e centralizado (Render free tier pode não rodar o job async).
   def expire_stale_acceptances!
-    Appointment
-      .where(status: "pending_acceptance", appointment_type: "disponivel")
-      .where("acceptance_expires_at < ?", Time.current)
-      .update_all(status: "cancelled", updated_at: Time.current)
-  rescue => e
-    Rails.logger.warn("expire_stale_acceptances! failed: #{e.message}")
+    Appointment.expire_stale_disponivel_acceptances!
   end
 
   def build_available_slots(car_wash, from, to)

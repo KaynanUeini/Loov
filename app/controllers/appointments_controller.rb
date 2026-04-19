@@ -3,6 +3,9 @@ class AppointmentsController < ApplicationController
   skip_before_action :verify_authenticity_token, only: [:create]
   before_action :set_appointment, only: [:show, :cancel, :help]
   before_action :set_car_wash, only: [:new, :create]
+  # Cleanup lazy de Disponíveis vencidos a cada acesso. Throttled no model
+  # (1x/30s app-wide) — não pesa no banco mesmo com polling frequente.
+  before_action -> { Appointment.expire_stale_disponivel_acceptances! }, only: [:index, :create]
 
   def new
     if @car_wash.nil?

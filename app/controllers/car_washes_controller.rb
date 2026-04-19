@@ -3,6 +3,9 @@ class CarWashesController < ApplicationController
   before_action :set_car_wash, only: %i[show manage update available_times]
   before_action :ensure_owner_or_attendant, only: [:manage]
   before_action :ensure_owner, only: [:update]
+  # Mantém available_times e a listagem consistentes — se um pending_acceptance
+  # venceu, não deve mais bloquear aquele slot nas próximas queries.
+  before_action -> { Appointment.expire_stale_disponivel_acceptances! }, only: [:index, :show, :available_times]
 
   def index
     @car_washes = CarWash.all

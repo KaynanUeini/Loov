@@ -74,16 +74,9 @@ module Owner
       render json: { error: "Agendamento não encontrado." }, status: :not_found
     end
 
-    # Purga "lazy" de pendentes que já venceram o TTL de 3 min. Render free
-    # tier não roda o job de expiração de forma confiável, então o owner
-    # não deve enxergar reservas vencidas na fila.
+    # Delega para o método centralizado (throttled) no Appointment.
     def expire_stale_acceptances!
-      Appointment
-        .where(status: "pending_acceptance", appointment_type: "disponivel")
-        .where("acceptance_expires_at < ?", Time.current)
-        .update_all(status: "cancelled", updated_at: Time.current)
-    rescue => e
-      Rails.logger.warn("expire_stale_acceptances! failed: #{e.message}")
+      Appointment.expire_stale_disponivel_acceptances!
     end
 
     def ensure_owner_or_attendant
