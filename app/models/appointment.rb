@@ -23,9 +23,15 @@ class Appointment < ApplicationRecord
   validates :appointment_type, inclusion: { in: TYPES }
   validates :walk_in_name,  presence: true, if: :walk_in?
 
-  validate :within_operating_hours, unless: :walk_in?
+  # Validações de "é um horário válido para marcar" rodam só na criação ou
+  # quando o horário muda. Uma vez criado, o agendamento fica imune — senão
+  # mudanças de status (compareceu/ausente) quebrariam em casos limítrofes
+  # (ex: owner editou operating_hours depois, ou validação ficou mais estrita).
+  validate :within_operating_hours, unless: :walk_in?,
+           if: -> { new_record? || will_save_change_to_scheduled_at? || will_save_change_to_service_id? }
+  validate :not_during_closure, unless: :walk_in?,
+           if: -> { new_record? || will_save_change_to_scheduled_at? }
   validate :service_duration_allows_disponivel, if: :disponivel?
-  validate :not_during_closure, unless: :walk_in?
 
   # ── SCOPES ────────────────────────────────────────────────────────────────
   scope :regular,            -> { where(appointment_type: "regular") }
