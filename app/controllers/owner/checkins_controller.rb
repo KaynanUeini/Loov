@@ -197,12 +197,34 @@ module Owner
       )
 
       # Notificação in-app automática (updated_at atualizado acima)
-      # Email apenas se o agendamento tiver usuário cadastrado
+      # Email + push apenas se o agendamento tiver usuário cadastrado
       if @appointment.user.present?
         begin
           AppointmentMailer.owner_cancellation(@appointment).deliver_now
         rescue => e
           Rails.logger.error("[CheckinsController#cancel] Email error: #{e.message}")
+        end
+
+        begin
+          shop     = @appointment.car_wash&.name || "o lava-rápido"
+          svc      = @appointment.service&.title || "seu atendimento"
+          when_str = @appointment.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%d/%m às %H:%M")
+
+          body  = "#{svc} em #{when_str}."
+          body << " #{reason}." if reason.present?
+          body << " Abra o app para escolher um novo horário."
+
+          ExpoPushNotifier.new.notify_user(
+            @appointment.user,
+            title: "#{shop} cancelou sua reserva",
+            body:  body,
+            data:  {
+              type:           "appointment_cancelled",
+              appointment_id: @appointment.id,
+            }
+          )
+        rescue => e
+          Rails.logger.error("[CheckinsController#cancel] Push error: #{e.message}")
         end
       end
 
