@@ -1,5 +1,6 @@
 class MonthlyCost < ApplicationRecord
   belongs_to :car_wash
+  has_many :custom_cost_lines, dependent: :destroy
 
   validates :year,  presence: true
   validates :month, presence: true, inclusion: { in: 1..12 }
@@ -10,12 +11,18 @@ class MonthlyCost < ApplicationRecord
     MONTH_NAMES[month - 1]
   end
 
+  # Totais incluem os 5 campos padrão + as linhas customizadas do dono.
+  # other_fixed e other_variable continuam sendo somados pra não perder
+  # dados de meses lançados antes do feature de linhas customizadas; a UI
+  # atual não expõe mais esses campos, eles ficam 0 para meses novos.
   def total_fixed
-    [rent, salaries, utilities, other_fixed].compact.sum
+    standard = [rent, salaries, utilities, other_fixed].compact.sum
+    standard + custom_cost_lines.fixed_type.sum(:amount).to_f
   end
 
   def total_variable
-    [products, maintenance, other_variable].compact.sum
+    standard = [products, maintenance, other_variable].compact.sum
+    standard + custom_cost_lines.variable_type.sum(:amount).to_f
   end
 
   def total

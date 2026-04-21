@@ -87,6 +87,9 @@ module Owner
             other_fixed:    @cost.other_fixed.to_f,
             other_variable: @cost.other_variable.to_f,
             notes:          @cost.notes.to_s,
+            custom_lines:   (@cost.persisted? ? @cost.custom_cost_lines.ordered : []).map { |l|
+              { id: l.id, name: l.name, amount: l.amount.to_f, cost_type: l.cost_type, position: l.position }
+            },
             pending_fields: @pending_fields,
             has_pending:    @has_pending,
             is_attendant:   current_user.attendant?
@@ -164,7 +167,13 @@ module Owner
 
       # Owner: salva direto
       @cost = MonthlyCost.for_month(@car_wash, year, month)
-      if @cost.update(cost_params.merge(year: year, month: month))
+      ok = ActiveRecord::Base.transaction do
+        next false unless @cost.update(cost_params.merge(year: year, month: month))
+        sync_custom_lines!(@cost, params[:custom_lines])
+        true
+      end
+
+      if ok
         if request.format.json?
           render json: { ok: true, message: "Custos de #{MonthlyCost::MONTH_NAMES[month - 1]}/#{year} salvos." }
         else
@@ -212,6 +221,47 @@ module Owner
         :rent, :salaries, :utilities, :products,
         :maintenance, :other_fixed, :other_variable, :notes
       )
+    end
+
+    # Sincroniza as linhas customizadas do mês. Estratégia:
+    #   - Linhas com `id` → update (se pertencem ao mesmo monthly_cost)
+    #   - Linhas sem `id` → create
+    #   - Linhas existentes no banco cujo id NÃO veio no payload → destroy
+    # Ignora linhas com nome vazio ou amount <= 0 (cleanup natural).
+    def sync_custom_lines!(monthly_cost, payload)
+      incoming = Array(payload).map do |h|
+        h = h.respond_to?(:permit) ? h.permit(:id, :name, :amount, :cost_type, :position).to_h : h.to_h.stringify_keys
+        h.slice("id", "name", "amount", "cost_type", "position")
+      end
+
+      # Filtra linhas vazias ou zeradas — dono limpou o campo, vira deleção.
+      incoming = incoming.reject do |h|
+        name   = h["name"].to_s.strip
+        amount = h["amount"].to_f
+        name.empty? || amount <= 0
+      end
+
+      keep_ids = incoming.map { |h| h["id"] }.compact.map(&:to_i)
+      monthly_cost.custom_cost_lines.where.not(id: keep_ids).destroy_all if monthly_cost.persisted?
+
+      incoming.each_with_index do |h, idx|
+        cost_type = h["cost_type"].to_s
+        next unless CustomCostLine::COST_TYPES.include?(cost_type)
+
+        attrs = {
+          name:      h["name"].to_s.strip[0, 80],
+          amount:    h["amount"].to_f.round(2),
+          cost_type: cost_type,
+          position:  (h["position"] || idx).to_i,
+        }
+
+        if h["id"].present?
+          line = monthly_cost.custom_cost_lines.find_by(id: h["id"])
+          line&.update(attrs)
+        else
+          monthly_cost.custom_cost_lines.create(attrs)
+        end
+      end
     end
   end
 end
