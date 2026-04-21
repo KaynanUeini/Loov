@@ -13,6 +13,17 @@ def weighted_sample(weights_hash)
   weights_hash.keys.last
 end
 
+# Dados de seed propositalmente criam cenários de alta densidade para
+# testar o cálculo de disponibilidade — incluindo overbooking além da
+# capacidade. O model tem `validate :fits_in_capacity` desde o commit
+# que fechou os caminhos de overbooking em produção; aqui pulamos
+# essa validação explicitamente via `skip_capacity_check`.
+def seed_create_appointment!(attrs)
+  appt = Appointment.new(attrs)
+  appt.skip_capacity_check = true
+  appt.save!
+end
+
 DAY_WEIGHTS = {
   1 => 8, 2 => 7, 3 => 9, 4 => 10, 5 => 18, 6 => 14
 }.freeze
@@ -70,7 +81,7 @@ count.times do
   end
 
   begin
-    Appointment.create!(
+    seed_create_appointment!(
       user: client, car_wash: car_wash,
       service: service, scheduled_at: scheduled_at, status: status
       )
@@ -97,7 +108,7 @@ loyalty_clients.each do |client|
     end
 
     begin
-      Appointment.create!(
+      seed_create_appointment!(
         user: client, car_wash: car_wash,
         service: service, scheduled_at: scheduled_at, status: status
         )
