@@ -13,15 +13,83 @@ def weighted_sample(weights_hash)
   weights_hash.keys.last
 end
 
-# Dados de seed propositalmente criam cenários de alta densidade para
-# testar o cálculo de disponibilidade — incluindo overbooking além da
-# capacidade. O model tem `validate :fits_in_capacity` desde o commit
-# que fechou os caminhos de overbooking em produção; aqui pulamos
-# essa validação explicitamente via `skip_capacity_check`.
+# Cria um agendamento respeitando TODAS as validações, incluindo
+# capacidade. Antes o seed pulava essa checagem e acabava criando
+# overbooking (ex: 8 serviços no mesmo slot com cap 3), o que batia com
+# o que o model enforce em produção e passava a sensação de bug ao
+# auditar o sistema. Agora o seed espelha a realidade operacional.
 def seed_create_appointment!(attrs)
-  appt = Appointment.new(attrs)
-  appt.skip_capacity_check = true
-  appt.save!
+  Appointment.create!(attrs)
+end
+
+# Tenta criar um agendamento com os parâmetros dados. Se o slot estiver
+# cheio (ou outra validação falhar), sorteia outro dia/hora e tenta de
+# novo, até `max_retries` vezes. Evita que o seed gere muito menos do
+# que o `count:` alvo quando capacidade é baixa e HOUR_WEIGHTS concentra
+# volume nas mesmas horas.
+def seed_attempt_appointment(car_wash:, valid_dates:, clients:, services:,
+                             svc_weights:, cancelled_rate:, no_show_rate:,
+                             max_retries: 12)
+  max_retries.times do
+    date = valid_dates.sample
+    hour = weighted_sample(HOUR_WEIGHTS)
+    minute = [0, 30].sample
+    next if date.wday == 6 && hour >= 14
+
+    scheduled_at = Time.zone.local(date.year, date.month, date.day, hour, minute)
+    client       = clients.sample
+    svc_idx      = weighted_sample(svc_weights)
+    service      = services[svc_idx] || services.first
+
+    status = if scheduled_at > Time.current
+      "confirmed"
+    elsif rand < cancelled_rate
+      "cancelled"
+    elsif rand < no_show_rate
+      "no_show"
+    else
+      "attended"
+    end
+
+    begin
+      return seed_create_appointment!(
+        user: client, car_wash: car_wash,
+        service: service, scheduled_at: scheduled_at, status: status
+      )
+    rescue ActiveRecord::RecordInvalid
+      # slot cheio ou inválido — tenta outro horário
+    end
+  end
+  nil
+end
+
+def seed_attempt_loyalty_visit(client:, car_wash:, valid_dates:, services:, max_retries: 10)
+  max_retries.times do
+    date = valid_dates.sample
+    hour = weighted_sample(HOUR_WEIGHTS)
+    minute = [0, 30].sample
+    next if date.wday == 6 && hour >= 14
+
+    scheduled_at = Time.zone.local(date.year, date.month, date.day, hour, minute)
+    service      = services.sample
+
+    status = if scheduled_at > Time.current
+      "confirmed"
+    elsif rand < 0.06
+      "no_show"
+    else
+      "attended"
+    end
+
+    begin
+      return seed_create_appointment!(
+        user: client, car_wash: car_wash,
+        service: service, scheduled_at: scheduled_at, status: status
+      )
+    rescue ActiveRecord::RecordInvalid
+    end
+  end
+  nil
 end
 
 DAY_WEIGHTS = {
@@ -60,60 +128,19 @@ valid_dates = (start_range..end_range).select { |d| DAY_WEIGHTS.key?(d.wday) }
 svc_weights = service_weights || services.each_with_index.map { |_, i| [i, [40, 25, 15, 8, 5, 4, 2, 1][i] || 2] }.to_h
 
 count.times do
-  date    = valid_dates.sample
-  hour    = weighted_sample(HOUR_WEIGHTS)
-  minute  = [0, 30].sample
-  next if date.wday == 6 && hour >= 14
-
-  scheduled_at = Time.zone.local(date.year, date.month, date.day, hour, minute)
-  client       = clients.sample
-  svc_idx      = weighted_sample(svc_weights)
-  service      = services[svc_idx] || services.first
-
-  status = if scheduled_at > Time.current
-    "confirmed"
-  elsif rand < cancelled_rate
-    "cancelled"
-  elsif rand < no_show_rate
-    "no_show"
-  else
-    "attended"
-  end
-
-  begin
-    seed_create_appointment!(
-      user: client, car_wash: car_wash,
-      service: service, scheduled_at: scheduled_at, status: status
-      )
-  rescue ActiveRecord::RecordInvalid
-  end
+  seed_attempt_appointment(
+    car_wash: car_wash, valid_dates: valid_dates, clients: clients,
+    services: services, svc_weights: svc_weights,
+    cancelled_rate: cancelled_rate, no_show_rate: no_show_rate
+  )
 end
 
 loyalty_clients.each do |client|
   rand(loyalty_visits).times do
-    date    = valid_dates.sample
-    hour    = weighted_sample(HOUR_WEIGHTS)
-    minute  = [0, 30].sample
-    next if date.wday == 6 && hour >= 14
-
-    scheduled_at = Time.zone.local(date.year, date.month, date.day, hour, minute)
-    service      = services.sample
-
-    status = if scheduled_at > Time.current
-      "confirmed"
-    elsif rand < 0.06
-      "no_show"
-    else
-      "attended"
-    end
-
-    begin
-      seed_create_appointment!(
-        user: client, car_wash: car_wash,
-        service: service, scheduled_at: scheduled_at, status: status
-        )
-    rescue ActiveRecord::RecordInvalid
-    end
+    seed_attempt_loyalty_visit(
+      client: client, car_wash: car_wash,
+      valid_dates: valid_dates, services: services
+    )
   end
 end
 end
