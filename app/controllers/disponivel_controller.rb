@@ -275,8 +275,8 @@ class DisponivelController < ApplicationController
     current       = from.beginning_of_day + next_slot_min.minutes
 
     while current <= to
-      booked = Appointment.where(car_wash: car_wash, scheduled_at: current)
-      .where(status: %w[confirmed pending_acceptance]).count
+      booked = Appointment.occupying_capacity
+        .where(car_wash: car_wash, scheduled_at: current).count
       if booked < capacity
         return [current]
       end
@@ -286,7 +286,8 @@ class DisponivelController < ApplicationController
   end
   def slot_available?(car_wash, slot)
     capacity = [car_wash.capacity_per_slot.to_i, 1].max
-    booked   = Appointment.where(car_wash: car_wash, scheduled_at: slot).where(status: %w[confirmed pending_acceptance]).count
+    booked   = Appointment.occupying_capacity
+      .where(car_wash: car_wash, scheduled_at: slot).count
     booked < capacity
   end
 end

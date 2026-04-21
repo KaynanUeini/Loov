@@ -225,9 +225,9 @@ class AppointmentsController < ApplicationController
       # (slot já foi usado) — sem eles, dois fluxos paralelos (regular vs
       # disponível, ou um attended histórico) colidiriam no mesmo horário.
       overlapping = Appointment
+        .occupying_capacity
         .joins(:service)
         .where(car_wash_id: @car_wash.id)
-        .where(status: %w[confirmed pending_acceptance attended])
         .where(
           "appointments.scheduled_at < ? AND (appointments.scheduled_at + (services.duration * interval '1 minute')) > ?",
           end_time, start_time

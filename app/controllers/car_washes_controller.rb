@@ -315,9 +315,9 @@ class CarWashesController < ApplicationController
       end
 
       appointments = @car_wash.appointments
+      .occupying_capacity
       .joins(:service)
       .where("DATE(scheduled_at) = ?", date)
-      .where(status: %w[confirmed pending_acceptance attended])
       .select("appointments.scheduled_at, services.duration AS svc_duration")
       .to_a
 

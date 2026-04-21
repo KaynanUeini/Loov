@@ -14,17 +14,12 @@ module Owner
         return
       end
 
-      # Inclui todos os status que o cálculo de disponibilidade considera
-      # ocupando o slot: "confirmed" (reservas regulares), "pending_acceptance"
-      # (disponível aguardando aceite do dono) e walk-ins (criados direto como
-      # "attended"). Sem isso, o dono via só "confirmed" e não entendia por
-      # que o app do cliente bloqueava horários que pareciam livres.
+      # Usa a mesma regra que `available_times` aplica pra bloquear
+      # capacidade — assim o que o dono vê aqui bate EXATAMENTE com o
+      # que impede o cliente de agendar.
       @appointments = car_wash.appointments
+        .occupying_capacity
         .where("scheduled_at::date >= CURRENT_DATE")
-        .where(
-          "appointments.status IN (?) OR (appointments.status = ? AND appointments.walk_in = ?)",
-          %w[confirmed pending_acceptance], "attended", true
-        )
 
       # HTML-only filters preservados (period / search)
       if params[:period].present?

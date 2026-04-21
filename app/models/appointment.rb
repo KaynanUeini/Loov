@@ -50,6 +50,27 @@ class Appointment < ApplicationRecord
       .where("acceptance_expires_at < ?", Time.current)
   }
 
+  # ÚNICA fonte de verdade para "este agendamento ocupa uma vaga da
+  # capacidade do lava-rápido agora". Use em todo lugar que precise
+  # contar quantos agendamentos sobrepõem um horário — assim não dá
+  # pra uma parte do código ficar out-of-sync com outra.
+  #
+  # Inclui:
+  #   - confirmed       (reserva regular aceita)
+  #   - attended        (inclui walk-ins, que são criados já como attended)
+  #   - pending_acceptance apenas se o TTL do aceite ainda não expirou.
+  #     Se o job de limpeza travar (Render free tier pode engolir jobs
+  #     async), esse filtro evita que um pendente-zumbi bloqueie slot.
+  scope :occupying_capacity, -> {
+    where(
+      "appointments.status IN (?) OR " \
+      "(appointments.status = ? AND appointments.acceptance_expires_at > ?)",
+      %w[confirmed attended],
+      "pending_acceptance",
+      Time.current
+    )
+  }
+
   # Expira aceites pendentes que já passaram do TTL de 3 min. Em Render free
   # tier o ActiveJob :async não é confiável (jobs morrem entre requests), então
   # a expiração é lazy: qualquer request relevante pode chamar este método

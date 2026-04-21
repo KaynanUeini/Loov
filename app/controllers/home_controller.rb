@@ -141,8 +141,8 @@ class HomeController < ApplicationController
 
         while slot_candidate <= window_end
           booked = Appointment
+            .occupying_capacity
             .where(car_wash: cw, scheduled_at: slot_candidate)
-            .where(status: %w[confirmed pending_acceptance])
             .count
 
           if booked < capacity
