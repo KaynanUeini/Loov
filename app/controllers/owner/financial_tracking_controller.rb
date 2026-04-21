@@ -53,6 +53,13 @@ module Owner
       @is_all_filter    = params[:period] == "all"
       @is_custom_filter = params[:period] == "custom"
 
+      # ── Curto-circuito JSON (app mobile) ───────────────────────────────────
+      # Pula toda a computação só-HTML (top services, attendance, demand, etc)
+      # quando o caller é o app — economiza 10+ queries por request.
+      if request.format.json?
+        return render json: build_financial_json(car_wash)
+      end
+
       # ── BASE: apenas atendimentos efetivados pelo dono ─────────────────────
       base = car_wash.appointments
       .where(status: "attended")
@@ -321,12 +328,9 @@ module Owner
         rate:     total_in_period > 0 ? (@total_appointments.to_f / total_in_period * 100).round(1) : 0.0
       }
 
-      # ── RESPOSTA JSON (consumida pelo app mobile) ──────────────────────────
+      # JSON já saiu acima via curto-circuito; aqui só HTML.
       respond_to do |format|
         format.html   # renderiza view erb normalmente
-        format.json do
-          render json: build_financial_json(car_wash)
-        end
       end
     end
 
@@ -354,20 +358,21 @@ module Owner
       end
     end
 
-    # ── Novo shape JSON (v2 — DRE completo, KPIs, chart com 3 séries) ─────
-    # Mantém o caminho HTML intacto. As @variáveis do HTML continuam sendo
-    # computadas acima; aqui só construímos um payload novo.
+    # ── JSON shape v2 — otimizado: bulk-fetch + group_by SQL ───────────────
+    # Roda numa quantidade pequena e constante de queries (≈5) independente
+    # do tamanho do período. Antes era O(N) com N = dias no período.
 
     def build_financial_json(car_wash)
-      revenue      = @total_sales.to_f
-      open_revenue = compute_open_revenue(car_wash, @start_date, @end_date)
-      costs        = compute_period_costs(car_wash, @start_date, @end_date)
-      profit       = revenue - costs[:total]
-      margin       = revenue > 0 ? ((profit / revenue) * 100).round(1) : nil
+      cost_lookup       = build_cost_lookup(car_wash)
+      revenue_in_period = revenue_sum_in_range(car_wash, @start_date, @end_date)
+      open_revenue      = open_revenue_sum_in_range(car_wash, @start_date, @end_date)
+      costs             = costs_for_range_fast(@start_date, @end_date, cost_lookup)
+      profit            = revenue_in_period - costs[:total]
+      margin            = revenue_in_period > 0 ? ((profit / revenue_in_period) * 100).round(1) : nil
 
-      chart        = build_chart_series(car_wash, @start_date, @end_date, @granularity)
-      monthly_dre  = build_monthly_dre(car_wash)
-      trailing     = build_trailing_12m(monthly_dre)
+      chart       = build_chart_series_fast(car_wash, @start_date, @end_date, @granularity, cost_lookup)
+      monthly_dre = build_monthly_dre_fast(car_wash, cost_lookup)
+      trailing    = build_trailing_12m(monthly_dre)
 
       {
         period:        params[:period] || "month",
@@ -376,7 +381,7 @@ module Owner
         end_date:      @end_date.iso8601,
         granularity:   @granularity,
         kpis: {
-          revenue:      revenue.round(2),
+          revenue:      revenue_in_period.round(2),
           open_revenue: open_revenue.round(2),
           costs:        costs,
           profit:       profit.round(2),
@@ -388,13 +393,27 @@ module Owner
       }
     end
 
-    # Receita "em aberto" = agendamentos confirmed que ainda não aconteceram,
-    # dentro da janela do período filtrado. Se o período já passou inteiro,
-    # retorna 0 (não faz sentido "em aberto" no passado).
-    def compute_open_revenue(car_wash, start_date, end_date)
+    # Carrega TODOS os monthly_costs relevantes (período + 12 meses pra DRE)
+    # numa única query e retorna um hash { [year, month] => MonthlyCost }.
+    def build_cost_lookup(car_wash)
+      trailing_start_year = 12.months.ago.year
+      max_year            = [@end_date.year, Date.current.year].max
+      car_wash.monthly_costs
+        .where(year: trailing_start_year..max_year)
+        .index_by { |c| [c.year, c.month] }
+    end
+
+    def revenue_sum_in_range(car_wash, start_date, end_date)
+      car_wash.appointments
+        .where(status: "attended")
+        .where(scheduled_at: start_date.beginning_of_day..end_date.end_of_day)
+        .joins(:service)
+        .sum("services.price").to_f
+    end
+
+    def open_revenue_sum_in_range(car_wash, start_date, end_date)
       period_end = end_date.end_of_day
       return 0.0 if period_end < Time.current
-
       effective_from = [start_date.beginning_of_day, Time.current].max
       car_wash.appointments
         .where(status: "confirmed")
@@ -403,18 +422,24 @@ module Owner
         .sum("services.price").to_f
     end
 
-    # Soma os custos dos meses que se sobrepõem ao período, pró-ratando o
-    # custo mensal pelos dias dentro do intervalo. Ex: filtro de 15 dias em
-    # abril soma (15/30) * custo_abril. Retorna fixo/variável/total.
-    def compute_period_costs(car_wash, start_date, end_date)
-      fixed = 0.0
+    # Itera por MÊS (não por dia) usando lookup em memória — bem mais rápido
+    # que find_by por dia. Para período curto (week/day) ainda é 1-2 iterações.
+    def costs_for_range_fast(start_date, end_date, cost_lookup)
+      fixed    = 0.0
       variable = 0.0
-      (start_date..end_date).each do |day|
-        mc = car_wash.monthly_costs.find_by(year: day.year, month: day.month)
-        next unless mc
-        days_in_month = Date.new(day.year, day.month, -1).day.to_f
-        fixed    += mc.total_fixed.to_f / days_in_month
-        variable += mc.total_variable.to_f / days_in_month
+      cursor   = start_date.beginning_of_month
+      while cursor <= end_date
+        month_start_in_range = [cursor, start_date].max
+        month_end_in_range   = [cursor.end_of_month, end_date].min
+        days_overlap         = (month_end_in_range - month_start_in_range).to_i + 1
+        days_in_month        = Date.new(cursor.year, cursor.month, -1).day
+        mc = cost_lookup[[cursor.year, cursor.month]]
+        if mc && days_in_month > 0
+          fraction = days_overlap.to_f / days_in_month
+          fixed    += mc.total_fixed.to_f    * fraction
+          variable += mc.total_variable.to_f * fraction
+        end
+        cursor = cursor.next_month
       end
       {
         fixed:    fixed.round(2),
@@ -423,27 +448,32 @@ module Owner
       }
     end
 
-    def build_chart_series(car_wash, start_date, end_date, granularity)
+    def build_chart_series_fast(car_wash, start_date, end_date, granularity, cost_lookup)
       case granularity
       when "hour"
-        build_hourly_chart(car_wash, start_date)
+        build_hourly_chart_fast(car_wash, start_date, cost_lookup)
       when "month", "year"
-        build_monthly_chart(car_wash, start_date, end_date)
+        build_monthly_chart_fast(car_wash, start_date, end_date, cost_lookup)
       else
-        build_daily_chart(car_wash, start_date, end_date)
+        build_daily_chart_fast(car_wash, start_date, end_date, cost_lookup)
       end
     end
 
-    def build_hourly_chart(car_wash, day)
-      mc            = car_wash.monthly_costs.find_by(year: day.year, month: day.month)
+    def build_hourly_chart_fast(car_wash, day, cost_lookup)
+      raw = car_wash.appointments
+        .where(status: "attended")
+        .where(scheduled_at: day.beginning_of_day..day.end_of_day)
+        .joins(:service)
+        .group(Arel.sql("EXTRACT(HOUR FROM (scheduled_at AT TIME ZONE 'America/Sao_Paulo'))"))
+        .sum("services.price")
+      rev_by_hour = raw.each_with_object({}) { |(k, v), h| h[k.to_i] = v.to_f }
+
+      mc            = cost_lookup[[day.year, day.month]]
       days_in_month = Date.new(day.year, day.month, -1).day.to_f
       hourly_cost   = mc ? (mc.total.to_f / days_in_month / 24.0) : 0.0
+
       (0..23).map do |h|
-        bucket_start = day.in_time_zone.change(hour: h, min: 0, sec: 0)
-        bucket_end   = bucket_start + 59.minutes + 59.seconds
-        rev = car_wash.appointments
-          .where(status: "attended", scheduled_at: bucket_start..bucket_end)
-          .joins(:service).sum("services.price").to_f
+        rev = rev_by_hour[h] || 0.0
         {
           label:   format("%02dh", h),
           revenue: rev.round(2),
@@ -453,14 +483,23 @@ module Owner
       end
     end
 
-    def build_daily_chart(car_wash, start_date, end_date)
+    def build_daily_chart_fast(car_wash, start_date, end_date, cost_lookup)
+      raw = car_wash.appointments
+        .where(status: "attended")
+        .where(scheduled_at: start_date.beginning_of_day..end_date.end_of_day)
+        .joins(:service)
+        .group(Arel.sql("DATE(scheduled_at AT TIME ZONE 'America/Sao_Paulo')"))
+        .sum("services.price")
+      rev_by_day = raw.each_with_object({}) do |(k, v), h|
+        date = k.is_a?(String) ? Date.parse(k) : k.to_date
+        h[date] = v.to_f
+      end
+
       (start_date..end_date).map do |day|
-        mc            = car_wash.monthly_costs.find_by(year: day.year, month: day.month)
+        mc            = cost_lookup[[day.year, day.month]]
         days_in_month = Date.new(day.year, day.month, -1).day.to_f
         daily_cost    = mc ? (mc.total.to_f / days_in_month) : 0.0
-        rev = car_wash.appointments
-          .where(status: "attended", scheduled_at: day.beginning_of_day..day.end_of_day)
-          .joins(:service).sum("services.price").to_f
+        rev           = rev_by_day[day] || 0.0
         {
           label:   day.strftime("%d/%m"),
           revenue: rev.round(2),
@@ -470,16 +509,24 @@ module Owner
       end
     end
 
-    def build_monthly_chart(car_wash, start_date, end_date)
+    def build_monthly_chart_fast(car_wash, start_date, end_date, cost_lookup)
+      raw = car_wash.appointments
+        .where(status: "attended")
+        .where(scheduled_at: start_date.beginning_of_day..end_date.end_of_day)
+        .joins(:service)
+        .group(Arel.sql("DATE_TRUNC('month', scheduled_at AT TIME ZONE 'America/Sao_Paulo')"))
+        .sum("services.price")
+      rev_by_month = raw.each_with_object({}) do |(k, v), h|
+        date = k.is_a?(String) ? Date.parse(k) : k.to_date
+        h[[date.year, date.month]] = v.to_f
+      end
+
       buckets = []
       cursor  = start_date.beginning_of_month
       while cursor <= end_date
-        month_end  = [cursor.end_of_month, end_date].min
-        mc         = car_wash.monthly_costs.find_by(year: cursor.year, month: cursor.month)
+        mc         = cost_lookup[[cursor.year, cursor.month]]
         month_cost = mc&.total.to_f
-        rev = car_wash.appointments
-          .where(status: "attended", scheduled_at: cursor.beginning_of_day..month_end.end_of_day)
-          .joins(:service).sum("services.price").to_f
+        rev        = rev_by_month[[cursor.year, cursor.month]] || 0.0
         buckets << {
           label:   MonthlyCost::MONTH_NAMES[cursor.month - 1][0..2],
           revenue: rev.round(2),
@@ -491,32 +538,41 @@ module Owner
       buckets
     end
 
-    def build_monthly_dre(car_wash)
+    def build_monthly_dre_fast(car_wash, cost_lookup)
+      window_start = 11.months.ago.beginning_of_month
+      window_end   = Date.current.end_of_month
+
+      rev_raw = car_wash.appointments
+        .where(status: "attended")
+        .where(scheduled_at: window_start.beginning_of_day..window_end.end_of_day)
+        .joins(:service)
+        .group(Arel.sql("DATE_TRUNC('month', scheduled_at AT TIME ZONE 'America/Sao_Paulo')"))
+        .sum("services.price")
+      rev_by_month = rev_raw.each_with_object({}) do |(k, v), h|
+        date = k.is_a?(String) ? Date.parse(k) : k.to_date
+        h[[date.year, date.month]] = v.to_f
+      end
+
+      open_raw = car_wash.appointments
+        .where(status: "confirmed")
+        .where("scheduled_at >= ?", Time.current)
+        .where(scheduled_at: Time.current..window_end.end_of_day)
+        .joins(:service)
+        .group(Arel.sql("DATE_TRUNC('month', scheduled_at AT TIME ZONE 'America/Sao_Paulo')"))
+        .sum("services.price")
+      open_by_month = open_raw.each_with_object({}) do |(k, v), h|
+        date = k.is_a?(String) ? Date.parse(k) : k.to_date
+        h[[date.year, date.month]] = v.to_f
+      end
+
       (0..11).map do |i|
-        date   = i.months.ago
-        year   = date.year
-        month  = date.month
-        cost   = car_wash.monthly_costs.find_by(year: year, month: month)
+        date  = i.months.ago
+        year  = date.year
+        month = date.month
+        cost  = cost_lookup[[year, month]]
 
-        month_start = date.beginning_of_month
-        month_end   = date.end_of_month
-
-        revenue = car_wash.appointments
-          .where(status: "attended")
-          .joins(:service)
-          .where(scheduled_at: month_start.beginning_of_day..month_end.end_of_day)
-          .sum("services.price").to_f
-
-        open_from = [month_start.beginning_of_day, Time.current].max
-        open_revenue = if month_end.end_of_day < Time.current
-          0.0
-        else
-          car_wash.appointments
-            .where(status: "confirmed")
-            .joins(:service)
-            .where(scheduled_at: open_from..month_end.end_of_day)
-            .sum("services.price").to_f
-        end
+        revenue      = rev_by_month[[year, month]]  || 0.0
+        open_revenue = open_by_month[[year, month]] || 0.0
 
         fixed      = cost&.total_fixed.to_f
         variable   = cost&.total_variable.to_f
