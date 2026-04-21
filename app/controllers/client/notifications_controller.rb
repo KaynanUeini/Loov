@@ -81,10 +81,23 @@ module Client
             }
           when "cancelled"
             key = "appt_cancelled-#{a.id}"
+            by_owner = a.cancelled_by_role.to_s == "owner"
+            reason   = a.cancellation_reason.to_s.strip
+
+            if by_owner
+              title = "#{shop} cancelou sua reserva"
+              desc  = "#{svc} em #{when_str}."
+              desc << " #{reason}." if reason.present?
+              desc << " Reagende quando quiser."
+            else
+              title = "Reserva cancelada"
+              desc  = "#{svc} em #{when_str} · #{shop}"
+            end
+
             list << {
               id: key, type: "appointment_cancelled",
-              title: "Reserva cancelada",
-              desc:  "#{shop} · #{svc} · #{when_str}",
+              title: title,
+              desc:  desc,
               created_at: a.updated_at.iso8601,
               read: reads.key?(key)
             }
