@@ -54,7 +54,110 @@ module Owner
       end
     end
 
+    # GET /owner/car_wash/slot_diagnostics?date=YYYY-MM-DD&duration=30
+    #
+    # Retorna, para cada slot do dia, a contagem e a lista completa de
+    # agendamentos que bloqueiam aquele horário. Espelha exatamente a lógica
+    # do `available_times` — mas com transparência total. Útil pro dono
+    # entender "por que o cliente não consegue marcar nesse horário?".
+    def slot_diagnostics
+      Appointment.expire_stale_disponivel_acceptances!
+
+      tz = "America/Sao_Paulo"
+      begin
+        date = Date.parse(params[:date].to_s)
+      rescue ArgumentError, TypeError
+        date = Date.current
+      end
+      duration = params[:duration].to_i
+      duration = 30 if duration <= 0
+
+      capacity = [@car_wash.capacity_per_slot.to_i, 1].max
+      operating_hour = @car_wash.operating_hours.find_by(day_of_week: date.wday)
+
+      unless operating_hour
+        render json: {
+          date:               date.iso8601,
+          capacity_per_slot:  capacity,
+          duration:           duration,
+          closed:             true,
+          slots:              []
+        } and return
+      end
+
+      opens_at_min  = (operating_hour.opens_at.hour  * 60) + operating_hour.opens_at.min
+      closes_at_min = (operating_hour.closes_at.hour * 60) + operating_hour.closes_at.min
+
+      now_sp    = Time.current.in_time_zone(tz)
+      is_today  = date == Date.current
+      now_min   = is_today ? now_sp.hour * 60 + now_sp.min : 0
+      lock_threshold = now_min + 45
+
+      grid_opens = if is_today && now_min >= opens_at_min
+        slots_passed = ((now_min - opens_at_min).to_f / duration).ceil
+        opens_at_min + (slots_passed * duration)
+      else
+        opens_at_min
+      end
+
+      appts = @car_wash.appointments
+        .occupying_capacity
+        .where("DATE(scheduled_at) = ?", date)
+        .includes(:service, :user)
+        .to_a
+
+      slots = []
+      current = grid_opens
+      while current + duration <= closes_at_min
+        time_end = current + duration
+
+        blocking = appts.select do |a|
+          s = (a.scheduled_at.in_time_zone(tz).hour * 60) + a.scheduled_at.in_time_zone(tz).min
+          d = a.service&.duration.to_i
+          next false if d <= 0
+          current < (s + d) && time_end > s
+        end
+
+        disp_only = is_today && current < lock_threshold
+        slots << {
+          time:              format("%02d:%02d", current / 60, current % 60),
+          count:             blocking.size,
+          capacity:          capacity,
+          regular_available: blocking.size < capacity && !disp_only,
+          disponivel_only:   disp_only,
+          blocking:          blocking.map { |a| diagnostics_appt_json(a, tz) }
+        }
+        current += duration
+      end
+
+      render json: {
+        date:              date.iso8601,
+        now:               is_today ? now_sp.strftime("%H:%M") : nil,
+        capacity_per_slot: capacity,
+        duration:          duration,
+        lock_minutes:      45,
+        operating_hours: {
+          opens_at:  operating_hour.opens_at.strftime("%H:%M"),
+          closes_at: operating_hour.closes_at.strftime("%H:%M")
+        },
+        slots: slots
+      }
+    end
+
     private
+
+    def diagnostics_appt_json(a, tz)
+      {
+        id:           a.id,
+        time:         a.scheduled_at.in_time_zone(tz).strftime("%H:%M"),
+        duration:     a.service&.duration,
+        service:      a.service&.title,
+        client:       a.walk_in? ? (a.walk_in_name.presence || "Avulso") : (a.user&.display_name || "—"),
+        status:       a.status,
+        walk_in:      a.walk_in,
+        acceptance_expires_at: a.acceptance_expires_at&.iso8601
+      }
+    end
 
     def set_car_wash
       @car_wash = current_user.car_washes.first

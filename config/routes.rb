@@ -58,8 +58,9 @@ Rails.application.routes.draw do
   end
 
   namespace :owner do
-    get   'car_wash', to: 'car_wash#show'
-    patch 'car_wash', to: 'car_wash#update'
+    get   'car_wash',                  to: 'car_wash#show'
+    patch 'car_wash',                  to: 'car_wash#update'
+    get   'car_wash/slot_diagnostics', to: 'car_wash#slot_diagnostics'
 
     get  'onboarding',          to: 'onboarding#show',          as: :onboarding
     post 'onboarding/car_wash', to: 'onboarding#save_car_wash', as: :onboarding_car_wash
