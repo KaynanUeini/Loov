@@ -23,6 +23,12 @@ class Appointment < ApplicationRecord
   validates :appointment_type, inclusion: { in: TYPES }
   validates :walk_in_name,  presence: true, if: :walk_in?
 
+  # Flag para pular a validação de capacidade quando o caller tem um motivo
+  # explícito (walk-in com override do dono, seed, migração, etc.). Todo caminho
+  # "normal" de criação (cliente via app ou Disponível) continua obrigatório
+  # a respeitar capacidade — a checagem no model é a rede de segurança final.
+  attr_accessor :skip_capacity_check
+
   # Validações de "é um horário válido para marcar" rodam só na criação ou
   # quando o horário muda. Uma vez criado, o agendamento fica imune — senão
   # mudanças de status (compareceu/ausente) quebrariam em casos limítrofes
@@ -32,6 +38,8 @@ class Appointment < ApplicationRecord
   validate :not_during_closure, unless: :walk_in?,
            if: -> { new_record? || will_save_change_to_scheduled_at? }
   validate :service_duration_allows_disponivel, if: :disponivel?
+  validate :fits_in_capacity, unless: :skip_capacity_check,
+           if: -> { new_record? || will_save_change_to_scheduled_at? || will_save_change_to_service_id? }
 
   # ── SCOPES ────────────────────────────────────────────────────────────────
   scope :regular,            -> { where(appointment_type: "regular") }
@@ -256,6 +264,37 @@ class Appointment < ApplicationRecord
 
     unless scheduled_seconds >= opens_at && end_seconds <= closes_at
       errors.add(:scheduled_at, "fora do intervalo de funcionamento")
+    end
+  end
+
+  # Rede de segurança final — qualquer caminho que salva um Appointment sem
+  # ter checado capacidade explicitamente cai aqui. Conta quantos outros
+  # agendamentos ocupam a mesma janela (mesma regra do `available_times`)
+  # e falha se já está no limite da capacidade do lava-rápido.
+  #
+  # Para pular essa checagem (walk-in com override do dono, seed, etc.):
+  #   appointment.skip_capacity_check = true
+  def fits_in_capacity
+    return unless car_wash && service && scheduled_at
+
+    cap = [car_wash.capacity_per_slot.to_i, 1].max
+    duration_min = service.duration.to_i
+    return if duration_min <= 0
+
+    end_at = scheduled_at + duration_min.minutes
+
+    scope = self.class.occupying_capacity
+      .joins(:service)
+      .where(car_wash_id: car_wash_id)
+      .where(
+        "appointments.scheduled_at < ? AND (appointments.scheduled_at + (services.duration * interval '1 minute')) > ?",
+        end_at, scheduled_at
+      )
+    scope = scope.where.not(id: id) if persisted?
+    overlap = scope.count
+
+    if overlap >= cap
+      errors.add(:scheduled_at, "horário sem capacidade disponível (#{overlap}/#{cap} ocupados)")
     end
   end
 

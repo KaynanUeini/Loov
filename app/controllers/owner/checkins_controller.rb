@@ -140,6 +140,12 @@ module Owner
     end
 
     # POST /owner/checkins/walk_in
+    # Parâmetros:
+    #   service_id, scheduled_at (HH:MM), walk_in_name, price_override
+    #   force (bool) — se true, ignora a validação de capacidade. O front passa
+    #     isso depois que o dono confirma "sim, quero encaixar mesmo estando
+    #     cheio". Sem force, retornamos 409 com os números para o app exibir o
+    #     aviso e pedir confirmação.
     def walk_in
       car_wash = current_car_wash
       return render json: { error: "Lava-rápido não encontrado." }, status: :not_found unless car_wash
@@ -151,6 +157,35 @@ module Owner
       hour, minute = time_str.split(":").map(&:to_i)
       scheduled_at = Time.current.beginning_of_day + hour.hours + minute.minutes
       price        = params[:price_override].present? ? params[:price_override].to_f : nil
+      force        = ActiveModel::Type::Boolean.new.cast(params[:force])
+
+      # Pré-checagem de capacidade: se já está cheio e o dono não confirmou
+      # override, devolve 409 com a contagem para o app mostrar o aviso.
+      unless force
+        cap          = [car_wash.capacity_per_slot.to_i, 1].max
+        duration_min = service.duration.to_i
+        if duration_min > 0
+          end_at  = scheduled_at + duration_min.minutes
+          overlap = car_wash.appointments
+            .occupying_capacity
+            .joins(:service)
+            .where(
+              "appointments.scheduled_at < ? AND (appointments.scheduled_at + (services.duration * interval '1 minute')) > ?",
+              end_at, scheduled_at
+            )
+            .count
+          if overlap >= cap
+            render json: {
+              error:    "Capacidade excedida",
+              warning:  "Capacidade excedida",
+              overlap:  overlap,
+              capacity: cap,
+              message:  "Neste horário já há #{overlap} atendimento(s) rodando, e a capacidade do lava-rápido é #{cap}. Tem certeza que consegue encaixar mais um?"
+            }, status: :conflict
+            return
+          end
+        end
+      end
 
       appointment = car_wash.appointments.build(
         user:           nil,
@@ -161,6 +196,9 @@ module Owner
         walk_in_name:   params[:walk_in_name].presence || "Avulso",
         price_override: price
       )
+      # Walk-in sempre pula a validação de capacidade do model — a decisão
+      # foi feita pelo dono/atendente presencialmente (com ou sem override).
+      appointment.skip_capacity_check = true
 
       if appointment.save
         render json: { ok: true }.merge(serialize_appointment(appointment))
