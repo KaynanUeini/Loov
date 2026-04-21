@@ -82,6 +82,8 @@ module Owner
             rent:           @cost.rent.to_f,
             salaries:       @cost.salaries.to_f,
             utilities:      @cost.utilities.to_f,
+            water:          @cost.water.to_f,
+            electricity:    @cost.electricity.to_f,
             products:       @cost.products.to_f,
             maintenance:    @cost.maintenance.to_f,
             other_fixed:    @cost.other_fixed.to_f,
@@ -167,9 +169,17 @@ module Owner
 
       # Owner: salva direto
       @cost = MonthlyCost.for_month(@car_wash, year, month)
+
+      # Rails `wrap_parameters` às vezes aninha o array em monthly_cost.
+      # Aceita top-level OU aninhado — frontend pode mandar de qualquer jeito.
+      custom_lines_payload = params[:custom_lines].presence ||
+                             params.dig(:monthly_cost, :custom_lines) ||
+                             []
+      Rails.logger.info("[monthly_costs#upsert] custom_lines recebidas: #{Array(custom_lines_payload).size}")
+
       ok = ActiveRecord::Base.transaction do
         next false unless @cost.update(cost_params.merge(year: year, month: month))
-        sync_custom_lines!(@cost, params[:custom_lines])
+        sync_custom_lines!(@cost, custom_lines_payload)
         true
       end
 
@@ -218,7 +228,7 @@ module Owner
 
     def cost_params
       params.require(:monthly_cost).permit(
-        :rent, :salaries, :utilities, :products,
+        :rent, :salaries, :utilities, :water, :electricity, :products,
         :maintenance, :other_fixed, :other_variable, :notes
       )
     end

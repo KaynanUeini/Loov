@@ -16,7 +16,7 @@ class MonthlyCost < ApplicationRecord
   # dados de meses lançados antes do feature de linhas customizadas; a UI
   # atual não expõe mais esses campos, eles ficam 0 para meses novos.
   def total_fixed
-    standard = [rent, salaries, utilities, other_fixed].compact.sum
+    standard = [rent, salaries, utilities, water, electricity, other_fixed].compact.sum
     standard + custom_cost_lines.fixed_type.sum(:amount).to_f
   end
 
