@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_04_07_222843) do
+ActiveRecord::Schema[7.1].define(version: 2026_04_21_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -24,6 +24,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_07_222843) do
     t.text "owner_input"
     t.datetime "owner_input_at"
     t.text "previous_inputs"
+    t.string "status", default: "ready", null: false
+    t.text "error_message"
     t.index ["car_wash_id"], name: "index_ai_insights_on_car_wash_id"
   end
 
@@ -100,6 +102,16 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_07_222843) do
     t.index ["user_id"], name: "index_car_washes_on_user_id"
   end
 
+  create_table "favorite_car_washes", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "car_wash_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["car_wash_id"], name: "index_favorite_car_washes_on_car_wash_id"
+    t.index ["user_id", "car_wash_id"], name: "index_favorite_car_washes_on_user_id_and_car_wash_id", unique: true
+    t.index ["user_id"], name: "index_favorite_car_washes_on_user_id"
+  end
+
   create_table "loyalty_programs", force: :cascade do |t|
     t.bigint "car_wash_id", null: false
     t.integer "visits_required", default: 5, null: false
@@ -125,6 +137,16 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_07_222843) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["car_wash_id"], name: "index_monthly_costs_on_car_wash_id"
+  end
+
+  create_table "notification_reads", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "key", null: false
+    t.datetime "read_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "key"], name: "index_notification_reads_on_user_id_and_key", unique: true
+    t.index ["user_id"], name: "index_notification_reads_on_user_id"
   end
 
   create_table "operating_hours", force: :cascade do |t|
@@ -172,6 +194,17 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_07_222843) do
     t.string "description"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "push_tokens", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "token", null: false
+    t.string "platform"
+    t.datetime "last_seen_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["token"], name: "index_push_tokens_on_token", unique: true
+    t.index ["user_id"], name: "index_push_tokens_on_user_id"
   end
 
   create_table "reviews", force: :cascade do |t|
@@ -260,13 +293,17 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_07_222843) do
   add_foreign_key "appointments", "users"
   add_foreign_key "car_wash_closures", "car_washes"
   add_foreign_key "car_washes", "users"
+  add_foreign_key "favorite_car_washes", "car_washes"
+  add_foreign_key "favorite_car_washes", "users"
   add_foreign_key "loyalty_programs", "car_washes"
   add_foreign_key "monthly_costs", "car_washes"
+  add_foreign_key "notification_reads", "users"
   add_foreign_key "operating_hours", "car_washes"
   add_foreign_key "owner_messages", "car_washes"
   add_foreign_key "owner_messages", "users", column: "recipient_id"
   add_foreign_key "owner_messages", "users", column: "sender_id"
   add_foreign_key "payments", "appointments"
+  add_foreign_key "push_tokens", "users"
   add_foreign_key "reviews", "appointments"
   add_foreign_key "reviews", "car_washes"
   add_foreign_key "reviews", "users"

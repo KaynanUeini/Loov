@@ -8,12 +8,66 @@ class AiInsightsService
     @car_wash = car_wash
   end
 
-  # Ponto de entrada: retorna o hash de seções parseado do JSON retornado pelo Claude.
+  MODEL = "claude-sonnet-4-6".freeze
+
+  # Ponto de entrada. Retorna um trace completo — não só as seções — pra que o
+  # caller possa persistir observabilidade de cada execução (prompt, resposta
+  # bruta, tokens, latência, flags de crise) mesmo em caso de falha.
+  #
+  # Retorno:
+  #   {
+  #     status:         "success" | "parse_fallback" | "api_error",
+  #     sections:       {...} | nil,           # hash parseado ou fallback
+  #     prompt:         "...",                 # prompt exato enviado
+  #     raw_response:   "..." | nil,           # texto do Claude (nil se API falhou)
+  #     model:          "claude-sonnet-4-6",
+  #     cycle_type:     "fechamento" | "acompanhamento",
+  #     is_crisis_mode: true | false,
+  #     owner_input:    "..." | nil,
+  #     input_tokens:   Integer | nil,
+  #     output_tokens:  Integer | nil,
+  #     latency_ms:     Integer | nil,
+  #     parse_ok:       true | false,
+  #     parse_error:    "..." | nil,
+  #     error_message:  "..." | nil            # apenas quando status != success
+  #   }
   def generate(previous_action: nil, owner_input: nil, previous_inputs: [])
-    context = build_context
-    prompt  = build_prompt(context, owner_input, previous_inputs, previous_action)
-    raw     = call_claude(prompt)
-    parse_sections(raw)
+    context        = build_context
+    is_crisis_mode = context.dig(:saude_financeira, :is_critical_state) || false
+    cycle_type     = context[:tipo_de_ciclo]
+    prompt         = build_prompt(context, owner_input, previous_inputs, previous_action)
+
+    api_result = call_claude(prompt)
+    trace = {
+      prompt:         prompt,
+      model:          MODEL,
+      cycle_type:     cycle_type,
+      is_crisis_mode: is_crisis_mode,
+      owner_input:    owner_input,
+      raw_response:   api_result[:raw],
+      input_tokens:   api_result[:input_tokens],
+      output_tokens:  api_result[:output_tokens],
+      latency_ms:     api_result[:latency_ms],
+    }
+
+    if api_result[:error]
+      return trace.merge(
+        status:        "api_error",
+        sections:      nil,
+        parse_ok:      false,
+        parse_error:   nil,
+        error_message: api_result[:error],
+      )
+    end
+
+    parsed = parse_sections(api_result[:raw])
+    trace.merge(
+      status:        parsed[:ok] ? "success" : "parse_fallback",
+      sections:      parsed[:sections],
+      parse_ok:      parsed[:ok],
+      parse_error:   parsed[:error],
+      error_message: nil,
+    )
   end
 
   private
@@ -135,10 +189,15 @@ class AiInsightsService
     Date.new(year, month, day)
   end
 
-  # ── MARGEM E BENCHMARKS ───────────────────────────────────────────────────────
+  # ── MARGEM E REFERÊNCIA HISTÓRICA ─────────────────────────────────────────────
+  # Sem benchmarks de setor — não temos estudo vetado pra lava-rápido no Brasil
+  # que justifique "aluguel ideal 18%" ou "salários 25–35%". A referência é o
+  # próprio histórico do negócio, comparando o mês atual com a média dos meses
+  # anteriores (até 6) pra detectar desvios estruturais.
 
   def fetch_margin_context
-    margins = (0..2).map do |i|
+    # Atual + 6 meses anteriores. Historical = margins[1..], excluindo o mês em curso.
+    margins = (0..6).map do |i|
       date = i.months.ago
       cost = car_wash.monthly_costs.find_by(year: date.year, month: date.month)
       next nil unless cost
@@ -172,8 +231,10 @@ class AiInsightsService
 
     return nil if margins.empty?
 
-    avg_margin    = (margins.map { |m| m[:margem] }.sum / margins.size).round(1)
-    current_month = margins.first
+    # Recorte explícito para as estatísticas já existentes (3 meses mais recentes).
+    three_month_slice = margins.first([margins.size, 3].min)
+    avg_margin        = (three_month_slice.map { |m| m[:margem] }.sum / three_month_slice.size).round(1)
+    current_month     = margins.first
 
     ticket_medio = car_wash.appointments
       .where(status: "attended").joins(:service)
@@ -185,9 +246,9 @@ class AiInsightsService
                        current_month.dig(:detalhamento_custos, :agua_luz).to_f +
                        current_month.dig(:detalhamento_custos, :outros_fixos).to_f
 
-    meses_anteriores = margins[1..]
-    media_custos_fixos_3m = if meses_anteriores.any?
-      custos_anteriores = meses_anteriores.map do |m|
+    meses_anteriores_3m = three_month_slice[1..] || []
+    media_custos_fixos_3m = if meses_anteriores_3m.any?
+      custos_anteriores = meses_anteriores_3m.map do |m|
         m.dig(:detalhamento_custos, :aluguel).to_f  +
         m.dig(:detalhamento_custos, :salarios).to_f +
         m.dig(:detalhamento_custos, :agua_luz).to_f +
@@ -211,75 +272,101 @@ class AiInsightsService
 
     atendimentos_faltam = break_even_atendimentos ? [break_even_atendimentos - atendimentos_mes_atual, 0].max : nil
 
+    # ── Referência histórica (o próprio negócio, últimos 6 meses) ──────────────
+    historico_meses        = margins[1..] || []                    # exclui o mês atual
+    meses_de_historico     = historico_meses.size
+    historico_suficiente   = meses_de_historico >= 3               # mínimo pra média confiável
+    mes_corrente_completo  = Date.current.day >= 28                # evita distorção por receita parcial
+    alertas_disponiveis    = historico_suficiente && mes_corrente_completo
+    threshold_pp           = 3.0                                   # desvio de +3pp vs média = alerta
+
+    pct_media_historica = if historico_suficiente
+      {
+        aluguel:      media_pct(historico_meses, :aluguel),
+        salarios:     media_pct(historico_meses, :salarios),
+        produtos:     media_pct(historico_meses, :produtos),
+        agua_luz:     media_pct(historico_meses, :agua_luz),
+        manutencao:   media_pct(historico_meses, :manutencao),
+        outros_fixos: media_pct(historico_meses, :outros_fixos),
+        outros_var:   media_pct(historico_meses, :outros_var),
+      }
+    end
+
     alertas_custo = []
     pct = current_month[:percentual_custos]
 
-    if pct[:aluguel] > 22
-      impacto = ((pct[:aluguel] - 18) / 100.0 * current_month[:faturamento]).round(2)
-      alertas_custo << {
-        linha: "aluguel", pct_atual: pct[:aluguel], pct_benchmark: "12–22%",
-        acima_do_benchmark: true, impacto_mensal: impacto,
-        mensagem: "Aluguel em #{pct[:aluguel]}% da receita — benchmark é 12–22%. Se reduzido para 18%, o resultado melhora R$ #{impacto}/mês."
-      }
+    if alertas_disponiveis && pct_media_historica
+      %i[aluguel salarios produtos].each do |linha|
+        atual = pct[linha].to_f
+        media = pct_media_historica[linha].to_f
+        next if media.zero?
+        delta_pp = (atual - media).round(1)
+        next if delta_pp < threshold_pp
+
+        impacto = (delta_pp / 100.0 * current_month[:faturamento]).round(2)
+        alertas_custo << {
+          linha:                           linha.to_s,
+          pct_atual:                       atual,
+          pct_media_historica:             media,
+          meses_de_historico:              meses_de_historico,
+          delta_pp:                        delta_pp,
+          impacto_mensal_se_voltar_a_media: impacto,
+          referencia:                      "historico_proprio_negocio",
+          mensagem: "#{linha.to_s.capitalize} em #{atual}% da receita — média dos últimos #{meses_de_historico} meses fechados: #{media}%. Voltar à média representa R$ #{impacto}/mês a mais no resultado. Referência: histórico do próprio negócio."
+        }
+      end
     end
 
-    if pct[:salarios] > 35
-      impacto = ((pct[:salarios] - 30) / 100.0 * current_month[:faturamento]).round(2)
-      alertas_custo << {
-        linha: "salários", pct_atual: pct[:salarios], pct_benchmark: "25–35%",
-        acima_do_benchmark: true, impacto_mensal: impacto,
-        mensagem: "Folha em #{pct[:salarios]}% da receita — benchmark é 25–35%. Cada ponto percentual vale R$ #{(current_month[:faturamento] / 100).round(2)}/mês."
-      }
-    end
-
-    if pct[:produtos] > 14
-      impacto = ((pct[:produtos] - 11) / 100.0 * current_month[:faturamento]).round(2)
-      alertas_custo << {
-        linha: "produtos", pct_atual: pct[:produtos], pct_benchmark: "8–14%",
-        acima_do_benchmark: true, impacto_mensal: impacto,
-        mensagem: "Produtos em #{pct[:produtos]}% da receita — benchmark é 8–14%. Reduzir para 11% vale R$ #{impacto}/mês."
-      }
-    end
-
-    custos_no_benchmark = alertas_custo.empty? && current_month[:detalhamento_custos].values.any? { |v| v.to_f > 0 }
+    custos_estaveis_vs_historico = alertas_disponiveis && alertas_custo.empty? &&
+                                   current_month[:detalhamento_custos].values.any? { |v| v.to_f > 0 }
 
     is_critical = current_month[:faturamento] > 0 &&
                   current_month[:lucro] < 0 &&
                   current_month[:lucro].abs >= current_month[:faturamento] * 0.5
 
-    media_fat_3m    = margins.map { |m| m[:faturamento] }.sum.to_f / [margins.size, 1].max
-    aluguel_atual   = current_month.dig(:detalhamento_custos, :aluguel).to_f
-    salarios_atual  = current_month.dig(:detalhamento_custos, :salarios).to_f
-    aluguel_ideal   = (media_fat_3m * 0.18).round(2)
-    aluguel_reducao = [aluguel_atual - aluguel_ideal, 0].max.round(2)
+    media_fat_3m   = three_month_slice.map { |m| m[:faturamento] }.sum.to_f / [three_month_slice.size, 1].max
+    aluguel_atual  = current_month.dig(:detalhamento_custos, :aluguel).to_f
+    salarios_atual = current_month.dig(:detalhamento_custos, :salarios).to_f
 
     {
-      historico_margem:              margins.reverse,
-      margem_atual:                  current_month[:margem],
-      lucro_atual:                   current_month[:lucro],
-      custos_atual:                  current_month[:custos],
-      custos_fixos_estimados:        custos_fixos_mes.round(2),
-      media_custos_fixos_historica:  media_custos_fixos_3m,
-      detalhamento_custos:           current_month[:detalhamento_custos],
-      percentual_custos:             current_month[:percentual_custos],
-      media_margem_3m:               avg_margin,
-      media_faturamento_3m:          media_fat_3m.round(2),
-      perfil_financeiro:             margin_profile(avg_margin),
-      is_critical_state:             is_critical,
-      custos_suspeitos:              custos_suspeitos,
-      break_even_atendimentos:       break_even_atendimentos,
+      historico_margem:                margins.reverse,
+      margem_atual:                    current_month[:margem],
+      lucro_atual:                     current_month[:lucro],
+      custos_atual:                    current_month[:custos],
+      custos_fixos_estimados:          custos_fixos_mes.round(2),
+      media_custos_fixos_historica:    media_custos_fixos_3m,
+      detalhamento_custos:             current_month[:detalhamento_custos],
+      percentual_custos:               current_month[:percentual_custos],
+      media_margem_3m:                 avg_margin,
+      media_faturamento_3m:            media_fat_3m.round(2),
+      perfil_financeiro:               margin_profile(avg_margin),
+      is_critical_state:               is_critical,
+      custos_suspeitos:                custos_suspeitos,
+      break_even_atendimentos:         break_even_atendimentos,
       break_even_pode_estar_subestimado: custos_suspeitos,
-      atendimentos_para_break_even:  atendimentos_faltam,
-      atendimentos_realizados_mes:   atendimentos_mes_atual,
-      ticket_medio_90d:              ticket_medio,
-      alertas_custo:                 alertas_custo,
-      custos_dentro_do_benchmark:    custos_no_benchmark,
-      aluguel_atual:                 aluguel_atual,
-      aluguel_ideal_18pct:           aluguel_ideal,
-      aluguel_reducao_sugerida:      aluguel_reducao,
-      salarios_atual:                salarios_atual,
-      tem_dados_de_custo:            true
+      atendimentos_para_break_even:    atendimentos_faltam,
+      atendimentos_realizados_mes:     atendimentos_mes_atual,
+      ticket_medio_90d:                ticket_medio,
+      alertas_custo:                   alertas_custo,
+      custos_estaveis_vs_historico:    custos_estaveis_vs_historico,
+      aluguel_atual:                   aluguel_atual,
+      salarios_atual:                  salarios_atual,
+      # Referência para o prompt: a comparação é com o próprio histórico, não com
+      # benchmark de setor. Essas chaves deixam isso explícito para o LLM.
+      referencia_origem:               "historico_proprio_negocio",
+      referencia_meses:                meses_de_historico,
+      referencia_suficiente:           historico_suficiente,
+      referencia_mes_completo:         mes_corrente_completo,
+      referencia_threshold_pp:         threshold_pp,
+      pct_media_historica:             pct_media_historica,
+      tem_dados_de_custo:              true
     }
+  end
+
+  def media_pct(meses, linha)
+    valores = meses.map { |m| m.dig(:percentual_custos, linha).to_f }
+    return 0.0 if valores.empty?
+    (valores.sum / valores.size).round(1)
   end
 
   def margin_profile(avg_margin)
@@ -302,8 +389,9 @@ class AiInsightsService
 
     sorted_counts = daily_counts.values.sort
     p75_index     = [(sorted_counts.size * 0.75).ceil - 1, 0].max
-    teto_realista = sorted_counts[p75_index].to_f
-    media_diaria  = (daily_counts.values.sum.to_f / daily_counts.size).round(1)
+    teto_realista = sorted_counts[p75_index].to_i
+    # Atendimentos/dia é evento discreto — inteiro, arredondado pra cima.
+    media_diaria  = (daily_counts.values.sum.to_f / daily_counts.size).ceil
 
     day_names   = %w[Domingo Segunda Terça Quarta Quinta Sexta Sábado]
     real_by_dow = base
@@ -312,15 +400,19 @@ class AiInsightsService
       .count
 
     idle_analysis = real_by_dow.map do |dow, total|
-      semanas   = (90.0 / 7).round(1)
-      media_dow = (total.to_f / semanas).round(1)
-      gap       = [teto_realista - media_dow, 0].max.round(1)
+      semanas          = 90.0 / 7
+      media_dow_float  = total.to_f / semanas
+      media_dow        = media_dow_float.ceil
+      gap              = [teto_realista - media_dow, 0].max
+      # Receita usa o delta fracionário real — quem perde 2,4 atendimentos perde o
+      # valor proporcional, mesmo que a contagem seja exibida como inteiro.
+      gap_para_receita = [teto_realista - media_dow_float, 0].max
       {
         dia:                    day_names[dow],
         media_atendimentos:     media_dow,
         teto_realista:          teto_realista,
         gap_vs_teto:            gap,
-        receita_perdida_semana: (gap * ticket_medio).round(2)
+        receita_perdida_semana: (gap_para_receita * ticket_medio).round(2)
       }
     end
 
@@ -670,19 +762,31 @@ class AiInsightsService
     new_clients_count = client_counts.count { |_, c| c == 1 }
     total_clients     = client_counts.size
     retention_rate    = total_clients > 0 ? ((recurring_clients.to_f / total_clients) * 100).round(1) : 0
-    avg_visits        = recurring_clients > 0 ? (client_counts.select { |_, c| c > 1 }.values.sum.to_f / recurring_clients).round(1) : 0
-
-    top_clients = base.joins(:user).group("users.email")
-      .order(Arel.sql("count_all DESC")).limit(5).count
-      .map { |email, count| { cliente: email.split("@").first.capitalize, visitas: count } }
+    # Visitas são eventos discretos — sempre inteiro. Arredonda pra cima.
+    avg_visits        = recurring_clients > 0 ? (client_counts.select { |_, c| c > 1 }.values.sum.to_f / recurring_clients).ceil : 0
 
     all_last_visit = car_wash.appointments.where(status: "attended")
-      .joins(:user).group("users.email").maximum(:scheduled_at)
+      .joins(:user).group(:user_id).maximum(:scheduled_at)
 
-    at_risk = all_last_visit
-      .select { |_, last| last < 30.days.ago && last > 90.days.ago }
-      .sort_by { |_, last| last }.first(10)
-      .map { |email, last| { cliente: email.split("@").first.capitalize, dias_sem_visita: (Time.current - last).to_i / 1.day } }
+    # Análise estrutural: só agregados, nunca identificação individual.
+    at_risk_entries = all_last_visit.select { |_, last| last < 30.days.ago && last > 90.days.ago }
+    at_risk_count   = at_risk_entries.size
+    at_risk_user_ids = at_risk_entries.keys
+
+    at_risk_media_dias = if at_risk_count > 0
+      somados = at_risk_entries.values.sum { |d| (Time.current - d).to_f / 1.day }
+      (somados / at_risk_count).ceil
+    else
+      0
+    end
+
+    at_risk_receita_historica = if at_risk_count > 0
+      base.where(user_id: at_risk_user_ids).sum("services.price").to_f.round(2)
+    else
+      0.0
+    end
+
+    pct_base_em_risco = total_clients > 0 ? ((at_risk_count.to_f / total_clients) * 100).round(1) : 0.0
 
     lost_clients = all_last_visit.count { |_, last| last < 90.days.ago }
 
@@ -760,8 +864,13 @@ class AiInsightsService
       horarios_ociosos:                 idle_hours,
       movimento_por_dia_da_semana:      demand_by_dow,
       servicos:                         services_perf,
-      clientes_mais_frequentes:         top_clients,
-      clientes_sumidos_30_a_90_dias:    at_risk,
+      clientes_em_risco_30_a_90d: {
+        quantidade:                     at_risk_count,
+        pct_da_base_total:              pct_base_em_risco,
+        media_dias_sem_visita:          at_risk_media_dias,
+        receita_historica_representada: at_risk_receita_historica,
+        ticket_medio_historico_grupo:   at_risk_count > 0 ? (at_risk_receita_historica / at_risk_count).round(2) : 0.0
+      },
       clientes_perdidos_mais_90_dias:   lost_clients,
       novos_clientes_este_mes:          this_month_new,
       novos_clientes_mes_anterior:      prev_month_new,
@@ -797,25 +906,36 @@ class AiInsightsService
     end
 
     crisis_instruction = if is_critical
-      prejuizo      = sf[:lucro_atual].abs
-      faturamento   = sf[:media_faturamento_3m]
-      aluguel       = sf[:aluguel_atual]
-      salarios      = sf[:salarios_atual]
-      aluguel_ideal = sf[:aluguel_ideal_18pct]
-      reducao       = sf[:aluguel_reducao_sugerida]
+      prejuizo    = sf[:lucro_atual].abs
+      faturamento = sf[:media_faturamento_3m]
+      aluguel     = sf[:aluguel_atual]
+      salarios    = sf[:salarios_atual]
+
+      aluguel_alerta = sf[:alertas_custo]&.find { |a| a[:linha] == "aluguel" }
+      aluguel_linha  = if aluguel_alerta
+        "Aluguel em #{aluguel_alerta[:pct_atual]}% da receita — +#{aluguel_alerta[:delta_pp]}pp acima da média dos últimos #{aluguel_alerta[:meses_de_historico]} meses fechados (#{aluguel_alerta[:pct_media_historica]}%). Voltar à média histórica representa R$ #{aluguel_alerta[:impacto_mensal_se_voltar_a_media]}/mês."
+      elsif !sf[:referencia_suficiente]
+        "Aluguel R$ #{aluguel}/mês — histórico insuficiente pra comparação. Avalie diretamente o contrato vs faturamento atual."
+      else
+        "Aluguel R$ #{aluguel}/mês está em linha com o próprio histórico do negócio. Em crise, renegociação direta continua sendo alavanca possível — mas o problema maior pode estar em outro lugar."
+      end
 
       <<~CRISIS
         ═══ MODO DE CRISE ATIVADO ═══════════════════════════════════════════
         Prejuízo de R$ #{prejuizo} com faturamento médio de R$ #{faturamento}/mês.
         Custos fixos dominantes: aluguel R$ #{aluguel}/mês + salários R$ #{salarios}/mês.
+        #{aluguel_linha}
 
         REGRAS OBRIGATÓRIAS:
         1. 80% da análise deve focar em corte de custos fixos e estancamento de caixa.
         2. Funil, retenção e crescimento são SECUNDÁRIOS — mencione brevemente e use
            a frase: "otimizar [métrica] agora é arrumar a decoração enquanto a casa pega fogo."
         3. A decisao_prioritaria DEVE ser sobre custo estrutural ou geração de caixa imediato.
-        4. Se aluguel está acima de 22% da receita: aluguel ideal = R$ #{aluguel_ideal}/mês.
-           Redução sugerida = R$ #{reducao}/mês. Quantifique o impacto.
+        4. Ao quantificar impacto de corte, use EXCLUSIVAMENTE a referência do próprio
+           histórico do negócio (campos alertas_custo[*].pct_media_historica e delta_pp).
+           NÃO invente "aluguel ideal é X%" ou "benchmark de setor é Y%" — não temos
+           estudo vetado pra lava-rápido no Brasil. Se o campo referencia_suficiente for
+           false, diga claramente que não há base comparativa ainda.
         5. Nunca sugira marketing, funil ou precificação como decisão principal em crise.
         6. Tom: interventor cirúrgico, não consultor motivacional.
       CRISIS
@@ -901,8 +1021,15 @@ class AiInsightsService
       else; ""; end
 
       alertas_str  = sf[:alertas_custo]&.any? ? sf[:alertas_custo].map { |a| a[:mensagem] }.join(" | ") : nil
-      custo_ok_str = sf[:custos_dentro_do_benchmark] && alertas_str.nil? ?
-        "CUSTOS NO BENCHMARK: estrutura de custo dentro dos parâmetros do setor. Zona de segurança — não significa que não há espaço para otimizar." : ""
+      custo_ok_str = if sf[:custos_estaveis_vs_historico] && alertas_str.nil?
+        "CUSTOS ESTÁVEIS VS. HISTÓRICO: estrutura de custos em linha com a média dos últimos #{sf[:referencia_meses]} meses fechados do próprio negócio. Sem desvio pontual, mas otimização estrutural continua valendo."
+      elsif !sf[:referencia_suficiente]
+        "REFERÊNCIA HISTÓRICA INDISPONÍVEL: ainda há menos de 3 meses fechados — não dá pra comparar com o próprio histórico. Evite afirmações sobre custo estar 'alto' ou 'baixo' sem base."
+      elsif !sf[:referencia_mes_completo]
+        "ALERTAS DE CUSTO SUSPENSOS: mês corrente ainda parcial (antes do dia 28) — % de custo sobre receita fica distorcido. Alertas vs histórico só rodam com mês fechado."
+      else
+        ""
+      end
 
       case sf[:perfil_financeiro]
       when "saudável"
@@ -996,7 +1123,7 @@ class AiInsightsService
       PROJEÇÃO FUTURA: #{ctx[:agendamentos_confirmados_proximos_30_dias]} agendamentos confirmados. R$ #{ctx[:receita_projetada_proximos_7_dias]} nos próximos 7 dias. No-show: #{ctx[:taxa_no_show]}.
 
       PRODUTO: app de agendamento. NUNCA sugira nada sobre agendamento ou marcação.
-      CLIENTE FINAL: não faz nada. Nunca sugira pedir indicação, avaliação ou feedback.
+      CLIENTE FINAL: não faz nada. Nunca sugira pedir indicação, avaliação ou feedback, NEM que o dono entre em contato direto com cliente (WhatsApp, ligação, mensagem, e-mail, SMS). Ação 1:1 com cliente não faz parte do escopo.
 
       ═══ SINAIS DO PERÍODO ═══════════════════════════════════════════════
       #{climate_instruction}
@@ -1018,7 +1145,7 @@ class AiInsightsService
       REGIÃO (#{ctx[:bairro]}, #{ctx[:cidade]}): #{perfil_bairro}
 
       ═══ HIERARQUIA DE ANÁLISE ═══════════════════════════════════════════
-      1. ESTRUTURAL: custos fora do benchmark | precificação abaixo do mercado | dados incompletos
+      1. ESTRUTURAL: custos acima da própria média histórica (ver alertas_custo) | precificação abaixo do histórico de preço praticado | dados incompletos
       2. OPERACIONAL: ociosidade recorrente | no-show alto | ticket caindo | funil quebrado | pipeline loss alto
       3. TÁTICO: clientes em risco | feriado próximo | serviço premium sem exposição
 
@@ -1030,14 +1157,18 @@ class AiInsightsService
       FUNIL: queda em serviço de entrada = pipeline_loss em R$ nos próximos 60–90 dias.
       DADOS INCOMPLETOS: se custos_suspeitos = true, avise antes de qualquer análise financeira.
       NÚMEROS: use dados reais do contexto. Nunca invente estimativas sem âncora nos dados.
+      REFERÊNCIAS DE CUSTO — SEMPRE HISTÓRICO PRÓPRIO: a única referência vetada é o histórico do próprio negócio (campos alertas_custo, pct_media_historica, referencia_origem="historico_proprio_negocio"). NUNCA cite "benchmark do setor é X%", "aluguel ideal é Y%", "salários devem ficar entre A e B%". Essas referências NÃO existem no contexto porque não temos estudo vetado pra lava-rápido no Brasil. Se um alerta_custo está presente, use a mensagem pronta (compara com a própria média dos últimos N meses). Se referencia_suficiente=false, diga explicitamente que ainda não há histórico suficiente pra comparação.
+      CLIENTES — ANONIMATO OBRIGATÓRIO: NUNCA cite nome, e-mail ou qualquer identificador de cliente individual. Sempre agregue: quantidade, % da base, receita histórica representada, média de dias sem visita. "10 clientes sumidos há ~45 dias representando R$ X em receita histórica" é correto. "Fulano, Ciclano, Beltrano estão há 40 dias sem aparecer" é ERRADO e não deve ocorrer em hipótese alguma.
+      CONTATO 1:1 PROIBIDO: NUNCA sugira que o dono entre em contato com cliente (WhatsApp, ligação, mensagem, SMS, e-mail). Também NUNCA sugira pedir avaliação, indicação, feedback ou qualquer ação do cliente. A análise é estrutural — sistemas, processos, operação, preço, mix — não tática 1:1.
+      VISITAS/ATENDIMENTOS — SEMPRE INTEIROS: visitas e atendimentos são eventos discretos. "3,6 visitas" não existe — é 4. Arredonde pra cima ao reportar qualquer contagem de visitas, atendimentos ou clientes.
 
       ═══ REGRAS DA DECISAO_PRIORITARIA ══════════════════════════════════
       1. Maior alavanca financeira disponível nos dados.
       2. Impacto em R$/mês usando dados reais.
-      3. Custo: delta vs benchmark e impacto mensal.
+      3. Custo: use delta vs média histórica do próprio negócio (alertas_custo[*].delta_pp e impacto_mensal_se_voltar_a_media). NUNCA cite benchmark externo que não está no contexto.
       4. Precificação: cite serviço pelo nome e valor atual.
       5. Funil: use pipeline_loss_60d do contexto.
-      6. Retenção: use nomes reais dos clientes sumidos.
+      6. Retenção: quantifique em receita histórica em risco (R$) e % de churn agregado. NUNCA cite nomes. A recomendação é estrutural (cadência de pacotes, fidelidade, espaçamento médio entre visitas), nunca "entrar em contato com X".
       7. Nunca repita a decisão do ciclo anterior.
       8. Nunca use ações genéricas.
       9. Tomável hoje ou amanhã, sem investimento externo.
@@ -1073,7 +1204,7 @@ class AiInsightsService
         "services":  { "text": "serviços com evolução e pipeline_loss em R$ se disponível", "status": "up|down|stable" },
         "clients":   { "text": "retenção, visita única e abandono com nomes reais", "status": "up|down|stable" },
         "demand":    { "text": "distribuição real de demanda, ociosidade com valor real, precificação dinâmica por serviço específico", "status": "up|down|stable" },
-        "retention": { "text": "clientes sumidos com nomes reais, dias de ausência e valor histórico estimado", "status": "up|down|stable" },
+        "retention": { "text": "retenção agregada: quantidade e % da base em risco, receita histórica representada, média de dias sem visita. NUNCA nomes. Recomendações estruturais (fidelidade, pacote, cadência), nunca contato 1:1.", "status": "up|down|stable" },
         "growth":    { "text": "novos clientes, feriados próximos e perfil do público captado", "status": "up|down|stable" },
         "cycle_summary": "avalia decisão anterior com dados. Resume o momento financeiro em 2 frases com meta concreta para os dias restantes.",
         "decisao_prioritaria": "maior alavanca financeira com problema, impacto em R$/mês e como executar. Se pipeline_loss > R$ 500, inclui alerta adjacente ao final. Estrutural > Operacional > Tático."
@@ -1084,16 +1215,22 @@ class AiInsightsService
   # ── PARSE / CALL ──────────────────────────────────────────────────────────────
 
   def parse_sections(raw)
-    clean = raw.gsub(/```json|```/, "").strip
-    JSON.parse(clean)
+    clean  = raw.to_s.gsub(/```json|```/, "").strip
+    parsed = JSON.parse(clean)
+    { ok: true, sections: parsed, error: nil }
   rescue => e
-    Rails.logger.error("Parse error: #{e.message} — raw: #{raw[0..200]}")
-    fallback = { "text" => raw, "status" => "stable" }
-    { "sales" => fallback, "services" => fallback, "clients" => fallback,
+    Rails.logger.error("AiInsights parse error: #{e.message} — raw: #{raw.to_s[0..200]}")
+    fallback = { "text" => raw.to_s, "status" => "stable" }
+    sections = {
+      "sales" => fallback, "services" => fallback, "clients" => fallback,
       "demand" => fallback, "retention" => fallback, "growth" => fallback,
-      "cycle_summary" => "", "decisao_prioritaria" => "" }
+      "cycle_summary" => "", "decisao_prioritaria" => ""
+    }
+    { ok: false, sections: sections, error: "#{e.class}: #{e.message}" }
   end
 
+  # Retorna: { raw:, input_tokens:, output_tokens:, latency_ms:, error: }
+  # Nunca levanta — caller decide como registrar a falha.
   def call_claude(prompt)
     uri  = URI("https://api.anthropic.com/v1/messages")
     http = Net::HTTP.new(uri.host, uri.port)
@@ -1105,15 +1242,36 @@ class AiInsightsService
     request["anthropic-version"] = "2023-06-01"
 
     request.body = {
-      model:      "claude-sonnet-4-6",
+      model:      MODEL,
       max_tokens: 6000,
-      system:     "Você é um consultor financeiro especialista em lava-rápidos no Brasil. Direto, simples, sem termos técnicos. Nunca sugere nada sobre agendamento. Nunca pede nada ao cliente final. Faturamento = apenas clientes que compareceram (attended). Hierarquia: estrutural > operacional > tático. Em modo de crise: 80% do foco em custo e caixa imediato. Se custos_suspeitos = true: avise sobre dados incompletos antes de qualquer análise financeira. Pipeline loss > R$ 500: inclui alerta adjacente ao final da decisao_prioritaria. Nunca inventa estimativas sem âncora nos dados. Capacidade ociosa = percentil 75 dos dias reais. Nunca usa 'os números falam por si'. Responde SEMPRE em JSON válido exatamente no formato solicitado.",
+      system:     "Você é um consultor financeiro especialista em lava-rápidos no Brasil. Direto, simples, sem termos técnicos. Nunca sugere nada sobre agendamento. Nunca pede nada ao cliente final NEM sugere que o dono entre em contato com cliente individual (WhatsApp, ligação, mensagem, e-mail, SMS). NUNCA cita nome, e-mail ou identificador de cliente — sempre agregados (quantidade, %, receita representada). Visitas e atendimentos são SEMPRE inteiros, arredondados pra cima — 3,6 visitas não existe. Análise é estrutural (custo, preço, mix, processo), nunca tática 1:1. NUNCA cita benchmark de setor (ex.: 'aluguel ideal 18%', 'salários 25–35%', 'produtos 8–14%') — não temos estudo vetado pra lava-rápido no Brasil. A única referência válida é o histórico do próprio negócio: quando o contexto trouxer alertas_custo, use a mensagem pronta (compara com pct_media_historica do próprio negócio). Se referencia_suficiente=false, diga que ainda não há base comparativa. Faturamento = apenas clientes que compareceram (attended). Hierarquia: estrutural > operacional > tático. Em modo de crise: 80% do foco em custo e caixa imediato. Se custos_suspeitos = true: avise sobre dados incompletos antes de qualquer análise financeira. Pipeline loss > R$ 500: inclui alerta adjacente ao final da decisao_prioritaria. Nunca inventa estimativas sem âncora nos dados. Capacidade ociosa = percentil 75 dos dias reais. Nunca usa 'os números falam por si'. Responde SEMPRE em JSON válido exatamente no formato solicitado.",
       messages:   [{ role: "user", content: prompt }]
     }.to_json
 
+    started  = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     response = http.request(request)
-    body     = JSON.parse(response.body)
-    raise "API error: #{body['error']&.dig('message')}" if body["error"]
-    body.dig("content", 0, "text") || "{}"
+    elapsed  = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
+
+    body = JSON.parse(response.body) rescue nil
+    unless body
+      return { raw: nil, input_tokens: nil, output_tokens: nil, latency_ms: elapsed,
+               error: "Resposta inválida da API (HTTP #{response.code})" }
+    end
+
+    if body["error"]
+      return { raw: nil, input_tokens: nil, output_tokens: nil, latency_ms: elapsed,
+               error: "API error: #{body['error']['message'] || body['error']}" }
+    end
+
+    {
+      raw:           body.dig("content", 0, "text") || "{}",
+      input_tokens:  body.dig("usage", "input_tokens"),
+      output_tokens: body.dig("usage", "output_tokens"),
+      latency_ms:    elapsed,
+      error:         nil,
+    }
+  rescue => e
+    { raw: nil, input_tokens: nil, output_tokens: nil, latency_ms: nil,
+      error: "#{e.class}: #{e.message}" }
   end
 end

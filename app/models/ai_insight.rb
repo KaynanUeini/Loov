@@ -1,5 +1,6 @@
 class AiInsight < ApplicationRecord
   belongs_to :car_wash
+  has_many   :runs, class_name: "AiInsightRun", dependent: :nullify
 
   REFRESH_DAYS = 15
   STATUSES     = %w[processing ready error].freeze
