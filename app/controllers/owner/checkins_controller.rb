@@ -216,7 +216,11 @@ module Owner
         return
       end
 
-      if @appointment.status == "attended"
+      # Walk-ins nascem com status "attended" (a cobrança/lavagem foi
+      # registrada na hora). Permitimos cancelar walk-in caso o dono
+      # tenha registrado errado. Para appointments regulares "attended"
+      # significa serviço concluído e cobrado — bloqueio mantido.
+      if @appointment.status == "attended" && !@appointment.walk_in?
         render json: { error: "Não é possível cancelar um agendamento já finalizado." }, status: :unprocessable_entity
         return
       end
