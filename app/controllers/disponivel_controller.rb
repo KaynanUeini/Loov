@@ -111,7 +111,7 @@ class DisponivelController < ApplicationController
       return
     end
 
-    unless slot_available?(@car_wash, @slot)
+    unless slot_available?(@car_wash, @slot, @service)
       redirect_to disponivel_index_path, alert: "Este horário acabou de ser ocupado."
       return
     end
@@ -151,7 +151,7 @@ class DisponivelController < ApplicationController
     ActiveRecord::Base.transaction do
       car_wash.lock!
 
-      unless slot_available?(car_wash, slot)
+      unless slot_available?(car_wash, slot, service)
         slot_taken = true
         raise ActiveRecord::Rollback
       end
@@ -278,6 +278,21 @@ class DisponivelController < ApplicationController
     Appointment.expire_stale_disponivel_acceptances!
   end
 
+  # Conta agendamentos ocupando capacidade que se sobrepõem à janela
+  # [slot, slot + new_duration_min). Mesma lógica do validator do model
+  # (Appointment#fits_in_capacity) — sem isso o feed mostra slots já
+  # cheios por overlap (ex: serviço de 60min iniciado 30min atrás).
+  def overlap_count_at(car_wash, slot, new_duration_min)
+    end_at = slot + new_duration_min.minutes
+    car_wash.appointments
+      .occupying_capacity
+      .joins(:service)
+      .where(
+        "appointments.scheduled_at < ? AND (appointments.scheduled_at + (services.duration * interval '1 minute')) > ?",
+        end_at, slot
+      ).count
+  end
+
   def build_available_slots(car_wash, from, to)
     capacity      = [car_wash.capacity_per_slot.to_i, 1].max
     now_minutes   = from.hour * 60 + from.min
@@ -285,19 +300,18 @@ class DisponivelController < ApplicationController
     current       = from.beginning_of_day + next_slot_min.minutes
 
     while current <= to
-      booked = Appointment.occupying_capacity
-        .where(car_wash: car_wash, scheduled_at: current).count
-      if booked < capacity
-        return [current]
-      end
+      # Granularidade do slot é 30min — checamos overlap considerando
+      # uma reserva hipotética de 30min começando aqui.
+      return [current] if overlap_count_at(car_wash, current, 30) < capacity
       current += 30.minutes
     end
     []
   end
-  def slot_available?(car_wash, slot)
+
+  def slot_available?(car_wash, slot, service = nil)
     capacity = [car_wash.capacity_per_slot.to_i, 1].max
-    booked   = Appointment.occupying_capacity
-      .where(car_wash: car_wash, scheduled_at: slot).count
-    booked < capacity
+    duration = service&.duration.to_i
+    duration = 30 if duration <= 0
+    overlap_count_at(car_wash, slot, duration) < capacity
   end
 end
