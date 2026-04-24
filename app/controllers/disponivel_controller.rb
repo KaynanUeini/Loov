@@ -130,9 +130,14 @@ class DisponivelController < ApplicationController
   # Cria o agendamento sem pagamento no app — o cliente paga presencialmente
   # (dinheiro, PIX direto com o dono ou maquininha) no lava-rápido.
   def create
+    log_tag = "[Disponivel#create]"
+    Rails.logger.info("#{log_tag} IN user_id=#{current_user&.id} params=#{params.permit(:car_wash_id, :service_id, :slot).to_h.inspect}")
+
     car_wash = CarWash.find(params[:car_wash_id])
     service  = car_wash.services.find(params[:service_id])
     slot     = Time.zone.parse(params[:slot])
+
+    Rails.logger.info("#{log_tag} resolved car_wash_id=#{car_wash.id} service_id=#{service.id} slot=#{slot.iso8601}")
 
     appointment   = nil
     slot_taken    = false
@@ -171,14 +176,18 @@ class DisponivelController < ApplicationController
     end
 
     if slot_taken
+      Rails.logger.warn("#{log_tag} slot_taken car_wash_id=#{car_wash.id} slot=#{slot.iso8601}")
       render json: { error: "Este horário acabou de ser ocupado. Escolha outro." }, status: :unprocessable_entity
       return
     end
 
     if save_error
+      Rails.logger.warn("#{log_tag} save_error car_wash_id=#{car_wash.id} slot=#{slot.iso8601} errors=#{save_error.inspect}")
       render json: { error: save_error }, status: :unprocessable_entity
       return
     end
+
+    Rails.logger.info("#{log_tag} OK appointment_id=#{appointment.id}")
 
     # Job é enfileirado fora da transação — se falhar, a lazy expiration
     # (expire_stale_acceptances!) ainda cobre o caso.
@@ -196,10 +205,11 @@ class DisponivelController < ApplicationController
       payment_status: "pending" # pagamento será feito presencialmente
     }
 
-  rescue ActiveRecord::RecordNotFound
+  rescue ActiveRecord::RecordNotFound => e
+    Rails.logger.warn("#{log_tag} not_found user_id=#{current_user&.id} car_wash_id=#{params[:car_wash_id].inspect} service_id=#{params[:service_id].inspect} msg=#{e.message}")
     render json: { error: "Lava-rápido ou serviço não encontrado." }, status: :not_found
   rescue => e
-    Rails.logger.error("Disponivel#create error: #{e.class}: #{e.message}\n#{e.backtrace&.first(5)&.join("\n")}")
+    Rails.logger.error("#{log_tag} error #{e.class}: #{e.message}\n#{e.backtrace&.first(8)&.join("\n")}")
     render json: {
       error: e.message,
       trace: e.backtrace&.first(3)
