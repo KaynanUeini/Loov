@@ -92,6 +92,7 @@ module Owner
         seconds_left:   appointment.seconds_until_expiry,
         expires_at:     appointment.acceptance_expires_at&.iso8601,
         client_name:    appointment.display_client,
+        service_id:     appointment.service_id,
         service_name:   appointment.service.title,
         service_price:  appointment.effective_price,
         prepayment:     appointment.prepayment_amount,
