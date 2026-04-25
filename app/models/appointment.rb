@@ -282,20 +282,51 @@ class Appointment < ApplicationRecord
     return if duration_min <= 0
 
     end_at = scheduled_at + duration_min.minutes
+    peak = self.class.peak_concurrency_during(
+      car_wash:   car_wash,
+      start_at:   scheduled_at,
+      end_at:     end_at,
+      exclude_id: persisted? ? id : nil
+    )
 
-    scope = self.class.occupying_capacity
+    if peak + 1 > cap
+      errors.add(:scheduled_at, "horário sem capacidade disponível (#{peak + 1}/#{cap} simultâneos durante a janela)")
+    end
+  end
+
+  # Pico de concorrência durante [start_at, end_at) entre agendamentos que
+  # ocupam capacidade no car_wash. Sweep de eventos (+1 entrada, -1 saída):
+  # contar overlap direto somaria atendimentos sequenciais que terminam e
+  # começam back-to-back, super-estimando o uso real da pista.
+  def self.peak_concurrency_during(car_wash:, start_at:, end_at:, exclude_id: nil)
+    scope = occupying_capacity
       .joins(:service)
-      .where(car_wash_id: car_wash_id)
+      .where(car_wash_id: car_wash.id)
       .where(
         "appointments.scheduled_at < ? AND (appointments.scheduled_at + (services.duration * interval '1 minute')) > ?",
-        end_at, scheduled_at
+        end_at, start_at
       )
-    scope = scope.where.not(id: id) if persisted?
-    overlap = scope.count
+    scope = scope.where.not(id: exclude_id) if exclude_id
 
-    if overlap >= cap
-      errors.add(:scheduled_at, "horário sem capacidade disponível (#{overlap}/#{cap} ocupados)")
+    ranges = scope.pluck(
+      Arel.sql("appointments.scheduled_at"),
+      Arel.sql("appointments.scheduled_at + (services.duration * interval '1 minute')")
+    )
+    return 0 if ranges.empty?
+
+    events = ranges.flat_map { |s, e|
+      cs = [s, start_at].max
+      ce = [e, end_at].min
+      [[cs, +1], [ce, -1]]
+    }.sort_by { |t, d| [t, d] } # -1 antes de +1 no mesmo instante (back-to-back não acumula)
+
+    peak = 0
+    current = 0
+    events.each do |_t, d|
+      current += d
+      peak = current if current > peak
     end
+    peak
   end
 
   # Aba Disponíveis só aceita serviços de curta duração (≤ 60 min)

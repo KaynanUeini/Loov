@@ -159,28 +159,26 @@ module Owner
       price        = params[:price_override].present? ? params[:price_override].to_f : nil
       force        = ActiveModel::Type::Boolean.new.cast(params[:force])
 
-      # Pré-checagem de capacidade: se já está cheio e o dono não confirmou
-      # override, devolve 409 com a contagem para o app mostrar o aviso.
+      # Pré-checagem de capacidade: usa pico de concorrência (sweep) — soma
+      # direta de overlap conta atendimentos sequenciais que rodam back-to-back
+      # como simultâneos, gerando falso "cheio".
       unless force
         cap          = [car_wash.capacity_per_slot.to_i, 1].max
         duration_min = service.duration.to_i
         if duration_min > 0
-          end_at  = scheduled_at + duration_min.minutes
-          overlap = car_wash.appointments
-            .occupying_capacity
-            .joins(:service)
-            .where(
-              "appointments.scheduled_at < ? AND (appointments.scheduled_at + (services.duration * interval '1 minute')) > ?",
-              end_at, scheduled_at
-            )
-            .count
-          if overlap >= cap
+          end_at = scheduled_at + duration_min.minutes
+          peak = Appointment.peak_concurrency_during(
+            car_wash: car_wash,
+            start_at: scheduled_at,
+            end_at:   end_at
+          )
+          if peak + 1 > cap
             render json: {
               error:    "Capacidade excedida",
               warning:  "Capacidade excedida",
-              overlap:  overlap,
+              overlap:  peak,
               capacity: cap,
-              message:  "Neste horário já há #{overlap} atendimento(s) rodando, e a capacidade do lava-rápido é #{cap}. Tem certeza que consegue encaixar mais um?"
+              message:  "Neste horário a capacidade ficaria em #{peak + 1}/#{cap} simultâneos durante a janela. Encaixar mesmo assim?"
             }, status: :conflict
             return
           end

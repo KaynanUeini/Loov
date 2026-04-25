@@ -278,19 +278,15 @@ class DisponivelController < ApplicationController
     Appointment.expire_stale_disponivel_acceptances!
   end
 
-  # Conta agendamentos ocupando capacidade que se sobrepõem à janela
-  # [slot, slot + new_duration_min). Mesma lógica do validator do model
-  # (Appointment#fits_in_capacity) — sem isso o feed mostra slots já
-  # cheios por overlap (ex: serviço de 60min iniciado 30min atrás).
-  def overlap_count_at(car_wash, slot, new_duration_min)
-    end_at = slot + new_duration_min.minutes
-    car_wash.appointments
-      .occupying_capacity
-      .joins(:service)
-      .where(
-        "appointments.scheduled_at < ? AND (appointments.scheduled_at + (services.duration * interval '1 minute')) > ?",
-        end_at, slot
-      ).count
+  # Pico de concorrência durante [slot, slot+new_duration_min). Delega
+  # para Appointment.peak_concurrency_during — sweep de eventos para não
+  # super-contar atendimentos que rodam em sequência (back-to-back).
+  def peak_at(car_wash, slot, new_duration_min)
+    Appointment.peak_concurrency_during(
+      car_wash: car_wash,
+      start_at: slot,
+      end_at:   slot + new_duration_min.minutes
+    )
   end
 
   def build_available_slots(car_wash, from, to)
@@ -300,9 +296,8 @@ class DisponivelController < ApplicationController
     current       = from.beginning_of_day + next_slot_min.minutes
 
     while current <= to
-      # Granularidade do slot é 30min — checamos overlap considerando
-      # uma reserva hipotética de 30min começando aqui.
-      return [current] if overlap_count_at(car_wash, current, 30) < capacity
+      # Granularidade do slot é 30min.
+      return [current] if peak_at(car_wash, current, 30) < capacity
       current += 30.minutes
     end
     []
@@ -312,6 +307,6 @@ class DisponivelController < ApplicationController
     capacity = [car_wash.capacity_per_slot.to_i, 1].max
     duration = service&.duration.to_i
     duration = 30 if duration <= 0
-    overlap_count_at(car_wash, slot, duration) < capacity
+    peak_at(car_wash, slot, duration) < capacity
   end
 end
