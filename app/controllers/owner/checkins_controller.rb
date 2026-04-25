@@ -93,7 +93,10 @@ module Owner
     # PATCH /owner/checkins/:id/attend
     def attend
       ActiveRecord::Base.transaction do
-        @appointment.update!(status: "attended")
+        # attended_at marca o fim REAL do serviço — usado pelo cálculo de
+        # capacidade pra liberar o slot mesmo quando o serviço terminou
+        # antes da duração planejada (ex: lavagem rápida).
+        @appointment.update!(status: "attended", attended_at: Time.current)
 
         if @appointment.disponivel? && @appointment.stripe_payment_intent_id.present?
           begin
@@ -120,7 +123,7 @@ module Owner
 
     # PATCH /owner/checkins/:id/revert
     def revert
-      @appointment.update!(status: "confirmed")
+      @appointment.update!(status: "confirmed", attended_at: nil)
       render json: { ok: true }.merge(serialize_appointment(@appointment))
     rescue => e
       render json: { error: e.message }, status: :unprocessable_entity

@@ -298,19 +298,27 @@ class Appointment < ApplicationRecord
   # ocupam capacidade no car_wash. Sweep de eventos (+1 entrada, -1 saída):
   # contar overlap direto somaria atendimentos sequenciais que terminam e
   # começam back-to-back, super-estimando o uso real da pista.
+  #
+  # Fim efetivo de cada agendamento = COALESCE(attended_at, scheduled_at +
+  # duração). Quando o dono clica "Finalizado" antes da duração planejada
+  # acabar (ex: lavagem rápida), attended_at libera o slot a partir dali.
+  # Walk-ins não têm attended_at e seguem usando a duração planejada.
+  EFFECTIVE_END_SQL = "COALESCE(appointments.attended_at, " \
+                      "appointments.scheduled_at + (services.duration * interval '1 minute'))".freeze
+
   def self.peak_concurrency_during(car_wash:, start_at:, end_at:, exclude_id: nil)
     scope = occupying_capacity
       .joins(:service)
       .where(car_wash_id: car_wash.id)
       .where(
-        "appointments.scheduled_at < ? AND (appointments.scheduled_at + (services.duration * interval '1 minute')) > ?",
+        "appointments.scheduled_at < ? AND #{EFFECTIVE_END_SQL} > ?",
         end_at, start_at
       )
     scope = scope.where.not(id: exclude_id) if exclude_id
 
     ranges = scope.pluck(
       Arel.sql("appointments.scheduled_at"),
-      Arel.sql("appointments.scheduled_at + (services.duration * interval '1 minute')")
+      Arel.sql(EFFECTIVE_END_SQL)
     )
     return 0 if ranges.empty?
 
