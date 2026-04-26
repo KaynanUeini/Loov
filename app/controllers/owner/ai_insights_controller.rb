@@ -17,6 +17,30 @@ module Owner
       car_wash = current_user.car_washes.first
       return render json: { error: "Lava-rápido não encontrado." }, status: :not_found if car_wash.nil?
 
+      # Trava: pendências de dias anteriores não resolvidas distorcem
+      # faturamento, ticket médio, ranking e qualquer comparativo histórico.
+      # Forçar a IA a rodar sem isso só geraria conclusões erradas.
+      unresolved_count = car_wash.appointments
+        .where(status: "confirmed", walk_in: false)
+        .where("scheduled_at < ?", Time.current.beginning_of_day)
+        .count
+      if unresolved_count > 0
+        msg = if unresolved_count == 1
+          "Há 1 atendimento de dias anteriores aguardando confirmação. " \
+          "Resolva no Dashboard antes de gerar a análise — sem isso os " \
+          "números ficam imprecisos."
+        else
+          "Há #{unresolved_count} atendimentos de dias anteriores aguardando " \
+          "confirmação. Resolva no Dashboard antes de gerar a análise — sem " \
+          "isso os números ficam imprecisos."
+        end
+        return render json: {
+          error:                msg,
+          code:                 "unresolved_past",
+          unresolved_count:     unresolved_count
+        }, status: :unprocessable_entity
+      end
+
       force    = params[:force] == "true"
       existing = AiInsight.current_for(car_wash)
 
