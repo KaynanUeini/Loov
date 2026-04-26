@@ -43,8 +43,10 @@ module Owner
         .order(:scheduled_at)
         .map { |a| serialize_appointment(a, loyalty, loyalty_counts) }
 
+      # walk_in: false — avulsos nascem 'attended' e mesmo via Reverter
+      # não fazem sentido como pendência (são lançamentos diretos do dono).
       unresolved_past = car_wash.appointments
-        .where(status: "confirmed")
+        .where(status: "confirmed", walk_in: false)
         .where("scheduled_at < ?", today_start)
         .includes(:service, :user)
         .order(:scheduled_at)
