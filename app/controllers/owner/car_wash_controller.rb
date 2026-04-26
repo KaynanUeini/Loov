@@ -11,6 +11,7 @@ module Owner
         name:              @car_wash.name,
         cep:               @car_wash.cep,
         logradouro:        @car_wash.logradouro,
+        numero:            @car_wash.numero,
         bairro:            @car_wash.bairro,
         cidade:            @car_wash.cidade,
         uf:                @car_wash.uf,
@@ -41,7 +42,7 @@ module Owner
 
     def update
       update_params = params.require(:car_wash).permit(
-        :name, :cep, :logradouro, :bairro, :cidade, :uf, :address,
+        :name, :cep, :logradouro, :numero, :bairro, :cidade, :uf, :address,
         :capacity_per_slot, :latitude, :longitude,
         operating_hours_attributes: [:id, :day_of_week, :opens_at, :closes_at, :_destroy],
         services_attributes:        [:id, :title, :category, :description, :price, :duration, :_destroy]
