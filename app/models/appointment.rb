@@ -169,9 +169,22 @@ class Appointment < ApplicationRecord
   def display_client
     return walk_in_name.presence || "Avulso" if walk_in?
     return "Cliente" unless user
-    # Prefere o full_name (já validado obrigatório no User#client?). Cai no
-    # email parsed só se algum legado vier sem nome cadastrado.
-    user.full_name.presence || user.email.split("@").first.capitalize
+
+    raw = user.full_name.presence
+    # Nome é "limpo" se tem espaço (e.g. "Maria Silva") OU não tem
+    # underscore nem dígito (registros legais sem espaço como "Carla").
+    return raw if raw && (raw.include?(" ") || (!raw.include?("_") && !raw.match?(/\d/)))
+
+    # Fallback: nome ausente ou parece username de email (ex: seeds legacy
+    # com full_name = "premium_mariavalenina4"). Limpa prefixo comum,
+    # remove dígitos finais e formata cada palavra capitalizada.
+    base = (raw || user.email.to_s.split("@").first.to_s).downcase
+    cleaned = base.sub(/\A(premiumm?_|free_|trial_|user_|client_)/, "")
+                  .gsub(/\d+\z/, "")
+                  .tr("_.", " ")
+                  .strip
+    return "Cliente" if cleaned.empty?
+    cleaned.split.map(&:capitalize).join(" ")
   end
 
   def reviewable?
