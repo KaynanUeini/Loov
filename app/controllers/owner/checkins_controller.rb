@@ -56,8 +56,12 @@ module Owner
       total_no_show  = appointments.count { |a| a[:status] == "no_show" }
       total_pending  = appointments.count { |a| a[:status] == "confirmed" }
 
+      # Receita do dono: preço cheio - comissão Loov (5% só nos disponíveis).
+      # Usa Appointment::COMMISSION_PCT pra blindar contra mudança futura
+      # da regra de comissão.
       revenue_today = appointments.select { |a| a[:status] == "attended" }.sum do |a|
-        a[:is_disponivel] ? a[:price] - a[:prepayment_amount].to_f : a[:price]
+        commission = a[:is_disponivel] ? (a[:price].to_f * Appointment::COMMISSION_PCT) : 0
+        (a[:price].to_f - commission).round(2)
       end
 
       avg_7_days = (1..7).map do |i|
@@ -65,7 +69,8 @@ module Owner
         d_end   = i.days.ago.end_of_day
         car_wash.appointments
           .where(scheduled_at: d_start..d_end, status: "attended")
-          .joins(:service).sum("services.price").to_f
+          .joins(:service)
+          .sum("services.price - COALESCE(appointments.commission_amount, 0)").to_f
       end.sum / 7.0
 
       services = car_wash.services.order(:title).map do |s|

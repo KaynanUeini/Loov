@@ -205,7 +205,7 @@ class AiInsightsService
       revenue    = car_wash.appointments
                      .where(status: "attended").joins(:service)
                      .where(scheduled_at: date.beginning_of_month..date.end_of_month)
-                     .sum("services.price").to_f
+                     .sum("services.price - COALESCE(appointments.commission_amount, 0)").to_f
       total_cost = cost.total.to_f
       profit     = revenue - total_cost
       margin     = revenue > 0 ? ((profit / revenue) * 100).round(1) : 0
@@ -239,7 +239,7 @@ class AiInsightsService
     ticket_medio = car_wash.appointments
       .where(status: "attended").joins(:service)
       .where(scheduled_at: 90.days.ago..Time.current)
-      .average("services.price").to_f.round(2)
+      .average("services.price - COALESCE(appointments.commission_amount, 0)").to_f.round(2)
 
     custos_fixos_mes = current_month.dig(:detalhamento_custos, :aluguel).to_f  +
                        current_month.dig(:detalhamento_custos, :salarios).to_f +
@@ -652,7 +652,7 @@ class AiInsightsService
     last_year_start = Date.current.beginning_of_month << 12
     last_year_end   = last_year_start.end_of_month
 
-    revenue_ly = base.where(scheduled_at: last_year_start..last_year_end).sum("services.price").to_f
+    revenue_ly = base.where(scheduled_at: last_year_start..last_year_end).sum("services.price - COALESCE(appointments.commission_amount, 0)").to_f
     count_ly   = base.where(scheduled_at: last_year_start..last_year_end).count
     return nil if count_ly.zero?
 
@@ -694,9 +694,9 @@ class AiInsightsService
       .where(status: "confirmed")
       .where(scheduled_at: Time.current..7.days.from_now)
       .joins(:service)
-      .sum("services.price").to_f
+      .sum("services.price - COALESCE(appointments.commission_amount, 0)").to_f
 
-    total_sales        = base.sum("services.price").to_f
+    total_sales        = base.sum("services.price - COALESCE(appointments.commission_amount, 0)").to_f
     total_appointments = base.count
     ticket_medio       = total_appointments > 0 ? (total_sales / total_appointments).round(2) : 0
 
@@ -704,7 +704,7 @@ class AiInsightsService
       sd      = i.months.ago.beginning_of_month
       ed      = i.months.ago.end_of_month
       period  = base.where(scheduled_at: sd..ed)
-      revenue = period.sum("services.price").to_f
+      revenue = period.sum("services.price - COALESCE(appointments.commission_amount, 0)").to_f
       count   = period.count
       { mes: sd.strftime("%Y-%m"), mes_label: sd.strftime("%b/%Y"),
         faturamento: revenue.round(2), agendamentos: count,
@@ -713,8 +713,8 @@ class AiInsightsService
 
     last_30         = base.where(scheduled_at: 30.days.ago..Time.current)
     prev_30         = base.where(scheduled_at: 60.days.ago..30.days.ago)
-    last_30_revenue = last_30.sum("services.price").to_f
-    prev_30_revenue = prev_30.sum("services.price").to_f
+    last_30_revenue = last_30.sum("services.price - COALESCE(appointments.commission_amount, 0)").to_f
+    prev_30_revenue = prev_30.sum("services.price - COALESCE(appointments.commission_amount, 0)").to_f
     last_30_count   = last_30.count
     prev_30_count   = prev_30.count
     revenue_growth  = prev_30_revenue > 0 ? (((last_30_revenue / prev_30_revenue) - 1) * 100).round(1) : nil
@@ -740,7 +740,7 @@ class AiInsightsService
 
     services_perf = base
       .group("services.title")
-      .select("services.title, COUNT(*) AS total_count, SUM(services.price) AS total_revenue")
+      .select("services.title, COUNT(*) AS total_count, SUM(services.price - COALESCE(appointments.commission_amount, 0)) AS total_revenue")
       .order(Arel.sql("total_revenue DESC"))
       .map do |s|
         last_m   = base.where(services: { title: s.title }, scheduled_at: 30.days.ago..Time.current).count
@@ -781,7 +781,7 @@ class AiInsightsService
     end
 
     at_risk_receita_historica = if at_risk_count > 0
-      base.where(user_id: at_risk_user_ids).sum("services.price").to_f.round(2)
+      base.where(user_id: at_risk_user_ids).sum("services.price - COALESCE(appointments.commission_amount, 0)").to_f.round(2)
     else
       0.0
     end
@@ -809,7 +809,7 @@ class AiInsightsService
     dias_restantes_no_mes  = Date.current.end_of_month.day - Date.current.day
     faturamento_mes_atual  = base
       .where(scheduled_at: Time.current.beginning_of_month..Time.current)
-      .sum("services.price").to_f.round(2)
+      .sum("services.price - COALESCE(appointments.commission_amount, 0)").to_f.round(2)
     melhor_mes_historico   = monthly.map { |m| m[:faturamento] }.max.to_f
     meta_excelencia        = melhor_mes_historico > 0 ? melhor_mes_historico : nil
     meta_excelencia_diaria = (meta_excelencia && dias_restantes_no_mes > 0) ?

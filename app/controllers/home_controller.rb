@@ -75,7 +75,8 @@ class HomeController < ApplicationController
         @today_pending  = @car_wash.appointments.where(scheduled_at: today_start..today_end, status: "confirmed").count
         @today_revenue  = @car_wash.appointments
                             .where(scheduled_at: today_start..today_end, status: "attended")
-                            .joins(:service).sum("services.price").to_f
+                            .joins(:service)
+                            .sum("services.price - COALESCE(appointments.commission_amount, 0)").to_f
         @upcoming_count = @car_wash.appointments
                             .where(status: "confirmed")
                             .where(scheduled_at: Time.current..7.days.from_now)

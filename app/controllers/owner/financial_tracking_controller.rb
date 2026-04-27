@@ -69,7 +69,7 @@ module Owner
       base = base.where("services.title = ?", params[:service_filter]) if params[:service_filter].present?
 
       @appointments       = base
-      @total_sales        = @appointments.sum("services.price").to_f
+      @total_sales        = @appointments.sum("services.price - COALESCE(appointments.commission_amount, 0)").to_f
       @total_appointments = @appointments.count
 
       if @is_all_filter
@@ -89,7 +89,7 @@ module Owner
       # ── VENDAS POR DIA ─────────────────────────────────────────────────────
       sales_by_day_data = @appointments
       .group(Arel.sql("DATE(scheduled_at)"))
-      .select("DATE(scheduled_at) AS sale_date, COUNT(*) AS appointment_count, SUM(services.price) AS total_value")
+      .select("DATE(scheduled_at) AS sale_date, COUNT(*) AS appointment_count, SUM(services.price - COALESCE(appointments.commission_amount, 0)) AS total_value")
       .order(Arel.sql("DATE(scheduled_at) ASC"))
 
       @sales_by_day = (@start_date..@end_date).map do |date|
@@ -104,7 +104,7 @@ module Owner
       # ── VENDAS POR MÊS ─────────────────────────────────────────────────────
       sales_by_month_data = @appointments
       .group(Arel.sql("DATE_TRUNC('month', scheduled_at)"))
-      .select("DATE_TRUNC('month', scheduled_at) AS period_start, COUNT(*) AS appointment_count, SUM(services.price) AS total_value")
+      .select("DATE_TRUNC('month', scheduled_at) AS period_start, COUNT(*) AS appointment_count, SUM(services.price - COALESCE(appointments.commission_amount, 0)) AS total_value")
       .order(Arel.sql("period_start ASC"))
 
       all_months = []
@@ -126,7 +126,7 @@ module Owner
       # ── VENDAS POR ANO ─────────────────────────────────────────────────────
       sales_by_year_data = @appointments
       .group(Arel.sql("DATE_TRUNC('year', scheduled_at)"))
-      .select("DATE_TRUNC('year', scheduled_at) AS period_start, COUNT(*) AS appointment_count, SUM(services.price) AS total_value")
+      .select("DATE_TRUNC('year', scheduled_at) AS period_start, COUNT(*) AS appointment_count, SUM(services.price - COALESCE(appointments.commission_amount, 0)) AS total_value")
       .order(Arel.sql("period_start ASC"))
 
       @sales_by_year = (@start_date.year..@end_date.year).map do |year|
@@ -152,13 +152,13 @@ module Owner
       when "hour"
         sales_by_hour = @appointments
         .group(Arel.sql("DATE(scheduled_at - INTERVAL '3 hours'), EXTRACT(HOUR FROM (scheduled_at - INTERVAL '3 hours'))"))
-        .select("DATE(scheduled_at - INTERVAL '3 hours'), EXTRACT(HOUR FROM (scheduled_at - INTERVAL '3 hours')) AS sale_hour, COUNT(*) AS appointment_count, SUM(services.price) AS total_value")
+        .select("DATE(scheduled_at - INTERVAL '3 hours'), EXTRACT(HOUR FROM (scheduled_at - INTERVAL '3 hours')) AS sale_hour, COUNT(*) AS appointment_count, SUM(services.price - COALESCE(appointments.commission_amount, 0)) AS total_value")
         .order(Arel.sql("DATE(scheduled_at - INTERVAL '3 hours') ASC, sale_hour ASC"))
         @chart_data = sales_by_hour.map { |e| { date: "#{e.sale_hour.to_i}:00", value: e.total_value.to_f } }
 
         confirmed_by_hour = confirmed_base
         .group(Arel.sql("DATE(scheduled_at - INTERVAL '3 hours'), EXTRACT(HOUR FROM (scheduled_at - INTERVAL '3 hours'))"))
-        .select("DATE(scheduled_at - INTERVAL '3 hours'), EXTRACT(HOUR FROM (scheduled_at - INTERVAL '3 hours')) AS sale_hour, SUM(services.price) AS total_value")
+        .select("DATE(scheduled_at - INTERVAL '3 hours'), EXTRACT(HOUR FROM (scheduled_at - INTERVAL '3 hours')) AS sale_hour, SUM(services.price - COALESCE(appointments.commission_amount, 0)) AS total_value")
         .order(Arel.sql("DATE(scheduled_at - INTERVAL '3 hours') ASC, sale_hour ASC"))
         confirmed_map = confirmed_by_hour.each_with_object({}) { |e, h| h["#{e.sale_hour.to_i}:00"] = e.total_value.to_f }
         @confirmed_chart_data = @chart_data.map { |d| { date: d[:date], value: confirmed_map[d[:date]] || 0 } }
@@ -167,7 +167,7 @@ module Owner
 
         confirmed_by_day = confirmed_base
         .group(Arel.sql("DATE(scheduled_at)"))
-        .select("DATE(scheduled_at) AS sale_date, SUM(services.price) AS total_value")
+        .select("DATE(scheduled_at) AS sale_date, SUM(services.price - COALESCE(appointments.commission_amount, 0)) AS total_value")
         .order(Arel.sql("DATE(scheduled_at) ASC"))
         confirmed_map = confirmed_by_day.each_with_object({}) { |e, h| h[e.sale_date.strftime("%d/%m")] = e.total_value.to_f }
         @confirmed_chart_data = @chart_data.map { |d| { date: d[:date], value: confirmed_map[d[:date]] || 0 } }
@@ -177,7 +177,7 @@ module Owner
 
         confirmed_by_month = confirmed_base
         .group(Arel.sql("DATE_TRUNC('month', scheduled_at)"))
-        .select("DATE_TRUNC('month', scheduled_at) AS period_start, SUM(services.price) AS total_value")
+        .select("DATE_TRUNC('month', scheduled_at) AS period_start, SUM(services.price - COALESCE(appointments.commission_amount, 0)) AS total_value")
         .order(Arel.sql("period_start ASC"))
         confirmed_map = confirmed_by_month.each_with_object({}) do |e, h|
           label = I18n.l(e.period_start.to_date, format: "%b/%Y", locale: :"pt-BR") rescue e.period_start.strftime("%m/%Y")
@@ -190,7 +190,7 @@ module Owner
 
         confirmed_by_year = confirmed_base
         .group(Arel.sql("DATE_TRUNC('year', scheduled_at)"))
-        .select("DATE_TRUNC('year', scheduled_at) AS period_start, SUM(services.price) AS total_value")
+        .select("DATE_TRUNC('year', scheduled_at) AS period_start, SUM(services.price - COALESCE(appointments.commission_amount, 0)) AS total_value")
         .order(Arel.sql("period_start ASC"))
         confirmed_map = confirmed_by_year.each_with_object({}) { |e, h| h[e.period_start.strftime("%Y")] = e.total_value.to_f }
         @confirmed_chart_data = @chart_data.map { |d| { date: d[:date], value: confirmed_map[d[:date]] || 0 } }
@@ -251,7 +251,7 @@ module Owner
       .where(status: "attended")
       .joins(:service)
       .group("services.title")
-      .select("services.title, COUNT(*) AS total_count, SUM(services.price) AS total_revenue")
+      .select("services.title, COUNT(*) AS total_count, SUM(services.price - COALESCE(appointments.commission_amount, 0)) AS total_revenue")
       .order(Arel.sql("total_revenue DESC"))
       .map { |s| { title: s.title, count: s.total_count.to_i, revenue: s.total_revenue.to_f } }
 
@@ -408,7 +408,7 @@ module Owner
         .where(status: "attended")
         .where(scheduled_at: start_date.beginning_of_day..end_date.end_of_day)
         .joins(:service)
-        .sum("services.price").to_f
+        .sum("services.price - COALESCE(appointments.commission_amount, 0)").to_f
     end
 
     def open_revenue_sum_in_range(car_wash, start_date, end_date)
@@ -419,7 +419,7 @@ module Owner
         .where(status: "confirmed")
         .where(scheduled_at: effective_from..period_end)
         .joins(:service)
-        .sum("services.price").to_f
+        .sum("services.price - COALESCE(appointments.commission_amount, 0)").to_f
     end
 
     # Itera por MÊS (não por dia) usando lookup em memória — bem mais rápido
@@ -465,7 +465,7 @@ module Owner
         .where(scheduled_at: day.beginning_of_day..day.end_of_day)
         .joins(:service)
         .group(Arel.sql("EXTRACT(HOUR FROM (scheduled_at AT TIME ZONE 'America/Sao_Paulo'))"))
-        .sum("services.price")
+        .sum("services.price - COALESCE(appointments.commission_amount, 0)")
       rev_by_hour = raw.each_with_object({}) { |(k, v), h| h[k.to_i] = v.to_f }
 
       mc            = cost_lookup[[day.year, day.month]]
@@ -489,7 +489,7 @@ module Owner
         .where(scheduled_at: start_date.beginning_of_day..end_date.end_of_day)
         .joins(:service)
         .group(Arel.sql("DATE(scheduled_at AT TIME ZONE 'America/Sao_Paulo')"))
-        .sum("services.price")
+        .sum("services.price - COALESCE(appointments.commission_amount, 0)")
       rev_by_day = raw.each_with_object({}) do |(k, v), h|
         date = k.is_a?(String) ? Date.parse(k) : k.to_date
         h[date] = v.to_f
@@ -515,7 +515,7 @@ module Owner
         .where(scheduled_at: start_date.beginning_of_day..end_date.end_of_day)
         .joins(:service)
         .group(Arel.sql("DATE_TRUNC('month', scheduled_at AT TIME ZONE 'America/Sao_Paulo')"))
-        .sum("services.price")
+        .sum("services.price - COALESCE(appointments.commission_amount, 0)")
       rev_by_month = raw.each_with_object({}) do |(k, v), h|
         date = k.is_a?(String) ? Date.parse(k) : k.to_date
         h[[date.year, date.month]] = v.to_f
@@ -547,7 +547,7 @@ module Owner
         .where(scheduled_at: window_start.beginning_of_day..window_end.end_of_day)
         .joins(:service)
         .group(Arel.sql("DATE_TRUNC('month', scheduled_at AT TIME ZONE 'America/Sao_Paulo')"))
-        .sum("services.price")
+        .sum("services.price - COALESCE(appointments.commission_amount, 0)")
       rev_by_month = rev_raw.each_with_object({}) do |(k, v), h|
         date = k.is_a?(String) ? Date.parse(k) : k.to_date
         h[[date.year, date.month]] = v.to_f
@@ -559,7 +559,7 @@ module Owner
         .where(scheduled_at: Time.current..window_end.end_of_day)
         .joins(:service)
         .group(Arel.sql("DATE_TRUNC('month', scheduled_at AT TIME ZONE 'America/Sao_Paulo')"))
-        .sum("services.price")
+        .sum("services.price - COALESCE(appointments.commission_amount, 0)")
       open_by_month = open_raw.each_with_object({}) do |(k, v), h|
         date = k.is_a?(String) ? Date.parse(k) : k.to_date
         h[[date.year, date.month]] = v.to_f

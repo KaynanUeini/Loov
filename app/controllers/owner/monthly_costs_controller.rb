@@ -19,13 +19,13 @@ module Owner
                     .where(status: "attended")
                     .joins(:service)
                     .where(scheduled_at: date.beginning_of_month..date.end_of_month)
-                    .sum("services.price").to_f
+                    .sum("services.price - COALESCE(appointments.commission_amount, 0)").to_f
 
         pending_revenue = @car_wash.appointments
                             .where(status: "confirmed")
                             .joins(:service)
                             .where(scheduled_at: Date.today..date.end_of_month)
-                            .sum("services.price").to_f
+                            .sum("services.price - COALESCE(appointments.commission_amount, 0)").to_f
 
         total_cost = cost&.total.to_f
         profit     = revenue - total_cost
