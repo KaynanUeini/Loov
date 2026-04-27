@@ -167,11 +167,11 @@ class Appointment < ApplicationRecord
 
   # ── DISPLAY ───────────────────────────────────────────────────────────────
   def display_client
-    if walk_in?
-      walk_in_name.presence || "Avulso"
-    else
-      user&.email&.split("@")&.first&.capitalize || "Cliente"
-    end
+    return walk_in_name.presence || "Avulso" if walk_in?
+    return "Cliente" unless user
+    # Prefere o full_name (já validado obrigatório no User#client?). Cai no
+    # email parsed só se algum legado vier sem nome cadastrado.
+    user.full_name.presence || user.email.split("@").first.capitalize
   end
 
   def reviewable?
