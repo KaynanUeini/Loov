@@ -1,7 +1,9 @@
 module Owner
   class AttendantInvitationsController < ApplicationController
-    before_action :authenticate_user!
-    before_action :ensure_owner, except: [:accept, :do_accept]
+    # accept/do_accept são públicos — convidado ainda nem tem conta criada,
+    # então não pode passar pelo authenticate_user!.
+    before_action :authenticate_user!, except: [:accept, :do_accept]
+    before_action :ensure_owner,       except: [:accept, :do_accept]
 
     def index
       @car_wash    = current_user.car_washes.first
