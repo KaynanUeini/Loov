@@ -113,7 +113,10 @@ module Owner
     # passar por e-mail. Útil quando o dono está ao lado do funcionário e
     # define a senha na hora, ou pra contornar limites de sandbox de SMTP.
     def create_direct
-      car_wash = current_user.car_washes.first
+      # Usa linked_car_wash pra ser consistente com TODAS as outras telas
+      # do app (dashboard, financeiro, etc), em vez de car_washes.first.
+      car_wash = current_user.linked_car_wash
+      Rails.logger.info("[create_direct] user=#{current_user.id}/#{current_user.email} linked_car_wash=#{car_wash&.id}/#{car_wash&.name} total_cw=#{current_user.car_washes.count}")
       return render json: { error: "Lava-rápido não encontrado." }, status: :not_found unless car_wash
 
       email     = params[:email].to_s.strip.downcase
