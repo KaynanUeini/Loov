@@ -6,6 +6,43 @@ module Owner
     before_action :authenticate_user!
     before_action :ensure_owner
 
+    # GET /owner/attendants/diagnostic — lista car_washes do dono pra
+    # debug em casos onde o user tem múltiplos (seed legado, etc).
+    def diagnostic
+      list = current_user.car_washes.order(:created_at).map do |cw|
+        {
+          id:                cw.id,
+          name:              cw.name,
+          created_at:        cw.created_at.iso8601,
+          appointments_count: cw.appointments.count,
+          attendants_active:  cw.attendant_invitations.where(status: "accepted").count,
+          pending_invites:    cw.attendant_invitations.where(status: "pending").count,
+        }
+      end
+      render json: {
+        user_email:       current_user.email,
+        car_washes_count: list.size,
+        car_washes:       list,
+        linked_car_wash_id: current_user.linked_car_wash&.id,
+      }
+    end
+
+    # DELETE /owner/attendants/car_wash/:id — apaga um car_wash duplicado
+    # (cleanup pra usuários que herdaram múltiplos via seed). Só permite
+    # se houver mais de um car_wash no user (não deixa zerar).
+    def destroy_car_wash
+      car_wash = current_user.car_washes.find_by(id: params[:id])
+      return render json: { error: "Lava-rápido não encontrado." }, status: :not_found unless car_wash
+      if current_user.car_washes.count <= 1
+        return render json: { error: "Você precisa manter ao menos um lava-rápido." }, status: :unprocessable_entity
+      end
+      name = car_wash.name
+      car_wash.destroy!
+      render json: { ok: true, deleted: name }
+    rescue => e
+      render json: { error: e.message }, status: :unprocessable_entity
+    end
+
     # GET /owner/attendants
     def index
       car_wash = current_user.car_washes.first
