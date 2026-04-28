@@ -1,0 +1,24 @@
+<div style="font-family: -apple-system, Helvetica, Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px; color: #28231c; background: #fafaf6;">
+  <p style="font-family: 'Courier New', monospace; font-size: 11px; letter-spacing: 1.5px; color: #ada699; text-transform: uppercase; margin: 0 0 6px;">LOOV · CONVITE</p>
+  <h1 style="font-size: 22px; font-weight: 700; letter-spacing: -0.3px; margin: 0 0 18px;">Você foi convidado a ser atendente</h1>
+
+  <p style="font-size: 14px; line-height: 22px; margin: 0 0 12px;">
+    <strong><%= @inviter&.full_name.presence || "O dono" %></strong> te adicionou como atendente do
+    <strong><%= @car_wash.name %></strong> no Loov.
+  </p>
+
+  <p style="font-size: 14px; line-height: 22px; margin: 0 0 24px; color: #575148;">
+    Como atendente você consegue gerenciar agendamentos, registrar avulsos e acompanhar atendimentos —
+    sem acesso à parte financeira ou configurações administrativas.
+  </p>
+
+  <a href="<%= @accept_url %>"
+     style="display: inline-block; background: #dd7852; color: #fafaf6; text-decoration: none; padding: 14px 22px; border-radius: 100px; font-weight: 600; letter-spacing: 1px; font-size: 13px;">
+    ACEITAR CONVITE
+  </a>
+
+  <p style="font-size: 12px; line-height: 18px; margin: 28px 0 0; color: #ada699;">
+    Se não conhece <%= @inviter&.full_name || "essa pessoa" %> ou recebeu por engano, é só ignorar.
+    O convite expira após o aceite ou se for cancelado pelo dono.
+  </p>
+</div>

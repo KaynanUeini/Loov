@@ -1,4 +1,5 @@
 class ApplicationMailer < ActionMailer::Base
-  default from: "from@example.com"
+  # Configurável via ENV — Resend exige domínio verificado.
+  default from: ENV.fetch("MAILER_FROM", "Loov <onboarding@resend.dev>")
   layout "mailer"
 end
