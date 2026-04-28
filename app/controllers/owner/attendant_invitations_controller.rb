@@ -43,15 +43,24 @@ module Owner
 
     # POST /owner/attendant_invitations/:token/accept
     def do_accept
+      Rails.logger.info("[do_accept] hit token=#{params[:token].to_s[0,8]}... ip=#{request.remote_ip}")
       @invitation = AttendantInvitation.find_by(token: params[:token], status: "pending")
       unless @invitation
+        Rails.logger.warn("[do_accept] convite inválido/já usado — token=#{params[:token].to_s[0,8]}...")
         redirect_to root_path, alert: "Convite inválido ou já utilizado." and return
       end
 
       user = User.find_by(email: @invitation.email)
 
       if user
+        # Bloqueia auto-convite (dono tentou se convidar). Sem isso o
+        # accept! antigo mudava role pra attendant e quebrava o acesso.
+        if user.owner?
+          Rails.logger.warn("[do_accept] tentativa de aceitar convite por dono user_id=#{user.id} email=#{user.email}")
+          redirect_to root_path, alert: "Esse e-mail já é dono — não dá pra aceitar como atendente." and return
+        end
         @invitation.accept!(user)
+        Rails.logger.info("[do_accept] aceito por user existente id=#{user.id}")
         sign_in(user)
         redirect_to root_path, notice: "Convite aceito! Bem-vindo ao #{@invitation.car_wash.name}."
       else
@@ -65,13 +74,18 @@ module Owner
         )
         if user.save
           @invitation.accept!(user)
+          Rails.logger.info("[do_accept] criada nova conta atendente id=#{user.id}")
           sign_in(user)
           redirect_to root_path, notice: "Conta criada! Bem-vindo ao #{@invitation.car_wash.name}."
         else
+          Rails.logger.warn("[do_accept] falha ao criar user — #{user.errors.full_messages.join(", ")}")
           flash.now[:alert] = user.errors.full_messages.join(", ")
           render :accept, status: :unprocessable_entity
         end
       end
+    rescue => e
+      Rails.logger.error("[do_accept] exceção #{e.class}: #{e.message}\n#{e.backtrace&.first(5)&.join("\n")}")
+      redirect_to root_path, alert: "Erro inesperado. Tenta de novo ou avisa o dono."
     end
 
     private

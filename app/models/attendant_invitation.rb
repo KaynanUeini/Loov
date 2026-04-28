@@ -20,7 +20,9 @@ class AttendantInvitation < ApplicationRecord
 
   def accept!(user)
     update!(status: "accepted", attendant: user)
-    user.update!(role: "attendant")
+    # Não rebaixa dono/admin — preserva privilégio mais alto. Só promove
+    # client → attendant.
+    user.update!(role: "attendant") if user.role == "client"
   end
 
   private

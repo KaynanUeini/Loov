@@ -43,6 +43,15 @@ module Owner
       email = params[:email].to_s.strip.downcase
       return render json: { error: "Informe um e-mail válido." }, status: :unprocessable_entity if email.empty? || !email.include?("@")
 
+      if email == current_user.email.to_s.downcase
+        return render json: { error: "Você já é o dono — não dá pra se convidar como atendente." }, status: :unprocessable_entity
+      end
+
+      existing = User.find_by(email: email)
+      if existing&.owner?
+        return render json: { error: "Esse e-mail já é dono de um lava-rápido. Não dá pra convidar como atendente." }, status: :unprocessable_entity
+      end
+
       invitation = car_wash.attendant_invitations.build(
         inviter: current_user,
         email:   email,
