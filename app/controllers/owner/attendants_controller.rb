@@ -50,12 +50,22 @@ module Owner
       )
 
       if invitation.save
+        mail_error = nil
         begin
+          Rails.logger.info("[AttendantsController#create] enviando convite pra #{invitation.email} (from=#{ApplicationMailer.default[:from]})")
           AttendantMailer.invitation(invitation).deliver_now
+          Rails.logger.info("[AttendantsController#create] convite enviado com sucesso pra #{invitation.email}")
         rescue => e
-          Rails.logger.warn("[AttendantsController#create] mailer falhou: #{e.message}")
+          mail_error = "#{e.class}: #{e.message}"
+          Rails.logger.error("[AttendantsController#create] mailer falhou pra #{invitation.email} — #{mail_error}\n#{e.backtrace&.first(5)&.join("\n")}")
         end
-        render json: { ok: true, id: invitation.id, email: invitation.email }
+        render json: {
+          ok:         true,
+          id:         invitation.id,
+          email:      invitation.email,
+          mail_sent:  mail_error.nil?,
+          mail_error: mail_error
+        }
       else
         render json: { error: invitation.errors.full_messages.join(", ") }, status: :unprocessable_entity
       end
