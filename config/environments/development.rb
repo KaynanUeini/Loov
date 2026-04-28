@@ -81,10 +81,10 @@ Rails.application.configure do
   # Raise error when a before_action's only/except options reference missing actions
   config.action_controller.raise_on_missing_callback_actions = true
 
-  # Configurações adicionais para o Action Mailer
-  config.action_mailer.delivery_method = :smtp
-  config.action_mailer.smtp_settings = { address: "smtp.resend.com", port: 587, user_name: "resend", password: ENV["RESEND_API_KEY"], authentication: :plain, enable_starttls_auto: true }
-  config.action_mailer.perform_deliveries = true
+  # Resend via HTTPS API (gem resend) — porta 443. Mesmo método usado
+  # em produção. Initializer config/initializers/resend.rb.
+  config.action_mailer.delivery_method     = :resend
+  config.action_mailer.perform_deliveries  = true
   config.action_mailer.default_url_options = { host: 'localhost', port: 3000 }
 
   # Desativar Turbo globalmente (Alternativa 5)

@@ -73,17 +73,10 @@ Rails.application.configure do
 
   config.action_mailer.perform_caching = false
 
-  # SMTP via Resend (mesmo provider do dev). Requer ENV RESEND_API_KEY
-  # configurado no Render.
-  config.action_mailer.delivery_method = :smtp
-  config.action_mailer.smtp_settings   = {
-    address:              "smtp.resend.com",
-    port:                 587,
-    user_name:            "resend",
-    password:             ENV["RESEND_API_KEY"],
-    authentication:       :plain,
-    enable_starttls_auto: true,
-  }
+  # Resend via HTTPS API (gem resend) — porta 443. Render bloqueia SMTP
+  # outbound (porta 587) e gerava Net::OpenTimeout. Configurado no
+  # initializer config/initializers/resend.rb.
+  config.action_mailer.delivery_method       = :resend
   config.action_mailer.raise_delivery_errors = true
   config.action_mailer.default_url_options = {
     host:     ENV.fetch("APP_HOST", "loov-api.onrender.com"),
