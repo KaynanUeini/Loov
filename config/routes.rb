@@ -78,7 +78,11 @@ Rails.application.routes.draw do
     end
 
     # JSON API — gestão de funcionários pelo app do dono
-    resources :attendants, only: [:index, :create, :destroy]
+    resources :attendants, only: [:index, :create, :destroy] do
+      collection do
+        post :direct, action: :create_direct
+      end
+    end
     delete 'attendants/invitations/:id', to: 'attendants#destroy_invitation', as: :destroy_attendant_invitation
 
     resources :messages, only: [:create] do

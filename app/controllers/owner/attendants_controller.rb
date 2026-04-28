@@ -72,6 +72,45 @@ module Owner
       end
     end
 
+    # POST /owner/attendants/direct — cria atendente + convite aceito sem
+    # passar por e-mail. Útil quando o dono está ao lado do funcionário e
+    # define a senha na hora, ou pra contornar limites de sandbox de SMTP.
+    def create_direct
+      car_wash = current_user.car_washes.first
+      return render json: { error: "Lava-rápido não encontrado." }, status: :not_found unless car_wash
+
+      email     = params[:email].to_s.strip.downcase
+      password  = params[:password].to_s
+      full_name = params[:full_name].to_s.strip
+
+      return render json: { error: "Informe um e-mail válido." }, status: :unprocessable_entity if email.empty? || !email.include?("@")
+      return render json: { error: "Informe o nome do atendente." }, status: :unprocessable_entity if full_name.empty?
+      return render json: { error: "Senha precisa de ao menos 6 caracteres." }, status: :unprocessable_entity if password.length < 6
+      return render json: { error: "Esse e-mail já tem conta no Loov." }, status: :unprocessable_entity if User.exists?(email: email)
+
+      begin
+        ActiveRecord::Base.transaction do
+          user = User.create!(
+            email:     email,
+            password:  password,
+            role:      "attendant",
+            full_name: full_name
+          )
+          car_wash.attendant_invitations.create!(
+            inviter:   current_user,
+            attendant: user,
+            email:     email,
+            status:    "accepted"
+          )
+        end
+      rescue => e
+        Rails.logger.error("[create_direct] #{e.class}: #{e.message}")
+        return render json: { error: e.message }, status: :unprocessable_entity
+      end
+
+      render json: { ok: true, email: email }
+    end
+
     # DELETE /owner/attendants/invitations/:id — cancela convite pendente
     def destroy_invitation
       car_wash = current_user.car_washes.first
