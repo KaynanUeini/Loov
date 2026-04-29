@@ -2,7 +2,11 @@ module Owner
   class CarWashController < ApplicationController
     skip_before_action :verify_authenticity_token
     before_action :authenticate_user!
-    before_action :ensure_owner
+    # Atendente pode ler info do car_wash que está vinculado (nome aparece
+    # no header do dashboard). Tudo que muda dados (update etc) segue
+    # restrito ao dono via ensure_owner.
+    before_action :ensure_owner, except: [:show]
+    before_action :ensure_owner_or_attendant, only:   [:show]
     before_action :set_car_wash
 
     def show
@@ -161,12 +165,20 @@ module Owner
     end
 
     def set_car_wash
-      @car_wash = current_user.car_washes.first
+      # Usa linked_car_wash pra resolver tanto pro dono (car_washes.first)
+      # quanto pro atendente (attendant_invitations.accepted.first.car_wash).
+      @car_wash = current_user&.linked_car_wash
       render json: { error: 'Lava-rápido não encontrado.' }, status: :not_found unless @car_wash
     end
 
     def ensure_owner
       render json: { error: 'Acesso negado.' }, status: :forbidden unless current_user&.owner?
+    end
+
+    def ensure_owner_or_attendant
+      unless current_user&.owner? || current_user&.attendant?
+        render json: { error: 'Acesso negado.' }, status: :forbidden
+      end
     end
   end
 end
