@@ -62,26 +62,70 @@ module Owner
       month         = params[:month]&.to_i || Date.current.month
       @cost         = MonthlyCost.for_month(@car_wash, year, month)
 
-      @pending_fields        = []
-      @pending_values        = {}
-      @pending_custom_lines  = nil
-      @has_pending           = false
+      @pending_fields    = []
+      @pending_values    = {}
+      @pending_line_keys = []
+      @has_pending       = false
+
+      # Lista de linhas customizadas com decoração de "pending" pra UI.
+      # Cada item tem id (DB int) ou syn_id (string "p:<pc_id>:<idx>").
+      @effective_lines = (@cost.persisted? ? @cost.custom_cost_lines.ordered : []).map { |l|
+        { "id" => l.id, "name" => l.name, "amount" => l.amount.to_f,
+          "cost_type" => l.cost_type, "position" => l.position, "pending" => false }
+      }
+
       if current_user.attendant?
         pending = @car_wash.pending_changes
-                    .where(change_type: "monthly_costs", status: "pending")
+                    .where(change_type: "monthly_costs", status: "pending", attendant: current_user)
                     .select { |pc| pc.payload_data["year"].to_i == year && pc.payload_data["month"].to_i == month }
                     .sort_by(&:created_at)
 
-        # O mais recente sobrescreve os anteriores — atendente vê o último
-        # valor que ele submeteu pra cada campo.
         pending.each do |pc|
-          (pc.payload_data["cost_params"] || {}).each { |k, v| @pending_values[k] = v }
-          if pc.payload_data["custom_lines"].is_a?(Array)
-            @pending_custom_lines = pc.payload_data["custom_lines"]
+          data = pc.payload_data
+          (data["cost_params"] || {}).each { |k, v| @pending_values[k] = v }
+
+          if (diff = data["custom_lines_diff"]).is_a?(Hash)
+            Array(diff["deleted"]).each do |id|
+              @effective_lines.reject! { |l| l["id"] == id.to_i }
+            end
+            Array(diff["updated"]).each do |upd|
+              line = @effective_lines.find { |l| l["id"] == upd["id"].to_i }
+              next unless line
+              line["name"]      = upd["name"]
+              line["amount"]    = upd["amount"].to_f
+              line["cost_type"] = upd["cost_type"]
+              line["pending"]   = true
+              @pending_line_keys << line["id"].to_s
+            end
+            Array(diff["added"]).each_with_index do |add, idx|
+              syn_id = "p:#{pc.id}:#{idx}"
+              @effective_lines << {
+                "id"        => syn_id,
+                "name"      => add["name"],
+                "amount"    => add["amount"].to_f,
+                "cost_type" => add["cost_type"],
+                "position"  => 9000 + idx,
+                "pending"   => true,
+              }
+              @pending_line_keys << syn_id
+            end
+          elsif (legacy = data["custom_lines"]).is_a?(Array)
+            # Backwards-compat: payload antigo guardava lista cheia.
+            @effective_lines = legacy.each_with_index.map do |l, idx|
+              syn_id = "p:#{pc.id}:#{idx}"
+              @pending_line_keys << syn_id
+              { "id"        => syn_id,
+                "name"      => l["name"],
+                "amount"    => l["amount"].to_f,
+                "cost_type" => l["cost_type"],
+                "position"  => idx,
+                "pending"   => true }
+            end
           end
         end
+
         @pending_fields = @pending_values.keys
-        @has_pending    = @pending_fields.any? || !@pending_custom_lines.nil?
+        @has_pending    = @pending_fields.any? || @pending_line_keys.any?
       end
 
       respond_to do |format|
@@ -101,14 +145,17 @@ module Owner
             other_fixed:    @cost.other_fixed.to_f,
             other_variable: @cost.other_variable.to_f,
             notes:          @cost.notes.to_s,
-            custom_lines:   (@cost.persisted? ? @cost.custom_cost_lines.ordered : []).map { |l|
-              { id: l.id, name: l.name, amount: l.amount.to_f, cost_type: l.cost_type, position: l.position }
+            # Custom_lines = estado efetivo (DB + diff de pending aplicados).
+            # Linhas pending-added têm `id` string sintético tipo "p:1:0".
+            custom_lines:      @effective_lines.map { |l|
+              { id: l["id"], name: l["name"], amount: l["amount"].to_f,
+                cost_type: l["cost_type"], position: l["position"], pending: l["pending"] }
             },
-            pending_fields:       @pending_fields,
-            pending_values:       @pending_values,
-            pending_custom_lines: @pending_custom_lines,
-            has_pending:          @has_pending,
-            is_attendant:         current_user.attendant?
+            pending_fields:    @pending_fields,
+            pending_values:    @pending_values,
+            pending_line_keys: @pending_line_keys,
+            has_pending:       @has_pending,
+            is_attendant:      current_user.attendant?
           }
         end
       end
@@ -125,107 +172,135 @@ module Owner
           :maintenance, :other_fixed, :other_variable, :notes
         ).to_h
 
+        # IDs de linhas podem vir como inteiros (DB) ou strings sintéticas
+        # tipo "p:<pending_id>:<idx>" pra linhas que JÁ estão num pending.
+        # Ambos os casos são tratados como "sem id de DB" no diff.
         incoming_lines = (params[:custom_lines].presence ||
                           params.dig(:monthly_cost, :custom_lines) ||
                           []).map do |h|
           h = h.respond_to?(:permit) ? h.permit(:id, :name, :amount, :cost_type, :position).to_h : h.to_h.stringify_keys
+          raw_id = h["id"]
+          db_id  = (raw_id.is_a?(Integer) || raw_id.to_s.match?(/\A\d+\z/)) ? raw_id.to_i : nil
           {
-            "id"        => h["id"].presence&.to_i,
+            "id"        => db_id,
             "name"      => h["name"].to_s.strip,
             "amount"    => h["amount"].to_f.round(2),
             "cost_type" => h["cost_type"].to_s,
-            "position"  => (h["position"] || 0).to_i,
           }
         end.reject { |h| h["name"].empty? || h["amount"] <= 0 }
 
         existing = MonthlyCost.for_month(@car_wash, year, month)
 
-        # Pending changes do mês, ordenadas por criação (mais antiga primeiro).
-        pending = @car_wash.pending_changes
-                    .where(change_type: "monthly_costs", status: "pending")
-                    .select { |pc| pc.payload_data["year"].to_i == year && pc.payload_data["month"].to_i == month }
-                    .sort_by(&:created_at)
-
-        # Estado mais recente "intencionado" pra cada campo padrão:
-        # último pending sobrescreve DB. Diff é contra esse estado, não só DB.
-        allowed_keys = %w[rent salaries utilities water electricity products
-                          maintenance other_fixed other_variable notes]
-        current_values = {}
-        allowed_keys.each { |k| current_values[k] = existing.send(k) }
-        pending.each do |pc|
-          (pc.payload_data["cost_params"] || {}).each { |k, v| current_values[k] = v }
-        end
-
-        changed = raw.select do |k, v|
+        # ── Diff de cost_params (vs DB) ──────────────────────────────────────
+        cost_params_diff = raw.select do |k, v|
           if k == "notes"
-            current_values[k].to_s.strip != v.to_s.strip
+            existing.send(k).to_s.strip != v.to_s.strip
           else
-            current_values[k].to_f.round(2) != v.to_f.round(2)
+            existing.send(k).to_f.round(2) != v.to_f.round(2)
           end
         end
 
-        # Estado mais recente das linhas customizadas: último pending com
-        # custom_lines OU as linhas salvas no DB.
-        latest_pending_lines = pending.reverse.find { |pc| pc.payload_data["custom_lines"].is_a?(Array) }
-                                       &.payload_data&.dig("custom_lines")
-        current_lines =
-          if latest_pending_lines
-            latest_pending_lines.map { |h|
-              { "id" => h["id"].presence&.to_i, "name" => h["name"].to_s.strip,
-                "amount" => h["amount"].to_f.round(2), "cost_type" => h["cost_type"].to_s }
-            }
-          elsif existing.persisted?
-            existing.custom_cost_lines.ordered.map { |l|
-              { "id" => l.id, "name" => l.name.to_s.strip,
-                "amount" => l.amount.to_f.round(2), "cost_type" => l.cost_type.to_s }
-            }
+        # ── Diff de custom_lines (vs DB) ─────────────────────────────────────
+        db_lines = existing.persisted? ? existing.custom_cost_lines.ordered.to_a : []
+        db_by_id = db_lines.index_by(&:id)
+
+        added   = []
+        updated = []
+        incoming_db_ids = []
+
+        incoming_lines.each do |inc|
+          if inc["id"]
+            db_line = db_by_id[inc["id"]]
+            if db_line.nil?
+              # ID de DB que sumiu — re-adiciona como nova
+              added << inc.slice("name", "amount", "cost_type")
+            else
+              incoming_db_ids << inc["id"]
+              if db_line.name.to_s.strip != inc["name"] ||
+                 db_line.amount.to_f.round(2) != inc["amount"] ||
+                 db_line.cost_type.to_s != inc["cost_type"]
+                updated << inc.slice("id", "name", "amount", "cost_type")
+              end
+            end
           else
-            []
+            # Sem id DB → linha nova (inclui sintéticos "p:..." que viraram nil)
+            added << inc.slice("name", "amount", "cost_type")
           end
+        end
 
-        normalize_lines = ->(arr) { arr.map { |h| h.slice("id", "name", "amount", "cost_type") }
-                                       .sort_by { |h| [h["id"].to_i, h["name"]] } }
-        custom_changed = normalize_lines.call(current_lines) != normalize_lines.call(incoming_lines)
+        deleted = db_lines.map(&:id) - incoming_db_ids
 
-        if changed.empty? && !custom_changed
-          if request.format.json?
-            return render json: { ok: false, message: "Nenhuma alteração detectada." }
+        custom_lines_diff = {
+          "added"   => added,
+          "updated" => updated,
+          "deleted" => deleted,
+        }
+        custom_changed = added.any? || updated.any? || deleted.any?
+
+        # ── Pending existente desse atendente pro mesmo mês? ─────────────────
+        existing_pending = @car_wash.pending_changes
+                              .where(change_type: "monthly_costs", status: "pending", attendant: current_user)
+                              .find { |pc| pc.payload_data["year"].to_i == year && pc.payload_data["month"].to_i == month }
+
+        diff_empty = cost_params_diff.empty? && !custom_changed
+
+        if diff_empty
+          # Não há diff vs DB. Se havia pending, foi revertido.
+          if existing_pending
+            existing_pending.destroy
+            if request.format.json?
+              return render json: { ok: true, pending: false, reverted: true,
+                                    message: "Alterações pendentes revertidas — voltou ao estado salvo." }
+            else
+              redirect_to edit_owner_monthly_costs_path(year: year, month: month),
+                notice: "Alterações pendentes revertidas."
+              return
+            end
           else
-            redirect_to edit_owner_monthly_costs_path(year: year, month: month),
-              notice: "Nenhuma alteração detectada."
-            return
+            if request.format.json?
+              return render json: { ok: false, message: "Nenhuma alteração detectada." }
+            else
+              redirect_to edit_owner_monthly_costs_path(year: year, month: month),
+                notice: "Nenhuma alteração detectada."
+              return
+            end
           end
         end
 
         field_names = {
-          "rent"           => "Aluguel",
-          "salaries"       => "Salários",
-          "utilities"      => "Energia/Água",
-          "water"          => "Água",
-          "electricity"    => "Luz",
-          "products"       => "Produtos",
-          "maintenance"    => "Manutenção",
-          "other_fixed"    => "Outros fixos",
-          "other_variable" => "Outros variáveis",
-          "notes"          => "Observações"
+          "rent"           => "Aluguel",      "salaries"    => "Salários",
+          "utilities"      => "Energia/Água", "water"       => "Água",
+          "electricity"    => "Luz",          "products"    => "Produtos",
+          "maintenance"    => "Manutenção",   "other_fixed" => "Outros fixos",
+          "other_variable" => "Outros variáveis", "notes"   => "Observações"
         }
-        labels = changed.keys.map { |k| field_names[k] || k }
-        labels << "Linhas customizadas" if custom_changed
+        labels = cost_params_diff.keys.map { |k| field_names[k] || k }
+        labels << "#{added.size} linha#{'s' if added.size != 1} adicionada#{'s' if added.size != 1}" if added.any?
+        labels << "#{updated.size} linha#{'s' if updated.size != 1} modificada#{'s' if updated.size != 1}" if updated.any?
+        labels << "#{deleted.size} linha#{'s' if deleted.size != 1} removida#{'s' if deleted.size != 1}" if deleted.any?
         changed_labels = labels.join(", ")
 
-        payload = { cost_params: changed, year: year, month: month }
-        # Pra custom_lines mandamos a lista COMPLETA — apply_change usa sync
-        # (cria/atualiza/destrói) baseado em quem está no payload.
-        payload[:custom_lines] = incoming_lines if custom_changed
+        payload = {
+          cost_params:       cost_params_diff,
+          custom_lines_diff: custom_lines_diff,
+          year:              year,
+          month:             month,
+        }
+        description = "Custos #{MonthlyCost::MONTH_NAMES[month - 1]}/#{year} — #{changed_labels}"
 
-        PendingChange.create!(
-          car_wash:    @car_wash,
-          attendant:   current_user,
-          change_type: "monthly_costs",
-          status:      "pending",
-          description: "Custos #{MonthlyCost::MONTH_NAMES[month - 1]}/#{year} — alterou: #{changed_labels}",
-          payload:     payload.to_json
-        )
+        if existing_pending
+          # Consolida — único pending por mês/atendente.
+          existing_pending.update!(payload: payload.to_json, description: description)
+        else
+          PendingChange.create!(
+            car_wash:    @car_wash,
+            attendant:   current_user,
+            change_type: "monthly_costs",
+            status:      "pending",
+            description: description,
+            payload:     payload.to_json
+          )
+        end
 
         if request.format.json?
           render json: { ok: true, pending: true, message: "Alterações enviadas para aprovação do proprietário." }

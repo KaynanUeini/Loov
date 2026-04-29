@@ -91,11 +91,12 @@ module Owner
         end
 
       when "monthly_costs"
-        cost_params  = data["cost_params"]
-        custom_lines = data["custom_lines"]
-        year         = data["year"].to_i
-        month        = data["month"].to_i
-        cost         = MonthlyCost.for_month(change.car_wash, year, month)
+        cost_params       = data["cost_params"]
+        custom_lines_diff = data["custom_lines_diff"]
+        custom_lines_full = data["custom_lines"]   # legado: payload antigo
+        year              = data["year"].to_i
+        month             = data["month"].to_i
+        cost              = MonthlyCost.for_month(change.car_wash, year, month)
 
         ActiveRecord::Base.transaction do
           allowed = %w[rent salaries utilities water electricity products
@@ -105,10 +106,40 @@ module Owner
             cost.update!(attrs)
           end
 
-          if custom_lines.is_a?(Array)
-            sync_custom_lines!(cost, custom_lines)
+          if custom_lines_diff.is_a?(Hash)
+            apply_custom_lines_diff!(cost, custom_lines_diff)
+          elsif custom_lines_full.is_a?(Array)
+            sync_custom_lines!(cost, custom_lines_full)
           end
         end
+      end
+    end
+
+    # Aplica diff parcial nas linhas customizadas — não toca em linhas que
+    # não estão no diff (preserva o que já foi aprovado).
+    def apply_custom_lines_diff!(cost, diff)
+      Array(diff["deleted"]).each do |id|
+        cost.custom_cost_lines.find_by(id: id)&.destroy
+      end
+      Array(diff["updated"]).each do |upd|
+        line = cost.custom_cost_lines.find_by(id: upd["id"])
+        next unless line
+        line.update(
+          name:      upd["name"].to_s.strip[0, 80],
+          amount:    upd["amount"].to_f.round(2),
+          cost_type: upd["cost_type"]
+        )
+      end
+      base_position = cost.custom_cost_lines.maximum(:position).to_i
+      Array(diff["added"]).each_with_index do |add, idx|
+        cost_type = add["cost_type"].to_s
+        next unless CustomCostLine::COST_TYPES.include?(cost_type)
+        cost.custom_cost_lines.create(
+          name:      add["name"].to_s.strip[0, 80],
+          amount:    add["amount"].to_f.round(2),
+          cost_type: cost_type,
+          position:  base_position + 1 + idx,
+        )
       end
     end
 
