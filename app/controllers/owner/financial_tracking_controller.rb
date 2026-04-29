@@ -2,10 +2,12 @@ module Owner
   class FinancialTrackingController < ApplicationController
     skip_before_action :verify_authenticity_token
     before_action :authenticate_user!
-    before_action :ensure_owner
+    # Atendente também acessa pra ver/lançar custos (a UI mostra só as
+    # linhas de custo pra ele, esconde faturamento/lucro). Owner vê tudo.
+    before_action :ensure_owner_or_attendant
 
     def index
-      car_wash = current_user.car_washes.first
+      car_wash = current_user.linked_car_wash
       if car_wash.nil?
         redirect_to root_path, alert: "Você não tem um lava-rápido associado."
         return
@@ -336,9 +338,13 @@ module Owner
 
     private
 
-    def ensure_owner
-      unless current_user&.owner?
-        redirect_to root_path, alert: "Acesso restrito a donos de lava-rápidos."
+    def ensure_owner_or_attendant
+      unless current_user&.owner? || current_user&.attendant?
+        if request.format.json?
+          render json: { error: "Acesso negado." }, status: :forbidden
+        else
+          redirect_to root_path, alert: "Acesso restrito."
+        end
       end
     end
 
