@@ -62,14 +62,26 @@ module Owner
       month         = params[:month]&.to_i || Date.current.month
       @cost         = MonthlyCost.for_month(@car_wash, year, month)
 
-      @pending_fields = []
-      @has_pending    = false
+      @pending_fields        = []
+      @pending_values        = {}
+      @pending_custom_lines  = nil
+      @has_pending           = false
       if current_user.attendant?
         pending = @car_wash.pending_changes
                     .where(change_type: "monthly_costs", status: "pending")
                     .select { |pc| pc.payload_data["year"].to_i == year && pc.payload_data["month"].to_i == month }
-        @pending_fields = pending.flat_map { |pc| pc.payload_data["cost_params"]&.keys || [] }.uniq
-        @has_pending    = @pending_fields.any?
+                    .sort_by(&:created_at)
+
+        # O mais recente sobrescreve os anteriores — atendente vê o último
+        # valor que ele submeteu pra cada campo.
+        pending.each do |pc|
+          (pc.payload_data["cost_params"] || {}).each { |k, v| @pending_values[k] = v }
+          if pc.payload_data["custom_lines"].is_a?(Array)
+            @pending_custom_lines = pc.payload_data["custom_lines"]
+          end
+        end
+        @pending_fields = @pending_values.keys
+        @has_pending    = @pending_fields.any? || !@pending_custom_lines.nil?
       end
 
       respond_to do |format|
@@ -92,9 +104,11 @@ module Owner
             custom_lines:   (@cost.persisted? ? @cost.custom_cost_lines.ordered : []).map { |l|
               { id: l.id, name: l.name, amount: l.amount.to_f, cost_type: l.cost_type, position: l.position }
             },
-            pending_fields: @pending_fields,
-            has_pending:    @has_pending,
-            is_attendant:   current_user.attendant?
+            pending_fields:       @pending_fields,
+            pending_values:       @pending_values,
+            pending_custom_lines: @pending_custom_lines,
+            has_pending:          @has_pending,
+            is_attendant:         current_user.attendant?
           }
         end
       end
@@ -107,27 +121,73 @@ module Owner
 
       if current_user.attendant?
         raw = params.require(:monthly_cost).permit(
-          :rent, :salaries, :utilities, :products,
+          :rent, :salaries, :utilities, :water, :electricity, :products,
           :maintenance, :other_fixed, :other_variable, :notes
         ).to_h
 
-        pending = @car_wash.pending_changes
-                    .where(change_type: "monthly_costs", status: "pending")
-                    .select { |pc| pc.payload_data["year"].to_i == year && pc.payload_data["month"].to_i == month }
-        locked_fields = pending.flat_map { |pc| pc.payload_data["cost_params"]&.keys || [] }.uniq
-        raw = raw.reject { |k, _| locked_fields.include?(k) }
+        incoming_lines = (params[:custom_lines].presence ||
+                          params.dig(:monthly_cost, :custom_lines) ||
+                          []).map do |h|
+          h = h.respond_to?(:permit) ? h.permit(:id, :name, :amount, :cost_type, :position).to_h : h.to_h.stringify_keys
+          {
+            "id"        => h["id"].presence&.to_i,
+            "name"      => h["name"].to_s.strip,
+            "amount"    => h["amount"].to_f.round(2),
+            "cost_type" => h["cost_type"].to_s,
+            "position"  => (h["position"] || 0).to_i,
+          }
+        end.reject { |h| h["name"].empty? || h["amount"] <= 0 }
 
         existing = MonthlyCost.for_month(@car_wash, year, month)
 
+        # Pending changes do mês, ordenadas por criação (mais antiga primeiro).
+        pending = @car_wash.pending_changes
+                    .where(change_type: "monthly_costs", status: "pending")
+                    .select { |pc| pc.payload_data["year"].to_i == year && pc.payload_data["month"].to_i == month }
+                    .sort_by(&:created_at)
+
+        # Estado mais recente "intencionado" pra cada campo padrão:
+        # último pending sobrescreve DB. Diff é contra esse estado, não só DB.
+        allowed_keys = %w[rent salaries utilities water electricity products
+                          maintenance other_fixed other_variable notes]
+        current_values = {}
+        allowed_keys.each { |k| current_values[k] = existing.send(k) }
+        pending.each do |pc|
+          (pc.payload_data["cost_params"] || {}).each { |k, v| current_values[k] = v }
+        end
+
         changed = raw.select do |k, v|
           if k == "notes"
-            existing.send(k).to_s.strip != v.to_s.strip
+            current_values[k].to_s.strip != v.to_s.strip
           else
-            existing.send(k).to_f.round(2) != v.to_f.round(2)
+            current_values[k].to_f.round(2) != v.to_f.round(2)
           end
         end
 
-        if changed.empty?
+        # Estado mais recente das linhas customizadas: último pending com
+        # custom_lines OU as linhas salvas no DB.
+        latest_pending_lines = pending.reverse.find { |pc| pc.payload_data["custom_lines"].is_a?(Array) }
+                                       &.payload_data&.dig("custom_lines")
+        current_lines =
+          if latest_pending_lines
+            latest_pending_lines.map { |h|
+              { "id" => h["id"].presence&.to_i, "name" => h["name"].to_s.strip,
+                "amount" => h["amount"].to_f.round(2), "cost_type" => h["cost_type"].to_s }
+            }
+          elsif existing.persisted?
+            existing.custom_cost_lines.ordered.map { |l|
+              { "id" => l.id, "name" => l.name.to_s.strip,
+                "amount" => l.amount.to_f.round(2), "cost_type" => l.cost_type.to_s }
+            }
+          else
+            []
+          end
+
+        normalize_lines = ->(arr) { arr.map { |h| h.slice("id", "name", "amount", "cost_type") }
+                                       .sort_by { |h| [h["id"].to_i, h["name"]] } }
+        custom_changed = normalize_lines.call(current_lines) != normalize_lines.call(incoming_lines)
+
+        if changed.empty? && !custom_changed
           if request.format.json?
             return render json: { ok: false, message: "Nenhuma alteração detectada." }
           else
@@ -141,13 +201,22 @@ module Owner
           "rent"           => "Aluguel",
           "salaries"       => "Salários",
           "utilities"      => "Energia/Água",
+          "water"          => "Água",
+          "electricity"    => "Luz",
           "products"       => "Produtos",
           "maintenance"    => "Manutenção",
           "other_fixed"    => "Outros fixos",
           "other_variable" => "Outros variáveis",
           "notes"          => "Observações"
         }
-        changed_labels = changed.keys.map { |k| field_names[k] || k }.join(", ")
+        labels = changed.keys.map { |k| field_names[k] || k }
+        labels << "Linhas customizadas" if custom_changed
+        changed_labels = labels.join(", ")
+
+        payload = { cost_params: changed, year: year, month: month }
+        # Pra custom_lines mandamos a lista COMPLETA — apply_change usa sync
+        # (cria/atualiza/destrói) baseado em quem está no payload.
+        payload[:custom_lines] = incoming_lines if custom_changed
 
         PendingChange.create!(
           car_wash:    @car_wash,
@@ -155,7 +224,7 @@ module Owner
           change_type: "monthly_costs",
           status:      "pending",
           description: "Custos #{MonthlyCost::MONTH_NAMES[month - 1]}/#{year} — alterou: #{changed_labels}",
-          payload:     { cost_params: changed, year: year, month: month }.to_json
+          payload:     payload.to_json
         )
 
         if request.format.json?

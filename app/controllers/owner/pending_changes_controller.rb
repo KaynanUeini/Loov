@@ -91,11 +91,61 @@ module Owner
         end
 
       when "monthly_costs"
-        cost_params = data["cost_params"]
-        year        = data["year"].to_i
-        month       = data["month"].to_i
-        cost        = MonthlyCost.for_month(change.car_wash, year, month)
-        cost.update!(cost_params.merge("year" => year, "month" => month)) if cost_params.present?
+        cost_params  = data["cost_params"]
+        custom_lines = data["custom_lines"]
+        year         = data["year"].to_i
+        month        = data["month"].to_i
+        cost         = MonthlyCost.for_month(change.car_wash, year, month)
+
+        ActiveRecord::Base.transaction do
+          allowed = %w[rent salaries utilities water electricity products
+                       maintenance other_fixed other_variable notes]
+          if cost_params.present?
+            attrs = cost_params.slice(*allowed).merge("year" => year, "month" => month)
+            cost.update!(attrs)
+          end
+
+          if custom_lines.is_a?(Array)
+            sync_custom_lines!(cost, custom_lines)
+          end
+        end
+      end
+    end
+
+    # Espelha a sincronização do MonthlyCostsController — mantém em sync as
+    # linhas customizadas quando o dono aprova uma mudança que veio do atendente.
+    def sync_custom_lines!(monthly_cost, payload)
+      incoming = Array(payload).map do |h|
+        h = h.respond_to?(:permit) ? h.permit(:id, :name, :amount, :cost_type, :position).to_h : h.to_h.stringify_keys
+        h.slice("id", "name", "amount", "cost_type", "position")
+      end
+
+      incoming = incoming.reject do |h|
+        name   = h["name"].to_s.strip
+        amount = h["amount"].to_f
+        name.empty? || amount <= 0
+      end
+
+      keep_ids = incoming.map { |h| h["id"] }.compact.map(&:to_i)
+      monthly_cost.custom_cost_lines.where.not(id: keep_ids).destroy_all if monthly_cost.persisted?
+
+      incoming.each_with_index do |h, idx|
+        cost_type = h["cost_type"].to_s
+        next unless CustomCostLine::COST_TYPES.include?(cost_type)
+
+        attrs = {
+          name:      h["name"].to_s.strip[0, 80],
+          amount:    h["amount"].to_f.round(2),
+          cost_type: cost_type,
+          position:  (h["position"] || idx).to_i,
+        }
+
+        if h["id"].present?
+          line = monthly_cost.custom_cost_lines.find_by(id: h["id"])
+          line ? line.update(attrs) : monthly_cost.custom_cost_lines.create(attrs)
+        else
+          monthly_cost.custom_cost_lines.create(attrs)
+        end
       end
     end
 
