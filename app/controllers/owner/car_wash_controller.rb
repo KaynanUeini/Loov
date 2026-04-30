@@ -190,30 +190,39 @@ module Owner
     # Não bloqueia a request — falha silenciosamente.
     def notify_owner_of_attendant_change!(car_wash, attendant, params)
       owner = car_wash.user
+      Rails.logger.info("[CarWash#notify] car_wash=#{car_wash.id} attendant=#{attendant&.id} owner=#{owner&.id}")
       return unless owner && owner != attendant
 
       summary = summarize_car_wash_change(params)
       title   = "Atendente alterou o lava-rápido"
       body    = "#{attendant.display_name} editou: #{summary}"
 
-      # Persiste pra aparecer na lista do dono em /owner/notifications.
-      AttendantActivity.create!(
-        car_wash:  car_wash,
-        attendant: attendant,
-        action:    "manage_car_wash",
-        title:     title,
-        body:      body,
-      )
+      # Persiste pra aparecer em /owner/notifications. Falha de persistência
+      # NÃO pode bloquear o push — então cada um tem seu próprio rescue.
+      begin
+        AttendantActivity.create!(
+          car_wash:  car_wash,
+          attendant: attendant,
+          action:    "manage_car_wash",
+          title:     title,
+          body:      body,
+        )
+        Rails.logger.info("[CarWash#notify] AttendantActivity persistida")
+      rescue => e
+        Rails.logger.error("[CarWash#notify] persistência falhou: #{e.class}: #{e.message}")
+      end
 
-      # Push imediato (best-effort).
-      ExpoPushNotifier.new.notify_user(
-        owner,
-        title: title,
-        body:  body,
-        data:  { type: "attendant_car_wash_change", car_wash_id: car_wash.id }
-      )
-    rescue => e
-      Rails.logger.warn("[CarWashController] notify falhou: #{e.class}: #{e.message}")
+      begin
+        ExpoPushNotifier.new.notify_user(
+          owner,
+          title: title,
+          body:  body,
+          data:  { type: "attendant_car_wash_change", car_wash_id: car_wash.id }
+        )
+        Rails.logger.info("[CarWash#notify] push disparado pra owner=#{owner.id}")
+      rescue => e
+        Rails.logger.error("[CarWash#notify] push falhou: #{e.class}: #{e.message}")
+      end
     end
 
     def summarize_car_wash_change(params)
