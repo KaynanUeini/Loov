@@ -5,8 +5,8 @@ module Owner
     # Atendente pode ler info do car_wash que está vinculado (nome aparece
     # no header do dashboard). Tudo que muda dados (update etc) segue
     # restrito ao dono via ensure_owner.
-    before_action :ensure_owner, except: [:show]
-    before_action :ensure_owner_or_attendant, only:   [:show]
+    before_action :ensure_owner_or_attendant, only: [:show, :update]
+    before_action :ensure_owner,               except: [:show, :update]
     before_action :set_car_wash
 
     def show
@@ -51,6 +51,33 @@ module Owner
         operating_hours_attributes: [:id, :day_of_week, :opens_at, :closes_at, :_destroy],
         services_attributes:        [:id, :title, :category, :description, :price, :duration, :_destroy]
       )
+
+      if current_user.attendant?
+        # Atendente: alterações entram em fila de aprovação.
+        # Consolida em um único pending por atendente (último submit ganha).
+        existing_pending = @car_wash.pending_changes
+                              .where(change_type: "manage_car_wash", status: "pending", attendant: current_user)
+                              .first
+
+        description = "Alterações no Gerenciar lava-rápido"
+        payload     = { car_wash_params: update_params.to_h }.to_json
+
+        if existing_pending
+          existing_pending.update!(description: description, payload: payload)
+        else
+          PendingChange.create!(
+            car_wash:    @car_wash,
+            attendant:   current_user,
+            change_type: "manage_car_wash",
+            status:      "pending",
+            description: description,
+            payload:     payload
+          )
+        end
+
+        return render json: { ok: true, pending: true,
+                              message: "Alterações enviadas para aprovação do proprietário." }
+      end
 
       if @car_wash.update(update_params)
         render json: { ok: true }
