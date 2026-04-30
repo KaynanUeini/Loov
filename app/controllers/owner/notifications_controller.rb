@@ -101,7 +101,27 @@ module Owner
         }
       end
 
-      # ── 4. AI Insights pronta ───────────────────────────────────────────────
+      # ── 4. Atividades do atendente (alterações diretas) ─────────────────────
+      if current_user.owner? && car_wash
+        AttendantActivity.where(car_wash: car_wash)
+                         .where("created_at >= ?", 30.days.ago)
+                         .order(created_at: :desc)
+                         .each do |act|
+          key = "attendant_activity-#{act.id}"
+          notifications << {
+            id:         key,
+            type:       "attendant_activity",
+            title:      act.title,
+            desc:       act.body.to_s.truncate(160),
+            route:      "OwnerGerenciar",
+            params:     {},
+            created_at: act.created_at.iso8601,
+            read:       reads.key?(key)
+          }
+        end
+      end
+
+      # ── 5. AI Insights pronta ───────────────────────────────────────────────
       if car_wash
         insight = AiInsight.current_for(car_wash)
         if insight && insight.respond_to?(:ready?) && insight.ready? && !insight.expired?
