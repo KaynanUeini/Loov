@@ -2,10 +2,10 @@ module Owner
   class CarWashAppointmentsController < ApplicationController
     skip_before_action :verify_authenticity_token
     before_action :authenticate_user!
-    before_action :ensure_owner
+    before_action :ensure_owner_or_attendant
 
     def index
-      car_wash = current_user.car_washes.first
+      car_wash = current_user.linked_car_wash
       if car_wash.nil?
         respond_to do |format|
           format.html { redirect_to root_path, alert: "Você não tem um lava-rápido associado." }
@@ -83,7 +83,7 @@ module Owner
     end
 
     def show
-      car_wash = current_user.car_washes.first
+      car_wash = current_user.linked_car_wash
       if car_wash.nil?
         respond_to do |format|
           format.html { redirect_to root_path, alert: "Você não tem um lava-rápido associado." }
@@ -107,12 +107,12 @@ module Owner
 
     private
 
-    def ensure_owner
-      return if current_user&.owner?
+    def ensure_owner_or_attendant
+      return if current_user&.owner? || current_user&.attendant?
       if request.format.json?
-        render json: { error: "Acesso restrito a donos de lava-rápidos." }, status: :forbidden
+        render json: { error: "Acesso negado." }, status: :forbidden
       else
-        redirect_to root_path, alert: "Acesso restrito a donos de lava-rápidos."
+        redirect_to root_path, alert: "Acesso restrito a donos e atendentes."
       end
     end
 
