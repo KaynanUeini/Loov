@@ -52,34 +52,12 @@ module Owner
         services_attributes:        [:id, :title, :category, :description, :price, :duration, :_destroy]
       )
 
-      if current_user.attendant?
-        # Atendente: alterações entram em fila de aprovação.
-        # Consolida em um único pending por atendente (último submit ganha).
-        existing_pending = @car_wash.pending_changes
-                              .where(change_type: "manage_car_wash", status: "pending", attendant: current_user)
-                              .first
-
-        description = "Alterações no Gerenciar lava-rápido"
-        payload     = { car_wash_params: update_params.to_h }.to_json
-
-        if existing_pending
-          existing_pending.update!(description: description, payload: payload)
-        else
-          PendingChange.create!(
-            car_wash:    @car_wash,
-            attendant:   current_user,
-            change_type: "manage_car_wash",
-            status:      "pending",
-            description: description,
-            payload:     payload
-          )
-        end
-
-        return render json: { ok: true, pending: true,
-                              message: "Alterações enviadas para aprovação do proprietário." }
-      end
+      attendant_change = current_user.attendant?
 
       if @car_wash.update(update_params)
+        # Atendente alterou Gerenciar lava-rápido — aplicado direto, mas o
+        # dono recebe push avisando.
+        notify_owner_of_attendant_change!(@car_wash, current_user, update_params) if attendant_change
         render json: { ok: true }
       else
         render json: { error: @car_wash.errors.full_messages.join(', ') }, status: :unprocessable_entity
@@ -206,6 +184,52 @@ module Owner
       unless current_user&.owner? || current_user&.attendant?
         render json: { error: 'Acesso negado.' }, status: :forbidden
       end
+    end
+
+    # Push pro dono quando atendente altera o Gerenciar lava-rápido.
+    # Não bloqueia a request — falha silenciosamente.
+    def notify_owner_of_attendant_change!(car_wash, attendant, params)
+      owner = car_wash.user
+      return unless owner && owner != attendant
+
+      summary = summarize_car_wash_change(params)
+      ExpoPushNotifier.new.notify_user(
+        owner,
+        title: "Atendente alterou o lava-rápido",
+        body:  "#{attendant.display_name} editou: #{summary}",
+        data:  { type: "attendant_car_wash_change", car_wash_id: car_wash.id }
+      )
+    rescue => e
+      Rails.logger.warn("[CarWashController] push falhou: #{e.class}: #{e.message}")
+    end
+
+    def summarize_car_wash_change(params)
+      labels = []
+      field_names = {
+        "name" => "nome", "address" => "endereço", "cep" => "CEP",
+        "logradouro" => "logradouro", "numero" => "número",
+        "bairro" => "bairro", "cidade" => "cidade", "uf" => "UF",
+        "capacity_per_slot" => "capacidade", "latitude" => "latitude",
+        "longitude" => "longitude"
+      }
+      params.to_h.each do |k, _|
+        next if %w[operating_hours_attributes services_attributes].include?(k)
+        labels << (field_names[k] || k)
+      end
+
+      hours = params[:operating_hours_attributes]
+      if hours.respond_to?(:any?) && hours.any?
+        n = hours.respond_to?(:size) ? hours.size : Array(hours).size
+        labels << "#{n} #{n == 1 ? 'horário' : 'horários'}"
+      end
+
+      services = params[:services_attributes]
+      if services.respond_to?(:any?) && services.any?
+        n = services.respond_to?(:size) ? services.size : Array(services).size
+        labels << "#{n} #{n == 1 ? 'serviço' : 'serviços'}"
+      end
+
+      labels.empty? ? "configurações do lava-rápido" : labels.join(", ")
     end
   end
 end
