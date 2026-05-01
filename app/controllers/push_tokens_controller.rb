@@ -28,4 +28,24 @@ class PushTokensController < ApplicationController
     PushToken.where(user: current_user, token: params[:token]).destroy_all
     render json: { ok: true }
   end
+
+  # GET /push_tokens/diagnostic — lista tokens do usuário logado pra debug.
+  def diagnostic
+    tokens = current_user.push_tokens.order(created_at: :desc).map do |t|
+      {
+        id:           t.id,
+        platform:     t.platform,
+        last_seen_at: t.last_seen_at&.iso8601,
+        created_at:   t.created_at.iso8601,
+        token_prefix: t.token.to_s[0, 18] + "...",
+      }
+    end
+    render json: {
+      user_id: current_user.id,
+      email:   current_user.email,
+      role:    current_user.role,
+      push_tokens_count: tokens.size,
+      tokens: tokens,
+    }
+  end
 end

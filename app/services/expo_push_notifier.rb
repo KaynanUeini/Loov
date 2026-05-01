@@ -17,9 +17,17 @@ class ExpoPushNotifier
   ENDPOINT = "https://exp.host/--/api/v2/push/send".freeze
 
   def notify_user(user, title:, body:, data: {}, sound: "default")
-    return if user.blank?
+    if user.blank?
+      Rails.logger.warn("[ExpoPushNotifier] user vazio — push abortado")
+      return
+    end
     tokens = user.push_tokens.pluck(:token).uniq
-    return if tokens.empty?
+    if tokens.empty?
+      Rails.logger.warn("[ExpoPushNotifier] user_id=#{user.id} sem push_tokens registrados — push silencioso")
+      return
+    end
+
+    Rails.logger.info("[ExpoPushNotifier] enviando pra user_id=#{user.id} (#{tokens.size} token#{tokens.size == 1 ? '' : 's'}) title=#{title.inspect}")
 
     messages = tokens.map do |token|
       {
@@ -33,6 +41,7 @@ class ExpoPushNotifier
     end
 
     response = post(messages)
+    Rails.logger.info("[ExpoPushNotifier] resposta http=#{response.code} body=#{response.body.to_s.truncate(300)}")
     handle_response(response, tokens)
   rescue => e
     Rails.logger.error("[ExpoPushNotifier] #{e.class}: #{e.message}")

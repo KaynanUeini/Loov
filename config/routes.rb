@@ -33,8 +33,9 @@ Rails.application.routes.draw do
   post 'webhooks/stripe', to: 'webhooks#stripe', as: :stripe_webhook
 
   # ── PUSH TOKENS (mobile) ──────────────────────────────────────────────────
-  post   'push_tokens',        to: 'push_tokens#create'
-  delete 'push_tokens/:token', to: 'push_tokens#destroy', constraints: { token: /[^\/]+/ }
+  post   'push_tokens',            to: 'push_tokens#create'
+  get    'push_tokens/diagnostic', to: 'push_tokens#diagnostic'
+  delete 'push_tokens/:token',     to: 'push_tokens#destroy', constraints: { token: /[^\/]+/ }
 
   namespace :client do
     resource :profile, only: [:show, :edit, :update] do
