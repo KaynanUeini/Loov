@@ -189,6 +189,20 @@ class CarWashesController < ApplicationController
           reviews_count:     reviews_count,
           open_now:          open_now,
           next_slot_minutes: next_slot_minutes,
+          reviews:           Review.where(car_wash_id: cw.id)
+                                   .order(created_at: :desc)
+                                   .limit(20)
+                                   .includes(:user)
+                                   .map { |r|
+                                     {
+                                       id:         r.id,
+                                       rating:     r.rating,
+                                       comment:    r.comment.to_s,
+                                       tags:       r.tags_list,
+                                       author:     r.user&.display_name || "Cliente",
+                                       created_at: r.created_at.iso8601,
+                                     }
+                                   },
           operating_hours: (cw.operating_hours || []).order(:day_of_week).map { |oh|
             {
               id:          oh.id,
