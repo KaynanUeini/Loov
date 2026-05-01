@@ -82,23 +82,30 @@ module Owner
       end
 
       # ── 3. Tickets de suporte com resposta nova ─────────────────────────────
-      current_user.support_tickets
-                  .where(status: %w[open in_progress])
-                  .includes(:messages)
-                  .each do |t|
-        last = t.messages.order(:created_at).last
-        next unless last && last.from_admin?
-        key = "support_reply-#{t.id}-#{last.id}"
-        notifications << {
-          id:         key,
-          type:       "support_reply",
-          title:      "Nova resposta do suporte",
-          desc:       last.body.to_s.truncate(120),
-          route:      "OwnerSupport",
-          params:     { ticket_id: t.id },
-          created_at: last.created_at.iso8601,
-          read:       reads.key?(key)
-        }
+      # Wrap em rescue: tabela support_ticket_messages pode não existir em
+      # ambientes onde a migration ainda não rodou — não pode derrubar TODA
+      # a tela de notificações por causa disso.
+      begin
+        current_user.support_tickets
+                    .where(status: %w[open in_progress])
+                    .includes(:messages)
+                    .each do |t|
+          last = t.messages.order(:created_at).last
+          next unless last && last.from_admin?
+          key = "support_reply-#{t.id}-#{last.id}"
+          notifications << {
+            id:         key,
+            type:       "support_reply",
+            title:      "Nova resposta do suporte",
+            desc:       last.body.to_s.truncate(120),
+            route:      "OwnerSupport",
+            params:     { ticket_id: t.id },
+            created_at: last.created_at.iso8601,
+            read:       reads.key?(key)
+          }
+        end
+      rescue ActiveRecord::StatementInvalid => e
+        Rails.logger.warn("[Notifications] support_tickets ignorado: #{e.message.to_s.truncate(120)}")
       end
 
       # ── 4. Atividades do atendente (alterações diretas) ─────────────────────
