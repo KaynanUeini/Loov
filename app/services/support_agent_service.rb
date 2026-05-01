@@ -107,6 +107,19 @@ class SupportAgentService
       return { autonomous: true, action: "aborted_by_owner" }
     end
 
+    # Owner refinou seleção (ex: "só o 1", "apenas o João") em vez de sim/não.
+    # Re-interpreta sobre a lista pendente e re-pergunta confirmação se for
+    # um subconjunto válido.
+    if awaiting_confirmation?
+      pending = load_pending_appointments.to_a
+      if pending.size > 1
+        refined = interpret_selection(pending)
+        if refined && refined.any? && refined.size < pending.size
+          return request_confirmation(refined)
+        end
+      end
+    end
+
     # Nova solicitação de cancelamento
     return autonomous_cancel_disponivel if cancelamento_disponivel?
 
@@ -150,13 +163,14 @@ class SupportAgentService
     selected = interpret_selection(appointments)
 
     if selected.nil?
-      # Não conseguiu interpretar — lista e pede que especifique
-      list = appointments.map { |a|
-        "• #{a.scheduled_at.in_time_zone('America/Sao_Paulo').strftime('%d/%m às %H:%M')} — #{a.service.title} (#{a.user&.display_name || 'cliente'})"
+      # Não conseguiu interpretar — lista NUMERADA e pede que especifique.
+      list = appointments.each_with_index.map { |a, i|
+        "#{i + 1}. #{a.scheduled_at.in_time_zone('America/Sao_Paulo').strftime('%d/%m às %H:%M')} — #{a.service.title} (#{a.user&.display_name || 'cliente'})"
       }.join("\n")
       post_agent_message(
-        "Encontrei #{appointments.count} agendamentos Disponível ativos:\n\n#{list}\n\n" \
-        "Por favor, informe quais deseja cancelar (pode dizer \"todos\", \"ambos\" ou especificar pelo nome do cliente ou horário)."
+        "Encontrei #{appointments.count} agendamentos Disponível ativos. Qual(is) deseja cancelar?\n\n" \
+        "#{list}\n\n" \
+        "Responda com o número (ex: \"1\" ou \"1 e 3\"), o nome do cliente ou \"todos\" se forem todos."
       )
       @ticket.update_columns(status: "in_progress", updated_at: Time.current)
       return { autonomous: true, action: "awaiting_selection" }
@@ -172,9 +186,14 @@ class SupportAgentService
       "• #{a.scheduled_at.in_time_zone('America/Sao_Paulo').strftime('%d/%m às %H:%M')} — #{a.service.title} (#{a.user&.display_name || 'cliente'})"
     }.join("\n")
 
-    msg = appointments.count == 1 ?
-      "Encontrei o seguinte agendamento Disponível ativo:\n\n#{list}\n\nDeseja confirmar o cancelamento e processar o estorno ao cliente? Responda sim ou não." :
-      "Encontrei #{appointments.count} agendamentos para cancelar:\n\n#{list}\n\nDeseja confirmar o cancelamento de todos e processar os estornos? Responda sim ou não."
+    msg = if appointments.count == 1
+      "Vou cancelar o seguinte agendamento e processar o estorno:\n\n#{list}\n\n" \
+      "Confirma? Responda sim ou não."
+    else
+      "Vou cancelar #{appointments.count} agendamentos e processar os estornos:\n\n#{list}\n\n" \
+      "Confirma TODOS esses? Responda sim ou não — se quiser cancelar apenas alguns, " \
+      "diga quais (pode usar o número da lista ou o nome do cliente)."
+    end
 
     post_agent_message(msg)
 
@@ -208,40 +227,35 @@ class SupportAgentService
 
   # ── SELEÇÃO ────────────────────────────────────────────────────────────────
   def interpret_selection(appointments)
-    all_owner_msgs = @ticket.messages
-      .where(from_admin: false)
-      .order(:created_at)
-      .pluck(:body)
-      .join(" ")
-      .downcase
+    last_msg = @ticket.messages.where(from_admin: false).order(:created_at).last&.body.to_s.downcase
 
-    # Palavras que significam todos
-    all_keywords = %w[ambos todos todas dois duas tudo qualquer]
-    return appointments.to_a if all_keywords.any? { |k| all_owner_msgs.include?(k) }
-
-    # Poucas mensagens + cancelar → todos
-    owner_msg_count = @ticket.messages.where(from_admin: false).count
-    return appointments.to_a if owner_msg_count <= 2 && all_owner_msgs.include?("cancelar")
+    # "Todos" só é aceito quando o dono diz EXPLICITAMENTE na ÚLTIMA
+    # mensagem — não basta ter aparecido em algum momento. Isso evita
+    # falso positivo do tipo "quero cancelar todos" interpretado a partir
+    # da primeira mensagem genérica "quero cancelar".
+    all_keywords = %w[ambos todos todas tudo qualquer]
+    if all_keywords.any? { |k| last_msg.include?(k) }
+      return appointments.to_a
+    end
 
     # Identifica por nome do cliente, email ou horário.
     # O dono vê NOME no card e na mensagem do agente, então prioriza match
     # por display_name e first_name; email fica como fallback.
-    last_msg = @ticket.messages.where(from_admin: false).order(:created_at).last&.body.to_s.downcase
     matched = appointments.select do |a|
       email      = a.user&.email.to_s.downcase
       display    = a.user&.display_name.to_s.downcase
       first_name = display.split(" ").first.to_s
       time       = a.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%H:%M")
       date       = a.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%d/%m")
-      (display.present?    && last_msg.include?(display))    ||
+      (display.present?      && last_msg.include?(display))    ||
       (first_name.length > 2 && last_msg.include?(first_name)) ||
-      (email.present?      && last_msg.include?(email))      ||
+      (email.present?        && last_msg.include?(email))      ||
       last_msg.include?(time) ||
       last_msg.include?(date)
     end
     return matched unless matched.empty?
 
-    # Número digitado
+    # Número digitado (1, 2, 3...) referente à lista numerada
     indices = last_msg.scan(/\d+/).map { |n| n.to_i - 1 }.select { |i| i >= 0 && i < appointments.size }
     return indices.map { |i| appointments.to_a[i] } unless indices.empty?
 
