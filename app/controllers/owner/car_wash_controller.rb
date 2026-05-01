@@ -54,10 +54,13 @@ module Owner
 
       attendant_change = current_user.attendant?
 
+      # Captura snapshot ANTES do update pra calcular diff preciso depois.
+      before_snapshot = attendant_change ? car_wash_snapshot(@car_wash) : nil
+
       if @car_wash.update(update_params)
-        # Atendente alterou Gerenciar lava-rápido — aplicado direto, mas o
-        # dono recebe push avisando.
-        notify_owner_of_attendant_change!(@car_wash, current_user, update_params) if attendant_change
+        if attendant_change
+          notify_owner_of_attendant_change!(@car_wash, current_user, before_snapshot)
+        end
         render json: { ok: true }
       else
         render json: { error: @car_wash.errors.full_messages.join(', ') }, status: :unprocessable_entity
@@ -188,14 +191,18 @@ module Owner
 
     # Push pro dono quando atendente altera o Gerenciar lava-rápido.
     # Não bloqueia a request — falha silenciosamente.
-    def notify_owner_of_attendant_change!(car_wash, attendant, params)
+    def notify_owner_of_attendant_change!(car_wash, attendant, before_snapshot)
       owner = car_wash.user
       Rails.logger.info("[CarWash#notify] car_wash=#{car_wash.id} attendant=#{attendant&.id} owner=#{owner&.id}")
       return unless owner && owner != attendant
 
-      summary = summarize_car_wash_change(params)
+      diff = car_wash_diff(before_snapshot, car_wash_snapshot(car_wash.reload))
+      Rails.logger.info("[CarWash#notify] diff=#{diff.inspect.to_s.truncate(300)}")
+      return if diff.empty?  # nada mudou de fato
+
+      summary = format_diff(diff)
       title   = "Atendente alterou o lava-rápido"
-      body    = "#{attendant.display_name} editou: #{summary}"
+      body    = "#{attendant.display_name} #{summary}"
 
       # Persiste pra aparecer em /owner/notifications. Falha de persistência
       # NÃO pode bloquear o push — então cada um tem seu próprio rescue.
@@ -225,33 +232,161 @@ module Owner
       end
     end
 
-    def summarize_car_wash_change(params)
-      labels = []
-      field_names = {
-        "name" => "nome", "address" => "endereço", "cep" => "CEP",
-        "logradouro" => "logradouro", "numero" => "número",
-        "bairro" => "bairro", "cidade" => "cidade", "uf" => "UF",
-        "capacity_per_slot" => "capacidade", "latitude" => "latitude",
-        "longitude" => "longitude"
+    # Snapshot estruturado do car_wash pra comparar antes/depois do update.
+    def car_wash_snapshot(car_wash)
+      {
+        scalars: {
+          "name"              => car_wash.name.to_s,
+          "cep"               => car_wash.cep.to_s,
+          "logradouro"        => car_wash.logradouro.to_s,
+          "numero"            => car_wash.numero.to_s,
+          "bairro"            => car_wash.bairro.to_s,
+          "cidade"            => car_wash.cidade.to_s,
+          "uf"                => car_wash.uf.to_s,
+          "address"           => car_wash.address.to_s,
+          "capacity_per_slot" => car_wash.capacity_per_slot.to_i,
+          "latitude"          => car_wash.latitude.to_f,
+          "longitude"         => car_wash.longitude.to_f,
+        },
+        hours: car_wash.operating_hours.order(:day_of_week).map { |h|
+          { id: h.id, day_of_week: h.day_of_week,
+            opens_at: h.opens_at&.strftime("%H:%M"),
+            closes_at: h.closes_at&.strftime("%H:%M") }
+        },
+        services: car_wash.services.order(:id).map { |s|
+          { id: s.id, title: s.title.to_s, category: s.category.to_s,
+            description: s.description.to_s,
+            price: s.price.to_f.round(2), duration: s.duration.to_i }
+        },
       }
-      params.to_h.each do |k, _|
-        next if %w[operating_hours_attributes services_attributes].include?(k)
-        labels << (field_names[k] || k)
+    end
+
+    # Compara dois snapshots e retorna lista de mudanças textuais.
+    # Cada item: { field, old, new, label } — para formatação posterior.
+    def car_wash_diff(before, after)
+      return [] unless before && after
+      changes = []
+
+      labels = {
+        "name" => "o nome", "cep" => "o CEP", "logradouro" => "o logradouro",
+        "numero" => "o número", "bairro" => "o bairro", "cidade" => "a cidade",
+        "uf" => "a UF", "address" => "o endereço",
+        "capacity_per_slot" => "a capacidade",
+        "latitude" => "a latitude", "longitude" => "a longitude",
+      }
+
+      before[:scalars].each do |k, v_old|
+        v_new = after[:scalars][k]
+        next if v_old == v_new
+        changes << { kind: :scalar, field: k, label: labels[k] || k,
+                     old: format_scalar(k, v_old), new: format_scalar(k, v_new) }
       end
 
-      hours = params[:operating_hours_attributes]
-      if hours.respond_to?(:any?) && hours.any?
-        n = hours.respond_to?(:size) ? hours.size : Array(hours).size
-        labels << "#{n} #{n == 1 ? 'horário' : 'horários'}"
+      hours_changes = diff_hours(before[:hours], after[:hours])
+      changes.concat(hours_changes)
+
+      services_changes = diff_services(before[:services], after[:services])
+      changes.concat(services_changes)
+
+      changes
+    end
+
+    DAY_NAMES = %w[domingo segunda terça quarta quinta sexta sábado].freeze
+
+    def diff_hours(before, after)
+      changes = []
+      before_by_id = before.index_by { |h| h[:id] }
+      after_by_id  = after.index_by  { |h| h[:id] }
+
+      added   = after.reject  { |h| before_by_id.key?(h[:id]) }
+      removed = before.reject { |h| after_by_id.key?(h[:id]) }
+      common  = after.select  { |h| before_by_id.key?(h[:id]) }
+
+      added.each do |h|
+        changes << { kind: :hour_added,   day: DAY_NAMES[h[:day_of_week]],
+                     opens: h[:opens_at], closes: h[:closes_at] }
+      end
+      removed.each do |h|
+        changes << { kind: :hour_removed, day: DAY_NAMES[h[:day_of_week]] }
+      end
+      common.each do |h|
+        old_h = before_by_id[h[:id]]
+        next if old_h[:opens_at] == h[:opens_at] && old_h[:closes_at] == h[:closes_at]
+        changes << { kind: :hour_changed, day: DAY_NAMES[h[:day_of_week]],
+                     old: "#{old_h[:opens_at]}–#{old_h[:closes_at]}",
+                     new: "#{h[:opens_at]}–#{h[:closes_at]}" }
+      end
+      changes
+    end
+
+    def diff_services(before, after)
+      changes = []
+      before_by_id = before.index_by { |s| s[:id] }
+      after_by_id  = after.index_by  { |s| s[:id] }
+
+      added   = after.reject  { |s| before_by_id.key?(s[:id]) }
+      removed = before.reject { |s| after_by_id.key?(s[:id]) }
+      common  = after.select  { |s| before_by_id.key?(s[:id]) }
+
+      added.each   { |s| changes << { kind: :service_added,   title: s[:title] } }
+      removed.each { |s| changes << { kind: :service_removed, title: s[:title] } }
+      common.each do |s|
+        old_s = before_by_id[s[:id]]
+        field_changes = []
+        field_changes << "preço de #{format_money(old_s[:price])} para #{format_money(s[:price])}"  if old_s[:price]    != s[:price]
+        field_changes << "duração de #{old_s[:duration]}min para #{s[:duration]}min"                if old_s[:duration] != s[:duration]
+        field_changes << "título de \"#{old_s[:title]}\" para \"#{s[:title]}\""                     if old_s[:title]    != s[:title]
+        field_changes << "categoria de \"#{old_s[:category]}\" para \"#{s[:category]}\""            if old_s[:category] != s[:category]
+        field_changes << "descrição"                                                                 if old_s[:description] != s[:description]
+        next if field_changes.empty?
+        changes << { kind: :service_changed, title: s[:title], details: field_changes }
+      end
+      changes
+    end
+
+    def format_scalar(field, value)
+      case field
+      when "capacity_per_slot" then value.to_s
+      when "latitude", "longitude" then format("%.4f", value)
+      else value.to_s
+      end
+    end
+
+    def format_money(v)
+      "R$ #{format('%.2f', v).tr('.', ',')}"
+    end
+
+    # Converte a lista de mudanças em texto humano.
+    # Ex: "alterou a capacidade de 1 para 3 e o preço de Lavagem Simples"
+    def format_diff(changes)
+      parts = changes.map do |c|
+        case c[:kind]
+        when :scalar
+          "#{c[:label]} de #{c[:old]} para #{c[:new]}"
+        when :hour_added
+          "horário de #{c[:day]} (#{c[:opens]}–#{c[:closes]}) adicionado"
+        when :hour_removed
+          "horário de #{c[:day]} removido"
+        when :hour_changed
+          "horário de #{c[:day]} de #{c[:old]} para #{c[:new]}"
+        when :service_added
+          "serviço \"#{c[:title]}\" adicionado"
+        when :service_removed
+          "serviço \"#{c[:title]}\" removido"
+        when :service_changed
+          "serviço \"#{c[:title]}\" — #{c[:details].join(', ')}"
+        end
       end
 
-      services = params[:services_attributes]
-      if services.respond_to?(:any?) && services.any?
-        n = services.respond_to?(:size) ? services.size : Array(services).size
-        labels << "#{n} #{n == 1 ? 'serviço' : 'serviços'}"
+      if parts.size == 1
+        "alterou #{parts.first}"
+      elsif parts.size <= 3
+        "alterou #{parts[0..-2].join(', ')} e #{parts.last}"
+      else
+        first_two = parts.first(2).join(', ')
+        rest      = parts.size - 2
+        "alterou #{first_two} e mais #{rest} #{rest == 1 ? 'mudança' : 'mudanças'}"
       end
-
-      labels.empty? ? "configurações do lava-rápido" : labels.join(", ")
     end
   end
 end
