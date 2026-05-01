@@ -22,12 +22,31 @@ class SupportAgentService
     return nil if response.nil?
     parsed = parse_response(response)
     return nil if parsed.nil?
+
     if parsed[:should_escalate]
       Rails.logger.info("[SupportAgent] Ticket ##{@ticket.id} escalação: #{parsed[:reason]}")
+      # Mantém rascunho pra admin revisar depois (não auto-posta).
+      if parsed[:draft].present?
+        @ticket.update_columns(agent_draft: parsed[:draft], agent_drafted_at: Time.current, agent_sent: false)
+      else
+        @ticket.update_columns(agent_draft: "[Escalado: #{parsed[:reason]}]", agent_drafted_at: Time.current, agent_sent: false)
+      end
+      # Posta uma mensagem informando que um humano vai revisar.
+      post_agent_message(
+        "Recebi sua mensagem e estou direcionando para um especialista da equipe Loov. " \
+        "Você receberá uma resposta em breve por aqui mesmo."
+      )
       return { escalate: true, reason: parsed[:reason] }
     end
-    @ticket.update_columns(agent_draft: parsed[:draft], agent_drafted_at: Time.current, agent_sent: false)
-    { draft: parsed[:draft], escalate: false }
+
+    # AUTO-RESPOSTA: agente confiante → posta direto como mensagem do suporte.
+    @ticket.update_columns(
+      status:           "in_progress",
+      agent_draft:      parsed[:draft],
+      agent_drafted_at: Time.current,
+    )
+    post_agent_message(parsed[:draft])
+    { draft: parsed[:draft], escalate: false, auto_replied: true }
   rescue => e
     Rails.logger.error("[SupportAgent] Erro draft ticket ##{@ticket.id}: #{e.message}")
     nil
