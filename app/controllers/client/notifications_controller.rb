@@ -81,7 +81,9 @@ module Client
             }
           when "cancelled"
             key = "appt_cancelled-#{a.id}"
-            by_owner = a.cancelled_by_role.to_s == "owner"
+            # "agent" = cancelado via suporte Loov a pedido do dono, mesma
+            # mensagem do que se o dono tivesse cancelado direto.
+            by_owner = %w[owner agent].include?(a.cancelled_by_role.to_s)
             reason   = a.cancellation_reason.to_s.strip
 
             if by_owner

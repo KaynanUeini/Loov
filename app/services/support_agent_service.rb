@@ -302,10 +302,33 @@ class SupportAgentService
         end
 
         if appt.user.present?
+          # 1) E-mail — best-effort
           begin
             AppointmentMailer.owner_cancellation(appt).deliver_now
           rescue => e
             Rails.logger.error("[SupportAgent] Email falhou ##{appt.id}: #{e.message}")
+          end
+
+          # 2) Push pro celular do cliente — best-effort. Notificação in-app
+          # é gerada automaticamente pelo Client::NotificationsController via
+          # status=cancelled + cancelled_by_role=agent (sem necessidade de
+          # criar registro extra).
+          begin
+            shop_name = appt.car_wash&.name || "Lava-rápido"
+            svc_title = appt.service&.title || "Serviço"
+            when_str  = appt.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%d/%m às %H:%M")
+            ExpoPushNotifier.new.notify_user(
+              appt.user,
+              title: "#{shop_name} cancelou sua reserva",
+              body:  "#{svc_title} em #{when_str}. O estorno está sendo processado.",
+              data:  {
+                type:           "appointment_cancelled",
+                appointment_id: appt.id,
+                car_wash_id:    appt.car_wash_id,
+              }
+            )
+          rescue => e
+            Rails.logger.error("[SupportAgent] Push falhou ##{appt.id}: #{e.message}")
           end
         end
 
@@ -321,7 +344,7 @@ class SupportAgentService
       post_agent_message(
         "Cancelamento realizado com sucesso:\n\n" \
         "#{cancelled_summaries.join("\n")}\n\n" \
-        "#{client_word} por e-mail.#{refund_msg}"
+        "#{client_word} no app (notificação push e tela de notificações).#{refund_msg}"
       )
       resolve_ticket!
     end
