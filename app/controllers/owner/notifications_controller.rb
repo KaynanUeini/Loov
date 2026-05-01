@@ -37,6 +37,23 @@ module Owner
       render json: { error: "Acesso negado." }, status: :forbidden
     end
 
+    # Backfill heurístico: AttendantActivity legada sem `items` ainda tem o
+    # `body` formatado tipo "Nome alterou A de X para Y, B de M para N e C..."
+    # Quebramos em itens pra renderizar como lista no app.
+    def derive_items_from_body(body)
+      text = body.to_s
+      return [] if text.empty?
+      # Remove o prefixo "<nome> alterou "
+      stripped = text.sub(/\A.*?alterou\s+/i, '')
+      # Última cláusula vem precedida de " e mais N mudanças" ou " e <coisa>".
+      # Substitui o último " e " por separador especial pra split funcionar.
+      with_sep = stripped.sub(/\s+e\s+(?=[^,]*\z)/, '__SEP__')
+      parts = with_sep.split(/__SEP__|,\s+/).map(&:strip).reject(&:empty?)
+      parts.map { |p| p.sub(/\A./) { |m| m.upcase } }
+    rescue
+      []
+    end
+
     def build_notifications
       car_wash = current_user.car_washes.first
       reads    = current_user.notification_reads.pluck(:key, :read_at).to_h
@@ -115,10 +132,12 @@ module Owner
                          .order(created_at: :desc)
                          .each do |act|
           key = "attendant_activity-#{act.id}"
-          # `items` é uma lista estruturada — uma string por mudança — pra
-          # frontend renderizar uma por linha quando expandido.
+          # `items` = lista estruturada (uma string por mudança). Se a
+          # atividade foi criada antes da coluna `items` existir, derivamos
+          # do body legado parsing as cláusulas "alterou X de Y para Z e ..."
           items = act.items rescue nil
           items = [] unless items.is_a?(Array)
+          items = derive_items_from_body(act.body) if items.empty?
           notifications << {
             id:         key,
             type:       "attendant_activity",
