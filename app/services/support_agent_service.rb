@@ -376,13 +376,32 @@ class SupportAgentService
       ÚLTIMA PERGUNTA DO PROPRIETÁRIO:
       "#{last_owner_question}"
 
-      INSTRUÇÕES OBRIGATÓRIAS:
+      DECISÃO — qual caminho tomar:
+
+      A) RESPONDA DIRETAMENTE (should_escalate=false, draft preenchido) quando:
+         - A pergunta é sobre o app Loov / lava-rápidos / agendamentos / financeiro /
+           atendentes / fidelidade / disponíveis / qualquer feature do produto.
+           Use a base de conhecimento e responda passo a passo.
+         - A pergunta é COMPLETAMENTE fora do escopo Loov (ex: receitas, futebol,
+           clima, vida pessoal, programação, etc). NÃO escale — responda
+           gentilmente que você é o suporte da Loov e só pode ajudar com o
+           produto, sugerindo perguntas relacionadas. Exemplo de tom:
+           "Olá! Sou o assistente de suporte da Loov e só posso ajudar com
+           dúvidas relacionadas ao seu lava-rápido — agendamentos, financeiro,
+           atendentes, etc. Se tiver alguma dúvida sobre o app, é só perguntar!"
+
+      B) ESCALE PARA HUMANO (should_escalate=true) APENAS quando:
+         - Envolve disputa de pagamento Stripe que não conseguimos resolver pela KB
+         - Bug crítico / dado corrompido / problema técnico não resolvível por instrução
+         - Pedido de exclusão de conta ou dados sensíveis
+         - Pergunta legítima sobre o produto cuja resposta NÃO está na KB
+
+      INSTRUÇÕES DE FORMATO:
       1. Responda APENAS à última pergunta do proprietário.
-      2. Se a resposta estiver na base de conhecimento: explique passo a passo.
-      3. Se NÃO estiver na base, ou envolver Stripe, disputa, bug crítico ou exclusão: indique escalação.
-      4. Máximo 4 parágrafos curtos. Sem markdown com asteriscos — texto limpo.
-      5. Termine sempre oferecendo ajuda adicional.
-      6. NUNCA invente funcionalidades que não existem na base de conhecimento.
+      2. Máximo 4 parágrafos curtos. Sem markdown com asteriscos — texto limpo.
+      3. Termine sempre oferecendo ajuda adicional ("Se precisar de mais alguma
+         coisa, é só chamar.").
+      4. NUNCA invente funcionalidades que não existem na base de conhecimento.
 
       RESPONDA APENAS EM JSON VÁLIDO, sem texto antes ou depois:
       {
@@ -391,10 +410,10 @@ class SupportAgentService
         "draft": "texto da resposta aqui"
       }
 
-      Se não souber responder:
+      Apenas se for caso (B) genuíno:
       {
         "should_escalate": true,
-        "reason": "motivo em 1 frase",
+        "reason": "motivo curto",
         "draft": null
       }
     PROMPT
