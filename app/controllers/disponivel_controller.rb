@@ -25,6 +25,13 @@ class DisponivelController < ApplicationController
     car_washes_scope = CarWash.where(id: open_car_wash_ids).distinct
     car_washes_scope = car_washes_scope.near([@lat, @lon], 5, units: :km) if @lat && @lon
 
+    # Filtro por car_wash específico — usado pelo BookingScreen quando o
+    # cliente clica num slot disponivel_only e quer ir direto pro Last
+    # Minute desse lava-rápido.
+    if params[:car_wash_id].present?
+      car_washes_scope = car_washes_scope.where(id: params[:car_wash_id])
+    end
+
     # Dedup em Ruby como rede de segurança — geocoder .near pode adicionar
     # JOINs que fazem o mesmo car_wash aparecer mais de uma vez no .each.
     raw_car_washes    = car_washes_scope.to_a

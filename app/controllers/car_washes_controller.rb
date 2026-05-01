@@ -185,10 +185,17 @@ class CarWashesController < ApplicationController
           longitude:         cw.longitude,
           distance_km:       dist,
           capacity_per_slot: cw.capacity_per_slot,
-          rating_avg:        rating_avg,
-          reviews_count:     reviews_count,
-          open_now:          open_now,
-          next_slot_minutes: next_slot_minutes,
+          rating_avg:         rating_avg,
+          reviews_count:      reviews_count,
+          open_now:           open_now,
+          next_slot_minutes:  next_slot_minutes,
+          # Elegível pro Last Minute: aberto agora + tem serviço com
+          # duração curta (≤ 60min). Frontend usa pra liberar slots
+          # disponivel_only como link pro fluxo Disponível.
+          disponivel_eligible: open_now && cw.services.any? { |s|
+            d = s.duration.to_i
+            d > 0 && d <= 60
+          },
           reviews:           Review.where(car_wash_id: cw.id)
                                    .order(created_at: :desc)
                                    .limit(20)
