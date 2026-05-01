@@ -152,11 +152,11 @@ class SupportAgentService
     if selected.nil?
       # Não conseguiu interpretar — lista e pede que especifique
       list = appointments.map { |a|
-        "• #{a.scheduled_at.in_time_zone('America/Sao_Paulo').strftime('%d/%m às %H:%M')} — #{a.service.title} (#{a.user&.email || 'cliente'})"
+        "• #{a.scheduled_at.in_time_zone('America/Sao_Paulo').strftime('%d/%m às %H:%M')} — #{a.service.title} (#{a.user&.display_name || 'cliente'})"
       }.join("\n")
       post_agent_message(
         "Encontrei #{appointments.count} agendamentos Disponível ativos:\n\n#{list}\n\n" \
-        "Por favor, informe quais deseja cancelar (pode dizer \"todos\", \"ambos\" ou especificar pelo horário/e-mail)."
+        "Por favor, informe quais deseja cancelar (pode dizer \"todos\", \"ambos\" ou especificar pelo nome do cliente ou horário)."
       )
       @ticket.update_columns(status: "in_progress", updated_at: Time.current)
       return { autonomous: true, action: "awaiting_selection" }
@@ -169,7 +169,7 @@ class SupportAgentService
   # ── CONFIRMAÇÃO ────────────────────────────────────────────────────────────
   def request_confirmation(appointments)
     list = appointments.map { |a|
-      "• #{a.scheduled_at.in_time_zone('America/Sao_Paulo').strftime('%d/%m às %H:%M')} — #{a.service.title} (#{a.user&.email || 'cliente'})"
+      "• #{a.scheduled_at.in_time_zone('America/Sao_Paulo').strftime('%d/%m às %H:%M')} — #{a.service.title} (#{a.user&.display_name || 'cliente'})"
     }.join("\n")
 
     msg = appointments.count == 1 ?
@@ -223,13 +223,21 @@ class SupportAgentService
     owner_msg_count = @ticket.messages.where(from_admin: false).count
     return appointments.to_a if owner_msg_count <= 2 && all_owner_msgs.include?("cancelar")
 
-    # Identifica por email ou horário
+    # Identifica por nome do cliente, email ou horário.
+    # O dono vê NOME no card e na mensagem do agente, então prioriza match
+    # por display_name e first_name; email fica como fallback.
     last_msg = @ticket.messages.where(from_admin: false).order(:created_at).last&.body.to_s.downcase
     matched = appointments.select do |a|
-      email = a.user&.email.to_s.downcase
-      time  = a.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%H:%M")
-      date  = a.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%d/%m")
-      last_msg.include?(email) || last_msg.include?(time) || last_msg.include?(date)
+      email      = a.user&.email.to_s.downcase
+      display    = a.user&.display_name.to_s.downcase
+      first_name = display.split(" ").first.to_s
+      time       = a.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%H:%M")
+      date       = a.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%d/%m")
+      (display.present?    && last_msg.include?(display))    ||
+      (first_name.length > 2 && last_msg.include?(first_name)) ||
+      (email.present?      && last_msg.include?(email))      ||
+      last_msg.include?(time) ||
+      last_msg.include?(date)
     end
     return matched unless matched.empty?
 
@@ -288,7 +296,7 @@ class SupportAgentService
         end
 
         scheduled = appt.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%d/%m às %H:%M")
-        cancelled_summaries << "• #{scheduled} — #{appt.service.title} (#{appt.user&.email || 'avulso'})#{refund_note}"
+        cancelled_summaries << "• #{scheduled} — #{appt.service.title} (#{appt.user&.display_name || 'avulso'})#{refund_note}"
       end
 
       refund_msg = refund_issues.any? ?
