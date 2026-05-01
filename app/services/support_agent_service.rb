@@ -14,14 +14,39 @@ class SupportAgentService
   end
 
   def generate_draft
-    return nil if already_replied_by_admin?
+    Rails.logger.info("[SupportAgent] generate_draft start ticket=##{@ticket.id} cat=#{@ticket.category}")
+
+    if already_replied_by_admin?
+      Rails.logger.info("[SupportAgent] já respondido pelo admin — pulando")
+      return nil
+    end
+
+    if ENV["ANTHROPIC_API_KEY"].to_s.strip.empty?
+      Rails.logger.error("[SupportAgent] ANTHROPIC_API_KEY ausente — postando fallback")
+      post_agent_message(fallback_no_api_message)
+      return { fallback: true, escalate: false }
+    end
+
     thread_context = build_thread_context
     kb             = load_knowledge_base
     prompt         = build_prompt(thread_context, kb)
-    response       = call_claude(prompt)
-    return nil if response.nil?
+    Rails.logger.info("[SupportAgent] prompt size=#{prompt.size} kb_size=#{kb.size}")
+
+    response = call_claude(prompt)
+    if response.nil?
+      Rails.logger.error("[SupportAgent] Claude retornou nil — postando fallback")
+      post_agent_message(fallback_claude_failed_message)
+      return { fallback: true, escalate: false }
+    end
+
     parsed = parse_response(response)
-    return nil if parsed.nil?
+    if parsed.nil?
+      Rails.logger.error("[SupportAgent] parse falhou — raw=#{response.to_s.slice(0, 200)}")
+      post_agent_message(fallback_claude_failed_message)
+      return { fallback: true, escalate: false }
+    end
+
+    Rails.logger.info("[SupportAgent] parsed escalate=#{parsed[:should_escalate]} draft_size=#{parsed[:draft].to_s.size}")
 
     if parsed[:should_escalate]
       Rails.logger.info("[SupportAgent] Ticket ##{@ticket.id} escalação: #{parsed[:reason]}")
@@ -400,9 +425,28 @@ class SupportAgentService
       max_tokens: 1024,
       messages:   [{ role: "user", content: prompt }]
     }.to_json
+
+    Rails.logger.info("[SupportAgent] Claude POST anthropic.com/v1/messages model=claude-haiku-4-5")
     response = http.request(request)
+    Rails.logger.info("[SupportAgent] Claude resp status=#{response.code} size=#{response.body.to_s.size}")
     body     = JSON.parse(response.body)
-    raise "API error: #{body['error']&.dig('message')}" if body["error"]
+    if body["error"]
+      Rails.logger.error("[SupportAgent] Claude erro: #{body['error'].inspect}")
+      raise "API error: #{body['error']&.dig('message')}"
+    end
     body.dig("content", 0, "text")
+  rescue => e
+    Rails.logger.error("[SupportAgent] call_claude exceção: #{e.class}: #{e.message}")
+    nil
+  end
+
+  def fallback_no_api_message
+    "Olá! Recebemos seu chamado e a equipe Loov vai responder por aqui em breve. " \
+    "Obrigado pela paciência."
+  end
+
+  def fallback_claude_failed_message
+    "Olá! Recebi seu chamado. No momento o atendimento automático está indisponível, " \
+    "mas a equipe Loov vai te responder em breve por aqui mesmo."
   end
 end
