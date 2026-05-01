@@ -76,6 +76,7 @@ class DisponivelController < ApplicationController
               name:        cw.name,
               address:     cw.address,
               logradouro:  cw.logradouro,
+              numero:      cw.numero,
               bairro:      cw.bairro,
               cidade:      cw.cidade,
               uf:          cw.uf,
