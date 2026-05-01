@@ -153,6 +153,20 @@ class CarWashesController < ApplicationController
         favorited = user_signed_in? && current_user.client? &&
           current_user.favorite_car_washes.exists?(car_wash_id: cw.id)
 
+        # Rating real (média + contagem de Reviews)
+        rating_stats = Review.where(car_wash_id: cw.id)
+                             .pick(Arel.sql("COALESCE(AVG(rating), 0)"), Arel.sql("COUNT(*)"))
+        rating_avg    = rating_stats[0].to_f.round(1)
+        reviews_count = rating_stats[1].to_i
+
+        # Aberto agora?
+        now_sp     = Time.current.in_time_zone("America/Sao_Paulo")
+        today_oh   = cw.operating_hours.find_by(day_of_week: now_sp.wday)
+        open_now   = open_at_time?(today_oh, now_sp)
+
+        # Próxima vaga (em minutos a partir de agora) — null se fechado o dia inteiro.
+        next_slot_minutes = next_available_slot_minutes(cw, now_sp)
+
         render json: {
           id:                cw.id,
           name:              cw.name,
@@ -171,6 +185,10 @@ class CarWashesController < ApplicationController
           longitude:         cw.longitude,
           distance_km:       dist,
           capacity_per_slot: cw.capacity_per_slot,
+          rating_avg:        rating_avg,
+          reviews_count:     reviews_count,
+          open_now:          open_now,
+          next_slot_minutes: next_slot_minutes,
           operating_hours: (cw.operating_hours || []).order(:day_of_week).map { |oh|
             {
               id:          oh.id,
@@ -360,6 +378,79 @@ class CarWashesController < ApplicationController
 
     def set_car_wash
       @car_wash = CarWash.find(params[:id] || params[:car_wash_id])
+    end
+
+    # ── Helpers de disponibilidade pro endpoint show ──────────────────────
+    def open_at_time?(operating_hour, time)
+      return false unless operating_hour&.opens_at && operating_hour&.closes_at
+      mins = time.hour * 60 + time.min
+      opens  = operating_hour.opens_at.hour  * 60 + operating_hour.opens_at.min
+      closes = operating_hour.closes_at.hour * 60 + operating_hour.closes_at.min
+      mins >= opens && mins <= closes
+    end
+
+    # Retorna minutos até a próxima vaga disponível.
+    # 0   = vaga agora; nil = sem vaga em até 7 dias ou nunca abre.
+    # Usa duração padrão de 30 min e checa capacity vs appointments
+    # existentes — espelha a lógica de available_times.
+    def next_available_slot_minutes(car_wash, now)
+      duration = 30
+      capacity = [car_wash.capacity_per_slot.to_i, 1].max
+
+      # Itera dia a dia (hoje, amanhã...) até 7 dias.
+      (0..7).each do |days_ahead|
+        date = (now + days_ahead.days).to_date
+        oh   = car_wash.operating_hours.find_by(day_of_week: date.wday)
+        next unless oh&.opens_at && oh&.closes_at
+
+        opens_min  = oh.opens_at.hour  * 60 + oh.opens_at.min
+        closes_min = oh.closes_at.hour * 60 + oh.closes_at.min
+
+        # No dia 0 começa do slot a partir de agora; nos seguintes,
+        # da abertura.
+        if days_ahead == 0
+          now_min      = now.hour * 60 + now.min
+          if now_min >= closes_min
+            next  # já fechou hoje, próximo dia
+          end
+          slots_passed = ((now_min - opens_min).to_f / duration).ceil
+          start_min    = [opens_min, opens_min + slots_passed * duration].max
+        else
+          start_min = opens_min
+        end
+
+        next if start_min + duration > closes_min
+
+        appts = car_wash.appointments
+                  .occupying_capacity
+                  .joins(:service)
+                  .where("DATE(scheduled_at) = ?", date)
+                  .pluck("appointments.scheduled_at, services.duration")
+
+        occupied = appts.map { |sa, d|
+          s_local = sa.in_time_zone("America/Sao_Paulo")
+          s = s_local.hour * 60 + s_local.min
+          d.to_i > 0 ? { begin: s, end: s + d.to_i } : nil
+        }.compact
+
+        current = start_min
+        while current + duration <= closes_min
+          time_end    = current + duration
+          overlapping = occupied.count { |i| current < i[:end] && time_end > i[:begin] }
+          if overlapping < capacity
+            slot_at = ActiveSupport::TimeZone["America/Sao_Paulo"].local(
+              date.year, date.month, date.day, current / 60, current % 60, 0
+            )
+            return ((slot_at - now) / 60).to_i.clamp(0, 7 * 24 * 60)
+          end
+          current += duration
+        end
+      end
+
+      nil
+    rescue => e
+      Rails.logger.warn("[next_available_slot] erro: #{e.message}")
+      nil
     end
 
     def ensure_owner
