@@ -115,11 +115,16 @@ module Owner
                          .order(created_at: :desc)
                          .each do |act|
           key = "attendant_activity-#{act.id}"
+          # `items` é uma lista estruturada — uma string por mudança — pra
+          # frontend renderizar uma por linha quando expandido.
+          items = act.items rescue nil
+          items = [] unless items.is_a?(Array)
           notifications << {
             id:         key,
             type:       "attendant_activity",
             title:      act.title,
             desc:       act.body.to_s.truncate(160),
+            items:      items,
             route:      "OwnerGerenciar",
             params:     {},
             created_at: act.created_at.iso8601,

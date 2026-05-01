@@ -200,6 +200,7 @@ module Owner
       Rails.logger.info("[CarWash#notify] diff=#{diff.inspect.to_s.truncate(300)}")
       return if diff.empty?  # nada mudou de fato
 
+      items   = diff.map { |c| diff_item_text(c) }
       summary = format_diff(diff)
       title   = "Atendente alterou o lava-rápido"
       body    = "#{attendant.display_name} #{summary}"
@@ -213,8 +214,9 @@ module Owner
           action:    "manage_car_wash",
           title:     title,
           body:      body,
+          items:     items,
         )
-        Rails.logger.info("[CarWash#notify] AttendantActivity persistida")
+        Rails.logger.info("[CarWash#notify] AttendantActivity persistida (items=#{items.size})")
       rescue => e
         Rails.logger.error("[CarWash#notify] persistência falhou: #{e.class}: #{e.message}")
       end
@@ -356,7 +358,30 @@ module Owner
       "R$ #{format('%.2f', v).tr('.', ',')}"
     end
 
-    # Converte a lista de mudanças em texto humano.
+    # Texto de uma única mudança — começa com letra maiúscula, fica
+    # bom isolado como item de lista.
+    def diff_item_text(c)
+      case c[:kind]
+      when :scalar
+        # capitaliza primeira letra do label ("a capacidade" → "A capacidade")
+        label = c[:label].sub(/\A./) { |m| m.upcase }
+        "#{label}: #{c[:old]} → #{c[:new]}"
+      when :hour_added
+        "Horário de #{c[:day]} adicionado (#{c[:opens]}–#{c[:closes]})"
+      when :hour_removed
+        "Horário de #{c[:day]} removido"
+      when :hour_changed
+        "Horário de #{c[:day]}: #{c[:old]} → #{c[:new]}"
+      when :service_added
+        "Serviço \"#{c[:title]}\" adicionado"
+      when :service_removed
+        "Serviço \"#{c[:title]}\" removido"
+      when :service_changed
+        "Serviço \"#{c[:title]}\": #{c[:details].join(', ')}"
+      end
+    end
+
+    # Resumo single-line para body do push e card colapsado.
     # Ex: "alterou a capacidade de 1 para 3 e o preço de Lavagem Simples"
     def format_diff(changes)
       parts = changes.map do |c|
