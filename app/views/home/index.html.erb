@@ -1891,7 +1891,11 @@
               <div style="flex:1; min-width:0;">
                 <div class="shop-name"><%= cw.name %></div>
                 <div class="shop-addr">
-                  <%= [cw.bairro, cw.cidade].compact_blank.join(" · ").presence || cw.address.to_s %>
+                  <%
+                    rua_num = [cw.logradouro, cw.numero].compact_blank.join(", ")
+                    addr_full = [rua_num.presence, cw.bairro.presence].compact.join(" · ")
+                  %>
+                  <%= addr_full.presence || cw.address.to_s %>
                 </div>
               </div>
             </div>
@@ -2483,7 +2487,11 @@
             <div class="shop-name"><%= cw.name %></div>
             <div class="shop-addr">
               <i class="fas fa-location-dot"></i>
-              <span><%= [cw.try(:bairro), cw.try(:cidade)].compact_blank.join(" · ").presence || cw.address.to_s %></span>
+              <%
+                shop_rua_num = [cw.try(:logradouro), cw.try(:numero)].compact_blank.join(", ")
+                shop_addr    = [shop_rua_num.presence, cw.try(:bairro).presence].compact.join(" · ")
+              %>
+              <span><%= shop_addr.presence || cw.address.to_s %></span>
             </div>
             <div class="shop-bottom">
               <% if is_open %>
