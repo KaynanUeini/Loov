@@ -2088,6 +2088,67 @@
 
   <% if user_signed_in? && current_user.client? %>
 
+  <%# ── GREETING ─ saudação por horário + nome + dia da semana ─ %>
+  <%
+    now_sp = Time.current.in_time_zone("America/Sao_Paulo")
+    h = now_sp.hour
+    greet = if h < 5      then "Boa madrugada"
+            elsif h < 12  then "Bom dia"
+            elsif h < 18  then "Boa tarde"
+            else               "Boa noite"
+            end
+    weekdays_full = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado']
+    months_full   = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro']
+    day_label  = weekdays_full[now_sp.wday].capitalize
+    date_label = "#{now_sp.day} de #{months_full[now_sp.month - 1]}"
+    first_name = current_user.display_name.to_s.split(' ').first.presence || current_user.email.split('@').first.capitalize
+  %>
+  <style>
+    .greet-section { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1.5rem 0; }
+    .greet-eyebrow {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; letter-spacing: 1.6px;
+      color: var(--ash); text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .greet-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(26px, 4.5vw, 36px);
+      font-weight: 700;
+      color: var(--ink);
+      letter-spacing: -0.6px;
+      line-height: 1.15;
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    }
+    .greet-title .name { color: var(--coral-500); }
+    .greet-wave {
+      display: inline-block;
+      animation: greet-wave 2.4s ease-in-out infinite;
+      transform-origin: 70% 70%;
+      font-size: 0.95em;
+    }
+    @keyframes greet-wave {
+      0%, 60%, 100% { transform: rotate(0); }
+      10% { transform: rotate(14deg); }
+      20% { transform: rotate(-8deg); }
+      30% { transform: rotate(14deg); }
+      40% { transform: rotate(-4deg); }
+      50% { transform: rotate(10deg); }
+    }
+    .greet-sub {
+      font-size: 13.5px; color: var(--graphite);
+      margin-top: 6px;
+    }
+  </style>
+  <section class="greet-section">
+    <div class="greet-eyebrow"><%= day_label %> · <%= date_label %></div>
+    <h1 class="greet-title">
+      <%= greet %>, <span class="name"><%= first_name %></span>
+      <span class="greet-wave">👋</span>
+    </h1>
+    <div class="greet-sub">Vamos deixar o seu carro novo de novo?</div>
+  </section>
+
   <%# ── LAST MINUTE — espelha o app (zap icon, ver todos, helper text, cards dark ink) ── %>
   <% if @disponivel_has_location %>
   <style>
@@ -2185,11 +2246,12 @@
           <%# Mesma lógica do app: o card do Last minute na home leva pra
               tela /disponivel (lista de todos os slots), pro cliente
               escolher e confirmar lá — não direto pro checkout. %>
+          <% lm_dist_label = slot_data[:distance_km] < 1 ? "#{(slot_data[:distance_km] * 1000).round}m" : sprintf('%.1f km', slot_data[:distance_km]) %>
           <%= link_to disponivel_index_path(latitude: params[:latitude], longitude: params[:longitude]), class: "lm-card" do %>
             <div class="lm-blob"></div>
             <div class="lm-distance-pill">
               <i class="fas fa-location-arrow"></i>
-              <%= slot_data[:distance_km] %> km
+              <%= lm_dist_label %>
             </div>
             <div class="lm-shop"><%= cw.name %></div>
             <div class="lm-meta"><%= addr.presence || "—" %></div>
@@ -2422,7 +2484,8 @@
                 <span class="shop-rating"><i class="fas fa-star"></i><%= sprintf('%.1f', avg_rating) %> <span style="color:var(--ash);font-weight:500;">(<%= review_ct %>)</span></span>
               <% end %>
               <% if distance_km %>
-                <span style="color:var(--graphite);font-weight:500;"><%= sprintf('%.1f', distance_km) %> km</span>
+                <% dist_label = distance_km < 1 ? "#{(distance_km * 1000).round}m" : sprintf('%.1f km', distance_km) %>
+                <span style="color:var(--graphite);font-weight:500;"><%= dist_label %></span>
               <% end %>
             </div>
           </div>

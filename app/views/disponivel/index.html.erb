@@ -329,7 +329,8 @@
 
           <% addr_line = [cw.try(:logradouro), cw.try(:bairro)].compact_blank.join(" · ").presence || cw.address.to_s %>
           <% city_line = [cw.try(:cidade), cw.try(:uf)].compact_blank.join(" · ") %>
-          <% distance = (@lat && cw.has_valid_coordinates?) ? cw.distance_to([@lat, @lon], :km).round(1) : nil %>
+          <% distance = (@lat && cw.has_valid_coordinates?) ? cw.distance_to([@lat, @lon], :km).to_f : nil %>
+          <% dist_label = distance ? (distance < 1 ? "#{(distance * 1000).round}m" : sprintf('%.1f km', distance)) : nil %>
 
           <div class="disp-card-dark"
                data-cw-id="<%= cw.id %>"
@@ -349,7 +350,7 @@
               </div>
               <% if distance %>
                 <div class="disp-distance-pill">
-                  <i class="fas fa-map-pin"></i><%= sprintf('%.1f km', distance) %>
+                  <i class="fas fa-map-pin"></i><%= dist_label %>
                 </div>
               <% end %>
             </div>
@@ -379,7 +380,7 @@
                     · <span class="svc-dur"><%= first.duration %>min</span>
                   <% end %>
                   <% if distance %>
-                    · <%= sprintf('%.1f km', distance) %>
+                    · <%= dist_label %>
                   <% end %>
                 </div>
               </div>
