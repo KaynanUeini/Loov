@@ -1,237 +1,267 @@
 <% Rails.logger.info("Iniciando renderização do template car_washes/new.html.erb") %>
 
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
+  .cw-new-section { margin-bottom: 18px; }
+  .cw-new-section-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 18px; font-weight: 700;
+    color: var(--ink);
+    margin: 0 0 18px 0;
+    display: flex; align-items: center; gap: 10px;
+    letter-spacing: -0.2px;
+  }
+  .cw-new-section-title i { color: var(--coral-500); font-size: 14px; }
 
-  :root {
-    --lime: #dd7852;
-    --lime-dim: #9c4930;
-    --black: #fafaf6;
-    --surface: #fafaf6;
-    --surface-2: #fafaf6111;
-    --surface-3: #e0dbd0;
-    --border: #e0dbd0222;
-    --text-muted: #ada699666;
-    --text-secondary: #ada699999;
-    --white: #28231c;
+  .cw-new-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  .cw-new-day-buttons {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    gap: 8px; margin-bottom: 18px;
+  }
+  .cw-new-day-btn {
+    background: var(--paper); border: 1px solid var(--stone);
+    border-radius: 12px; padding: 10px 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 700; letter-spacing: 1.2px;
+    color: var(--graphite); cursor: pointer;
+    transition: all .18s ease;
+    text-align: center; text-transform: uppercase; user-select: none;
+  }
+  .cw-new-day-btn:hover { border-color: var(--coral-300); color: var(--coral-700); }
+  .cw-new-day-btn.active {
+    background: var(--coral-50); border-color: var(--coral-500);
+    color: var(--coral-700);
   }
 
-  .new-wrap { min-height: 100vh; background: var(--black); font-family: 'Inter', sans-serif; padding-top: 64px; padding-bottom: 4rem; }
-  .new-inner { max-width: 680px; margin: 0 auto; padding: 3rem 1.5rem; }
-
-  .new-eyebrow { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.7rem; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; color: var(--lime); margin-bottom: 1rem; opacity: 0; animation: fadeUp 0.6s ease forwards 0.1s; }
-  .new-eyebrow::before { content: ''; display: block; width: 24px; height: 1px; background: var(--lime); }
-
-  .new-title { font-family: 'Space Grotesk', sans-serif; font-size: clamp(2.5rem, 8vw, 4.5rem); line-height: 1; color: var(--white); margin: 0 0 2.5rem 0; opacity: 0; animation: fadeUp 0.6s ease forwards 0.2s; }
-  .new-title span { color: var(--lime); }
-
-  .form-errors { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; }
-  .form-errors h2 { font-size: 0.8rem; font-weight: 600; color: #fca5a5; margin: 0 0 0.4rem 0; text-transform: uppercase; letter-spacing: 0.05em; }
-  .form-errors ul { list-style: none; margin: 0; padding: 0; }
-  .form-errors ul li { font-size: 0.875rem; color: #fca5a5; padding: 0.2rem 0; }
-  .form-errors ul li::before { content: '· '; }
-
-  .form-section { background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; padding: 1.75rem; margin-bottom: 1.25rem; opacity: 0; animation: fadeUp 0.6s ease forwards; }
-  .form-section:nth-child(1) { animation-delay: 0.3s; }
-  .form-section:nth-child(2) { animation-delay: 0.4s; }
-  .form-section:nth-child(3) { animation-delay: 0.5s; }
-
-  .form-section-title { font-family: 'Space Grotesk', sans-serif; font-size: 1.25rem; color: var(--lime); letter-spacing: 0.05em; margin: 0 0 1.25rem 0; display: flex; align-items: center; gap: 0.5rem; }
-
-  .form-field { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem; }
-  .form-field:last-child { margin-bottom: 0; }
-
-  .form-label { font-size: 0.8rem; font-weight: 500; color: var(--text-muted); letter-spacing: 0.05em; text-transform: uppercase; }
-
-  .form-input, .form-select, .form-textarea { background: var(--surface-3); border: 1px solid var(--border); border-radius: 10px; padding: 0.875rem 1rem; font-family: 'Inter', sans-serif; font-size: 0.9375rem; color: var(--white); outline: none; transition: all 0.2s ease; width: 100%; }
-  .form-input::placeholder, .form-textarea::placeholder { color: var(--text-muted); }
-  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--lime); box-shadow: 0 0 0 3px rgba(221, 120, 82,0.08); }
-
-  .form-select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 1rem center; cursor: pointer; }
-  .form-select option { background: var(--surface-3); }
-  .form-textarea { resize: vertical; min-height: 80px; }
-
-  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-
-  .cep-hint { font-size: 0.72rem; color: var(--text-muted); margin-top: -0.25rem; }
-
-  .day-buttons { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; margin-bottom: 1.25rem; }
-  .day-btn { background: var(--surface-3); border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.25rem; font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: all 0.2s ease; text-align: center; letter-spacing: 0.02em; text-transform: uppercase; user-select: none; }
-  .day-btn:hover { border-color: rgba(221, 120, 82,0.3); color: var(--white); }
-  .day-btn.active { background: rgba(221, 120, 82,0.1); border-color: var(--lime); color: var(--lime); }
-
-  .day-time-rows { display: flex; flex-direction: column; gap: 0.75rem; }
-  .day-time-row { display: none; align-items: center; gap: 1rem; background: var(--surface-3); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem; animation: fadeUp 0.3s ease forwards; }
+  .day-time-rows { display: flex; flex-direction: column; gap: 10px; }
+  .day-time-row {
+    display: none; align-items: center; gap: 14px;
+    background: var(--sand); border: 1px solid var(--stone);
+    border-radius: 14px; padding: 14px 16px;
+    animation: cwFadeUp .25s ease forwards;
+  }
   .day-time-row.visible { display: flex; }
-  .day-time-label { font-family: 'Space Grotesk', sans-serif; font-size: 1rem; color: var(--lime); letter-spacing: 0.05em; min-width: 40px; }
-  .time-select-wrap { display: flex; align-items: center; gap: 0.5rem; flex: 1; }
-  .time-label-small { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
-  .time-select { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.75rem; font-family: 'Inter', sans-serif; font-size: 0.875rem; color: var(--white); outline: none; transition: all 0.2s ease; cursor: pointer; appearance: none; text-align: center; }
-  .time-select:focus { border-color: var(--lime); box-shadow: 0 0 0 2px rgba(221, 120, 82,0.08); }
-  .time-separator { font-family: 'Space Grotesk', sans-serif; font-size: 1.1rem; color: var(--text-muted); }
+  .day-time-label {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 15px; font-weight: 700;
+    color: var(--coral-500); min-width: 40px;
+    letter-spacing: -0.2px;
+  }
+  .time-select-wrap { display: flex; align-items: center; gap: 8px; flex: 1; }
+  .time-label-small {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 600; letter-spacing: 1.4px;
+    color: var(--graphite); text-transform: uppercase; white-space: nowrap;
+  }
+  .time-select {
+    background: var(--paper); border: 1px solid var(--stone);
+    border-radius: 8px; padding: 7px 10px;
+    font-family: 'Inter', sans-serif; font-size: 13.5px;
+    color: var(--ink); outline: none; cursor: pointer;
+    appearance: none; text-align: center;
+    transition: border-color .15s;
+  }
+  .time-select:focus { border-color: var(--coral-500); }
+  .time-separator {
+    font-family: 'Space Grotesk', sans-serif; font-size: 16px;
+    color: var(--ash);
+  }
 
-  .sub-card { background: var(--surface-3); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem; margin-bottom: 1rem; }
+  .sub-card {
+    background: var(--sand); border: 1px solid var(--stone);
+    border-radius: 16px; padding: 18px; margin-bottom: 12px;
+  }
   .sub-card:last-of-type { margin-bottom: 0; }
-  .sub-card-remove { display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: #ef4444; cursor: pointer; background: none; border: none; padding: 0; font-family: 'Inter', sans-serif; margin-top: 0.75rem; transition: color 0.2s ease; }
-  .sub-card-remove:hover { color: #fca5a5; }
-  .sub-card-remove input[type="checkbox"] { accent-color: #ef4444; cursor: pointer; }
+  .sub-card-remove {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 12.5px; color: var(--rose-500); cursor: pointer;
+    background: none; border: none; padding: 0;
+    margin-top: 12px; transition: color .15s;
+  }
+  .sub-card-remove:hover { color: #a13838; }
+  .sub-card-remove input[type="checkbox"] { accent-color: var(--rose-500); cursor: pointer; }
 
-  .btn-add { display: inline-flex; align-items: center; gap: 0.5rem; background: transparent; color: var(--lime); border: 1px dashed rgba(221, 120, 82,0.3); border-radius: 10px; padding: 0.75rem 1rem; font-family: 'Inter', sans-serif; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s ease; width: 100%; justify-content: center; margin-top: 1rem; text-decoration: none; }
-  .btn-add:hover { border-color: var(--lime); background: rgba(221, 120, 82,0.04); }
+  .btn-add {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: transparent; color: var(--coral-700);
+    border: 1px dashed var(--coral-300); border-radius: 12px;
+    padding: 12px 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 600; letter-spacing: 1.4px;
+    text-transform: uppercase;
+    cursor: pointer; transition: all .18s ease;
+    width: 100%; justify-content: center; margin-top: 12px;
+  }
+  .btn-add:hover {
+    border-color: var(--coral-500); background: var(--coral-50);
+    color: var(--coral-700);
+  }
 
-  .btn-submit { background: var(--lime); color: var(--black); border: none; border-radius: 100px; padding: 1rem 2rem; font-family: 'Inter', sans-serif; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; width: 100%; margin-top: 0.5rem; opacity: 0; animation: fadeUp 0.6s ease forwards 0.6s; }
-  .btn-submit:hover { background: var(--lime-dim); transform: translateY(-2px); }
+  .form-errors-loov {
+    background: #fdecec;
+    border: 1px solid #f5cccc;
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+  }
+  .form-errors-loov h2 {
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 11px; letter-spacing: 1.4px;
+    color: var(--rose-500) !important;
+    margin: 0 0 8px 0; text-transform: uppercase;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .form-errors-loov ul { list-style: none; margin: 0; padding: 0; }
+  .form-errors-loov ul li { font-size: 13.5px; color: var(--rose-500); padding: 3px 0; }
+  .form-errors-loov ul li::before { content: '· '; }
 
-  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  .cep-error-msg {
+    display: none;
+    font-size: 12.5px; color: var(--rose-500);
+    margin-top: -8px;
+  }
+
+  @keyframes cwFadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
   @media (max-width: 540px) {
-    .day-buttons { grid-template-columns: repeat(4, 1fr); }
-    .form-row { grid-template-columns: 1fr; }
+    .cw-new-day-buttons { grid-template-columns: repeat(4, 1fr); }
+    .cw-new-row { grid-template-columns: 1fr; }
     .day-time-row { flex-direction: column; align-items: flex-start; }
     .time-select-wrap { width: 100%; }
-    .new-inner { padding: 2rem 1.25rem; }
   }
 </style>
 
-<div class="new-wrap">
-  <div class="new-inner">
-
-    <div class="new-eyebrow">Novo parceiro</div>
-    <h1 class="new-title">Cadastre seu<br><span>Lava-Rápido.</span></h1>
-
-    <%= form_with model: @car_wash, local: true, id: "car-wash-form" do |form| %>
-
-      <% if @car_wash.errors.any? %>
-      <div class="form-errors">
-        <h2><i class="fas fa-circle-exclamation"></i> Corrija os erros abaixo</h2>
-        <ul>
-          <% @car_wash.errors.full_messages.each do |message| %>
-          <li><%= message %></li>
-          <% end %>
-        </ul>
-      </div>
-      <% end %>
-
-      <!-- Informações Básicas -->
-      <div class="form-section">
-        <div class="form-section-title">
-          <i class="fas fa-store"></i> Informações Básicas
-        </div>
-
-        <div class="form-field">
-          <%= form.label :name, "Nome do Lava-Rápido", class: "form-label" %>
-          <%= form.text_field :name, class: "form-input", placeholder: "Ex: Lava Car Premium" %>
-        </div>
-
-        <div class="form-row" style="grid-template-columns: 160px 1fr;">
-          <div class="form-field">
-            <%= form.label :cep, "CEP", class: "form-label" %>
-            <div style="position:relative;">
-              <%= form.text_field :cep, class: "form-input", placeholder: "00000-000",
-                  id: "cep_field", maxlength: 9, style: "padding-right:2.5rem;" %>
-              <div id="cep-spinner" style="display:none; position:absolute; right:0.75rem; top:50%; transform:translateY(-50%); color:#dd7852;">
-                <i class="fas fa-circle-notch fa-spin"></i>
-              </div>
-            </div>
-          </div>
-          <div class="form-field">
-            <%= form.label :logradouro, "Logradouro", class: "form-label" %>
-            <%= form.text_field :logradouro, class: "form-input", placeholder: "Rua / Avenida / número", id: "logradouro_field" %>
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-field">
-            <%= form.label :bairro, "Bairro", class: "form-label" %>
-            <%= form.text_field :bairro, class: "form-input", placeholder: "Bairro", id: "bairro_field" %>
-          </div>
-          <div class="form-field">
-            <%= form.label :cidade, "Cidade", class: "form-label" %>
-            <%= form.text_field :cidade, class: "form-input", placeholder: "Cidade", id: "cidade_field" %>
-          </div>
-        </div>
-
-        <div class="form-row" style="grid-template-columns: 80px 1fr;">
-          <div class="form-field">
-            <%= form.label :uf, "UF", class: "form-label" %>
-            <%= form.text_field :uf, class: "form-input", placeholder: "SP", id: "uf_field", maxlength: 2 %>
-          </div>
-          <div class="form-field">
-            <%= form.label :address, "Endereço para mapa", class: "form-label" %>
-            <%= form.text_field :address, class: "form-input", placeholder: "Preenchido automaticamente pelo CEP", id: "address_field" %>
-          </div>
-        </div>
-
-        <div id="cep-error" style="display:none; font-size:0.775rem; color:#fca5a5; margin-top:-0.5rem;">
-          CEP não encontrado. Preencha o endereço manualmente.
-        </div>
-      </div>
-
-      <!-- Horários de Funcionamento -->
-      <div class="form-section">
-        <div class="form-section-title">
-          <i class="fas fa-clock"></i> Horários de Funcionamento
-        </div>
-        <div class="day-buttons">
-          <% [["Dom",0],["Seg",1],["Ter",2],["Qua",3],["Qui",4],["Sex",5],["Sáb",6]].each do |label, val| %>
-          <div class="day-btn" data-day="<%= val %>" onclick="toggleDay(<%= val %>, '<%= label %>')">
-            <%= label %>
-          </div>
-          <% end %>
-        </div>
-        <div class="day-time-rows" id="day-time-rows"></div>
-        <div id="operating-hours-inputs"></div>
-      </div>
-
-      <!-- Serviços -->
-      <div class="form-section">
-        <div class="form-section-title">
-          <i class="fas fa-spray-can-sparkles"></i> Serviços
-        </div>
-        <div id="services">
-          <%= form.fields_for :services do |service_form| %>
-          <div class="sub-card service-fields">
-            <div class="form-field">
-              <%= service_form.label :title, "Categoria do Serviço", class: "form-label" %>
-              <%= service_form.select :title,
-                  Service::CATEGORIES.map { |c| [c, c] },
-                  { prompt: "Selecione uma categoria" },
-                  class: "form-select" %>
-            </div>
-            <div class="form-field">
-              <%= service_form.label :description, "Descrição", class: "form-label" %>
-              <%= service_form.text_area :description, class: "form-textarea", placeholder: "Descreva o serviço..." %>
-            </div>
-            <div class="form-row">
-              <div class="form-field">
-                <%= service_form.label :price, "Preço (R$)", class: "form-label" %>
-                <%= service_form.number_field :price, step: 0.01, min: 0, class: "form-input", placeholder: "0,00" %>
-              </div>
-              <div class="form-field">
-                <%= service_form.label :duration, "Duração (min)", class: "form-label" %>
-                <%= service_form.number_field :duration, min: 1, class: "form-input", placeholder: "60" %>
-              </div>
-            </div>
-            <label class="sub-card-remove">
-              <%= service_form.check_box :_destroy %>
-              <i class="fas fa-trash-can"></i> Remover este serviço
-            </label>
-          </div>
-          <% end %>
-        </div>
-        <button type="button" class="btn-add" id="add-service">
-          <i class="fas fa-plus"></i> Adicionar Serviço
-        </button>
-      </div>
-
-      <%= form.submit "Criar Lava-Rápido", class: "btn-submit" %>
-
-    <% end %>
+<div class="loov-page loov-page--narrow">
+  <div class="loov-hero">
+    <div class="loov-eyebrow"><span class="dot"></span>NOVO PARCEIRO</div>
+    <h1 class="loov-h1">Cadastre seu <span class="accent">lava-rápido</span>.</h1>
+    <p class="loov-lead">Preencha os dados, defina horários e adicione serviços. Você poderá editar tudo depois.</p>
   </div>
+
+  <%= form_with model: @car_wash, local: true, id: "car-wash-form" do |form| %>
+
+    <% if @car_wash.errors.any? %>
+    <div class="form-errors-loov">
+      <h2><i class="fas fa-circle-exclamation"></i> Corrija os erros abaixo</h2>
+      <ul>
+        <% @car_wash.errors.full_messages.each do |message| %>
+        <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+    <% end %>
+
+    <div class="loov-card cw-new-section">
+      <h3 class="cw-new-section-title"><i class="fas fa-store"></i> Informações básicas</h3>
+
+      <div class="loov-field">
+        <%= form.label :name, "Nome do lava-rápido", class: "loov-label" %>
+        <%= form.text_field :name, class: "loov-input", placeholder: "Ex: Lava Car Premium" %>
+      </div>
+
+      <div class="cw-new-row" style="grid-template-columns: 160px 1fr;">
+        <div class="loov-field">
+          <%= form.label :cep, "CEP", class: "loov-label" %>
+          <div style="position:relative;">
+            <%= form.text_field :cep, class: "loov-input", placeholder: "00000-000",
+                id: "cep_field", maxlength: 9, style: "padding-right:2.5rem;" %>
+            <div id="cep-spinner" style="display:none; position:absolute; right:12px; top:50%; transform:translateY(-50%); color:var(--coral-500);">
+              <i class="fas fa-circle-notch fa-spin"></i>
+            </div>
+          </div>
+        </div>
+        <div class="loov-field">
+          <%= form.label :logradouro, "Logradouro", class: "loov-label" %>
+          <%= form.text_field :logradouro, class: "loov-input", placeholder: "Rua / Avenida / número", id: "logradouro_field" %>
+        </div>
+      </div>
+
+      <div class="cw-new-row">
+        <div class="loov-field">
+          <%= form.label :bairro, "Bairro", class: "loov-label" %>
+          <%= form.text_field :bairro, class: "loov-input", placeholder: "Bairro", id: "bairro_field" %>
+        </div>
+        <div class="loov-field">
+          <%= form.label :cidade, "Cidade", class: "loov-label" %>
+          <%= form.text_field :cidade, class: "loov-input", placeholder: "Cidade", id: "cidade_field" %>
+        </div>
+      </div>
+
+      <div class="cw-new-row" style="grid-template-columns: 80px 1fr;">
+        <div class="loov-field">
+          <%= form.label :uf, "UF", class: "loov-label" %>
+          <%= form.text_field :uf, class: "loov-input", placeholder: "SP", id: "uf_field", maxlength: 2 %>
+        </div>
+        <div class="loov-field">
+          <%= form.label :address, "Endereço para mapa", class: "loov-label" %>
+          <%= form.text_field :address, class: "loov-input", placeholder: "Preenchido automaticamente pelo CEP", id: "address_field" %>
+        </div>
+      </div>
+
+      <div id="cep-error" class="cep-error-msg">
+        CEP não encontrado. Preencha o endereço manualmente.
+      </div>
+    </div>
+
+    <div class="loov-card cw-new-section">
+      <h3 class="cw-new-section-title"><i class="fas fa-clock"></i> Horários de funcionamento</h3>
+      <div class="cw-new-day-buttons">
+        <% [["Dom",0],["Seg",1],["Ter",2],["Qua",3],["Qui",4],["Sex",5],["Sáb",6]].each do |label, val| %>
+        <div class="cw-new-day-btn day-btn" data-day="<%= val %>" onclick="toggleDay(<%= val %>, '<%= label %>')">
+          <%= label %>
+        </div>
+        <% end %>
+      </div>
+      <div class="day-time-rows" id="day-time-rows"></div>
+      <div id="operating-hours-inputs"></div>
+    </div>
+
+    <div class="loov-card cw-new-section">
+      <h3 class="cw-new-section-title"><i class="fas fa-spray-can-sparkles"></i> Serviços</h3>
+      <div id="services">
+        <%= form.fields_for :services do |service_form| %>
+        <div class="sub-card service-fields">
+          <div class="loov-field">
+            <%= service_form.label :title, "Categoria do serviço", class: "loov-label" %>
+            <%= service_form.select :title,
+                Service::CATEGORIES.map { |c| [c, c] },
+                { prompt: "Selecione uma categoria" },
+                class: "loov-select" %>
+          </div>
+          <div class="loov-field">
+            <%= service_form.label :description, "Descrição", class: "loov-label" %>
+            <%= service_form.text_area :description, class: "loov-textarea", placeholder: "Descreva o serviço..." %>
+          </div>
+          <div class="cw-new-row">
+            <div class="loov-field">
+              <%= service_form.label :price, "Preço (R$)", class: "loov-label" %>
+              <%= service_form.number_field :price, step: 0.01, min: 0, class: "loov-input", placeholder: "0,00" %>
+            </div>
+            <div class="loov-field">
+              <%= service_form.label :duration, "Duração (min)", class: "loov-label" %>
+              <%= service_form.number_field :duration, min: 1, class: "loov-input", placeholder: "60" %>
+            </div>
+          </div>
+          <label class="sub-card-remove">
+            <%= service_form.check_box :_destroy %>
+            <i class="fas fa-trash-can"></i> Remover este serviço
+          </label>
+        </div>
+        <% end %>
+      </div>
+      <button type="button" class="btn-add" id="add-service">
+        <i class="fas fa-plus"></i> Adicionar serviço
+      </button>
+    </div>
+
+    <div class="loov-cta-row" style="margin-top: 28px;">
+      <%= form.submit "Criar lava-rápido", class: "loov-btn-primary loov-btn-block loov-btn-lg" %>
+    </div>
+
+  <% end %>
 </div>
 
 <script>
-  // ── CEP ──────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function() {
     var cepField = document.getElementById('cep_field');
     if (cepField) {
@@ -264,13 +294,12 @@
       });
     }
 
-    // ── SERVIÇOS DINÂMICOS ────────────────────────────────────────
     document.getElementById('add-service').addEventListener('click', function(e) {
       e.preventDefault();
       var time = new Date().getTime();
       var html = '<div class="sub-card service-fields">' +
-        '<div class="form-field"><label class="form-label">Categoria do Serviço</label>' +
-        '<select name="car_wash[services_attributes][' + time + '][title]" class="form-select" required>' +
+        '<div class="loov-field"><label class="loov-label">Categoria do serviço</label>' +
+        '<select name="car_wash[services_attributes][' + time + '][title]" class="loov-select" required>' +
         '<option value="">Selecione uma categoria</option>' +
         '<option value="Lavagem">Lavagem</option>' +
         '<option value="Polimento">Polimento</option>' +
@@ -278,13 +307,13 @@
         '<option value="Cristalização">Cristalização</option>' +
         '<option value="Outros">Outros</option>' +
         '</select></div>' +
-        '<div class="form-field"><label class="form-label">Descrição</label>' +
-        '<textarea name="car_wash[services_attributes][' + time + '][description]" class="form-textarea" placeholder="Descreva o serviço..."></textarea></div>' +
-        '<div class="form-row">' +
-          '<div class="form-field"><label class="form-label">Preço (R$)</label>' +
-          '<input type="number" step="0.01" min="0" name="car_wash[services_attributes][' + time + '][price]" class="form-input" placeholder="0,00" required></div>' +
-          '<div class="form-field"><label class="form-label">Duração (min)</label>' +
-          '<input type="number" min="1" name="car_wash[services_attributes][' + time + '][duration]" class="form-input" placeholder="60" required></div>' +
+        '<div class="loov-field"><label class="loov-label">Descrição</label>' +
+        '<textarea name="car_wash[services_attributes][' + time + '][description]" class="loov-textarea" placeholder="Descreva o serviço..."></textarea></div>' +
+        '<div class="cw-new-row">' +
+          '<div class="loov-field"><label class="loov-label">Preço (R$)</label>' +
+          '<input type="number" step="0.01" min="0" name="car_wash[services_attributes][' + time + '][price]" class="loov-input" placeholder="0,00" required></div>' +
+          '<div class="loov-field"><label class="loov-label">Duração (min)</label>' +
+          '<input type="number" min="1" name="car_wash[services_attributes][' + time + '][duration]" class="loov-input" placeholder="60" required></div>' +
         '</div>' +
         '<label class="sub-card-remove">' +
           '<input type="checkbox" name="car_wash[services_attributes][' + time + '][_destroy]">' +
@@ -294,7 +323,6 @@
     });
   });
 
-  // ── HORÁRIOS ──────────────────────────────────────────────────────
   var activeDays = {};
 
   function buildHourOptions(selectedVal) {

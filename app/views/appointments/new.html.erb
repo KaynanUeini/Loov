@@ -7,246 +7,146 @@
   window.carWashAddress = "<%= @car_wash.address %>";
 </script>
 
-<div id="loov-cursor"></div>
-<div id="loov-cursor-trail"></div>
-<div id="page-transition"></div>
-
 <style>
-  :root {
-    --lime: #dd7852;
-    --lime-dim: #9c4930;
-    --black: #fafaf6;
-    --surface: #fafaf6;
-    --surface-2: #fafaf6;
-    --surface-3: #fefefd;
-    --border: #e0dbd0;
-    --border-soft: #e0dbd0;
-    --text-muted: #ada699;
-    --text-secondary: #ada699;
-    --white: #28231c;
-  }
-
-  /* ── CURSOR ─────────────────────────────────────────── */
-  #loov-cursor { position:fixed;width:8px;height:8px;background:var(--lime);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .18s ease,height .18s ease;mix-blend-mode:difference; }
-  #loov-cursor-trail { position:fixed;width:38px;height:38px;border:1px solid rgba(221, 120, 82,0.25);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:width .25s ease,height .25s ease,border-color .25s ease; }
-  body.cursor-hover #loov-cursor { width:14px;height:14px; }
-  body.cursor-hover #loov-cursor-trail { width:58px;height:58px;border-color:rgba(221, 120, 82,0.45); }
-  @media(hover:none){#loov-cursor,#loov-cursor-trail{display:none;}}
-
-  /* ── PAGE TRANSITION ─────────────────────────────────── */
-  #page-transition { position:fixed;inset:0;z-index:10000;background:#fafaf6;transform:translateY(100%);pointer-events:none; }
-  #page-transition.enter { animation:pgEnter .42s cubic-bezier(.76,0,.24,1) forwards; }
-  #page-transition.exit  { animation:pgExit  .42s cubic-bezier(.76,0,.24,1) forwards; }
-  @keyframes pgEnter { from{transform:translateY(100%)}to{transform:translateY(0)} }
-  @keyframes pgExit  { from{transform:translateY(0)}to{transform:translateY(-100%)} }
-
-  /* ── BASE ────────────────────────────────────────────── */
-  * { box-sizing: border-box; }
-  body { cursor: none; }
-
-  .appt-wrap {
-    min-height: 100vh;
-    background: var(--black);
-    font-family: 'Inter', sans-serif;
-    padding-top: 60px;
-  }
-
-  .appt-back {
-    max-width: 640px; margin: 0 auto;
-    padding: 2rem 1.5rem 0;
-    opacity: 0; animation: revealUp .6s cubic-bezier(.16,1,.3,1) forwards .05s;
-  }
+  .appt-back { margin-bottom:14px; }
   .appt-back a {
-    display: inline-flex; align-items: center; gap: .5rem;
-    font-size: .8125rem; color: var(--text-muted);
-    text-decoration: none; transition: color .2s ease; cursor: none;
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:'JetBrains Mono', monospace; font-size:11.5px; letter-spacing:1.4px; text-transform:uppercase;
+    color:var(--graphite); text-decoration:none; transition:color .15s ease;
   }
-  .appt-back a:hover { color: var(--lime); }
+  .appt-back a:hover { color:var(--coral-700); }
 
-  .appt-header {
-    max-width: 640px; margin: 0 auto;
-    padding: 2rem 1.5rem;
-    opacity: 0; animation: revealUp .7s cubic-bezier(.16,1,.3,1) forwards .15s;
-  }
+  .appt-flash { margin-bottom:18px; }
+  .appt-flash-msg { display:flex; align-items:center; gap:10px; padding:13px 18px; border-radius:12px; font-size:13.5px; margin-bottom:10px; }
+  .appt-flash-msg.error   { background:#fdecec; border:1px solid #f5cccc; color:var(--rose-500); }
+  .appt-flash-msg.success { background:var(--coral-50); border:1px solid var(--coral-100); color:var(--coral-700); }
 
-  .appt-eyebrow {
-    display: inline-flex; align-items: center; gap: .5rem;
-    font-size: .68rem; font-weight: 500; letter-spacing: .25em;
-    text-transform: uppercase; color: var(--lime); margin-bottom: 1rem;
-  }
-  .appt-eyebrow::before { content:''; display:block; width:24px; height:1px; background:var(--lime); }
-
-  .appt-title {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: clamp(2rem, 7vw, 4rem);
-    line-height: .95; color: var(--white); margin-bottom: .5rem;
-  }
-  .appt-title span { color: var(--lime); }
-  .appt-subtitle { font-size: .9rem; color: var(--text-muted); }
-
-  .appt-flash { max-width: 640px; margin: 0 auto; padding: 0 1.5rem 1rem; }
-  .appt-flash-msg { display: flex; align-items: center; gap: .75rem; padding: .875rem 1.25rem; border-radius: 12px; font-size: .875rem; margin-bottom: .75rem; }
-  .appt-flash-msg.error   { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.2); color: #fca5a5; }
-  .appt-flash-msg.success { background: rgba(221, 120, 82,.08); border: 1px solid rgba(221, 120, 82,.15); color: var(--lime); }
-
-  .appt-divider { max-width: 640px; margin: 0 auto; padding: 0 1.5rem; }
-  .appt-divider-line { height: 1px; background: var(--border); }
-
-  .appt-screens { max-width: 640px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
   .appt-screen { transition: opacity .35s ease, transform .35s ease; }
-  .appt-screen.hidden { display: none; }
+  .appt-screen.hidden { display:none; }
 
-  /* ── STEPS ───────────────────────────────────────────── */
-  .appt-steps { display: flex; align-items: center; gap: .5rem; margin-bottom: 2.5rem; }
-  .appt-step { display: flex; align-items: center; gap: .4rem; font-size: .75rem; font-weight: 500; color: var(--text-muted); transition: color .2s ease; }
-  .appt-step-num { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: .65rem; font-weight: 700; flex-shrink: 0; transition: all .2s ease; }
-  .appt-step.active { color: var(--white); }
-  .appt-step.active .appt-step-num { background: var(--lime); color: var(--black); border-color: var(--lime); }
-  .appt-step.done { color: var(--lime); }
-  .appt-step.done .appt-step-num { background: transparent; color: var(--lime); border-color: var(--lime); }
-  .appt-step-divider { flex: 1; height: 1px; background: var(--border); }
+  .appt-steps { display:flex; align-items:center; gap:10px; margin-bottom:32px; }
+  .appt-step { display:flex; align-items:center; gap:8px; font-family:'JetBrains Mono', monospace; font-size:11px; font-weight:600; letter-spacing:1.4px; text-transform:uppercase; color:var(--ash); transition:color .2s ease; }
+  .appt-step-num { width:24px; height:24px; border-radius:50%; border:1px solid var(--stone); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; transition:all .2s ease; background:var(--paper); }
+  .appt-step.active { color:var(--ink); }
+  .appt-step.active .appt-step-num { background:var(--coral-500); color:var(--cream); border-color:var(--coral-500); }
+  .appt-step.done { color:var(--coral-700); }
+  .appt-step.done .appt-step-num { background:transparent; color:var(--coral-500); border-color:var(--coral-500); }
+  .appt-step-divider { flex:1; height:1px; background:var(--stone); }
 
-  /* ── FIELDS ──────────────────────────────────────────── */
-  .appt-field { margin-bottom: 2rem; }
-  .appt-label { display: flex; align-items: center; gap: .5rem; font-size: .8125rem; font-weight: 500; color: var(--text-secondary); margin-bottom: .625rem; text-transform: uppercase; letter-spacing: .08em; }
-  .appt-label i { color: var(--lime); font-size: .7rem; }
+  .appt-field { margin-bottom:24px; }
+  .appt-field-label { display:flex; align-items:center; gap:8px; font-family:'JetBrains Mono', monospace; font-size:11px; font-weight:600; letter-spacing:1.4px; color:var(--graphite); margin-bottom:10px; text-transform:uppercase; }
+  .appt-field-label i { color:var(--coral-500); font-size:11px; }
 
-  /* Campo bloqueado */
-  .field-locked-wrap { opacity: .4; pointer-events: none; transition: opacity .25s ease; }
-  .field-locked-wrap.unlocked { opacity: 1; pointer-events: auto; }
+  .field-locked-wrap { opacity:.4; pointer-events:none; transition:opacity .25s ease; }
+  .field-locked-wrap.unlocked { opacity:1; pointer-events:auto; }
 
-  .field-hint { display: none; align-items: center; gap: .4rem; font-size: .78rem; color: var(--text-muted); margin-top: .5rem; padding: .5rem .75rem; background: var(--surface-2); border: 1px dashed var(--border); border-radius: 8px; }
-  .appt-field.locked .field-hint { display: flex; }
+  .field-hint { display:none; align-items:center; gap:8px; font-size:12.5px; color:var(--graphite); margin-top:8px; padding:10px 14px; background:var(--cream); border:1px dashed var(--stone); border-radius:10px; }
+  .appt-field.locked .field-hint { display:flex; }
 
   .appt-input {
-    width: 100%; background: var(--surface-2); border: 1px solid var(--border);
-    border-radius: 10px; padding: .875rem 1rem;
-    font-family: 'Inter', sans-serif; font-size: .9375rem; color: var(--white);
-    transition: all .2s ease; outline: none; appearance: none; cursor: none;
+    width:100%; background:var(--paper); border:1px solid var(--stone);
+    border-radius:12px; padding:14px 16px;
+    font-family:'Inter', sans-serif; font-size:14.5px; color:var(--ink);
+    transition:all .2s ease; outline:none; appearance:none;
   }
-  .appt-input::placeholder { color: var(--text-muted); }
-  .appt-input:focus { border-color: var(--lime); box-shadow: 0 0 0 3px rgba(221, 120, 82,.07); }
+  .appt-input::placeholder { color:var(--ash); }
+  .appt-input:focus { border-color:var(--coral-500); box-shadow:0 0 0 3px rgba(220,120,82,.08); }
 
-  /* ── SERVICE CARDS ───────────────────────────────────── */
-  .service-cards { display: flex; flex-direction: column; gap: .75rem; }
+  .service-cards { display:flex; flex-direction:column; gap:10px; }
   .service-card {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 1rem 1.25rem; background: var(--surface-2);
-    border: 1px solid var(--border); border-radius: 12px;
-    cursor: none; transition: all .2s ease; gap: 1rem;
-    position: relative; overflow: hidden;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 18px; background:var(--paper);
+    border:1px solid var(--stone); border-radius:14px;
+    cursor:pointer; transition:all .2s ease; gap:14px;
+    position:relative; overflow:hidden;
   }
-  .service-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:2px; background:var(--lime); transform:scaleY(0); transform-origin:bottom; transition:transform .3s cubic-bezier(.16,1,.3,1); }
-  .service-card:hover { border-color: rgba(221, 120, 82,.2); background: var(--surface-3); }
-  .service-card:hover::before { transform: scaleY(1); }
-  .service-card.selected { border-color: var(--lime); background: var(--surface-3); box-shadow: 0 0 0 1px var(--lime); }
-  .service-card.selected::before { transform: scaleY(1); }
+  .service-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--coral-500); transform:scaleY(0); transform-origin:bottom; transition:transform .3s cubic-bezier(.16,1,.3,1); }
+  .service-card:hover { border-color:var(--coral-100); }
+  .service-card:hover::before { transform:scaleY(1); }
+  .service-card.selected { border-color:var(--coral-500); background:var(--coral-50); }
+  .service-card.selected::before { transform:scaleY(1); }
 
-  .service-card-left { flex: 1; }
-  .service-card-name { font-size: .9375rem; font-weight: 500; color: var(--white); margin-bottom: .2rem; }
-  .service-card-meta { font-size: .8rem; color: var(--text-muted); display: flex; align-items: center; gap: .5rem; }
-  .service-card-meta i { color: var(--lime); font-size: .65rem; }
-  .service-card-price { font-family: 'Space Grotesk', sans-serif; font-size: 1.4rem; color: var(--lime); letter-spacing: .02em; flex-shrink: 0; }
-  .service-card-check { width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--border); flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all .2s ease; font-size: .6rem; color: transparent; }
-  .service-card.selected .service-card-check { background: var(--lime); border-color: var(--lime); color: var(--black); }
+  .service-card-left { flex:1; }
+  .service-card-name { font-size:14.5px; font-weight:600; color:var(--ink); margin-bottom:3px; }
+  .service-card-meta { font-size:12.5px; color:var(--graphite); display:flex; align-items:center; gap:6px; }
+  .service-card-meta i { color:var(--coral-500); font-size:10.5px; }
+  .service-card-price { font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:20px; color:var(--coral-500); letter-spacing:-0.3px; flex-shrink:0; }
+  .service-card-check { width:22px; height:22px; border-radius:50%; border:1px solid var(--stone); flex-shrink:0; display:flex; align-items:center; justify-content:center; transition:all .2s ease; font-size:10px; color:transparent; background:var(--paper); }
+  .service-card.selected .service-card-check { background:var(--coral-500); border-color:var(--coral-500); color:var(--cream); }
 
-  /* ── TIME SLOTS ──────────────────────────────────────── */
-  .time-slots-container { display: flex; flex-wrap: wrap; gap: .5rem; }
-  .time-slot { padding: .625rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text-secondary); font-size: .875rem; font-weight: 500; cursor: none; transition: all .15s ease; font-variant-numeric: tabular-nums; }
-  .time-slot:hover { border-color: var(--lime); color: var(--lime); }
-  .time-slot.selected { background: var(--lime); color: var(--black); border-color: var(--lime); font-weight: 600; }
+  .time-slots-container { display:flex; flex-wrap:wrap; gap:8px; }
+  .time-slot {
+    padding:10px 16px; border-radius:10px;
+    border:1px solid var(--stone); background:var(--paper);
+    color:var(--graphite); font-size:14px; font-weight:500;
+    cursor:pointer; transition:all .15s ease;
+    font-variant-numeric:tabular-nums;
+  }
+  .time-slot:hover { border-color:var(--coral-500); color:var(--coral-700); }
+  .time-slot.selected { background:var(--coral-500); color:var(--cream); border-color:var(--coral-500); font-weight:700; }
 
-  #loading-indicator { font-size: .8125rem; color: var(--lime); display: flex; align-items: center; gap: .5rem; padding: .5rem 0; }
-  #time-error { font-size: .8rem; color: #fca5a5; display: flex; align-items: center; gap: .5rem; }
+  #loading-indicator { font-size:13px; color:var(--coral-700); display:flex; align-items:center; gap:8px; padding:8px 0; }
+  #time-error { font-size:13px; color:var(--rose-500); display:flex; align-items:center; gap:8px; }
 
-  /* ── SUMMARY ─────────────────────────────────────────── */
   .summary-card {
-    background: var(--surface-2); border: 1px solid var(--border);
-    border-radius: 20px; overflow: hidden; margin-bottom: 1rem;
-    position: relative;
+    background:var(--paper); border:1px solid var(--stone);
+    border-radius:20px; overflow:hidden; margin-bottom:18px;
+    position:relative;
   }
-  .summary-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:2px; background:var(--lime); }
+  .summary-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--coral-500); }
 
   .summary-card-header {
-    padding: 1.25rem 1.5rem 1.25rem 1.75rem;
-    border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; gap: 1rem;
+    padding:20px 22px 20px 26px;
+    border-bottom:1px solid var(--stone);
+    display:flex; align-items:center; gap:14px;
   }
-
   .summary-avatar {
-    width: 48px; height: 48px; border-radius: 12px;
-    background: linear-gradient(135deg, #fefefd, #e0dbd0);
-    border: 1px solid var(--border-soft);
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Space Grotesk', sans-serif; font-size: 1.1rem; color: var(--lime); flex-shrink: 0;
+    width:52px; height:52px; border-radius:14px;
+    background:var(--coral-50);
+    border:1px solid var(--coral-100);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:17px; color:var(--coral-700); flex-shrink:0;
   }
+  .summary-car-wash-name { font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:20px; color:var(--ink); letter-spacing:-0.3px; }
+  .summary-car-wash-address { font-size:13px; color:var(--graphite); margin-top:3px; }
 
-  .summary-car-wash-name { font-family: 'Space Grotesk', sans-serif; font-size: 1.25rem; color: var(--white); letter-spacing: .02em; }
-  .summary-car-wash-address { font-size: .8rem; color: var(--text-muted); margin-top: .15rem; }
+  .summary-rows { padding:6px 0; }
+  .summary-row { display:flex; align-items:center; justify-content:space-between; padding:12px 22px 12px 26px; border-bottom:1px solid var(--stone); gap:14px; }
+  .summary-row:last-child { border-bottom:none; }
+  .summary-row-label { font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:1.4px; text-transform:uppercase; color:var(--ash); flex-shrink:0; }
+  .summary-row-value { font-size:14px; color:var(--ink); text-align:right; font-weight:500; }
+  .summary-row-value.highlight { font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:24px; color:var(--coral-500); letter-spacing:-0.4px; }
 
-  .summary-rows { padding: .5rem 0; }
-  .summary-row { display: flex; align-items: center; justify-content: space-between; padding: .75rem 1.5rem .75rem 1.75rem; border-bottom: 1px solid var(--border); gap: 1rem; }
-  .summary-row:last-child { border-bottom: none; }
-  .summary-row-label { font-size: .8125rem; color: var(--text-muted); flex-shrink: 0; }
-  .summary-row-value { font-size: .875rem; color: var(--white); text-align: right; }
-  .summary-row-value.highlight { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; color: var(--lime); letter-spacing: .02em; }
-
-  /* ── EMAIL NOTICE ────────────────────────────────────── */
   .email-notice {
-    display: flex; align-items: center; gap: .75rem;
-    padding: .875rem 1.25rem;
-    background: rgba(221, 120, 82,.04); border: 1px solid rgba(221, 120, 82,.1);
-    border-radius: 12px; margin-bottom: 1.25rem;
-    font-size: .82rem; color: var(--text-muted); line-height: 1.4;
+    display:flex; align-items:center; gap:12px;
+    padding:14px 16px;
+    background:var(--coral-50); border:1px solid var(--coral-100);
+    border-radius:12px; margin-bottom:18px;
+    font-size:13px; color:var(--graphite); line-height:1.5;
   }
-  .email-notice i { color: var(--lime); font-size: .85rem; flex-shrink: 0; }
-  .email-notice strong { color: var(--white); }
+  .email-notice i { color:var(--coral-500); font-size:14px; flex-shrink:0; }
+  .email-notice strong { color:var(--ink); }
 
-  /* ── ACTIONS ─────────────────────────────────────────── */
-  .appt-actions { display: flex; gap: .75rem; flex-wrap: wrap; }
+  .appt-actions { display:flex; gap:10px; flex-wrap:wrap; }
+  .appt-actions .btn-grow { flex:1; }
 
-  .btn-appt {
-    display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
-    padding: .875rem 1.75rem; border-radius: 100px;
-    font-family: 'Inter', sans-serif; font-size: .875rem; font-weight: 500;
-    text-decoration: none; transition: all .2s ease; cursor: none; border: none; white-space: nowrap;
-  }
-  .btn-appt-primary { background: var(--lime); color: var(--black); flex: 1; }
-  .btn-appt-primary:hover:not(:disabled) { background: var(--lime-dim); transform: translateY(-2px); }
-  .btn-appt-primary:disabled { opacity: .45; cursor: not-allowed; transform: none; }
-  .btn-appt-secondary { background: transparent; color: var(--white); border: 1px solid var(--border-soft); }
-  .btn-appt-secondary:hover { border-color: var(--lime); color: var(--lime); }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .spin { animation:spin .8s linear infinite; display:inline-block; }
 
-  /* Spinner inline no botão */
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .spin { animation: spin .8s linear infinite; display: inline-block; }
-
-  /* ── FLATPICKR ───────────────────────────────────────── */
-  .flatpickr-input { cursor: none !important; }
-  .flatpickr-calendar { background: var(--surface-2) !important; border: 1px solid var(--border) !important; border-radius: 12px !important; box-shadow: 0 8px 32px rgba(40, 35, 28,0.5) !important; }
-  .flatpickr-day { color: var(--white) !important; border-radius: 8px !important; }
-  .flatpickr-day:hover { background: var(--surface-3) !important; border-color: var(--lime) !important; }
-  .flatpickr-day.selected, .flatpickr-day.selected:hover { background: var(--lime) !important; color: var(--black) !important; border-color: var(--lime) !important; font-weight: 700 !important; }
-  .flatpickr-day.disabled, .flatpickr-day.disabled:hover { color: var(--border) !important; cursor: not-allowed !important; }
-  .flatpickr-day.nextMonthDay, .flatpickr-day.prevMonthDay { color: var(--border) !important; pointer-events: none !important; }
-  .flatpickr-month { color: var(--white) !important; }
-  .flatpickr-current-month, .flatpickr-current-month span, .flatpickr-current-month input { color: var(--white) !important; font-family: 'Space Grotesk', sans-serif !important; font-size: 1rem !important; }
-  .flatpickr-weekday { color: var(--lime) !important; font-size: .7rem !important; font-weight: 600 !important; }
-  .flatpickr-prev-month svg, .flatpickr-next-month svg { fill: var(--white) !important; }
-  .flatpickr-prev-month:hover svg, .flatpickr-next-month:hover svg { fill: var(--lime) !important; }
-
-  /* ── ANIMAÇÕES ───────────────────────────────────────── */
-  @keyframes revealUp { from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)} }
-  @keyframes slideIn  { from{opacity:0;transform:translateX(32px)}to{opacity:1;transform:translateX(0)} }
-  .screen-enter { animation: slideIn .35s ease forwards; }
-
-  /* ── RESPONSIVE ──────────────────────────────────────── */
-  @media(max-width:640px) {
-    .appt-back, .appt-header, .appt-divider, .appt-screens, .appt-flash { padding-left: 1.25rem; padding-right: 1.25rem; }
-  }
+  .flatpickr-calendar { background:var(--paper) !important; border:1px solid var(--stone) !important; border-radius:14px !important; box-shadow:0 14px 40px rgba(40,35,28,0.1) !important; }
+  .flatpickr-day { color:var(--ink) !important; border-radius:10px !important; }
+  .flatpickr-day:hover { background:var(--coral-50) !important; border-color:var(--coral-100) !important; }
+  .flatpickr-day.selected, .flatpickr-day.selected:hover { background:var(--coral-500) !important; color:var(--cream) !important; border-color:var(--coral-500) !important; font-weight:700 !important; }
+  .flatpickr-day.disabled, .flatpickr-day.disabled:hover { color:var(--stone) !important; cursor:not-allowed !important; }
+  .flatpickr-day.nextMonthDay, .flatpickr-day.prevMonthDay { color:var(--stone) !important; pointer-events:none !important; }
+  .flatpickr-month { color:var(--ink) !important; }
+  .flatpickr-current-month, .flatpickr-current-month span, .flatpickr-current-month input { color:var(--ink) !important; font-family:'Space Grotesk', sans-serif !important; font-size:15px !important; }
+  .flatpickr-weekday { color:var(--coral-500) !important; font-size:11px !important; font-weight:600 !important; font-family:'JetBrains Mono', monospace !important; }
+  .flatpickr-prev-month svg, .flatpickr-next-month svg { fill:var(--graphite) !important; }
+  .flatpickr-prev-month:hover svg, .flatpickr-next-month:hover svg { fill:var(--coral-500) !important; }
 </style>
 
-<div class="appt-wrap">
+<div class="loov-page loov-page--narrow">
 
   <div class="appt-back">
     <a href="#" id="back-btn">
@@ -254,12 +154,10 @@
     </a>
   </div>
 
-  <div class="appt-header">
-    <div class="appt-eyebrow">Novo Agendamento</div>
-    <h1 class="appt-title">
-      Agendar em<span> <%= @car_wash&.name || "Lava-rápido" %>.</span>
-    </h1>
-    <p class="appt-subtitle"><%= @car_wash&.address %></p>
+  <div class="loov-hero loov-hero--left">
+    <div class="loov-eyebrow"><span class="dot"></span>NOVO AGENDAMENTO</div>
+    <h1 class="loov-h1">Agendar em <span class="accent"><%= @car_wash&.name || "Lava-rápido" %></span>.</h1>
+    <p class="loov-lead"><%= @car_wash&.address %></p>
   </div>
 
   <% if flash[:alert] || flash[:notice] %>
@@ -273,30 +171,26 @@
   </div>
   <% end %>
 
-  <div class="appt-divider"><div class="appt-divider-line"></div></div>
+  <div class="appt-screen" id="screen-selection">
 
-  <div class="appt-screens">
+    <div class="appt-steps">
+      <div class="appt-step active" id="step-1"><div class="appt-step-num">1</div><span>Data</span></div>
+      <div class="appt-step-divider"></div>
+      <div class="appt-step" id="step-2"><div class="appt-step-num">2</div><span>Serviço</span></div>
+      <div class="appt-step-divider"></div>
+      <div class="appt-step" id="step-3"><div class="appt-step-num">3</div><span>Horário</span></div>
+    </div>
 
-    <!-- TELA 1: Seleção -->
-    <div id="screen-selection" class="appt-screen">
-
-      <div class="appt-steps">
-        <div class="appt-step active" id="step-1"><div class="appt-step-num">1</div><span>Data</span></div>
-        <div class="appt-step-divider"></div>
-        <div class="appt-step" id="step-2"><div class="appt-step-num">2</div><span>Serviço</span></div>
-        <div class="appt-step-divider"></div>
-        <div class="appt-step" id="step-3"><div class="appt-step-num">3</div><span>Horário</span></div>
-      </div>
-
-      <!-- Data -->
+    <div class="loov-card" style="margin-bottom:18px;">
       <div class="appt-field">
-        <label class="appt-label"><i class="fas fa-calendar"></i> Data *</label>
+        <label class="appt-field-label"><i class="fas fa-calendar"></i> Data *</label>
         <input type="text" id="appointment-date" class="appt-input" placeholder="Selecione uma data" readonly>
       </div>
+    </div>
 
-      <!-- Serviço -->
+    <div class="loov-card" style="margin-bottom:18px;">
       <div class="appt-field locked" id="field-service">
-        <label class="appt-label"><i class="fas fa-wrench"></i> Serviço *</label>
+        <label class="appt-field-label"><i class="fas fa-wrench"></i> Serviço *</label>
         <div class="field-locked-wrap" id="wrap-service">
           <div class="service-cards" id="service-cards">
             <% @car_wash.services.each do |service| %>
@@ -325,10 +219,11 @@
           <span>Selecione uma data primeiro para liberar este campo.</span>
         </div>
       </div>
+    </div>
 
-      <!-- Horário -->
-      <div class="appt-field locked" id="field-time">
-        <label class="appt-label"><i class="fas fa-clock"></i> Horário *</label>
+    <div class="loov-card">
+      <div class="appt-field locked" id="field-time" style="margin-bottom:0;">
+        <label class="appt-field-label"><i class="fas fa-clock"></i> Horário *</label>
         <div class="field-locked-wrap" id="wrap-time">
           <div id="loading-indicator" style="display:none;">
             <i class="fas fa-spinner fa-spin"></i> Carregando horários...
@@ -343,54 +238,53 @@
           <span>Escolha um serviço primeiro para ver os horários disponíveis.</span>
         </div>
       </div>
-
-    </div>
-
-    <!-- TELA 2: Resumo -->
-    <div id="screen-summary" class="appt-screen hidden">
-
-      <%= form_with(model: @appointment, local: true, id: "appointment-form") do |form| %>
-        <%= form.hidden_field :car_wash_id, value: @car_wash.id %>
-        <%= form.hidden_field :service_id, id: "hidden-service-id" %>
-        <%= form.hidden_field :date, id: "hidden-date" %>
-        <%= form.hidden_field :time, id: "hidden-time" %>
-
-        <div class="summary-card">
-          <div class="summary-card-header">
-            <div class="summary-avatar"><%= @car_wash.name.first(2).upcase %></div>
-            <div>
-              <div class="summary-car-wash-name"><%= @car_wash.name %></div>
-              <div class="summary-car-wash-address"><%= @car_wash.address %></div>
-            </div>
-          </div>
-          <div class="summary-rows">
-            <div class="summary-row"><span class="summary-row-label">Data</span><span class="summary-row-value" id="sum-date">—</span></div>
-            <div class="summary-row"><span class="summary-row-label">Horário</span><span class="summary-row-value" id="sum-time">—</span></div>
-            <div class="summary-row"><span class="summary-row-label">Serviço</span><span class="summary-row-value" id="sum-service">—</span></div>
-            <div class="summary-row"><span class="summary-row-label">Duração</span><span class="summary-row-value" id="sum-duration">—</span></div>
-            <div class="summary-row"><span class="summary-row-label">Valor</span><span class="summary-row-value highlight" id="sum-price">—</span></div>
-          </div>
-        </div>
-
-        <div class="email-notice">
-          <i class="fas fa-envelope"></i>
-          <span>Após confirmar, você receberá um <strong>e-mail de confirmação</strong> com todos os detalhes.</span>
-        </div>
-
-        <div class="appt-actions">
-          <button type="button" class="btn-appt btn-appt-secondary" id="btn-back-selection">
-            <i class="fas fa-arrow-left"></i> Corrigir
-          </button>
-          <%= form.submit "Confirmar Agendamento",
-              class: "btn-appt btn-appt-primary",
-              id: "submit-button",
-              data: { disable_with: "Confirmando..." } %>
-        </div>
-
-      <% end %>
     </div>
 
   </div>
+
+  <div id="screen-summary" class="appt-screen hidden">
+
+    <%= form_with(model: @appointment, local: true, id: "appointment-form") do |form| %>
+      <%= form.hidden_field :car_wash_id, value: @car_wash.id %>
+      <%= form.hidden_field :service_id, id: "hidden-service-id" %>
+      <%= form.hidden_field :date, id: "hidden-date" %>
+      <%= form.hidden_field :time, id: "hidden-time" %>
+
+      <div class="summary-card">
+        <div class="summary-card-header">
+          <div class="summary-avatar"><%= @car_wash.name.first(2).upcase %></div>
+          <div>
+            <div class="summary-car-wash-name"><%= @car_wash.name %></div>
+            <div class="summary-car-wash-address"><%= @car_wash.address %></div>
+          </div>
+        </div>
+        <div class="summary-rows">
+          <div class="summary-row"><span class="summary-row-label">Data</span><span class="summary-row-value" id="sum-date">—</span></div>
+          <div class="summary-row"><span class="summary-row-label">Horário</span><span class="summary-row-value" id="sum-time">—</span></div>
+          <div class="summary-row"><span class="summary-row-label">Serviço</span><span class="summary-row-value" id="sum-service">—</span></div>
+          <div class="summary-row"><span class="summary-row-label">Duração</span><span class="summary-row-value" id="sum-duration">—</span></div>
+          <div class="summary-row"><span class="summary-row-label">Valor</span><span class="summary-row-value highlight" id="sum-price">—</span></div>
+        </div>
+      </div>
+
+      <div class="email-notice">
+        <i class="fas fa-envelope"></i>
+        <span>Após confirmar, você receberá um <strong>e-mail de confirmação</strong> com todos os detalhes.</span>
+      </div>
+
+      <div class="appt-actions">
+        <button type="button" class="loov-btn-secondary" id="btn-back-selection">
+          <i class="fas fa-arrow-left"></i> Corrigir
+        </button>
+        <%= form.submit "Confirmar Agendamento",
+            class: "loov-btn-primary loov-btn-lg btn-grow",
+            id: "submit-button",
+            data: { disable_with: "Confirmando..." } %>
+      </div>
+
+    <% end %>
+  </div>
+
 </div>
 
 <script>
@@ -401,28 +295,6 @@
   var selectedServiceTitle = null;
   var selectedServicePrice = null;
 
-  // ── CURSOR ────────────────────────────────────────────
-  (function() {
-    const cursor = document.getElementById('loov-cursor');
-    const trail  = document.getElementById('loov-cursor-trail');
-    if (!cursor || !trail) return;
-    let mx=-100,my=-100,tx=-100,ty=-100;
-    document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cursor.style.left=mx+'px';cursor.style.top=my+'px';});
-    (function anim(){tx+=(mx-tx)*0.12;ty+=(my-ty)*0.12;trail.style.left=tx+'px';trail.style.top=ty+'px';requestAnimationFrame(anim);})();
-    document.addEventListener('mouseover',e=>{if(e.target.closest('a,button,input,select,textarea'))document.body.classList.add('cursor-hover');});
-    document.addEventListener('mouseout', e=>{if(e.target.closest('a,button,input,select,textarea'))document.body.classList.remove('cursor-hover');});
-    document.addEventListener('mouseleave',()=>{cursor.style.opacity='0';trail.style.opacity='0';});
-    document.addEventListener('mouseenter',()=>{cursor.style.opacity='1';trail.style.opacity='1';});
-  })();
-
-  // ── PAGE TRANSITION ───────────────────────────────────
-  (function() {
-    const pt = document.getElementById('page-transition');
-    if (!pt) return;
-    window.addEventListener('pageshow',()=>{pt.classList.remove('enter');pt.classList.add('exit');setTimeout(()=>pt.classList.remove('exit'),440);});
-  })();
-
-  // ── HELPERS ───────────────────────────────────────────
   function setStep(step) {
     for (var i = 1; i <= 3; i++) {
       var el = document.getElementById('step-' + i);
@@ -450,8 +322,6 @@
     document.querySelectorAll('.appt-screen').forEach(function(s) { s.classList.add('hidden'); });
     var screen = document.getElementById(id);
     screen.classList.remove('hidden');
-    screen.classList.add('screen-enter');
-    setTimeout(function() { screen.classList.remove('screen-enter'); }, 400);
   }
 
   function showSummary() {
@@ -466,7 +336,6 @@
     document.getElementById('back-label').textContent = 'Voltar';
   }
 
-  // ── BACK ──────────────────────────────────────────────
   document.getElementById('back-btn').addEventListener('click', function(e) {
     e.preventDefault();
     var summaryVisible = !document.getElementById('screen-summary').classList.contains('hidden');
@@ -482,7 +351,6 @@
     showScreen('screen-selection');
   });
 
-  // ── SERVICE CARDS ─────────────────────────────────────
   document.querySelectorAll('.service-card').forEach(function(card) {
     card.addEventListener('click', function() {
       document.querySelectorAll('.service-card').forEach(function(c) { c.classList.remove('selected'); });
@@ -501,7 +369,6 @@
     });
   });
 
-  // ── TIME SLOTS ────────────────────────────────────────
   async function loadTimeSlots() {
     if (!selectedDateStr || !selectedDuration) return;
     var dayOfWeek = selectedDate.getDay();
@@ -569,7 +436,6 @@
     unlockField('field-time', 'wrap-time');
   }
 
-  // ── SUBMIT COM TRAVA ──────────────────────────────────
   document.getElementById('appointment-form')?.addEventListener('submit', function() {
     var btn = document.getElementById('submit-button');
     if (btn) {
@@ -579,7 +445,6 @@
     }
   });
 
-  // ── FLATPICKR ─────────────────────────────────────────
   function initFlatpickr() {
     var el = document.getElementById('appointment-date');
     if (!el || typeof flatpickr === 'undefined') { setTimeout(initFlatpickr, 50); return; }

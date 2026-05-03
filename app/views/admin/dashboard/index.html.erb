@@ -1,203 +1,219 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="loov">
 <head>
   <meta charset="UTF-8">
   <title>Loov Admin</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <%= csrf_meta_tags %>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=Montserrat:wght@500;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     :root {
-      --lime:#dd7852; --lime-dim:#9c4930;
-      --black:#fafaf6; --surface:#fafaf6; --surface-2:#fafaf6; --surface-3:#fafaf6;
-      --border:#e0dbd0; --border-soft:#e0dbd0;
-      --text-muted:#ada699; --white:#28231c;
-      --red:#f87171; --yellow:#fbbf24; --blue:#60a5fa; --purple:#a78bfa; --orange:#fb923c;
+      --cream:    #fafaf6;
+      --paper:    #fefefd;
+      --sand:     #f1eee6;
+      --stone:    #e0dbd0;
+      --ash:      #ada699;
+      --graphite: #575148;
+      --ink:      #28231c;
+      --obsidian: #1a1612;
+
+      --coral-50:  #fbeae3;
+      --coral-100: #f5d3c3;
+      --coral-300: #e8a48a;
+      --coral-500: #dd7852;
+      --coral-700: #9c4930;
+
+      --pool-500:  #4b8ec0;
+      --mint-500:  #5dc39f;
+      --amber-500: #d6b14a;
+      --rose-500:  #c85050;
+
+      --red:    var(--rose-500);
+      --yellow: var(--amber-500);
+      --blue:   var(--pool-500);
+      --purple: #a78bfa;
+      --orange: #fb923c;
     }
-    *{box-sizing:border-box;margin:0;padding:0;}
-    body{background:var(--black);color:var(--white);font-family:'Inter',sans-serif;min-height:100vh;display:flex;}
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { background:var(--cream); color:var(--ink); font-family:'Inter', sans-serif; min-height:100vh; display:flex; -webkit-font-smoothing:antialiased; }
 
-    /* SIDEBAR */
-    .adm-sidebar{width:200px;flex-shrink:0;background:var(--surface-2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;bottom:0;left:0;z-index:10;}
-    .adm-sidebar-brand{padding:1.25rem 1.25rem 1rem;border-bottom:1px solid var(--border);}
-    .adm-sidebar-logo{font-family:'Space Grotesk',sans-serif;font-size:1.5rem;color:var(--white);letter-spacing:.04em;}
-    .adm-sidebar-logo span{color:var(--lime);}
-    .adm-sidebar-role{font-size:.52rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:rgba(221, 120, 82,.3);margin-top:1px;}
-    .adm-nav{display:flex;flex-direction:column;gap:2px;padding:.75rem;flex:1;}
-    .adm-nav-item{display:flex;align-items:center;gap:.625rem;padding:.625rem .875rem;border-radius:10px;font-size:.78rem;font-weight:500;color:var(--text-muted);text-decoration:none;transition:all .15s;cursor:pointer;border:none;background:transparent;width:100%;text-align:left;}
-    .adm-nav-item:hover{color:var(--white);background:rgba(40, 35, 28,.03);}
-    .adm-nav-item.active{color:var(--lime);background:rgba(221, 120, 82,.06);}
-    .adm-nav-item i{width:14px;text-align:center;font-size:.72rem;}
-    .adm-nav-sep{height:1px;background:var(--border);margin:.5rem 0;}
-    .adm-sidebar-footer{padding:.875rem 1.25rem;border-top:1px solid var(--border);}
-    .adm-user-name{font-size:.75rem;font-weight:600;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-    .adm-user-email{font-size:.6rem;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;}
-    .adm-signout{display:flex;align-items:center;gap:.5rem;margin-top:.625rem;font-size:.72rem;color:#e0dbd0;text-decoration:none;transition:color .15s;}
-    .adm-signout:hover{color:var(--red);}
+    .adm-sidebar { width:220px; flex-shrink:0; background:var(--paper); border-right:1px solid var(--stone); display:flex; flex-direction:column; position:fixed; top:0; bottom:0; left:0; z-index:10; }
+    .adm-sidebar-brand { padding:22px 20px 18px; border-bottom:1px solid var(--stone); }
+    .adm-sidebar-logo { font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:24px; color:var(--ink); letter-spacing:-0.4px; }
+    .adm-sidebar-logo span { color:var(--coral-500); }
+    .adm-sidebar-role { font-family:'JetBrains Mono', monospace; font-size:9.5px; font-weight:600; letter-spacing:1.8px; text-transform:uppercase; color:var(--coral-500); margin-top:4px; }
+    .adm-nav { display:flex; flex-direction:column; gap:3px; padding:14px 12px; flex:1; }
+    .adm-nav-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; font-size:13px; font-weight:500; color:var(--graphite); text-decoration:none; transition:all .15s; cursor:pointer; border:none; background:transparent; width:100%; text-align:left; font-family:'Inter', sans-serif; }
+    .adm-nav-item:hover { color:var(--ink); background:var(--sand); }
+    .adm-nav-item.active { color:var(--coral-700); background:var(--coral-50); border:1px solid var(--coral-100); }
+    .adm-nav-item i { width:16px; text-align:center; font-size:12px; }
+    .adm-nav-sep { height:1px; background:var(--stone); margin:8px 0; }
+    .adm-sidebar-footer { padding:14px 18px; border-top:1px solid var(--stone); }
+    .adm-user-name { font-size:13px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .adm-user-email { font-size:11px; color:var(--ash); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
+    .adm-signout { display:flex; align-items:center; gap:8px; margin-top:10px; font-family:'JetBrains Mono', monospace; font-size:11px; font-weight:600; letter-spacing:1.4px; text-transform:uppercase; color:var(--graphite); text-decoration:none; transition:color .15s; }
+    .adm-signout:hover { color:var(--rose-500); }
 
-    /* MAIN */
-    .adm-main{margin-left:200px;flex:1;display:flex;flex-direction:column;min-height:100vh;}
-    .adm-topbar{height:52px;background:rgba(40, 35, 28,.6);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;flex-shrink:0;position:sticky;top:0;z-index:5;}
-    .adm-topbar-title{font-family:'Inter',sans-serif;font-size:.62rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--text-muted);}
-    .adm-topbar-right{display:flex;align-items:center;gap:.75rem;}
+    .adm-main { margin-left:220px; flex:1; display:flex; flex-direction:column; min-height:100vh; }
+    .adm-topbar { height:56px; background:var(--paper); backdrop-filter:blur(10px); border-bottom:1px solid var(--stone); display:flex; align-items:center; justify-content:space-between; padding:0 22px; flex-shrink:0; position:sticky; top:0; z-index:5; }
+    .adm-topbar-title { font-family:'JetBrains Mono', monospace; font-size:11px; font-weight:600; letter-spacing:1.8px; text-transform:uppercase; color:var(--graphite); }
+    .adm-topbar-right { display:flex; align-items:center; gap:10px; }
 
-    /* CEO ASSISTANT BUTTON */
-    .ceo-btn{display:inline-flex;align-items:center;gap:.5rem;padding:.45rem 1rem;border-radius:100px;background:linear-gradient(135deg,rgba(167,139,250,.15),rgba(96,165,250,.1));border:1px solid rgba(167,139,250,.3);color:#a78bfa;font-family:'Inter',sans-serif;font-size:.75rem;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.03em;}
-    .ceo-btn:hover{background:linear-gradient(135deg,rgba(167,139,250,.25),rgba(96,165,250,.18));border-color:rgba(167,139,250,.5);box-shadow:0 0 20px rgba(167,139,250,.15);}
-    .ceo-btn-dot{width:7px;height:7px;border-radius:50%;background:#a78bfa;animation:ceoPulse 2s ease-in-out infinite;}
-    @keyframes ceoPulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(167,139,250,.4)}50%{opacity:.6;box-shadow:0 0 0 6px rgba(167,139,250,0)}}
+    .ceo-btn {
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 16px; border-radius:100px;
+      background:linear-gradient(135deg, rgba(167,139,250,.12), rgba(96,165,250,.08));
+      border:1px solid rgba(167,139,250,.3);
+      color:#7d5ee0; font-family:'JetBrains Mono', monospace; font-size:11px; font-weight:600; letter-spacing:1.4px; text-transform:uppercase;
+      cursor:pointer; transition:all .2s;
+    }
+    .ceo-btn:hover { background:linear-gradient(135deg, rgba(167,139,250,.2), rgba(96,165,250,.14)); border-color:rgba(167,139,250,.55); }
+    .ceo-btn-dot { width:7px; height:7px; border-radius:50%; background:#a78bfa; animation:ceoPulse 2s ease-in-out infinite; }
+    @keyframes ceoPulse { 0%,100%{opacity:1; box-shadow:0 0 0 0 rgba(167,139,250,.4)} 50%{opacity:.6; box-shadow:0 0 0 6px rgba(167,139,250,0)} }
 
-    .adm-content{padding:1.5rem;flex:1;}
+    .adm-content { padding:22px; flex:1; }
 
-    /* KPI GRID */
-    .adm-kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem;}
-    .adm-kpi{background:var(--surface-2);border:1px solid var(--border);border-radius:14px;padding:1.125rem 1.25rem;position:relative;overflow:hidden;}
-    .adm-kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(to right,transparent,rgba(40, 35, 28,.05),transparent);}
-    .adm-kpi-label{font-size:.55rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--text-muted);margin-bottom:.5rem;}
-    .adm-kpi-value{font-family:'Space Grotesk',sans-serif;font-size:2rem;line-height:1;letter-spacing:.02em;}
-    .adm-kpi-value.lime{color:var(--lime);}
-    .adm-kpi-value.blue{color:var(--blue);}
-    .adm-kpi-value.yellow{color:var(--yellow);}
-    .adm-kpi-value.red{color:var(--red);}
-    .adm-kpi-sub{font-size:.62rem;color:var(--text-muted);margin-top:.25rem;}
+    .adm-kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px; }
+    .adm-kpi { background:var(--paper); border:1px solid var(--stone); border-radius:16px; padding:16px 18px; position:relative; overflow:hidden; box-shadow: 0 2px 6px rgba(25,20,15,0.04); }
+    .adm-kpi-label { font-family:'JetBrains Mono', monospace; font-size:10px; font-weight:600; letter-spacing:1.6px; text-transform:uppercase; color:var(--ash); margin-bottom:10px; }
+    .adm-kpi-value { font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:28px; line-height:1; letter-spacing:-0.5px; color:var(--ink); }
+    .adm-kpi-value.lime   { color:var(--coral-500); }
+    .adm-kpi-value.blue   { color:var(--pool-500); }
+    .adm-kpi-value.yellow { color:var(--amber-500); }
+    .adm-kpi-value.red    { color:var(--rose-500); }
+    .adm-kpi-sub { font-size:11.5px; color:var(--graphite); margin-top:6px; }
 
-    /* PANELS */
-    .adm-panel{background:var(--surface-2);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:1rem;}
-    .adm-panel-header{padding:.875rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
-    .adm-panel-title{font-family:'Inter',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--text-muted);}
-    .adm-panel-body{padding:1rem 1.25rem;}
+    .adm-panel { background:var(--paper); border:1px solid var(--stone); border-radius:16px; overflow:hidden; margin-bottom:14px; box-shadow: 0 2px 6px rgba(25,20,15,0.04); }
+    .adm-panel-header { padding:14px 18px; border-bottom:1px solid var(--stone); display:flex; align-items:center; justify-content:space-between; gap:14px; }
+    .adm-panel-title { font-family:'JetBrains Mono', monospace; font-size:10.5px; font-weight:600; letter-spacing:1.6px; text-transform:uppercase; color:var(--graphite); }
+    .adm-panel-body { padding:14px 18px; }
 
-    /* TABS */
-    .adm-tabs{display:flex;gap:2px;padding:.5rem;background:var(--surface-3);border-radius:10px;margin-bottom:1rem;}
-    .adm-tab{flex:1;padding:.45rem .75rem;border-radius:7px;font-size:.72rem;font-weight:600;color:var(--text-muted);border:none;background:transparent;cursor:pointer;transition:all .15s;text-align:center;}
-    .adm-tab.active{background:rgba(40, 35, 28,.06);color:var(--white);}
+    .adm-tabs { display:flex; gap:3px; padding:6px; background:var(--cream); border-radius:12px; margin-bottom:14px; }
+    .adm-tab { flex:1; padding:8px 12px; border-radius:8px; font-size:12px; font-weight:600; color:var(--graphite); border:none; background:transparent; cursor:pointer; transition:all .15s; text-align:center; font-family:'Inter', sans-serif; }
+    .adm-tab.active { background:var(--paper); color:var(--ink); box-shadow: 0 1px 3px rgba(25,20,15,0.05); }
 
-    /* TABLE */
-    .adm-table{width:100%;border-collapse:collapse;font-size:.78rem;}
-    .adm-table th{font-size:.55rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted);padding:.5rem .75rem;text-align:left;border-bottom:1px solid var(--border);}
-    .adm-table td{padding:.625rem .75rem;border-bottom:1px solid rgba(40, 35, 28,.025);color:#ada699;vertical-align:middle;}
-    .adm-table tr:last-child td{border-bottom:none;}
-    .adm-table tr:hover td{background:rgba(40, 35, 28,.015);}
+    .adm-table { width:100%; border-collapse:collapse; font-size:13px; }
+    .adm-table th { font-family:'JetBrains Mono', monospace; font-size:10px; font-weight:600; letter-spacing:1.4px; text-transform:uppercase; color:var(--ash); padding:10px 14px; text-align:left; border-bottom:1px solid var(--stone); background:var(--cream); }
+    .adm-table td { padding:11px 14px; border-bottom:1px solid var(--stone); color:var(--graphite); vertical-align:middle; }
+    .adm-table tr:last-child td { border-bottom:none; }
+    .adm-table tr:hover td { background:var(--cream); }
 
-    /* BADGES */
-    .badge{display:inline-flex;align-items:center;gap:.25rem;padding:.15rem .5rem;border-radius:100px;font-size:.58rem;font-weight:700;letter-spacing:.06em;}
-    .badge-green{background:rgba(221, 120, 82,.08);border:1px solid rgba(221, 120, 82,.2);color:var(--lime);}
-    .badge-blue{background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);color:var(--blue);}
-    .badge-yellow{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);color:var(--yellow);}
-    .badge-red{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);color:var(--red);}
-    .badge-purple{background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.2);color:var(--purple);}
+    .badge { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:100px; font-family:'JetBrains Mono', monospace; font-size:10px; font-weight:600; letter-spacing:1.2px; text-transform:uppercase; border:1px solid; }
+    .badge-green  { background:#d6ecde; color:#2d6b42; border-color:#b5d8c1; }
+    .badge-blue   { background:#e0ecf6; color:#2a5f8a; border-color:#c4dbeb; }
+    .badge-yellow { background:#fbe2c0; color:#7a4814; border-color:#f0d0a0; }
+    .badge-red    { background:#fdecec; color:var(--rose-500); border-color:#f5cccc; }
+    .badge-purple { background:#ece6fc; color:#5a3eba; border-color:#d8cef8; }
 
-    /* ACTION BUTTONS */
-    .tbl-btn{padding:.25rem .625rem;border-radius:6px;font-size:.62rem;font-weight:700;cursor:pointer;border:1px solid;transition:all .15s;}
-    .tbl-btn-red{color:var(--red);border-color:rgba(248,113,113,.2);background:transparent;}
-    .tbl-btn-red:hover{background:rgba(248,113,113,.08);}
-    .tbl-btn-green{color:var(--lime);border-color:rgba(221, 120, 82,.2);background:transparent;}
-    .tbl-btn-green:hover{background:rgba(221, 120, 82,.08);}
-    .tbl-btn-blue{color:var(--blue);border-color:rgba(96,165,250,.2);background:transparent;}
-    .tbl-btn-blue:hover{background:rgba(96,165,250,.08);}
+    .tbl-btn { padding:5px 11px; border-radius:8px; font-family:'JetBrains Mono', monospace; font-size:10px; font-weight:600; letter-spacing:1.2px; text-transform:uppercase; cursor:pointer; border:1px solid; transition:all .15s; background:var(--paper); }
+    .tbl-btn-red   { color:var(--rose-500); border-color:#f5cccc; }
+    .tbl-btn-red:hover   { background:#fdecec; }
+    .tbl-btn-green { color:var(--coral-700); border-color:var(--coral-100); }
+    .tbl-btn-green:hover { background:var(--coral-50); }
+    .tbl-btn-blue  { color:var(--pool-500); border-color:#c4dbeb; }
+    .tbl-btn-blue:hover  { background:#e0ecf6; }
 
-    /* FILTERS */
-    .adm-filters{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem;}
-    .adm-filter-btn{padding:.35rem .75rem;border-radius:100px;font-size:.68rem;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text-muted);transition:all .15s;}
-    .adm-filter-btn:hover,.adm-filter-btn.active{border-color:rgba(221, 120, 82,.3);color:var(--lime);background:rgba(221, 120, 82,.04);}
-    .adm-search{background:var(--surface-3);border:1px solid var(--border);border-radius:8px;color:var(--white);font-family:'Inter',sans-serif;font-size:.78rem;padding:.4rem .75rem;outline:none;width:220px;}
-    .adm-search:focus{border-color:rgba(221, 120, 82,.3);}
+    .adm-filters { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; align-items:center; }
+    .adm-filter-btn { padding:7px 14px; border-radius:100px; font-family:'JetBrains Mono', monospace; font-size:10.5px; font-weight:600; letter-spacing:1.4px; text-transform:uppercase; cursor:pointer; border:1px solid var(--stone); background:var(--paper); color:var(--graphite); transition:all .15s; }
+    .adm-filter-btn:hover, .adm-filter-btn.active { border-color:var(--coral-500); color:var(--coral-700); background:var(--coral-50); }
+    .adm-search { background:var(--paper); border:1px solid var(--stone); border-radius:10px; color:var(--ink); font-family:'Inter', sans-serif; font-size:13px; padding:8px 12px; outline:none; width:240px; transition:border-color .15s; }
+    .adm-search:focus { border-color:var(--coral-500); }
+    .adm-search::placeholder { color:var(--ash); }
 
-    /* SUPPORT THREAD */
-    .support-thread{display:flex;flex-direction:column;gap:4px;max-height:240px;overflow-y:auto;padding:.5rem;background:rgba(40, 35, 28,.4);border-radius:8px;margin-bottom:.75rem;}
-    .support-thread::-webkit-scrollbar{width:2px;}
-    .support-thread::-webkit-scrollbar-thumb{background:#e0dbd0;border-radius:99px;}
-    .msg-bubble{max-width:80%;padding:7px 11px;border-radius:9px;font-size:.75rem;line-height:1.5;}
-    .msg-admin{align-self:flex-end;background:rgba(221, 120, 82,.07);border:1px solid rgba(221, 120, 82,.12);}
-    .msg-owner{align-self:flex-start;background:rgba(96,165,250,.07);border:1px solid rgba(96,165,250,.12);}
-    .msg-author{font-size:.55rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:2px;}
-    .msg-admin .msg-author{color:rgba(221, 120, 82,.45);}
-    .msg-owner .msg-author{color:rgba(96,165,250,.45);}
-    .msg-body{color:#ada699;white-space:pre-wrap;}
-    .msg-time{font-size:.55rem;color:#e0dbd0;margin-top:2px;}
+    .support-thread { display:flex; flex-direction:column; gap:6px; max-height:260px; overflow-y:auto; padding:10px; background:var(--cream); border:1px solid var(--stone); border-radius:10px; margin-bottom:12px; }
+    .msg-bubble { max-width:80%; padding:9px 13px; border-radius:11px; font-size:13px; line-height:1.5; }
+    .msg-admin { align-self:flex-end; background:var(--coral-50); border:1px solid var(--coral-100); }
+    .msg-owner { align-self:flex-start; background:#e0ecf6; border:1px solid #c4dbeb; }
+    .msg-author { font-family:'JetBrains Mono', monospace; font-size:9.5px; font-weight:600; letter-spacing:1.2px; text-transform:uppercase; margin-bottom:3px; }
+    .msg-admin .msg-author { color:var(--coral-700); }
+    .msg-owner .msg-author { color:#2a5f8a; }
+    .msg-body { color:var(--ink); white-space:pre-wrap; }
+    .msg-time { font-size:10.5px; color:var(--ash); margin-top:4px; font-family:'JetBrains Mono', monospace; letter-spacing:0.5px; }
 
-    /* AGENT DRAFT */
-    .agent-draft-box{background:rgba(96,165,250,.04);border:1px solid rgba(96,165,250,.15);border-radius:10px;padding:.875rem 1rem;margin-bottom:.75rem;}
-    .agent-draft-label{font-size:.55rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(96,165,250,.5);margin-bottom:.5rem;display:flex;align-items:center;gap:.4rem;}
-    .agent-draft-body{font-size:.78rem;color:#ada699;line-height:1.6;white-space:pre-wrap;}
-    .draft-actions{display:flex;gap:.5rem;margin-top:.75rem;}
-    .draft-btn{padding:.35rem .875rem;border-radius:7px;font-size:.68rem;font-weight:700;cursor:pointer;border:none;transition:all .15s;}
-    .draft-approve{background:rgba(221, 120, 82,.1);color:var(--lime);border:1px solid rgba(221, 120, 82,.25);}
-    .draft-approve:hover{background:rgba(221, 120, 82,.18);}
-    .draft-discard{background:transparent;color:var(--text-muted);border:1px solid var(--border);}
-    .draft-discard:hover{color:var(--red);border-color:rgba(248,113,113,.3);}
-    .draft-edit{background:transparent;color:var(--blue);border:1px solid rgba(96,165,250,.25);}
-    .draft-edit:hover{background:rgba(96,165,250,.08);}
+    .agent-draft-box { background:#e0ecf6; border:1px solid #c4dbeb; border-radius:12px; padding:14px 16px; margin-bottom:12px; }
+    .agent-draft-label { font-family:'JetBrains Mono', monospace; font-size:10px; font-weight:600; letter-spacing:1.4px; text-transform:uppercase; color:#2a5f8a; margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+    .agent-draft-body { font-size:13px; color:var(--graphite); line-height:1.6; white-space:pre-wrap; }
+    .draft-actions { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+    .draft-btn { padding:6px 14px; border-radius:8px; font-family:'JetBrains Mono', monospace; font-size:10.5px; font-weight:600; letter-spacing:1.2px; text-transform:uppercase; cursor:pointer; border:1px solid; transition:all .15s; }
+    .draft-approve { background:var(--coral-50); color:var(--coral-700); border-color:var(--coral-100); }
+    .draft-approve:hover { background:var(--coral-100); }
+    .draft-discard { background:var(--paper); color:var(--graphite); border-color:var(--stone); }
+    .draft-discard:hover { color:var(--rose-500); border-color:#f5cccc; }
+    .draft-edit { background:var(--paper); color:var(--pool-500); border-color:#c4dbeb; }
+    .draft-edit:hover { background:#e0ecf6; }
 
-    /* REPLY AREA */
-    .reply-area{display:flex;flex-direction:column;gap:.5rem;}
-    .reply-textarea{width:100%;background:var(--surface-3);border:1px solid var(--border);border-radius:8px;color:var(--white);font-family:'Inter',sans-serif;font-size:.78rem;padding:.625rem .875rem;outline:none;resize:vertical;min-height:60px;transition:border-color .2s;}
-    .reply-textarea:focus{border-color:rgba(221, 120, 82,.25);}
-    .reply-actions{display:flex;gap:.5rem;align-items:center;}
-    .reply-send{background:var(--lime);border:none;border-radius:7px;color:#fafaf6;font-family:'Inter',sans-serif;font-size:.72rem;font-weight:700;padding:.4rem .875rem;cursor:pointer;transition:background .15s;}
-    .reply-send:hover{background:var(--lime-dim);}
-    .reply-resolve{background:transparent;border:1px solid rgba(221, 120, 82,.2);border-radius:7px;color:rgba(221, 120, 82,.6);font-size:.68rem;font-weight:700;padding:.4rem .875rem;cursor:pointer;transition:all .15s;}
-    .reply-resolve:hover{border-color:var(--lime);color:var(--lime);}
-    .reply-reopen{background:transparent;border:1px solid rgba(96,165,250,.2);border-radius:7px;color:rgba(96,165,250,.6);font-size:.68rem;font-weight:700;padding:.4rem .875rem;cursor:pointer;transition:all .15s;}
-    .reply-reopen:hover{border-color:var(--blue);color:var(--blue);}
-    .run-agent-btn{background:transparent;border:1px solid rgba(167,139,250,.25);border-radius:7px;color:rgba(167,139,250,.7);font-size:.65rem;font-weight:700;padding:.35rem .75rem;cursor:pointer;transition:all .15s;margin-left:auto;}
-    .run-agent-btn:hover{border-color:#a78bfa;color:#a78bfa;}
+    .reply-area { display:flex; flex-direction:column; gap:8px; }
+    .reply-textarea { width:100%; background:var(--paper); border:1px solid var(--stone); border-radius:10px; color:var(--ink); font-family:'Inter', sans-serif; font-size:13px; padding:10px 14px; outline:none; resize:vertical; min-height:70px; transition:border-color .15s; }
+    .reply-textarea:focus { border-color:var(--coral-500); }
+    .reply-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .reply-send { background:var(--coral-500); border:none; border-radius:8px; color:var(--cream); font-family:'JetBrains Mono', monospace; font-size:11px; font-weight:600; letter-spacing:1.4px; text-transform:uppercase; padding:7px 14px; cursor:pointer; transition:background .15s; }
+    .reply-send:hover { background:var(--coral-700); }
+    .reply-resolve { background:var(--paper); border:1px solid var(--coral-100); border-radius:8px; color:var(--coral-700); font-family:'JetBrains Mono', monospace; font-size:10.5px; font-weight:600; letter-spacing:1.4px; text-transform:uppercase; padding:7px 14px; cursor:pointer; transition:all .15s; }
+    .reply-resolve:hover { background:var(--coral-50); }
+    .reply-reopen { background:var(--paper); border:1px solid #c4dbeb; border-radius:8px; color:var(--pool-500); font-family:'JetBrains Mono', monospace; font-size:10.5px; font-weight:600; letter-spacing:1.4px; text-transform:uppercase; padding:7px 14px; cursor:pointer; transition:all .15s; }
+    .reply-reopen:hover { background:#e0ecf6; }
+    .run-agent-btn { background:var(--paper); border:1px solid rgba(167,139,250,.3); border-radius:8px; color:#7d5ee0; font-family:'JetBrains Mono', monospace; font-size:10.5px; font-weight:600; letter-spacing:1.4px; text-transform:uppercase; padding:7px 14px; cursor:pointer; transition:all .15s; margin-left:auto; }
+    .run-agent-btn:hover { background:#ece6fc; }
 
-    /* CEO ASSISTANT MODAL */
-    .ceo-modal-overlay{position:fixed;inset:0;z-index:500;background:rgba(40, 35, 28,.95);backdrop-filter:blur(12px);display:none;align-items:flex-start;justify-content:center;padding:1.5rem;overflow-y:auto;}
-    .ceo-modal-overlay.open{display:flex;}
-    .ceo-modal{background:var(--surface-2);border:1px solid rgba(167,139,250,.2);border-radius:20px;width:100%;max-width:780px;overflow:hidden;box-shadow:0 0 80px rgba(167,139,250,.08);}
-    .ceo-modal-header{padding:1.25rem 1.5rem;border-bottom:1px solid rgba(167,139,250,.1);display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;}
-    .ceo-modal-title-wrap{}
-    .ceo-modal-eyebrow{font-size:.55rem;font-weight:700;letter-spacing:.25em;text-transform:uppercase;color:rgba(167,139,250,.5);margin-bottom:.25rem;}
-    .ceo-modal-title{font-family:'Space Grotesk',sans-serif;font-size:1.625rem;color:var(--white);letter-spacing:.04em;}
-    .ceo-modal-title span{color:#a78bfa;}
-    .ceo-modal-close{background:none;border:1px solid var(--border);border-radius:8px;color:var(--text-muted);width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .15s;font-size:.78rem;}
-    .ceo-modal-close:hover{border-color:var(--red);color:var(--red);}
-    .ceo-modal-focus{padding:.875rem 1.5rem;border-bottom:1px solid var(--border);display:flex;gap:.625rem;align-items:center;}
-    .ceo-focus-input{flex:1;background:var(--surface-3);border:1px solid var(--border);border-radius:8px;color:var(--white);font-family:'Inter',sans-serif;font-size:.8rem;padding:.5rem .875rem;outline:none;transition:border-color .2s;}
-    .ceo-focus-input:focus{border-color:rgba(167,139,250,.35);}
-    .ceo-focus-input::placeholder{color:#e0dbd0;}
-    .ceo-run-btn{background:linear-gradient(135deg,#a78bfa,#60a5fa);border:none;border-radius:8px;color:#fafaf6;font-family:'Inter',sans-serif;font-size:.78rem;font-weight:800;padding:.5rem 1.125rem;cursor:pointer;white-space:nowrap;transition:opacity .15s;}
-    .ceo-run-btn:hover:not(:disabled){opacity:.88;}
-    .ceo-run-btn:disabled{opacity:.4;cursor:not-allowed;}
-    .ceo-modal-body{padding:1.5rem;}
-    .ceo-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4rem 2rem;gap:1.25rem;}
-    .ceo-loading-orb{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,rgba(167,139,250,.2),rgba(96,165,250,.1));border:1px solid rgba(167,139,250,.3);display:flex;align-items:center;justify-content:center;animation:ceoOrb 2s ease-in-out infinite;}
-    @keyframes ceoOrb{0%,100%{box-shadow:0 0 0 0 rgba(167,139,250,.3)}50%{box-shadow:0 0 0 16px rgba(167,139,250,0)}}
-    .ceo-loading-text{font-size:.78rem;color:rgba(167,139,250,.6);text-align:center;line-height:1.6;}
-    .ceo-briefing{font-size:.85rem;line-height:1.75;color:#ada699;}
-    .ceo-section{margin-bottom:1.75rem;}
-    .ceo-section-title{font-family:'Inter',sans-serif;font-size:.58rem;font-weight:800;letter-spacing:.22em;text-transform:uppercase;padding:.35rem .75rem;border-radius:6px;display:inline-block;margin-bottom:.875rem;}
-    .ceo-section-title.pulse{background:rgba(221, 120, 82,.08);border:1px solid rgba(221, 120, 82,.2);color:var(--lime);}
-    .ceo-section-title.alert{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);color:var(--red);}
-    .ceo-section-title.money{background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);color:var(--yellow);}
-    .ceo-section-title.opp{background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.2);color:var(--blue);}
-    .ceo-section-title.decision{background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.2);color:#a78bfa;}
-    .ceo-section-title.vision{background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.15);color:var(--orange);}
-    .ceo-section-body{color:#ada699;line-height:1.8;white-space:pre-wrap;}
-    .ceo-footer{padding:.875rem 1.5rem;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
-    .ceo-generated-at{font-size:.62rem;color:#e0dbd0;}
-    .ceo-rerun-btn{background:transparent;border:1px solid rgba(167,139,250,.2);border-radius:7px;color:rgba(167,139,250,.6);font-size:.68rem;font-weight:700;padding:.35rem .875rem;cursor:pointer;transition:all .15s;}
-    .ceo-rerun-btn:hover{border-color:#a78bfa;color:#a78bfa;}
+    .ceo-modal-overlay { position:fixed; inset:0; z-index:500; background:rgba(40,35,28,0.55); backdrop-filter:blur(10px); display:none; align-items:flex-start; justify-content:center; padding:24px; overflow-y:auto; }
+    .ceo-modal-overlay.open { display:flex; }
+    .ceo-modal { background:var(--paper); border:1px solid rgba(167,139,250,.3); border-radius:24px; width:100%; max-width:820px; overflow:hidden; box-shadow: 0 24px 60px rgba(40,35,28,0.18); }
+    .ceo-modal-header { padding:20px 24px; border-bottom:1px solid var(--stone); display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+    .ceo-modal-eyebrow { font-family:'JetBrains Mono', monospace; font-size:10px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:#7d5ee0; margin-bottom:4px; }
+    .ceo-modal-title { font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:24px; color:var(--ink); letter-spacing:-0.4px; }
+    .ceo-modal-title span { color:#7d5ee0; }
+    .ceo-modal-close { background:var(--paper); border:1px solid var(--stone); border-radius:10px; color:var(--graphite); width:34px; height:34px; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; transition:all .15s; font-size:13px; }
+    .ceo-modal-close:hover { border-color:var(--rose-500); color:var(--rose-500); }
+    .ceo-modal-focus { padding:14px 24px; border-bottom:1px solid var(--stone); display:flex; gap:10px; align-items:center; }
+    .ceo-focus-input { flex:1; background:var(--paper); border:1px solid var(--stone); border-radius:10px; color:var(--ink); font-family:'Inter', sans-serif; font-size:13.5px; padding:9px 14px; outline:none; transition:border-color .15s; }
+    .ceo-focus-input:focus { border-color:rgba(167,139,250,.5); }
+    .ceo-focus-input::placeholder { color:var(--ash); }
+    .ceo-run-btn { background:linear-gradient(135deg, #a78bfa, #7d5ee0); border:none; border-radius:10px; color:var(--cream); font-family:'JetBrains Mono', monospace; font-size:11.5px; font-weight:700; letter-spacing:1.4px; text-transform:uppercase; padding:9px 18px; cursor:pointer; white-space:nowrap; transition:opacity .15s; }
+    .ceo-run-btn:hover:not(:disabled) { opacity:.88; }
+    .ceo-run-btn:disabled { opacity:.4; cursor:not-allowed; }
+    .ceo-modal-body { padding:24px; }
+    .ceo-loading { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 24px; gap:18px; }
+    .ceo-loading-orb { width:60px; height:60px; border-radius:50%; background:linear-gradient(135deg, rgba(167,139,250,.18), rgba(96,165,250,.1)); border:1px solid rgba(167,139,250,.4); display:flex; align-items:center; justify-content:center; animation:ceoOrb 2s ease-in-out infinite; }
+    @keyframes ceoOrb { 0%,100%{box-shadow:0 0 0 0 rgba(167,139,250,.3)} 50%{box-shadow:0 0 0 16px rgba(167,139,250,0)} }
+    .ceo-loading-text { font-size:13px; color:var(--graphite); text-align:center; line-height:1.6; }
+    .ceo-briefing { font-size:14px; line-height:1.75; color:var(--graphite); }
+    .ceo-section { margin-bottom:24px; }
+    .ceo-section-title { font-family:'JetBrains Mono', monospace; font-size:10.5px; font-weight:700; letter-spacing:2px; text-transform:uppercase; padding:6px 12px; border-radius:8px; display:inline-flex; align-items:center; gap:6px; margin-bottom:12px; border:1px solid; }
+    .ceo-section-title.pulse    { background:var(--coral-50); border-color:var(--coral-100); color:var(--coral-700); }
+    .ceo-section-title.alert    { background:#fdecec; border-color:#f5cccc; color:var(--rose-500); }
+    .ceo-section-title.money    { background:#fbe2c0; border-color:#f0d0a0; color:#7a4814; }
+    .ceo-section-title.opp      { background:#e0ecf6; border-color:#c4dbeb; color:#2a5f8a; }
+    .ceo-section-title.decision { background:#ece6fc; border-color:#d8cef8; color:#5a3eba; }
+    .ceo-section-title.vision   { background:#fff1e0; border-color:#fadbb8; color:#a45a14; }
+    .ceo-section-body { color:var(--graphite); line-height:1.8; white-space:pre-wrap; font-size:13.5px; }
+    .ceo-modal-footer, .ceo-footer { padding:14px 24px; border-top:1px solid var(--stone); display:flex; align-items:center; justify-content:space-between; }
+    .ceo-generated-at { font-family:'JetBrains Mono', monospace; font-size:10.5px; color:var(--ash); letter-spacing:1.2px; }
+    .ceo-rerun-btn { background:var(--paper); border:1px solid rgba(167,139,250,.3); border-radius:8px; color:#7d5ee0; font-family:'JetBrains Mono', monospace; font-size:10.5px; font-weight:600; letter-spacing:1.4px; text-transform:uppercase; padding:7px 14px; cursor:pointer; transition:all .15s; }
+    .ceo-rerun-btn:hover { background:#ece6fc; }
 
-    /* TOAST */
-    .toast-wrap{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:600;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;}
-    .toast{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:100px;font-size:.68rem;font-weight:700;backdrop-filter:blur(16px);box-shadow:0 8px 24px rgba(40, 35, 28,.5);opacity:0;transform:translateY(10px);animation:toastIn .3s ease forwards;pointer-events:none;}
-    .toast.ok{background:rgba(221, 120, 82,.1);border:1px solid rgba(221, 120, 82,.25);color:var(--lime);}
-    .toast.err{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.25);color:var(--red);}
-    .toast.out{animation:toastOut .3s ease forwards;}
-    @keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-    @keyframes toastOut{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-8px)}}
-    .spin{animation:spinA .7s linear infinite;display:inline-block;}
-    @keyframes spinA{to{transform:rotate(360deg)}}
+    .toast-wrap { position:fixed; bottom:28px; left:50%; transform:translateX(-50%); z-index:600; display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none; }
+    .toast { display:inline-flex; align-items:center; gap:8px; padding:11px 18px; border-radius:100px; font-family:'JetBrains Mono', monospace; font-size:11px; font-weight:600; letter-spacing:1.4px; text-transform:uppercase; backdrop-filter:blur(10px); box-shadow: 0 8px 24px rgba(40,35,28,0.16); opacity:0; transform:translateY(10px); animation:toastIn .3s ease forwards; pointer-events:none; border:1px solid; }
+    .toast.ok  { background:var(--coral-50); border-color:var(--coral-100); color:var(--coral-700); }
+    .toast.err { background:#fdecec; border-color:#f5cccc; color:var(--rose-500); }
+    .toast.out { animation:toastOut .3s ease forwards; }
+    @keyframes toastIn  { from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:translateY(0)} }
+    @keyframes toastOut { from{opacity:1; transform:translateY(0)} to{opacity:0; transform:translateY(-8px)} }
+    .spin { animation:spinA .7s linear infinite; display:inline-block; }
+    @keyframes spinA { to { transform:rotate(360deg); } }
+
+    @media (max-width:900px) {
+      .adm-sidebar { width:80px; }
+      .adm-main { margin-left:80px; }
+      .adm-sidebar-logo, .adm-sidebar-role, .adm-nav-item span, .adm-user-name, .adm-user-email, .adm-signout span { display:none; }
+      .adm-kpi-grid { grid-template-columns:repeat(2,1fr); }
+    }
   </style>
 </head>
 <body>
 
-<!-- CEO ASSISTANT MODAL -->
 <div class="ceo-modal-overlay" id="ceo-overlay">
   <div class="ceo-modal">
     <div class="ceo-modal-header">
@@ -212,10 +228,10 @@
       <button class="ceo-run-btn" id="ceo-run-btn"><i class="fas fa-brain"></i> Analisar</button>
     </div>
     <div class="ceo-modal-body" id="ceo-modal-body">
-      <div style="text-align:center;padding:3rem 2rem;color:#e0dbd0;font-size:.8rem;">
-        <i class="fas fa-brain" style="font-size:2rem;margin-bottom:1rem;display:block;color:#e0dbd0;"></i>
+      <div style="text-align:center; padding:48px 24px; color:var(--graphite); font-size:13.5px;">
+        <i class="fas fa-brain" style="font-size:32px; margin-bottom:14px; display:block; color:#a78bfa;"></i>
         Clique em "Analisar" para gerar seu briefing estratégico completo.<br>
-        <span style="font-size:.7rem;color:#fefefd;">O assistente vai ler todos os dados da plataforma e entregar insights de nível board.</span>
+        <span style="font-size:12px; color:var(--ash);">O assistente vai ler todos os dados da plataforma e entregar insights de nível board.</span>
       </div>
     </div>
     <div class="ceo-modal-footer" id="ceo-footer" style="display:none;">
@@ -233,20 +249,20 @@
     <div class="adm-sidebar-role">Admin Panel</div>
   </div>
   <nav class="adm-nav">
-    <button class="adm-nav-item active" onclick="showSection('overview')"><i class="fas fa-chart-line"></i> Visão Geral</button>
-    <button class="adm-nav-item" onclick="showSection('users')"><i class="fas fa-users"></i> Usuários</button>
-    <button class="adm-nav-item" onclick="showSection('carwashes')"><i class="fas fa-car-wash"></i> Lava-rápidos</button>
-    <button class="adm-nav-item" onclick="showSection('appointments')"><i class="fas fa-calendar-days"></i> Agendamentos</button>
-    <button class="adm-nav-item" onclick="showSection('financial')"><i class="fas fa-wallet"></i> Financeiro</button>
-    <button class="adm-nav-item" onclick="showSection('support')"><i class="fas fa-headset"></i> Suporte</button>
+    <button class="adm-nav-item active" onclick="showSection('overview')"><i class="fas fa-chart-line"></i> <span>Visão Geral</span></button>
+    <button class="adm-nav-item" onclick="showSection('users')"><i class="fas fa-users"></i> <span>Usuários</span></button>
+    <button class="adm-nav-item" onclick="showSection('carwashes')"><i class="fas fa-car-wash"></i> <span>Lava-rápidos</span></button>
+    <button class="adm-nav-item" onclick="showSection('appointments')"><i class="fas fa-calendar-days"></i> <span>Agendamentos</span></button>
+    <button class="adm-nav-item" onclick="showSection('financial')"><i class="fas fa-wallet"></i> <span>Financeiro</span></button>
+    <button class="adm-nav-item" onclick="showSection('support')"><i class="fas fa-headset"></i> <span>Suporte</span></button>
     <div class="adm-nav-sep"></div>
-    <button class="adm-nav-item" onclick="openCeoAssistant()" style="color:#a78bfa;"><i class="fas fa-brain"></i> CEO Assistant</button>
+    <button class="adm-nav-item" onclick="openCeoAssistant()" style="color:#7d5ee0;"><i class="fas fa-brain"></i> <span>CEO Assistant</span></button>
   </nav>
   <div class="adm-sidebar-footer">
     <div class="adm-user-name"><%= current_user.display_name %></div>
     <div class="adm-user-email"><%= current_user.email %></div>
     <%= link_to destroy_user_session_path, method: :delete, class: "adm-signout" do %>
-      <i class="fas fa-arrow-right-from-bracket"></i> Sair
+      <i class="fas fa-arrow-right-from-bracket"></i> <span>Sair</span>
     <% end %>
   </div>
 </aside>
@@ -264,7 +280,6 @@
 
   <div class="adm-content">
 
-    <!-- KPI STRIP (sempre visível) -->
     <div class="adm-kpi-grid" id="kpi-strip">
       <div class="adm-kpi"><div class="adm-kpi-label">Usuários</div><div class="adm-kpi-value blue" id="kpi-users">—</div><div class="adm-kpi-sub" id="kpi-users-sub">—</div></div>
       <div class="adm-kpi"><div class="adm-kpi-label">Lava-rápidos ativos</div><div class="adm-kpi-value lime" id="kpi-cws">—</div><div class="adm-kpi-sub" id="kpi-cws-sub">—</div></div>
@@ -272,15 +287,13 @@
       <div class="adm-kpi"><div class="adm-kpi-label">Comissão do mês</div><div class="adm-kpi-value lime" id="kpi-commission">—</div><div class="adm-kpi-sub" id="kpi-commission-sub">—</div></div>
     </div>
 
-    <!-- OVERVIEW -->
     <div id="section-overview">
       <div class="adm-panel">
-        <div class="adm-panel-header"><span class="adm-panel-title">Atividade recente</span><span style="font-size:.65rem;color:var(--text-muted);" id="activity-count">—</span></div>
-        <div id="activity-list" style="overflow-x:auto;"><div style="padding:2rem;text-align:center;color:#e0dbd0;font-size:.78rem;">Carregando...</div></div>
+        <div class="adm-panel-header"><span class="adm-panel-title">Atividade recente</span><span style="font-size:11.5px; color:var(--ash); font-family:'JetBrains Mono', monospace; letter-spacing:0.5px;" id="activity-count">—</span></div>
+        <div id="activity-list" style="overflow-x:auto;"><div style="padding:32px; text-align:center; color:var(--ash); font-size:13px;">Carregando...</div></div>
       </div>
     </div>
 
-    <!-- USERS -->
     <div id="section-users" style="display:none;">
       <div class="adm-filters">
         <input class="adm-search" id="user-search" placeholder="Buscar por nome ou e-mail...">
@@ -292,19 +305,17 @@
       </div>
       <div class="adm-panel">
         <div class="adm-panel-header"><span class="adm-panel-title" id="users-panel-title">Usuários</span></div>
-        <div style="overflow-x:auto;" id="users-table-wrap"><div style="padding:2rem;text-align:center;color:#e0dbd0;font-size:.78rem;">Carregando...</div></div>
+        <div style="overflow-x:auto;" id="users-table-wrap"><div style="padding:32px; text-align:center; color:var(--ash); font-size:13px;">Carregando...</div></div>
       </div>
     </div>
 
-    <!-- CAR WASHES -->
     <div id="section-carwashes" style="display:none;">
       <div class="adm-panel">
         <div class="adm-panel-header"><span class="adm-panel-title" id="cws-panel-title">Lava-rápidos</span></div>
-        <div style="overflow-x:auto;" id="cws-table-wrap"><div style="padding:2rem;text-align:center;color:#e0dbd0;font-size:.78rem;">Carregando...</div></div>
+        <div style="overflow-x:auto;" id="cws-table-wrap"><div style="padding:32px; text-align:center; color:var(--ash); font-size:13px;">Carregando...</div></div>
       </div>
     </div>
 
-    <!-- APPOINTMENTS -->
     <div id="section-appointments" style="display:none;">
       <div class="adm-filters">
         <button class="adm-filter-btn active" onclick="filterAppts('')">Todos os status</button>
@@ -317,20 +328,19 @@
       </div>
       <div class="adm-panel">
         <div class="adm-panel-header"><span class="adm-panel-title" id="appts-panel-title">Agendamentos</span></div>
-        <div style="overflow-x:auto;" id="appts-table-wrap"><div style="padding:2rem;text-align:center;color:#e0dbd0;font-size:.78rem;">Carregando...</div></div>
+        <div style="overflow-x:auto;" id="appts-table-wrap"><div style="padding:32px; text-align:center; color:var(--ash); font-size:13px;">Carregando...</div></div>
       </div>
     </div>
 
-    <!-- FINANCIAL -->
     <div id="section-financial" style="display:none;">
       <div class="adm-filters">
         <button class="adm-filter-btn active" onclick="filterFinancial(1)">Último mês</button>
         <button class="adm-filter-btn" onclick="filterFinancial(3)">Últimos 3 meses</button>
         <button class="adm-filter-btn" onclick="filterFinancial(6)">Últimos 6 meses</button>
         <button class="adm-filter-btn" onclick="filterFinancial(12)">Último ano</button>
-        <button class="adm-filter-btn" onclick="exportFinancial()"><i class="fas fa-download" style="font-size:.6rem;"></i> Exportar CSV</button>
+        <button class="adm-filter-btn" onclick="exportFinancial()"><i class="fas fa-download" style="font-size:10px;"></i> Exportar CSV</button>
       </div>
-      <div class="adm-kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:1rem;">
+      <div class="adm-kpi-grid" style="grid-template-columns:repeat(4,1fr); margin-bottom:14px;">
         <div class="adm-kpi"><div class="adm-kpi-label">Volume Disponíveis</div><div class="adm-kpi-value lime" id="fin-volume">—</div></div>
         <div class="adm-kpi"><div class="adm-kpi-label">Comissão Total Loov</div><div class="adm-kpi-value yellow" id="fin-commission">—</div></div>
         <div class="adm-kpi"><div class="adm-kpi-label">Comissão do Período</div><div class="adm-kpi-value lime" id="fin-period">—</div></div>
@@ -338,11 +348,10 @@
       </div>
       <div class="adm-panel">
         <div class="adm-panel-header"><span class="adm-panel-title" id="fin-panel-title">Transações Disponíveis</span></div>
-        <div style="overflow-x:auto;" id="fin-table-wrap"><div style="padding:2rem;text-align:center;color:#e0dbd0;font-size:.78rem;">Carregando...</div></div>
+        <div style="overflow-x:auto;" id="fin-table-wrap"><div style="padding:32px; text-align:center; color:var(--ash); font-size:13px;">Carregando...</div></div>
       </div>
     </div>
 
-    <!-- SUPPORT -->
     <div id="section-support" style="display:none;">
       <div class="adm-filters">
         <button class="adm-filter-btn active" onclick="filterSupport('')">Todos</button>
@@ -352,7 +361,7 @@
       </div>
       <div class="adm-panel" id="support-panel">
         <div class="adm-panel-header"><span class="adm-panel-title" id="support-panel-title">Chamados de suporte</span></div>
-        <div id="support-list"><div style="padding:2rem;text-align:center;color:#e0dbd0;font-size:.78rem;">Carregando...</div></div>
+        <div id="support-list"><div style="padding:32px; text-align:center; color:var(--ash); font-size:13px;">Carregando...</div></div>
       </div>
     </div>
 
@@ -366,7 +375,6 @@
   let allUsers = [], allAppts = [], allCws = [], allSupport = [];
   let currentApptStatus = '', currentApptType = '';
 
-  // ── TOAST ─────────────────────────────────────────────────────────────
   function toast(msg, type='ok') {
     const w=document.getElementById('toast-wrap'), t=document.createElement('div');
     t.className=`toast ${type}`;
@@ -375,7 +383,6 @@
     setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),320);},3500);
   }
 
-  // ── SECTIONS ──────────────────────────────────────────────────────────
   window.showSection = function(name) {
     ['overview','users','carwashes','appointments','financial','support'].forEach(s=>{
       document.getElementById('section-'+s).style.display = s===name?'':'none';
@@ -393,7 +400,6 @@
     if(name==='support'&&!allSupport.length) loadSupport();
   };
 
-  // ── STATS ─────────────────────────────────────────────────────────────
   function loadStats() {
     fetch('/admin/dashboard/stats',{headers:{Accept:'application/json'}})
       .then(r=>r.json()).then(d=>{
@@ -408,30 +414,28 @@
       }).catch(()=>{});
   }
 
-  // ── ACTIVITY ─────────────────────────────────────────────────────────
   function loadActivity() {
     fetch('/admin/dashboard/activity',{headers:{Accept:'application/json'}})
       .then(r=>r.json()).then(data=>{
         document.getElementById('activity-count').textContent = `${data.length} recentes`;
-        const statColors={attended:'lime',confirmed:'yellow',cancelled:'red',no_show:'red',pending_acceptance:'blue'};
+        const statColors={attended:'green',confirmed:'yellow',cancelled:'red',no_show:'red',pending_acceptance:'blue'};
         const statLabels={attended:'Compareceu',confirmed:'Confirmado',cancelled:'Cancelado',no_show:'Não veio',pending_acceptance:'Aguard. aceite'};
         document.getElementById('activity-list').innerHTML = `<table class="adm-table">
           <thead><tr><th>#</th><th>Cliente</th><th>Serviço</th><th>Lava-rápido</th><th>Tipo</th><th>Status</th><th>Data</th><th>Comissão</th></tr></thead>
           <tbody>${data.map(a=>`<tr>
-            <td style="color:var(--text-muted);">#${a.id}</td>
-            <td>${a.client||'—'}</td>
-            <td style="color:#ada699;">${a.service||'—'}</td>
-            <td style="color:#ada699;">${a.car_wash||'—'}</td>
+            <td style="color:var(--ash);">#${a.id}</td>
+            <td style="color:var(--ink);font-weight:500;">${a.client||'—'}</td>
+            <td>${a.service||'—'}</td>
+            <td>${a.car_wash||'—'}</td>
             <td><span class="badge ${a.type==='disponivel'?'badge-green':'badge-blue'}">${a.type==='disponivel'?'Disp.':'Regular'}</span></td>
             <td><span class="badge badge-${statColors[a.status]||'blue'}">${statLabels[a.status]||a.status}</span></td>
-            <td style="color:var(--text-muted);">${a.scheduled_at||'—'}</td>
-            <td style="color:${a.commission>0?'var(--lime)':'var(--text-muted)'};">${a.commission>0?'R$'+a.commission.toFixed(2):'—'}</td>
+            <td style="color:var(--ash);">${a.scheduled_at||'—'}</td>
+            <td style="color:${a.commission>0?'var(--coral-700)':'var(--ash)'};font-weight:600;">${a.commission>0?'R$'+a.commission.toFixed(2):'—'}</td>
           </tr>`).join('')}</tbody>
         </table>`;
       }).catch(()=>{});
   }
 
-  // ── USERS ────────────────────────────────────────────────────────────
   function loadUsers(role='') {
     const url = role ? `/admin/users?role=${role}` : '/admin/users';
     fetch(url,{headers:{Accept:'application/json'}}).then(r=>r.json()).then(data=>{
@@ -440,16 +444,16 @@
   }
   function renderUsers(data) {
     document.getElementById('users-panel-title').textContent=`Usuários — ${data.length} registros`;
-    const roleColors={client:'blue',owner:'lime',attendant:'yellow',admin:'purple'};
+    const roleColors={client:'blue',owner:'green',attendant:'yellow',admin:'purple'};
     document.getElementById('users-table-wrap').innerHTML=`<table class="adm-table">
       <thead><tr><th>Nome</th><th>E-mail</th><th>Role</th><th>Status</th><th>Agend.</th><th>Desde</th><th>Ações</th></tr></thead>
       <tbody>${data.map(u=>`<tr>
-        <td style="font-weight:500;">${u.name}</td>
-        <td style="color:var(--text-muted);">${u.email}</td>
+        <td style="font-weight:500;color:var(--ink);">${u.name}</td>
+        <td style="color:var(--ash);">${u.email}</td>
         <td><span class="badge badge-${roleColors[u.role]||'blue'}">${u.role}</span></td>
         <td><span class="badge ${u.blocked?'badge-red':'badge-green'}">${u.blocked?'Bloqueado':'Ativo'}</span></td>
-        <td style="color:var(--text-muted);">${u.appointments_count}</td>
-        <td style="color:var(--text-muted);">${u.created_at}</td>
+        <td style="color:var(--ash);">${u.appointments_count}</td>
+        <td style="color:var(--ash);">${u.created_at}</td>
         <td>
           ${u.blocked
             ? `<button class="tbl-btn tbl-btn-green" onclick="unblockUser(${u.id},this)">Desbloquear</button>`
@@ -479,7 +483,6 @@
     const d=await r.json(); if(d.ok){loadUsers();toast('Usuário desbloqueado.');}else{toast(d.error||'Erro','err');btn.disabled=false;btn.textContent='Desbloquear';}
   };
 
-  // ── CAR WASHES ────────────────────────────────────────────────────────
   function loadCarWashes() {
     fetch('/admin/car_washes',{headers:{Accept:'application/json'}}).then(r=>r.json()).then(data=>{
       allCws=data; renderCarWashes(data);
@@ -490,12 +493,12 @@
     document.getElementById('cws-table-wrap').innerHTML=`<table class="adm-table">
       <thead><tr><th>Nome</th><th>Proprietário</th><th>Status</th><th>Serviços</th><th>Agend.</th><th>Receita</th><th>Ações</th></tr></thead>
       <tbody>${data.map(cw=>`<tr>
-        <td style="font-weight:500;">${cw.name}</td>
-        <td style="color:var(--text-muted);">${cw.owner||'—'}</td>
+        <td style="font-weight:500;color:var(--ink);">${cw.name}</td>
+        <td style="color:var(--ash);">${cw.owner||'—'}</td>
         <td><span class="badge ${cw.active?'badge-green':'badge-red'}">${cw.active?'Ativo':'Inativo'}</span></td>
-        <td style="color:var(--text-muted);">${cw.services}</td>
-        <td style="color:var(--text-muted);">${cw.appointments}</td>
-        <td style="color:var(--lime);">R$${cw.revenue.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+        <td style="color:var(--ash);">${cw.services}</td>
+        <td style="color:var(--ash);">${cw.appointments}</td>
+        <td style="color:var(--coral-700);font-weight:600;">R$${cw.revenue.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
         <td>${cw.active
           ? `<button class="tbl-btn tbl-btn-red" onclick="deactivateCw(${cw.id},this)">Desativar</button>`
           : `<button class="tbl-btn tbl-btn-green" onclick="activateCw(${cw.id},this)">Ativar</button>`
@@ -514,7 +517,6 @@
     const d=await r.json(); if(d.ok){allCws=[];loadCarWashes();toast('Ativado.');}else{toast(d.error||'Erro','err');btn.disabled=false;btn.textContent='Ativar';}
   };
 
-  // ── APPOINTMENTS ──────────────────────────────────────────────────────
   function loadAppts(status='', type='') {
     let url='/admin/appointments';
     const params=[]; if(status) params.push('status='+status); if(type) params.push('appointment_type='+type);
@@ -523,19 +525,19 @@
   }
   function renderAppts(data) {
     document.getElementById('appts-panel-title').textContent=`Agendamentos — ${data.length} registros`;
-    const statColors={attended:'lime',confirmed:'yellow',cancelled:'red',no_show:'red',pending_acceptance:'blue'};
+    const statColors={attended:'green',confirmed:'yellow',cancelled:'red',no_show:'red',pending_acceptance:'blue'};
     const statLabels={attended:'Compareceu',confirmed:'Confirmado',cancelled:'Cancelado',no_show:'Não veio',pending_acceptance:'Aguard. aceite'};
     document.getElementById('appts-table-wrap').innerHTML=`<table class="adm-table">
       <thead><tr><th>#</th><th>Cliente</th><th>Serviço</th><th>Lava-rápido</th><th>Tipo</th><th>Status</th><th>Data</th><th>Valor</th><th>Ações</th></tr></thead>
       <tbody>${data.map(a=>`<tr>
-        <td style="color:var(--text-muted);">#${a.id}</td>
-        <td>${a.client||'—'}</td>
-        <td style="color:#ada699;">${a.service||'—'}</td>
-        <td style="color:#ada699;">${a.car_wash||'—'}</td>
+        <td style="color:var(--ash);">#${a.id}</td>
+        <td style="color:var(--ink);font-weight:500;">${a.client||'—'}</td>
+        <td>${a.service||'—'}</td>
+        <td>${a.car_wash||'—'}</td>
         <td><span class="badge ${a.type==='disponivel'?'badge-green':'badge-blue'}">${a.type==='disponivel'?'Disp.':'Regular'}</span></td>
         <td><span class="badge badge-${statColors[a.status]||'blue'}">${statLabels[a.status]||a.status}</span></td>
-        <td style="color:var(--text-muted);">${a.scheduled_at||'—'}</td>
-        <td style="color:var(--white);">R$${a.price.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+        <td style="color:var(--ash);">${a.scheduled_at||'—'}</td>
+        <td style="color:var(--ink);font-weight:500;">R$${a.price.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
         <td>${a.status!=='cancelled'?`<button class="tbl-btn tbl-btn-red" onclick="cancelAppt(${a.id},this)">Cancelar</button>`:'—'}</td>
       </tr>`).join('')}</tbody>
     </table>`;
@@ -559,7 +561,6 @@
     const d=await r.json(); if(d.ok){loadAppts(currentApptStatus,currentApptType);toast('Agendamento cancelado.');}else{toast(d.error||'Erro','err');btn.disabled=false;btn.textContent='Cancelar';}
   };
 
-  // ── FINANCIAL ─────────────────────────────────────────────────────────
   window.loadFinancial = function(months) {
     document.querySelectorAll('#section-financial .adm-filter-btn:not(:last-child)').forEach(b=>b.classList.toggle('active',b.onclick?.toString().includes(months+')')));
     fetch(`/admin/financial?months=${months}`,{headers:{Accept:'application/json'}}).then(r=>r.json()).then(d=>{
@@ -571,21 +572,20 @@
       document.getElementById('fin-table-wrap').innerHTML=`<table class="adm-table">
         <thead><tr><th>#</th><th>Data</th><th>Cliente</th><th>Serviço</th><th>Lava-rápido</th><th>Valor</th><th>Pré-pago</th><th>Comissão</th></tr></thead>
         <tbody>${(d.transactions||[]).map(t=>`<tr>
-          <td style="color:var(--text-muted);">#${t.id}</td>
-          <td style="color:var(--text-muted);">${t.scheduled_at}</td>
-          <td>${t.client||'—'}</td>
-          <td style="color:#ada699;">${t.service||'—'}</td>
-          <td style="color:#ada699;">${t.car_wash||'—'}</td>
-          <td>R$${t.price.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
-          <td style="color:var(--text-muted);">R$${t.prepayment.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
-          <td style="color:var(--lime);">R$${t.commission.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+          <td style="color:var(--ash);">#${t.id}</td>
+          <td style="color:var(--ash);">${t.scheduled_at}</td>
+          <td style="color:var(--ink);font-weight:500;">${t.client||'—'}</td>
+          <td>${t.service||'—'}</td>
+          <td>${t.car_wash||'—'}</td>
+          <td style="color:var(--ink);font-weight:500;">R$${t.price.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+          <td style="color:var(--ash);">R$${t.prepayment.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+          <td style="color:var(--coral-700);font-weight:600;">R$${t.commission.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
         </tr>`).join('')}</tbody>
       </table>`;
     }).catch(()=>{});
   };
   window.exportFinancial = function() { window.location.href='/admin/financial/export'; };
 
-  // ── SUPPORT ───────────────────────────────────────────────────────────
   function loadSupport(status='') {
     const url = status ? `/admin/support_tickets?status=${status}` : '/admin/support_tickets';
     fetch(url,{headers:{Accept:'application/json'}}).then(r=>r.json()).then(data=>{
@@ -599,7 +599,7 @@
 
   function renderSupport(data) {
     document.getElementById('support-panel-title').textContent=`Chamados de suporte — ${data.length} registros`;
-    if(!data.length){document.getElementById('support-list').innerHTML='<div style="padding:2rem;text-align:center;color:#e0dbd0;font-size:.78rem;">Nenhum chamado.</div>';return;}
+    if(!data.length){document.getElementById('support-list').innerHTML='<div style="padding:32px;text-align:center;color:var(--ash);font-size:13px;">Nenhum chamado.</div>';return;}
     document.getElementById('support-list').innerHTML = data.map(t=>renderTicketCard(t)).join('');
   }
 
@@ -637,23 +637,23 @@
           <button class="run-agent-btn" onclick="runAgent(${t.id},this)"><i class="fas fa-robot"></i> IA</button>
         </div>
       </div>` : `
-      <div style="display:flex;gap:.5rem;">
+      <div style="display:flex;gap:8px;">
         <button class="reply-reopen" onclick="reopenTicket(${t.id},this)"><i class="fas fa-rotate-left"></i> Reabrir</button>
       </div>`;
 
-    return `<div class="adm-panel" id="ticket-${t.id}" style="margin-bottom:.75rem;">
+    return `<div class="adm-panel" id="ticket-${t.id}" style="margin-bottom:10px;">
       <div class="adm-panel-header">
-        <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
           ${statusBadge}
-          <span style="font-size:.72rem;color:#ada699;">#${t.id} · ${t.category}</span>
-          <span style="font-size:.72rem;font-weight:600;color:var(--white);">${t.owner_name||t.owner_email||'—'}</span>
-          <span style="font-size:.62rem;color:var(--text-muted);">${t.car_wash_name||'—'}</span>
+          <span style="font-size:12px;color:var(--graphite);">#${t.id} · ${t.category}</span>
+          <span style="font-size:13px;font-weight:600;color:var(--ink);">${t.owner_name||t.owner_email||'—'}</span>
+          <span style="font-size:11.5px;color:var(--ash);">${t.car_wash_name||'—'}</span>
         </div>
-        <span style="font-size:.62rem;color:var(--text-muted);">${t.created_at}</span>
+        <span style="font-size:11px;color:var(--ash);font-family:'JetBrains Mono',monospace;letter-spacing:0.5px;">${t.created_at}</span>
       </div>
-      <div style="padding:.875rem 1.25rem;">
+      <div style="padding:14px 18px;">
         ${agentDraftHtml}
-        <div class="support-thread" id="thread-${t.id}">${msgs||'<div style="color:#e0dbd0;font-size:.72rem;padding:.5rem 0;">Nenhuma mensagem.</div>'}</div>
+        <div class="support-thread" id="thread-${t.id}">${msgs||'<div style="color:var(--ash);font-size:12px;padding:8px 0;">Nenhuma mensagem.</div>'}</div>
         ${replyArea}
       </div>
     </div>`;
@@ -702,7 +702,6 @@
     else{toast(d.message||'Agente não gerou rascunho.','err');}
   };
 
-  // ── CEO ASSISTANT ─────────────────────────────────────────────────────
   window.openCeoAssistant = function() {
     document.getElementById('ceo-overlay').classList.add('open');
     document.body.style.overflow='hidden';
@@ -724,10 +723,10 @@
     footer.style.display='none';
 
     body.innerHTML=`<div class="ceo-loading">
-      <div class="ceo-loading-orb"><i class="fas fa-brain" style="color:#a78bfa;font-size:1.25rem;"></i></div>
+      <div class="ceo-loading-orb"><i class="fas fa-brain" style="color:#7d5ee0;font-size:18px;"></i></div>
       <div class="ceo-loading-text">
         Lendo todos os dados da plataforma...<br>
-        <span style="font-size:.65rem;color:#e0dbd0;">Usuários · Lava-rápidos · Agendamentos · Financeiro · Suporte</span>
+        <span style="font-size:11.5px;color:var(--ash);">Usuários · Lava-rápidos · Agendamentos · Financeiro · Suporte</span>
       </div>
     </div>`;
 
@@ -745,7 +744,7 @@
       footer.style.display='flex';
       document.getElementById('ceo-gen-at').textContent = 'Gerado em ' + d.generated_at;
     } catch(e) {
-      body.innerHTML=`<div style="padding:2rem;text-align:center;color:var(--red);font-size:.8rem;"><i class="fas fa-triangle-exclamation" style="display:block;font-size:1.5rem;margin-bottom:.75rem;"></i>${e.message}</div>`;
+      body.innerHTML=`<div style="padding:32px;text-align:center;color:var(--rose-500);font-size:13.5px;"><i class="fas fa-triangle-exclamation" style="display:block;font-size:24px;margin-bottom:12px;"></i>${e.message}</div>`;
     } finally {
       btn.disabled=false; btn.innerHTML='<i class="fas fa-brain"></i> Analisar';
     }
@@ -774,12 +773,11 @@
       const meta = sectionMap[title];
 
       html += `<div class="ceo-section">
-        <div class="ceo-section-title ${meta.color}"><i class="fas ${meta.icon}" style="margin-right:.4rem;"></i>${title}</div>
+        <div class="ceo-section-title ${meta.color}"><i class="fas ${meta.icon}" style="margin-right:6px;"></i>${title}</div>
         <div class="ceo-section-body">${content}</div>
       </div>`;
     });
 
-    // fallback: se não parseou, mostra raw
     if (!html) {
       html = `<div class="ceo-briefing">${text}</div>`;
     }
@@ -791,7 +789,6 @@
   document.getElementById('ceo-rerun').addEventListener('click', runCeoAssistant);
   document.getElementById('ceo-focus-input').addEventListener('keydown', e=>{ if(e.key==='Enter') runCeoAssistant(); });
 
-  // ── INIT ──────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', () => {
     loadStats();
     loadActivity();
