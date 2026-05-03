@@ -358,6 +358,9 @@
 <div class="loov-drawer" id="loov-drawer">
   <% if user_signed_in? %>
     <% if current_user.client? %>
+      <%= link_to root_path, class: "#{current_path == '/' ? 'drawer-active' : ''}" do %>
+        <i class="fas fa-house"></i> Home
+      <% end %>
       <%= link_to appointments_path, class: "#{current_path == appointments_path ? 'drawer-active' : ''}" do %>
         <i class="fas fa-calendar-check"></i> Meus Agendamentos
       <% end %>
