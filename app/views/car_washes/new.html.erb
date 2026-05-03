@@ -4,25 +4,25 @@
   @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
 
   :root {
-    --lime: #afff2d;
-    --lime-dim: #8fcc24;
-    --black: #000000;
-    --surface: #0a0a0a;
-    --surface-2: #111111;
-    --surface-3: #1a1a1a;
-    --border: #222222;
-    --text-muted: #666666;
-    --text-secondary: #999999;
-    --white: #ffffff;
+    --lime: #dd7852;
+    --lime-dim: #9c4930;
+    --black: #fafaf6;
+    --surface: #fafaf6;
+    --surface-2: #fafaf6111;
+    --surface-3: #e0dbd0;
+    --border: #e0dbd0222;
+    --text-muted: #ada699666;
+    --text-secondary: #ada699999;
+    --white: #28231c;
   }
 
-  .new-wrap { min-height: 100vh; background: var(--black); font-family: 'DM Sans', sans-serif; padding-top: 64px; padding-bottom: 4rem; }
+  .new-wrap { min-height: 100vh; background: var(--black); font-family: 'Inter', sans-serif; padding-top: 64px; padding-bottom: 4rem; }
   .new-inner { max-width: 680px; margin: 0 auto; padding: 3rem 1.5rem; }
 
   .new-eyebrow { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.7rem; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; color: var(--lime); margin-bottom: 1rem; opacity: 0; animation: fadeUp 0.6s ease forwards 0.1s; }
   .new-eyebrow::before { content: ''; display: block; width: 24px; height: 1px; background: var(--lime); }
 
-  .new-title { font-family: 'Bebas Neue', sans-serif; font-size: clamp(2.5rem, 8vw, 4.5rem); line-height: 1; color: var(--white); margin: 0 0 2.5rem 0; opacity: 0; animation: fadeUp 0.6s ease forwards 0.2s; }
+  .new-title { font-family: 'Space Grotesk', sans-serif; font-size: clamp(2.5rem, 8vw, 4.5rem); line-height: 1; color: var(--white); margin: 0 0 2.5rem 0; opacity: 0; animation: fadeUp 0.6s ease forwards 0.2s; }
   .new-title span { color: var(--lime); }
 
   .form-errors { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; }
@@ -36,16 +36,16 @@
   .form-section:nth-child(2) { animation-delay: 0.4s; }
   .form-section:nth-child(3) { animation-delay: 0.5s; }
 
-  .form-section-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.25rem; color: var(--lime); letter-spacing: 0.05em; margin: 0 0 1.25rem 0; display: flex; align-items: center; gap: 0.5rem; }
+  .form-section-title { font-family: 'Space Grotesk', sans-serif; font-size: 1.25rem; color: var(--lime); letter-spacing: 0.05em; margin: 0 0 1.25rem 0; display: flex; align-items: center; gap: 0.5rem; }
 
   .form-field { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem; }
   .form-field:last-child { margin-bottom: 0; }
 
   .form-label { font-size: 0.8rem; font-weight: 500; color: var(--text-muted); letter-spacing: 0.05em; text-transform: uppercase; }
 
-  .form-input, .form-select, .form-textarea { background: var(--surface-3); border: 1px solid var(--border); border-radius: 10px; padding: 0.875rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.9375rem; color: var(--white); outline: none; transition: all 0.2s ease; width: 100%; }
+  .form-input, .form-select, .form-textarea { background: var(--surface-3); border: 1px solid var(--border); border-radius: 10px; padding: 0.875rem 1rem; font-family: 'Inter', sans-serif; font-size: 0.9375rem; color: var(--white); outline: none; transition: all 0.2s ease; width: 100%; }
   .form-input::placeholder, .form-textarea::placeholder { color: var(--text-muted); }
-  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--lime); box-shadow: 0 0 0 3px rgba(175,255,45,0.08); }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--lime); box-shadow: 0 0 0 3px rgba(221, 120, 82,0.08); }
 
   .form-select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 1rem center; cursor: pointer; }
   .form-select option { background: var(--surface-3); }
@@ -56,30 +56,30 @@
   .cep-hint { font-size: 0.72rem; color: var(--text-muted); margin-top: -0.25rem; }
 
   .day-buttons { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; margin-bottom: 1.25rem; }
-  .day-btn { background: var(--surface-3); border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.25rem; font-family: 'DM Sans', sans-serif; font-size: 0.7rem; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: all 0.2s ease; text-align: center; letter-spacing: 0.02em; text-transform: uppercase; user-select: none; }
-  .day-btn:hover { border-color: rgba(175,255,45,0.3); color: var(--white); }
-  .day-btn.active { background: rgba(175,255,45,0.1); border-color: var(--lime); color: var(--lime); }
+  .day-btn { background: var(--surface-3); border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.25rem; font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: all 0.2s ease; text-align: center; letter-spacing: 0.02em; text-transform: uppercase; user-select: none; }
+  .day-btn:hover { border-color: rgba(221, 120, 82,0.3); color: var(--white); }
+  .day-btn.active { background: rgba(221, 120, 82,0.1); border-color: var(--lime); color: var(--lime); }
 
   .day-time-rows { display: flex; flex-direction: column; gap: 0.75rem; }
   .day-time-row { display: none; align-items: center; gap: 1rem; background: var(--surface-3); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem; animation: fadeUp 0.3s ease forwards; }
   .day-time-row.visible { display: flex; }
-  .day-time-label { font-family: 'Bebas Neue', sans-serif; font-size: 1rem; color: var(--lime); letter-spacing: 0.05em; min-width: 40px; }
+  .day-time-label { font-family: 'Space Grotesk', sans-serif; font-size: 1rem; color: var(--lime); letter-spacing: 0.05em; min-width: 40px; }
   .time-select-wrap { display: flex; align-items: center; gap: 0.5rem; flex: 1; }
   .time-label-small { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
-  .time-select { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.75rem; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; color: var(--white); outline: none; transition: all 0.2s ease; cursor: pointer; appearance: none; text-align: center; }
-  .time-select:focus { border-color: var(--lime); box-shadow: 0 0 0 2px rgba(175,255,45,0.08); }
-  .time-separator { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; color: var(--text-muted); }
+  .time-select { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.75rem; font-family: 'Inter', sans-serif; font-size: 0.875rem; color: var(--white); outline: none; transition: all 0.2s ease; cursor: pointer; appearance: none; text-align: center; }
+  .time-select:focus { border-color: var(--lime); box-shadow: 0 0 0 2px rgba(221, 120, 82,0.08); }
+  .time-separator { font-family: 'Space Grotesk', sans-serif; font-size: 1.1rem; color: var(--text-muted); }
 
   .sub-card { background: var(--surface-3); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem; margin-bottom: 1rem; }
   .sub-card:last-of-type { margin-bottom: 0; }
-  .sub-card-remove { display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: #ef4444; cursor: pointer; background: none; border: none; padding: 0; font-family: 'DM Sans', sans-serif; margin-top: 0.75rem; transition: color 0.2s ease; }
+  .sub-card-remove { display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: #ef4444; cursor: pointer; background: none; border: none; padding: 0; font-family: 'Inter', sans-serif; margin-top: 0.75rem; transition: color 0.2s ease; }
   .sub-card-remove:hover { color: #fca5a5; }
   .sub-card-remove input[type="checkbox"] { accent-color: #ef4444; cursor: pointer; }
 
-  .btn-add { display: inline-flex; align-items: center; gap: 0.5rem; background: transparent; color: var(--lime); border: 1px dashed rgba(175,255,45,0.3); border-radius: 10px; padding: 0.75rem 1rem; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s ease; width: 100%; justify-content: center; margin-top: 1rem; text-decoration: none; }
-  .btn-add:hover { border-color: var(--lime); background: rgba(175,255,45,0.04); }
+  .btn-add { display: inline-flex; align-items: center; gap: 0.5rem; background: transparent; color: var(--lime); border: 1px dashed rgba(221, 120, 82,0.3); border-radius: 10px; padding: 0.75rem 1rem; font-family: 'Inter', sans-serif; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s ease; width: 100%; justify-content: center; margin-top: 1rem; text-decoration: none; }
+  .btn-add:hover { border-color: var(--lime); background: rgba(221, 120, 82,0.04); }
 
-  .btn-submit { background: var(--lime); color: var(--black); border: none; border-radius: 100px; padding: 1rem 2rem; font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; width: 100%; margin-top: 0.5rem; opacity: 0; animation: fadeUp 0.6s ease forwards 0.6s; }
+  .btn-submit { background: var(--lime); color: var(--black); border: none; border-radius: 100px; padding: 1rem 2rem; font-family: 'Inter', sans-serif; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; width: 100%; margin-top: 0.5rem; opacity: 0; animation: fadeUp 0.6s ease forwards 0.6s; }
   .btn-submit:hover { background: var(--lime-dim); transform: translateY(-2px); }
 
   @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
@@ -129,7 +129,7 @@
             <div style="position:relative;">
               <%= form.text_field :cep, class: "form-input", placeholder: "00000-000",
                   id: "cep_field", maxlength: 9, style: "padding-right:2.5rem;" %>
-              <div id="cep-spinner" style="display:none; position:absolute; right:0.75rem; top:50%; transform:translateY(-50%); color:#afff2d;">
+              <div id="cep-spinner" style="display:none; position:absolute; right:0.75rem; top:50%; transform:translateY(-50%); color:#dd7852;">
                 <i class="fas fa-circle-notch fa-spin"></i>
               </div>
             </div>

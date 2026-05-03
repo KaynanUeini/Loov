@@ -4,22 +4,22 @@
   @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
 
   :root {
-    --lime: #afff2d;
-    --lime-dim: #8fcc24;
-    --black: #000000;
-    --surface: #0a0a0a;
-    --surface-2: #111111;
-    --surface-3: #1a1a1a;
-    --border: #222222;
-    --text-muted: #666666;
-    --text-secondary: #999999;
-    --white: #ffffff;
+    --lime: #dd7852;
+    --lime-dim: #9c4930;
+    --black: #fafaf6;
+    --surface: #fafaf6;
+    --surface-2: #fafaf6111;
+    --surface-3: #e0dbd0;
+    --border: #e0dbd0222;
+    --text-muted: #ada699666;
+    --text-secondary: #ada699999;
+    --white: #28231c;
   }
 
   .show-wrap {
     min-height: 100vh;
     background: var(--black);
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Inter', sans-serif;
     padding-top: 64px;
     padding-bottom: 4rem;
   }
@@ -53,7 +53,7 @@
   }
 
   .show-title {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Space Grotesk', sans-serif;
     font-size: clamp(2.5rem, 8vw, 4.5rem);
     line-height: 1;
     color: var(--white);
@@ -83,7 +83,7 @@
   }
 
   .detail-header-title {
-    font-family: 'Bebas Neue', sans-serif;
+    font-family: 'Space Grotesk', sans-serif;
     font-size: 1rem;
     color: var(--lime);
     letter-spacing: 0.1em;
@@ -101,9 +101,9 @@
   }
 
   .status-badge.agendado {
-    background: rgba(175,255,45,0.08);
+    background: rgba(221, 120, 82,0.08);
     color: var(--lime);
-    border: 1px solid rgba(175,255,45,0.2);
+    border: 1px solid rgba(221, 120, 82,0.2);
   }
 
   .status-badge.concluido {
@@ -130,7 +130,7 @@
   }
 
   .detail-row:last-child { border-bottom: none; }
-  .detail-row:hover { background: rgba(255,255,255,0.02); }
+  .detail-row:hover { background: rgba(40, 35, 28,0.02); }
 
   .detail-icon {
     width: 32px;
@@ -162,7 +162,7 @@
     font-weight: 500;
   }
 
-  .detail-value.highlight { color: var(--lime); font-family: 'Bebas Neue', sans-serif; font-size: 1.25rem; letter-spacing: 0.05em; }
+  .detail-value.highlight { color: var(--lime); font-family: 'Space Grotesk', sans-serif; font-size: 1.25rem; letter-spacing: 0.05em; }
 
   .actions {
     display: flex;
@@ -180,7 +180,7 @@
     border: 1px solid var(--border);
     border-radius: 100px;
     padding: 0.875rem 1.5rem;
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;
@@ -199,7 +199,7 @@
     border: 1px solid rgba(239,68,68,0.3);
     border-radius: 100px;
     padding: 0.875rem 1.5rem;
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;

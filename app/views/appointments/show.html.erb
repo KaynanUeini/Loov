@@ -6,28 +6,28 @@
 
   <!-- Detalhes do Agendamento -->
   <div class="appointment-card fade-in-section">
-    <h2 class="text-xl font-medium mb-4" style="color: #FFFFFF;">
+    <h2 class="text-xl font-medium mb-4" style="color: #28231c;">
       Agendamento #<%= @appointment.id %>
     </h2>
     <p class="flex items-center mb-2" style="color: #B0B0B0;">
       <i class="fas fa-car-wash mr-2 icon-hover" style="color: #6D54A9;"></i>
-      <strong style="color: #FFFFFF;">Lava-rápido:</strong> <span class="ml-1"><%= @appointment.car_wash.name %></span>
+      <strong style="color: #28231c;">Lava-rápido:</strong> <span class="ml-1"><%= @appointment.car_wash.name %></span>
     </p>
     <p class="flex items-center mb-2" style="color: #B0B0B0;">
       <i class="fas fa-tools mr-2 icon-hover" style="color: #6D54A9;"></i>
-      <strong style="color: #FFFFFF;">Serviço:</strong> <span class="ml-1"><%= @appointment.service.title %></span>
+      <strong style="color: #28231c;">Serviço:</strong> <span class="ml-1"><%= @appointment.service.title %></span>
     </p>
     <p class="flex items-center mb-2" style="color: #B0B0B0;">
       <i class="fas fa-clock mr-2 icon-hover" style="color: #6D54A9;"></i>
-      <strong style="color: #FFFFFF;">Data:</strong> <span class="ml-1"><%= @appointment.scheduled_at.strftime("%d/%m/%Y às %H:%M") %></span>
+      <strong style="color: #28231c;">Data:</strong> <span class="ml-1"><%= @appointment.scheduled_at.strftime("%d/%m/%Y às %H:%M") %></span>
     </p>
     <p class="flex items-center mb-2" style="color: #B0B0B0;">
       <i class="fas fa-money-bill-wave mr-2 icon-hover" style="color: #6D54A9;"></i>
-      <strong style="color: #FFFFFF;">Preço:</strong> <span class="ml-1">R$ <%= @appointment.service.price.to_f.round(2) %></span>
+      <strong style="color: #28231c;">Preço:</strong> <span class="ml-1">R$ <%= @appointment.service.price.to_f.round(2) %></span>
     </p>
     <p class="flex items-center mb-2" style="color: #B0B0B0;">
       <i class="fas fa-info-circle mr-2 icon-hover" style="color: #6D54A9;"></i>
-      <strong style="color: #FFFFFF;">Status:</strong> <span class="ml-1"><%= @appointment.status.capitalize %></span>
+      <strong style="color: #28231c;">Status:</strong> <span class="ml-1"><%= @appointment.status.capitalize %></span>
     </p>
     <% if @appointment.status != 'cancelled' && @appointment.scheduled_at > DateTime.now %>
       <div class="mt-6">

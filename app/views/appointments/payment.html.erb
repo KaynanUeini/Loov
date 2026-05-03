@@ -15,19 +15,19 @@
     </h2>
     <p class="flex items-center mb-2" style="color: #B0B0B0;">
       <i class="fas fa-car-wash mr-2 icon-hover" style="color: #6D54A9;"></i>
-      <strong style="color: #FFFFFF;">Lava-rápido:</strong> <span class="ml-1"><%= @appointment.car_wash.name %></span>
+      <strong style="color: #28231c;">Lava-rápido:</strong> <span class="ml-1"><%= @appointment.car_wash.name %></span>
     </p>
     <p class="flex items-center mb-2" style="color: #B0B0B0;">
       <i class="fas fa-tools mr-2 icon-hover" style="color: #6D54A9;"></i>
-      <strong style="color: #FFFFFF;">Serviço:</strong> <span class="ml-1"><%= @appointment.service.title %></span>
+      <strong style="color: #28231c;">Serviço:</strong> <span class="ml-1"><%= @appointment.service.title %></span>
     </p>
     <p class="flex items-center mb-2" style="color: #B0B0B0;">
       <i class="fas fa-clock mr-2 icon-hover" style="color: #6D54A9;"></i>
-      <strong style="color: #FFFFFF;">Data:</strong> <span class="ml-1"><%= @appointment.scheduled_at.strftime("%d/%m/%Y às %H:%M") %></span>
+      <strong style="color: #28231c;">Data:</strong> <span class="ml-1"><%= @appointment.scheduled_at.strftime("%d/%m/%Y às %H:%M") %></span>
     </p>
     <p class="flex items-center mb-2" style="color: #B0B0B0;">
       <i class="fas fa-money-bill-wave mr-2 icon-hover" style="color: #6D54A9;"></i>
-      <strong style="color: #FFFFFF;">Preço:</strong> <span class="ml-1">R$ <%= @appointment.service.price.to_f.round(2) %></span>
+      <strong style="color: #28231c;">Preço:</strong> <span class="ml-1">R$ <%= @appointment.service.price.to_f.round(2) %></span>
     </p>
   </div>
   <% Rails.logger.info("Detalhes do agendamento renderizados com sucesso") %>
@@ -40,7 +40,7 @@
     </h2>
     <%= form_with url: process_payment_appointment_path(id: 'new'), method: :post, local: true, id: "payment-form" do %>
       <div class="form-control mb-4">
-        <label class="block mb-2 font-medium" style="color: #FFFFFF;">Detalhes do Cartão</label>
+        <label class="block mb-2 font-medium" style="color: #28231c;">Detalhes do Cartão</label>
         <div id="card-element" class="stripe-card-field"></div>
         <div id="card-errors" role="alert" style="color: #EF4444; margin-top: 0.5rem;"></div>
       </div>
@@ -102,7 +102,7 @@
       const card = elements.create('card', {
         style: {
           base: {
-            color: '#FFFFFF',
+            color: '#28231c',
             fontFamily: '"Poppins", sans-serif',
             fontSize: '16px',
             '::placeholder': {

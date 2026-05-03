@@ -306,14 +306,14 @@
       canvas.height = H;
       const render = Render.create({
         canvas, engine,
-        options: { width: W, height: H, wireframes: false, background: '#000000' }
+        options: { width: W, height: H, wireframes: false, background: '#fafaf6' }
       });
       window.addEventListener('resize', () => {
         const nW = window.innerWidth, nH = window.innerHeight;
         render.canvas.width  = nW; render.canvas.height = nH;
         render.options.width = nW; render.options.height = nH;
       });
-      const wallOpts = { isStatic: true, render: { fillStyle: '#0a0a0a' } };
+      const wallOpts = { isStatic: true, render: { fillStyle: '#fafaf6' } };
       const off = 50;
       World.add(engine.world, [
         Bodies.rectangle(W/2,   -off,    W+2*off, off*2, wallOpts),
@@ -331,8 +331,8 @@
         return b;
       };
       const allBodies = [
-        ...Array.from({length:10}, () => makeBody('rect',   '#ffffff')),
-        ...Array.from({length:8},  () => makeBody('circle', '#afff2d')),
+        ...Array.from({length:10}, () => makeBody('rect',   '#28231c')),
+        ...Array.from({length:8},  () => makeBody('circle', '#dd7852')),
         ...Array.from({length:6},  () => makeBody('circle', '#333333'))
       ];
       World.add(engine.world, allBodies);
