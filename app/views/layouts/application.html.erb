@@ -233,6 +233,389 @@
 
     /* Selection */
     ::selection { background: var(--coral-100); color: var(--ink); }
+
+    /* ─────────────────────────────────────────────────────
+       LOOV CANONICAL DESIGN SYSTEM — utility classes
+       Match the public landing aesthetic. Use these on any
+       page to opt into the Loov look without rewriting CSS.
+       ───────────────────────────────────────────────────── */
+
+    .loov-page {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 80px 24px 96px;
+    }
+    .loov-page--narrow { max-width: 720px; }
+    .loov-page--wide   { max-width: 1240px; }
+
+    /* Hero header — every page should start with this */
+    .loov-hero {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+    .loov-hero--left { text-align: left; }
+
+    .loov-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: 'JetBrains Mono', monospace !important;
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: var(--coral-500) !important;
+      text-transform: uppercase;
+      padding: 6px 14px;
+      background: var(--coral-50);
+      border: 1px solid var(--coral-100);
+      border-radius: 100px;
+      margin-bottom: 18px;
+    }
+    .loov-eyebrow .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--coral-500);
+      animation: loov-pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes loov-pulse {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50%     { opacity: .4; transform: scale(.7); }
+    }
+
+    .loov-h1 {
+      font-family: 'Space Grotesk', 'Inter', sans-serif !important;
+      font-weight: 700;
+      font-size: clamp(36px, 5.5vw, 56px);
+      letter-spacing: -1.2px;
+      line-height: 1.05;
+      color: var(--ink) !important;
+      margin: 0 0 18px !important;
+    }
+    .loov-h1 .accent {
+      color: var(--coral-500);
+      position: relative;
+      white-space: nowrap;
+    }
+    .loov-h1 .accent::after {
+      content: '';
+      position: absolute; left: 0; right: 0; bottom: -3px;
+      height: 4px;
+      background: linear-gradient(90deg, var(--coral-300), var(--coral-500));
+      border-radius: 4px;
+      opacity: .7;
+    }
+
+    .loov-h2 {
+      font-family: 'Space Grotesk', sans-serif !important;
+      font-weight: 700; font-size: 28px;
+      color: var(--ink) !important;
+      letter-spacing: -0.4px;
+      margin: 0;
+    }
+
+    .loov-lead {
+      font-size: 16.5px;
+      color: var(--graphite) !important;
+      max-width: 580px;
+      margin: 0 auto 28px;
+      line-height: 1.55;
+    }
+    .loov-hero--left .loov-lead { margin-left: 0; margin-right: 0; }
+
+    .loov-cta-row {
+      display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;
+    }
+    .loov-hero--left .loov-cta-row { justify-content: flex-start; }
+
+    /* Section with eyebrow + h2 */
+    .loov-section { margin-bottom: 56px; }
+    .loov-section-header {
+      display: flex; align-items: flex-end; justify-content: space-between;
+      gap: 16px; flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    .loov-section-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; letter-spacing: 2px;
+      color: var(--coral-500); text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    /* Cards */
+    .loov-card {
+      background: var(--paper);
+      border: 1px solid var(--stone);
+      border-radius: 20px;
+      padding: 26px;
+      box-shadow: 0 2px 6px rgba(25,20,15,0.04);
+      transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+    }
+    .loov-card--hover:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px rgba(25,20,15,0.07);
+      border-color: var(--coral-100);
+    }
+    .loov-card--compact { padding: 18px; border-radius: 16px; }
+    .loov-card--lg      { padding: 36px; border-radius: 24px; }
+
+    .loov-card-icon {
+      width: 48px; height: 48px;
+      border-radius: 14px;
+      background: var(--coral-50);
+      border: 1px solid var(--coral-100);
+      display: inline-flex; align-items: center; justify-content: center;
+      color: var(--coral-700);
+      margin-bottom: 14px;
+    }
+    .loov-card-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 17px; font-weight: 700;
+      color: var(--ink);
+      margin: 0 0 8px;
+      letter-spacing: -0.2px;
+    }
+    .loov-card-text {
+      font-size: 13.5px;
+      color: var(--graphite);
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    /* Buttons */
+    .loov-btn-primary, .loov-btn-secondary, .loov-btn-ghost {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 13px 24px;
+      border-radius: 100px;
+      text-decoration: none !important;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      letter-spacing: 1.4px;
+      font-weight: 600;
+      text-transform: uppercase;
+      transition: transform .15s ease, box-shadow .15s ease, background .15s ease, border-color .15s ease, color .15s ease;
+      cursor: pointer;
+      border: none;
+      white-space: nowrap;
+    }
+    .loov-btn-primary {
+      background: var(--coral-500) !important;
+      color: var(--cream) !important;
+      box-shadow: 0 8px 20px rgba(220,120,82,0.22);
+    }
+    .loov-btn-primary:hover {
+      background: var(--coral-700) !important;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 24px rgba(156,73,48,0.28);
+      color: var(--cream) !important;
+    }
+    .loov-btn-secondary {
+      background: var(--paper) !important;
+      color: var(--ink) !important;
+      border: 1px solid var(--stone) !important;
+    }
+    .loov-btn-secondary:hover {
+      border-color: var(--coral-500) !important;
+      color: var(--coral-700) !important;
+      transform: translateY(-2px);
+    }
+    .loov-btn-ghost {
+      background: transparent !important;
+      color: var(--graphite) !important;
+    }
+    .loov-btn-ghost:hover { color: var(--coral-700) !important; background: var(--sand) !important; }
+
+    .loov-btn-block { width: 100%; justify-content: center; }
+    .loov-btn-sm    { padding: 9px 18px; font-size: 11px; }
+    .loov-btn-lg    { padding: 16px 30px; font-size: 13px; }
+
+    /* Form fields */
+    .loov-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+    .loov-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 1.4px;
+      color: var(--graphite);
+      text-transform: uppercase;
+    }
+    .loov-input, .loov-select, .loov-textarea {
+      background: var(--paper) !important;
+      border: 1px solid var(--stone) !important;
+      border-radius: 12px !important;
+      padding: 12px 16px !important;
+      font-family: 'Inter', sans-serif !important;
+      font-size: 14.5px !important;
+      color: var(--ink) !important;
+      outline: none;
+      width: 100%;
+      transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    .loov-input:focus, .loov-select:focus, .loov-textarea:focus {
+      border-color: var(--coral-500) !important;
+      box-shadow: 0 0 0 3px rgba(220,120,82,0.08) !important;
+    }
+    .loov-input::placeholder, .loov-textarea::placeholder { color: var(--ash) !important; }
+    .loov-textarea { min-height: 90px; resize: vertical; }
+    .loov-help { font-size: 12px; color: var(--ash); margin-top: 4px; }
+    .loov-error { font-size: 12.5px; color: var(--rose-500); margin-top: 4px; font-weight: 500; }
+
+    /* Generic feature/stats grids */
+    .loov-grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+    .loov-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+    .loov-grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+
+    /* Stats inline */
+    .loov-stats {
+      display: flex; flex-wrap: wrap; gap: 44px; justify-content: center;
+      margin-top: 48px;
+    }
+    .loov-stat { text-align: center; }
+    .loov-stat-value {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 28px; font-weight: 700;
+      color: var(--ink); letter-spacing: -0.5px; margin-bottom: 4px;
+    }
+    .loov-stat-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; letter-spacing: 1.6px;
+      color: var(--ash); text-transform: uppercase;
+    }
+
+    /* CTA dark band */
+    .loov-cta-band {
+      background: linear-gradient(135deg, var(--ink) 0%, var(--obsidian) 100%);
+      color: var(--cream);
+      border-radius: 24px;
+      padding: 48px 32px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .loov-cta-band::before {
+      content: '';
+      position: absolute; top: -50%; right: -20%;
+      width: 380px; height: 380px;
+      background: radial-gradient(circle, var(--coral-500) 0%, transparent 60%);
+      opacity: .25; pointer-events: none;
+    }
+    .loov-cta-band > * { position: relative; }
+    .loov-cta-band h2 {
+      font-family: 'Space Grotesk', sans-serif !important;
+      font-weight: 700; font-size: clamp(24px, 4vw, 32px);
+      letter-spacing: -0.5px; margin: 14px 0 12px !important;
+      color: var(--cream) !important;
+    }
+    .loov-cta-band p { color: var(--ash); margin: 0 auto 24px; max-width: 460px; }
+
+    /* Pills/badges */
+    .loov-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 12px; border-radius: 100px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; font-weight: 700; letter-spacing: 1.4px;
+      text-transform: uppercase;
+      border: 1px solid;
+    }
+    .loov-pill--coral  { background: var(--coral-50); color: var(--coral-700); border-color: var(--coral-100); }
+    .loov-pill--success{ background: #d6ecde; color: #2d6b42; border-color: #b5d8c1; }
+    .loov-pill--danger { background: #fdecec; color: var(--rose-500); border-color: #f5cccc; }
+    .loov-pill--warn   { background: #fbe2c0; color: #7a4814; border-color: #f0d0a0; }
+    .loov-pill--neutral{ background: var(--sand); color: var(--graphite); border-color: var(--stone); }
+
+    /* Divider */
+    .loov-divider {
+      height: 1px; background: var(--stone); border: none;
+      margin: 32px 0;
+    }
+
+    /* Auth shared two-column layout */
+    .loov-auth {
+      min-height: 100vh;
+      padding-top: 60px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-items: stretch;
+      background: var(--cream);
+    }
+    .loov-auth-editorial {
+      padding: 64px 48px 64px 64px;
+      display: flex; flex-direction: column; justify-content: center;
+      border-right: 1px solid var(--stone);
+      background: var(--paper);
+      position: relative;
+      overflow: hidden;
+    }
+    .loov-auth-editorial::before {
+      content: '';
+      position: absolute; top: 10%; right: -30%;
+      width: 460px; height: 460px;
+      background: radial-gradient(circle, var(--coral-500) 0%, transparent 65%);
+      opacity: .14;
+      pointer-events: none;
+    }
+    .loov-auth-form-side {
+      padding: 64px 64px 64px 48px;
+      display: flex; flex-direction: column; justify-content: center;
+      max-width: 580px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    .loov-auth-detail-row {
+      margin-top: 36px; padding-top: 28px;
+      border-top: 1px solid var(--stone);
+      display: flex; align-items: center; gap: 18px;
+      position: relative;
+    }
+    .loov-auth-detail-num {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 40px; font-weight: 700; color: var(--coral-500);
+      line-height: 1; letter-spacing: -0.5px;
+    }
+    .loov-auth-detail-label { font-size: 13px; color: var(--graphite); line-height: 1.5; }
+    .loov-auth-detail-label span.weak { color: var(--ash); }
+    @media (max-width: 860px) {
+      .loov-auth { grid-template-columns: 1fr; }
+      .loov-auth-editorial { display: none; }
+      .loov-auth-form-side { padding: 48px 24px; max-width: 100%; }
+    }
+
+    /* Centered single card (smaller auth pages, success pages) */
+    .loov-center-page {
+      min-height: 100vh;
+      padding: 80px 20px 60px;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--cream);
+    }
+    .loov-center-card {
+      width: 100%; max-width: 480px;
+      background: var(--paper);
+      border: 1px solid var(--stone);
+      border-radius: 24px;
+      padding: 48px 36px;
+      box-shadow: 0 14px 40px rgba(40,35,28,0.06);
+      text-align: center;
+    }
+
+    /* Footer link row inside cards */
+    .loov-footer-row {
+      margin-top: 28px; padding-top: 24px;
+      border-top: 1px solid var(--stone);
+      display: flex; flex-direction: column; gap: 8px; align-items: center;
+    }
+    .loov-footer-row a {
+      font-size: 13.5px; color: var(--graphite);
+      text-decoration: none;
+      transition: color .15s ease;
+    }
+    .loov-footer-row a:hover { color: var(--coral-700); }
+    .loov-footer-row a.strong { color: var(--coral-700); font-weight: 600; }
+
+    /* Mobile */
+    @media (max-width: 600px) {
+      .loov-page { padding: 56px 18px 64px; }
+      .loov-h1 { font-size: clamp(30px, 7vw, 38px); }
+      .loov-h2 { font-size: 22px; }
+      .loov-stats { gap: 28px; }
+      .loov-stat-value { font-size: 22px; }
+      .loov-cta-band { padding: 36px 22px; }
+      .loov-card { padding: 22px; }
+      .loov-center-card { padding: 36px 24px; }
+    }
   </style>
 </head>
 <body>

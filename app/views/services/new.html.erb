@@ -1,40 +1,55 @@
-<h1>Novo Serviço</h1>
-
-<%= form_with(model: [@car_wash, @service], local: true) do |form| %>
-  <% if @service.errors.any? %>
-    <div class="alert alert-danger">
-      <h4><%= pluralize(@service.errors.count, "erro") %> impediu a criação:</h4>
-      <ul>
-        <% @service.errors.full_messages.each do |message| %>
-          <li><%= message %></li>
-        <% end %>
-      </ul>
-    </div>
-  <% end %>
-
-  <div class="field">
-    <%= form.label :title, "Título" %>
-    <%= form.text_field :title %>
+<div class="loov-page loov-page--narrow">
+  <div class="loov-hero">
+    <div class="loov-eyebrow"><span class="dot"></span>NOVO SERVIÇO</div>
+    <h1 class="loov-h1">
+      Adicionar um <span class="accent">serviço</span>.
+    </h1>
+    <p class="loov-lead">
+      Cadastre um novo serviço com título, descrição, preço e duração.
+    </p>
   </div>
 
-  <div class="field">
-    <%= form.label :description, "Descrição" %>
-    <%= form.text_area :description %>
-  </div>
+  <div class="loov-card loov-card--lg">
+    <%= form_with(model: [@car_wash, @service], local: true) do |form| %>
+      <% if @service.errors.any? %>
+        <div style="background:#fdecec;border:1px solid #f5cccc;border-radius:14px;padding:14px 18px;margin-bottom:18px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:#c85050;margin-bottom:8px;">
+            <i class="fas fa-circle-exclamation" style="margin-right:6px;"></i>
+            <%= pluralize(@service.errors.count, "erro") %> impediu a criação
+          </div>
+          <ul style="margin:0;padding-left:20px;font-size:13.5px;color:#7a3838;line-height:1.55;">
+            <% @service.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
 
-  <div class="field">
-    <%= form.label :price, "Preço" %>
-    <%= form.number_field :price, step: 0.01 %>
-  </div>
+      <div class="loov-field">
+        <%= form.label :title, "Título", class: "loov-label" %>
+        <%= form.text_field :title, class: "loov-input", placeholder: "Ex: Lavagem completa" %>
+      </div>
 
-  <div class="field">
-    <%= form.label :duration, "Duração (minutos)" %>
-    <%= form.number_field :duration %>
-  </div>
+      <div class="loov-field">
+        <%= form.label :description, "Descrição", class: "loov-label" %>
+        <%= form.text_area :description, class: "loov-textarea", placeholder: "Descreva brevemente o que está incluso..." %>
+      </div>
 
-  <div class="actions">
-    <%= form.submit "Criar Serviço" %>
-  </div>
-<% end %>
+      <div class="loov-grid-2">
+        <div class="loov-field">
+          <%= form.label :price, "Preço (R$)", class: "loov-label" %>
+          <%= form.number_field :price, step: 0.01, class: "loov-input", placeholder: "0,00" %>
+        </div>
+        <div class="loov-field">
+          <%= form.label :duration, "Duração (minutos)", class: "loov-label" %>
+          <%= form.number_field :duration, class: "loov-input", placeholder: "30" %>
+        </div>
+      </div>
 
-<%= link_to 'Voltar', @car_wash %>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
+        <%= form.submit "Criar serviço", class: "loov-btn-primary loov-btn-lg" %>
+        <%= link_to "Voltar", @car_wash, class: "loov-btn-secondary loov-btn-lg" %>
+      </div>
+    <% end %>
+  </div>
+</div>

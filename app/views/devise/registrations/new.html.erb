@@ -1,329 +1,175 @@
-<div id="loov-cursor"></div>
-<div id="loov-cursor-trail"></div>
-<div id="page-transition"></div>
-
 <style>
-  :root {
-    --lime: #dd7852;
-    --lime-dim: #9c4930;
-    --black: #fafaf6;
-    --surface: #fafaf6;
-    --surface-2: #fafaf6;
-    --surface-3: #fefefd;
-    --border: #e0dbd0;
-    --border-soft: #e0dbd0;
-    --text-muted: #ada699;
-    --text-secondary: #ada699;
-    --white: #28231c;
-  }
-
-  /* ── CURSOR ─────────────────────────────────────────── */
-  #loov-cursor { position:fixed;width:8px;height:8px;background:var(--lime);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .18s ease,height .18s ease;mix-blend-mode:difference; }
-  #loov-cursor-trail { position:fixed;width:38px;height:38px;border:1px solid rgba(221, 120, 82,0.25);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:width .25s ease,height .25s ease,border-color .25s ease; }
-  body.cursor-hover #loov-cursor { width:14px;height:14px; }
-  body.cursor-hover #loov-cursor-trail { width:58px;height:58px;border-color:rgba(221, 120, 82,0.45); }
-  @media(hover:none){#loov-cursor,#loov-cursor-trail{display:none;}}
-
-  /* ── PAGE TRANSITION ─────────────────────────────────── */
-  #page-transition { position:fixed;inset:0;z-index:10000;background:#fafaf6;transform:translateY(100%);pointer-events:none; }
-  #page-transition.enter { animation:pgEnter .42s cubic-bezier(.76,0,.24,1) forwards; }
-  #page-transition.exit  { animation:pgExit  .42s cubic-bezier(.76,0,.24,1) forwards; }
-  @keyframes pgEnter{from{transform:translateY(100%)}to{transform:translateY(0)}}
-  @keyframes pgExit{from{transform:translateY(0)}to{transform:translateY(-100%)}}
-
-  * { box-sizing: border-box; }
-  body { cursor: none; }
-
-  .reg-wrap {
-    min-height: 100vh;
-    background: var(--black);
-    font-family: 'Inter', sans-serif;
-    padding-top: 60px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    align-items: center;
-  }
-
-  /* ── LADO ESQUERDO — EDITORIAL ────────────────────────── */
-  .reg-editorial {
-    padding: 4rem 3rem 4rem 4rem;
-    display: flex; flex-direction: column; justify-content: center;
-    min-height: calc(100vh - 60px);
-    border-right: 1px solid var(--border);
-    opacity: 0; animation: revealUp .9s cubic-bezier(.16,1,.3,1) forwards .1s;
-  }
-
-  .reg-eyebrow {
-    display: inline-flex; align-items: center; gap: .6rem;
-    font-size: .68rem; font-weight: 500; letter-spacing: .25em;
-    text-transform: uppercase; color: var(--lime); margin-bottom: 1.5rem;
-  }
-  .reg-eyebrow::before { content:''; display:block; width:28px; height:1px; background:var(--lime); }
-
-  .reg-editorial-title {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: clamp(3rem, 6vw, 5.5rem);
-    line-height: .92; color: var(--white); margin: 0 0 1.5rem;
-  }
-  .reg-editorial-title span { color: var(--lime); }
-
-  .reg-editorial-sub {
-    font-size: .9375rem; color: var(--text-secondary);
-    font-weight: 300; line-height: 1.65; max-width: 340px;
-  }
-
-  /* Detalhe decorativo */
-  .reg-editorial-steps {
-    margin-top: 3rem; padding-top: 2rem;
-    border-top: 1px solid var(--border);
-    display: flex; flex-direction: column; gap: .875rem;
-  }
-
-  .reg-step {
-    display: flex; align-items: center; gap: .875rem;
-    font-size: .8rem; color: var(--text-muted);
-  }
-
-  .reg-step-num {
-    width: 22px; height: 22px; border-radius: 50%;
-    border: 1px solid rgba(221, 120, 82,.3);
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Space Grotesk', sans-serif; font-size: .75rem;
-    color: var(--lime); flex-shrink: 0; letter-spacing: .04em;
-  }
-
-  /* ── LADO DIREITO — FORM ─────────────────────────────── */
-  .reg-form-side {
-    padding: 3rem 4rem 3rem 3rem;
-    display: flex; flex-direction: column; justify-content: center;
-    min-height: calc(100vh - 60px);
-    opacity: 0; animation: revealUp .9s cubic-bezier(.16,1,.3,1) forwards .25s;
-    overflow-y: auto;
-  }
-
-  .reg-form-title {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: clamp(1.75rem, 3.5vw, 2.5rem);
-    line-height: 1; color: var(--white); margin: 0 0 1.75rem;
-  }
-  .reg-form-title span { color: var(--lime); }
-
-  /* ── ROLE SELECTOR ───────────────────────────────────── */
-  .role-selector {
+  .reg-role-grid {
     display: grid; grid-template-columns: 1fr 1fr;
-    gap: .625rem; margin-bottom: 1.5rem;
+    gap: 10px; margin-bottom: 20px;
+  }
+  .reg-role-input { display: none; }
+  .reg-role-card {
+    display: flex; flex-direction: column; gap: 4px;
+    background: var(--paper);
+    border: 1px solid var(--stone);
+    border-radius: 14px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
+    user-select: none;
+  }
+  .reg-role-card:hover { border-color: var(--coral-100); background: var(--cream); }
+  .reg-role-input:checked + .reg-role-card {
+    border-color: var(--coral-500);
+    background: var(--coral-50);
+    box-shadow: 0 0 0 3px rgba(220,120,82,0.08);
+  }
+  .reg-role-title {
+    font-size: 14.5px; font-weight: 600; color: var(--ink);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .reg-role-title i { color: var(--coral-500); font-size: 13px; }
+  .reg-role-desc { font-size: 12px; color: var(--graphite); line-height: 1.4; }
+
+  .reg-step-list {
+    margin-top: 32px; padding-top: 24px;
+    border-top: 1px solid var(--stone);
+    display: flex; flex-direction: column; gap: 12px;
+    position: relative;
+  }
+  .reg-step-row { display: flex; align-items: center; gap: 14px; font-size: 14px; color: var(--graphite); }
+  .reg-step-num {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 1.5px solid var(--coral-300);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px; font-weight: 700; color: var(--coral-700);
+    flex-shrink: 0;
+    background: var(--coral-50);
   }
 
-  .role-option { display: none; }
-
-  .role-label {
-    display: flex; flex-direction: column; gap: .3rem;
-    background: var(--surface-2); border: 1px solid var(--border);
-    border-radius: 12px; padding: .875rem 1rem;
-    cursor: none; transition: all .2s ease; user-select: none;
-  }
-  .role-label:hover { border-color: rgba(221, 120, 82,.2); }
-
-  .role-option:checked + .role-label {
-    border-color: var(--lime);
-    background: rgba(221, 120, 82,.05);
-    box-shadow: 0 0 0 1px var(--lime);
-  }
-
-  .role-label-title {
-    font-size: .875rem; font-weight: 500; color: var(--white);
-    display: flex; align-items: center; gap: .4rem;
-  }
-
-  .role-label-title i { color: var(--lime); font-size: .75rem; }
-
-  .role-label-desc { font-size: .72rem; color: var(--text-muted); line-height: 1.4; }
-
-  /* ── FORM FIELDS ─────────────────────────────────────── */
-  .reg-form { display: flex; flex-direction: column; gap: 1rem; }
-
-  .reg-field { display: flex; flex-direction: column; gap: .4rem; }
-
-  .reg-label {
-    font-size: .72rem; font-weight: 500; color: var(--text-muted);
-    letter-spacing: .08em; text-transform: uppercase;
-  }
-
-  .reg-input {
-    background: var(--surface-2); border: 1px solid var(--border);
-    border-radius: 10px; padding: .875rem 1rem;
-    font-family: 'Inter', sans-serif; font-size: .9375rem;
-    color: var(--white); outline: none; transition: all .2s ease;
-    width: 100%; cursor: none;
-  }
-  .reg-input::placeholder { color: var(--text-muted); }
-  .reg-input:focus { border-color: var(--lime); box-shadow: 0 0 0 3px rgba(221, 120, 82,.07); }
-
-  /* Campos do cliente — hidden por padrão */
   .client-fields { display: none; }
   .client-fields.visible { display: contents; }
-
-  .reg-submit {
-    background: var(--lime); color: var(--black); border: none;
-    border-radius: 100px; padding: .9rem 1.75rem;
-    font-family: 'Inter', sans-serif; font-size: .9375rem; font-weight: 600;
-    cursor: none; transition: all .22s ease; width: 100%; margin-top: .375rem;
-  }
-  .reg-submit:hover { background: var(--lime-dim); transform: translateY(-2px); box-shadow: 0 10px 28px rgba(221, 120, 82,.18); }
-
-  .reg-links {
-    display: flex; flex-direction: column; gap: .5rem;
-    margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);
-  }
-  .reg-links a {
-    font-size: .875rem; color: var(--text-muted); text-decoration: none;
-    transition: color .2s ease; display: flex; align-items: center; gap: .4rem;
-  }
-  .reg-links a:hover { color: var(--lime); }
-
-  /* ── ANIMAÇÕES ───────────────────────────────────────── */
-  @keyframes revealUp { from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)} }
-
-  /* ── RESPONSIVE ──────────────────────────────────────── */
-  @media(max-width:768px) {
-    .reg-wrap { grid-template-columns: 1fr; }
-    .reg-editorial { display: none; }
-    .reg-form-side { padding: 2.5rem 1.5rem; min-height: auto; }
-    .reg-form-title { font-size: 2rem; }
-  }
 </style>
 
-<div class="reg-wrap">
+<div class="loov-auth">
 
-  <!-- LADO EDITORIAL -->
-  <div class="reg-editorial">
-    <div class="reg-eyebrow">Bem-vindo à Loov</div>
-    <h1 class="reg-editorial-title">
-      Crie sua<br>
-      <span>conta.</span>
+  <!-- ── EDITORIAL ──────────────────────────────────── -->
+  <aside class="loov-auth-editorial">
+    <div class="loov-eyebrow"><span class="dot"></span>BEM-VINDO À LOOV</div>
+    <h1 class="loov-h1" style="text-align:left;">
+      Crie sua<br><span class="accent">conta</span>.
     </h1>
-    <p class="reg-editorial-sub">
+    <p class="loov-lead" style="margin-left:0;text-align:left;">
       Escolha seu perfil e comece a usar a Loov em menos de 2 minutos.
     </p>
-    <div class="reg-editorial-steps">
-      <div class="reg-step"><div class="reg-step-num">1</div>Escolha seu perfil</div>
-      <div class="reg-step"><div class="reg-step-num">2</div>Preencha seus dados</div>
-      <div class="reg-step"><div class="reg-step-num">3</div>Confirme seu e-mail</div>
+    <div class="reg-step-list">
+      <div class="reg-step-row"><div class="reg-step-num">1</div>Escolha seu perfil</div>
+      <div class="reg-step-row"><div class="reg-step-num">2</div>Preencha seus dados</div>
+      <div class="reg-step-row"><div class="reg-step-num">3</div>Confirme seu e-mail</div>
     </div>
-  </div>
+  </aside>
 
-  <!-- FORM -->
-  <div class="reg-form-side">
-    <h2 class="reg-form-title">Criar conta<span>.</span></h2>
+  <!-- ── FORM ──────────────────────────────────────── -->
+  <section class="loov-auth-form-side">
+    <div class="loov-eyebrow"><span class="dot"></span>CRIAR CONTA</div>
+    <h2 class="loov-h1" style="font-size:clamp(28px,4vw,40px);text-align:left;">
+      Vamos <span class="accent">começar</span>.
+    </h2>
+    <p class="loov-lead" style="margin-left:0;text-align:left;margin-bottom:28px;">
+      Selecione seu perfil e cadastre-se em segundos.
+    </p>
 
-    <!-- SELETOR DE PERFIL -->
-    <div class="role-selector" id="role-selector">
+    <div class="reg-role-grid">
       <div>
-        <input type="radio" name="role_ui" id="role-client" value="client" class="role-option" checked>
-        <label for="role-client" class="role-label">
-          <div class="role-label-title"><i class="fas fa-user"></i> Cliente</div>
-          <div class="role-label-desc">Agende serviços em lava-rápidos próximos a você</div>
+        <input type="radio" name="role_ui" id="role-client" value="client" class="reg-role-input" checked>
+        <label for="role-client" class="reg-role-card">
+          <div class="reg-role-title"><i class="fas fa-user"></i> Cliente</div>
+          <div class="reg-role-desc">Agende serviços em lava-rápidos próximos a você</div>
         </label>
       </div>
       <div>
-        <input type="radio" name="role_ui" id="role-owner" value="owner" class="role-option">
-        <label for="role-owner" class="role-label">
-          <div class="role-label-title"><i class="fas fa-store"></i> Proprietário</div>
-          <div class="role-label-desc">Gerencie seu lava-rápido e receba agendamentos</div>
+        <input type="radio" name="role_ui" id="role-owner" value="owner" class="reg-role-input">
+        <label for="role-owner" class="reg-role-card">
+          <div class="reg-role-title"><i class="fas fa-store"></i> Proprietário</div>
+          <div class="reg-role-desc">Gerencie seu lava-rápido e receba agendamentos</div>
         </label>
       </div>
     </div>
 
-    <%= form_for(resource, as: resource_name, url: registration_path(resource_name), html: { class: "reg-form", id: "reg-form" }) do |f| %>
+    <%= form_for(resource, as: resource_name, url: registration_path(resource_name), html: { id: "reg-form" }) do |f| %>
 
       <%= f.hidden_field :role, id: "role-hidden", value: "client" %>
 
-      <!-- Campos do cliente -->
       <div class="client-fields visible" id="client-fields">
-        <div class="reg-field">
-          <label class="reg-label">Nome completo</label>
-          <%= f.text_field :full_name, class: "reg-input", placeholder: "Seu nome completo", id: "full_name_field" %>
+        <div class="loov-field">
+          <%= f.label :full_name, "Nome completo", class: "loov-label" %>
+          <%= f.text_field :full_name, class: "loov-input", placeholder: "Seu nome completo", id: "full_name_field" %>
         </div>
-        <div class="reg-field">
-          <label class="reg-label">Telefone</label>
-          <%= f.text_field :phone, class: "reg-input", placeholder: "(11) 99999-9999", id: "phone_field", maxlength: 15 %>
+        <div class="loov-field">
+          <%= f.label :phone, "Telefone", class: "loov-label" %>
+          <%= f.text_field :phone, class: "loov-input", placeholder: "(11) 99999-9999", id: "phone_field", maxlength: 15 %>
         </div>
       </div>
 
-      <div class="reg-field">
-        <label class="reg-label">E-mail</label>
+      <div class="loov-field">
+        <%= f.label :email, "E-mail", class: "loov-label" %>
         <%= f.email_field :email, autofocus: true, autocomplete: "email",
-            class: "reg-input", placeholder: "seu@email.com" %>
+            class: "loov-input", placeholder: "seu@email.com" %>
       </div>
 
-      <div class="reg-field">
-        <label class="reg-label">Senha</label>
+      <div class="loov-field">
+        <%= f.label :password, "Senha", class: "loov-label" %>
         <%= f.password_field :password, autocomplete: "new-password",
-            class: "reg-input", placeholder: "Mínimo #{resource.class.password_length.min} caracteres" %>
+            class: "loov-input", placeholder: "Mínimo #{resource.class.password_length.min} caracteres" %>
       </div>
 
-      <div class="reg-field">
-        <label class="reg-label">Confirmar senha</label>
+      <div class="loov-field">
+        <%= f.label :password_confirmation, "Confirmar senha", class: "loov-label" %>
         <%= f.password_field :password_confirmation, autocomplete: "new-password",
-            class: "reg-input", placeholder: "Repita a senha" %>
+            class: "loov-input", placeholder: "Repita a senha" %>
       </div>
 
-      <%= f.submit "Criar conta", class: "reg-submit" %>
+      <%= f.submit "Criar conta", class: "loov-btn-primary loov-btn-block loov-btn-lg" %>
 
     <% end %>
 
-    <div class="reg-links">
+    <div class="loov-footer-row">
       <%= render "devise/shared/links" %>
     </div>
-  </div>
+  </section>
 
 </div>
 
 <script>
-(function(){
-  // CURSOR
-  const cursor=document.getElementById('loov-cursor'),trail=document.getElementById('loov-cursor-trail');
-  if(cursor&&trail){let mx=-100,my=-100,tx=-100,ty=-100;document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cursor.style.left=mx+'px';cursor.style.top=my+'px';});(function anim(){tx+=(mx-tx)*0.12;ty+=(my-ty)*0.12;trail.style.left=tx+'px';trail.style.top=ty+'px';requestAnimationFrame(anim);})();document.addEventListener('mouseover',e=>{if(e.target.closest('a,button,input,select,textarea'))document.body.classList.add('cursor-hover');});document.addEventListener('mouseout',e=>{if(e.target.closest('a,button,input,select,textarea'))document.body.classList.remove('cursor-hover');});document.addEventListener('mouseleave',()=>{cursor.style.opacity='0';trail.style.opacity='0';});document.addEventListener('mouseenter',()=>{cursor.style.opacity='1';trail.style.opacity='1';});}
+document.addEventListener('DOMContentLoaded', function() {
+  const radios       = document.querySelectorAll('input[name="role_ui"]');
+  const clientFields = document.getElementById('client-fields');
+  const roleHidden   = document.getElementById('role-hidden');
+  const phoneField   = document.getElementById('phone_field');
+  const nameField    = document.getElementById('full_name_field');
 
-  // PAGE TRANSITION
-  const pt=document.getElementById('page-transition');
-  if(pt){document.addEventListener('click',e=>{const link=e.target.closest('a[href]');if(!link)return;const href=link.getAttribute('href');if(!href||href.startsWith('#')||href.startsWith('mailto')||link.target==='_blank')return;if(href.startsWith('http')&&!href.includes(window.location.hostname))return;e.preventDefault();pt.classList.add('enter');setTimeout(()=>window.location.href=href,400);});window.addEventListener('pageshow',()=>{pt.classList.remove('enter');pt.classList.add('exit');setTimeout(()=>pt.classList.remove('exit'),440);});}
-
-  // ROLE TOGGLE
-  document.addEventListener('DOMContentLoaded',function(){
-    var radios=document.querySelectorAll('input[name="role_ui"]');
-    var clientFields=document.getElementById('client-fields');
-    var roleHidden=document.getElementById('role-hidden');
-    var phoneField=document.getElementById('phone_field');
-    var nameField=document.getElementById('full_name_field');
-
-    radios.forEach(function(radio){
-      radio.addEventListener('change',function(){
-        var isClient=this.value==='client';
-        roleHidden.value=this.value;
-        clientFields.classList.toggle('visible',isClient);
-        if(nameField)nameField.required=isClient;
-        if(phoneField)phoneField.required=isClient;
-      });
+  radios.forEach(radio => {
+    radio.addEventListener('change', function() {
+      const isClient = this.value === 'client';
+      roleHidden.value = this.value;
+      clientFields.classList.toggle('visible', isClient);
+      if (nameField)  nameField.required  = isClient;
+      if (phoneField) phoneField.required = isClient;
     });
-
-    // Máscara telefone
-    if(phoneField){
-      phoneField.addEventListener('input',function(){
-        var v=this.value.replace(/\D/g,'');
-        v=v.length<=10?v.replace(/^(\d{2})(\d{4})(\d{0,4})/,'($1) $2-$3'):v.replace(/^(\d{2})(\d{5})(\d{0,4})/,'($1) $2-$3');
-        this.value=v;
-      });
-    }
-
-    // Restaura estado se houver erro de validação (página recarregada)
-    var currentRole=roleHidden.value||'client';
-    var matchingRadio=document.querySelector('input[name="role_ui"][value="'+currentRole+'"]');
-    if(matchingRadio){
-      matchingRadio.checked=true;
-      var isClient=currentRole==='client';
-      clientFields.classList.toggle('visible',isClient);
-    }
   });
-})();
+
+  if (phoneField) {
+    phoneField.addEventListener('input', function() {
+      let v = this.value.replace(/\D/g, '');
+      v = v.length <= 10
+        ? v.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3')
+        : v.replace(/^(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
+      this.value = v;
+    });
+  }
+
+  const currentRole   = roleHidden.value || 'client';
+  const matchingRadio = document.querySelector('input[name="role_ui"][value="' + currentRole + '"]');
+  if (matchingRadio) {
+    matchingRadio.checked = true;
+    clientFields.classList.toggle('visible', currentRole === 'client');
+  }
+});
 </script>

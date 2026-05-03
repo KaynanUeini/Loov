@@ -1,20 +1,40 @@
-<h1>Serviços do <%= @car_wash.name %></h1>
-
-<% if @services.any? %>
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <% @services.each do |service| %>
-      <div class="border rounded-lg p-4 shadow">
-        <h3 class="text-lg font-semibold"><%= service.title %></h3>
-        <p><%= service.description %></p>
-        <p><strong>Preço:</strong> R$ <%= service.price %></p>
-        <p><strong>Duração:</strong> <%= service.duration %> minutos</p>
-        <%= link_to 'Editar', edit_car_wash_service_path(@car_wash, service), class: 'text-blue-500 hover:underline' %>
-      </div>
-    <% end %>
+<div class="loov-page">
+  <div class="loov-hero">
+    <div class="loov-eyebrow"><span class="dot"></span>SERVIÇOS</div>
+    <h1 class="loov-h1">
+      Serviços do <span class="accent"><%= @car_wash.name %></span>
+    </h1>
+    <p class="loov-lead">Gerencie os serviços, preços e durações do seu lava-rápido.</p>
+    <div class="loov-cta-row">
+      <%= link_to new_car_wash_service_path(@car_wash), class: "loov-btn-primary" do %>
+        <i class="fas fa-plus"></i> NOVO SERVIÇO
+      <% end %>
+      <%= link_to car_wash_path(@car_wash), class: "loov-btn-secondary" do %>
+        <i class="fas fa-arrow-left"></i> VOLTAR
+      <% end %>
+    </div>
   </div>
-<% else %>
-  <p>Nenhum serviço cadastrado.</p>
-<% end %>
 
-<%= link_to 'Adicionar novo serviço', new_car_wash_service_path(@car_wash), class: 'mt-4 inline-block bg-blue-500 text-white px-4 py-2 rounded' %>
-<%= link_to 'Voltar', car_wash_path(@car_wash), class: 'mt-4 inline-block text-blue-500 hover:underline' %>
+  <% if @services.any? %>
+    <div class="loov-grid-2">
+      <% @services.each do |service| %>
+        <div class="loov-card loov-card--hover">
+          <div class="loov-card-icon"><i class="fas fa-spray-can-sparkles"></i></div>
+          <h3 class="loov-card-title"><%= service.title %></h3>
+          <p class="loov-card-text" style="margin-bottom:12px;"><%= service.description %></p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+            <span class="loov-pill loov-pill--coral">R$ <%= sprintf('%.2f', service.price.to_f) %></span>
+            <span class="loov-pill loov-pill--neutral"><i class="fas fa-clock" style="margin-right:4px;"></i><%= service.duration %> MIN</span>
+          </div>
+          <%= link_to "EDITAR", edit_car_wash_service_path(@car_wash, service), class: "loov-btn-ghost loov-btn-sm" %>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="loov-card" style="text-align:center;padding:48px 24px;">
+      <div class="loov-card-icon" style="margin:0 auto 14px;"><i class="fas fa-spray-can-sparkles"></i></div>
+      <h3 class="loov-card-title">Nenhum serviço cadastrado</h3>
+      <p class="loov-card-text">Comece adicionando o primeiro serviço do seu lava-rápido.</p>
+    </div>
+  <% end %>
+</div>

@@ -4,18 +4,70 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Senha atualizada — Loov</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: #fafaf6; color: #28231c;
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      padding: 40px 20px;
+      -webkit-font-smoothing: antialiased;
+    }
+    .card {
+      width: 100%; max-width: 440px;
+      background: #fefefd;
+      border: 1px solid #e0dbd0;
+      border-radius: 24px;
+      padding: 44px 32px;
+      text-align: center;
+      box-shadow: 0 14px 40px rgba(40,35,28,0.06);
+    }
+    .icon-wrap {
+      width: 72px; height: 72px;
+      border-radius: 22px;
+      background: #d6ecde; border: 1px solid #b5d8c1;
+      margin: 0 auto 18px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; letter-spacing: 2px;
+      color: #2d6b42; text-transform: uppercase;
+      padding: 6px 14px;
+      background: #d6ecde;
+      border: 1px solid #b5d8c1;
+      border-radius: 100px;
+      margin-bottom: 14px;
+    }
+    h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(24px, 4.5vw, 30px);
+      letter-spacing: -0.5px;
+      color: #28231c;
+      margin-bottom: 10px;
+    }
+    h1 .accent { color: #dd7852; }
+    p {
+      color: #575148;
+      font-size: 14px; line-height: 1.55;
+    }
+  </style>
 </head>
-<body style="margin:0;background:#fafaf6;">
-<div style="font-family:-apple-system,Helvetica,Arial,sans-serif;background:#fafaf6;min-height:100vh;padding:32px 16px;box-sizing:border-box;">
-  <div style="max-width:420px;margin:0 auto;background:#fefefd;border:1px solid #e0dbd0;border-radius:18px;padding:28px;text-align:center;box-shadow:0 2px 6px rgba(25,20,15,0.05);">
-    <div style="width:64px;height:64px;border-radius:32px;background:#fbeae3;border:1px solid #f5d3c3;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#dd7852" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+<body>
+  <div class="card">
+    <div class="icon-wrap">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2d6b42" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
     </div>
-    <h1 style="font-size:22px;font-weight:700;letter-spacing:-0.3px;color:#28231c;margin:0 0 6px;">Senha atualizada</h1>
-    <p style="color:#575148;font-size:13px;line-height:19px;margin:0;">
-      Volte ao app Loov e faça login com a nova senha.
-    </p>
+    <div class="eyebrow">SUCESSO</div>
+    <h1>Senha <span class="accent">atualizada</span></h1>
+    <p>Volte ao app Loov e faça login com a nova senha.</p>
   </div>
-</div>
 </body>
 </html>

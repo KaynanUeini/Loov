@@ -1,68 +1,50 @@
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
-  :root { --lime:#dd7852;--lime-dim:#9c4930;--black:#fafaf6;--surface-2:#fafaf6;--surface-3:#e0dbd0;--border:#e0dbd0;--text-muted:#ada699;--white:#28231c; }
-  *{box-sizing:border-box}
-  .wrap{min-height:100vh;background:var(--black);font-family:'Inter',sans-serif;padding-top:64px;display:flex;align-items:center;justify-content:center;padding-bottom:3rem;}
-  .card{width:100%;max-width:480px;background:var(--surface-2);border:1px solid var(--border);border-radius:20px;padding:2.5rem;margin:1.5rem;}
-  .eyebrow{display:inline-flex;align-items:center;gap:.5rem;font-size:.7rem;font-weight:500;letter-spacing:.2em;text-transform:uppercase;color:var(--lime);margin-bottom:1rem;}
-  .eyebrow::before{content:'';display:block;width:24px;height:1px;background:var(--lime)}
-  .title{font-family:'Space Grotesk',sans-serif;font-size:2.5rem;line-height:1;color:var(--white);margin:0 0 .5rem;}
-  .title span{color:var(--lime)}
-  .subtitle{font-size:.9rem;color:var(--text-muted);margin:0 0 2rem;}
-  .car-wash-badge{display:inline-flex;align-items:center;gap:.4rem;background:rgba(221, 120, 82,.08);color:var(--lime);border:1px solid rgba(221, 120, 82,.2);border-radius:100px;padding:.4rem 1rem;font-size:.8rem;font-weight:500;margin-bottom:1.5rem;}
-  .form-field{display:flex;flex-direction:column;gap:.5rem;margin-bottom:1rem;}
-  .form-label{font-size:.78rem;font-weight:500;color:var(--text-muted);letter-spacing:.05em;text-transform:uppercase;}
-  .form-input{background:var(--surface-3);border:1px solid var(--border);border-radius:10px;padding:.875rem 1rem;font-family:'Inter',sans-serif;font-size:.9375rem;color:var(--white);outline:none;transition:all .2s;width:100%;}
-  .form-input::placeholder{color:var(--text-muted)}
-  .form-input:focus{border-color:var(--lime);box-shadow:0 0 0 3px rgba(221, 120, 82,.08)}
-  .btn-submit{background:var(--lime);color:var(--black);border:none;border-radius:100px;padding:.875rem 2rem;font-family:'Inter',sans-serif;font-size:.9375rem;font-weight:600;cursor:pointer;transition:all .2s;width:100%;margin-top:.5rem;}
-  .btn-submit:hover{background:var(--lime-dim);}
-  .already-account{font-size:.8rem;color:var(--text-muted);text-align:center;margin-top:1.25rem;}
-  .already-account a{color:var(--lime);text-decoration:none;}
-  .flash-error{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#fca5a5;border-radius:12px;padding:.875rem 1.25rem;font-size:.875rem;margin-bottom:1.25rem;}
-</style>
+<div class="loov-center-page">
+  <div class="loov-center-card" style="max-width:520px;">
+    <div class="loov-eyebrow"><span class="dot"></span>CONVITE</div>
+    <h1 class="loov-h1" style="font-size:clamp(28px,4.5vw,38px);">
+      Aceitar <span class="accent">convite</span>.
+    </h1>
+    <p class="loov-lead">
+      Você foi convidado(a) para ser atendente.
+    </p>
 
-<div class="wrap">
-  <div class="card">
-    <div class="eyebrow">Convite</div>
-    <h1 class="title">Aceitar <span>Convite</span></h1>
-    <p class="subtitle">Você foi convidado para ser atendente.</p>
-
-    <div class="car-wash-badge">
+    <div style="display:inline-flex;align-items:center;gap:8px;background:var(--coral-50);color:var(--coral-700);border:1px solid var(--coral-100);border-radius:100px;padding:8px 16px;font-size:13.5px;font-weight:600;margin-bottom:24px;">
       <i class="fas fa-store"></i>
       <%= @invitation.car_wash.name %>
     </div>
 
     <% if flash[:alert] %>
-    <div class="flash-error"><%= flash[:alert] %></div>
+      <div style="background:#fdecec;border:1px solid #f5cccc;color:#7a3838;border-radius:14px;padding:12px 16px;font-size:13.5px;margin-bottom:18px;text-align:left;">
+        <%= flash[:alert] %>
+      </div>
     <% end %>
 
     <% existing_user = User.find_by(email: @invitation.email) %>
     <% if existing_user %>
-      <p style="font-size:.875rem;color:var(--text-muted);margin-bottom:1.5rem;">
-        A conta <strong style="color:var(--white);"><%= @invitation.email %></strong> já existe. Clique abaixo para aceitar o convite.
+      <p style="font-size:14px;color:var(--graphite);margin-bottom:22px;line-height:1.55;">
+        A conta <strong style="color:var(--ink);"><%= @invitation.email %></strong> já existe.<br>Clique abaixo para aceitar o convite.
       </p>
       <%= form_with url: do_accept_owner_attendant_invitations_path(token: @invitation.token), method: :post, local: true do %>
-        <%= submit_tag "Aceitar e Entrar", class: "btn-submit" %>
+        <%= submit_tag "Aceitar e entrar", class: "loov-btn-primary loov-btn-block loov-btn-lg" %>
       <% end %>
     <% else %>
-      <p style="font-size:.875rem;color:var(--text-muted);margin-bottom:1.5rem;">
-        Crie sua conta para <strong style="color:var(--white);"><%= @invitation.email %></strong>.
+      <p style="font-size:14px;color:var(--graphite);margin-bottom:22px;line-height:1.55;">
+        Crie sua conta para <strong style="color:var(--ink);"><%= @invitation.email %></strong>.
       </p>
-      <%= form_with url: do_accept_owner_attendant_invitations_path(token: @invitation.token), method: :post, local: true do %>
-        <div class="form-field">
-          <label class="form-label">Nome completo</label>
-          <%= text_field_tag :full_name, nil, class: "form-input", placeholder: "Seu nome", required: true %>
+      <%= form_with url: do_accept_owner_attendant_invitations_path(token: @invitation.token), method: :post, local: true, html: { style: "text-align:left;" } do %>
+        <div class="loov-field">
+          <label class="loov-label">Nome completo</label>
+          <%= text_field_tag :full_name, nil, class: "loov-input", placeholder: "Seu nome", required: true %>
         </div>
-        <div class="form-field">
-          <label class="form-label">Senha</label>
-          <%= password_field_tag :password, nil, class: "form-input", placeholder: "Mínimo 6 caracteres", required: true %>
+        <div class="loov-field">
+          <label class="loov-label">Senha</label>
+          <%= password_field_tag :password, nil, class: "loov-input", placeholder: "Mínimo 6 caracteres", required: true %>
         </div>
-        <div class="form-field">
-          <label class="form-label">Confirmar senha</label>
-          <%= password_field_tag :password_confirmation, nil, class: "form-input", placeholder: "Repita a senha", required: true %>
+        <div class="loov-field">
+          <label class="loov-label">Confirmar senha</label>
+          <%= password_field_tag :password_confirmation, nil, class: "loov-input", placeholder: "Repita a senha", required: true %>
         </div>
-        <%= submit_tag "Criar Conta e Aceitar", class: "btn-submit" %>
+        <%= submit_tag "Criar conta e aceitar", class: "loov-btn-primary loov-btn-block loov-btn-lg", style: "margin-top:8px;" %>
       <% end %>
     <% end %>
   </div>

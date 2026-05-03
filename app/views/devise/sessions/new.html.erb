@@ -1,233 +1,59 @@
-<div id="loov-cursor"></div>
-<div id="loov-cursor-trail"></div>
-<div id="page-transition"></div>
+<div class="loov-auth">
 
-<style>
-  :root {
-    --lime: #dd7852;
-    --lime-dim: #9c4930;
-    --black: #fafaf6;
-    --surface: #fafaf6;
-    --surface-2: #fafaf6;
-    --surface-3: #fefefd;
-    --border: #e0dbd0;
-    --border-soft: #e0dbd0;
-    --text-muted: #ada699;
-    --text-secondary: #ada699;
-    --white: #28231c;
-  }
-
-  /* ── CURSOR ─────────────────────────────────────────── */
-  #loov-cursor { position:fixed;width:8px;height:8px;background:var(--lime);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .18s ease,height .18s ease;mix-blend-mode:difference; }
-  #loov-cursor-trail { position:fixed;width:38px;height:38px;border:1px solid rgba(221, 120, 82,0.25);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:width .25s ease,height .25s ease,border-color .25s ease; }
-  body.cursor-hover #loov-cursor { width:14px;height:14px; }
-  body.cursor-hover #loov-cursor-trail { width:58px;height:58px;border-color:rgba(221, 120, 82,0.45); }
-  @media(hover:none){#loov-cursor,#loov-cursor-trail{display:none;}}
-
-  /* ── PAGE TRANSITION ─────────────────────────────────── */
-  #page-transition { position:fixed;inset:0;z-index:10000;background:#fafaf6;transform:translateY(100%);pointer-events:none; }
-  #page-transition.enter { animation:pgEnter .42s cubic-bezier(.76,0,.24,1) forwards; }
-  #page-transition.exit  { animation:pgExit  .42s cubic-bezier(.76,0,.24,1) forwards; }
-  @keyframes pgEnter { from{transform:translateY(100%)}to{transform:translateY(0)} }
-  @keyframes pgExit  { from{transform:translateY(0)}to{transform:translateY(-100%)} }
-
-  /* ── BASE ────────────────────────────────────────────── */
-  * { box-sizing: border-box; }
-  body { cursor: none; }
-
-  .auth-wrap {
-    min-height: 100vh;
-    background: var(--black);
-    font-family: 'Inter', sans-serif;
-    padding-top: 60px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    align-items: center;
-  }
-
-  /* ── LADO ESQUERDO — EDITORIAL ────────────────────────── */
-  .auth-editorial {
-    padding: 4rem 3rem 4rem 4rem;
-    display: flex; flex-direction: column; justify-content: center;
-    min-height: calc(100vh - 60px);
-    border-right: 1px solid var(--border);
-    opacity: 0; animation: revealUp .9s cubic-bezier(.16,1,.3,1) forwards .1s;
-  }
-
-  .auth-eyebrow {
-    display: inline-flex; align-items: center; gap: .6rem;
-    font-size: .68rem; font-weight: 500; letter-spacing: .25em;
-    text-transform: uppercase; color: var(--lime); margin-bottom: 1.5rem;
-  }
-  .auth-eyebrow::before { content:''; display:block; width:28px; height:1px; background:var(--lime); }
-
-  .auth-editorial-title {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: clamp(3.5rem, 7vw, 6rem);
-    line-height: .92; color: var(--white); margin: 0 0 1.5rem;
-  }
-  .auth-editorial-title span { color: var(--lime); }
-
-  .auth-editorial-sub {
-    font-size: .9375rem; color: var(--text-secondary);
-    font-weight: 300; line-height: 1.65; max-width: 340px;
-  }
-
-  /* Detalhe decorativo */
-  .auth-editorial-detail {
-    margin-top: 3rem; padding-top: 2rem;
-    border-top: 1px solid var(--border);
-    display: flex; align-items: center; gap: 1.25rem;
-  }
-  .auth-detail-num {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 2.5rem; color: var(--lime); line-height: 1; letter-spacing: .02em;
-  }
-  .auth-detail-label { font-size: .78rem; color: var(--text-muted); line-height: 1.5; }
-
-  /* ── LADO DIREITO — FORM ─────────────────────────────── */
-  .auth-form-side {
-    padding: 4rem 4rem 4rem 3rem;
-    display: flex; flex-direction: column; justify-content: center;
-    min-height: calc(100vh - 60px);
-    opacity: 0; animation: revealUp .9s cubic-bezier(.16,1,.3,1) forwards .25s;
-  }
-
-  .auth-form-title {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: clamp(2rem, 4vw, 2.75rem);
-    line-height: 1; color: var(--white); margin: 0 0 2rem;
-  }
-  .auth-form-title span { color: var(--lime); }
-
-  .auth-form {
-    display: flex; flex-direction: column; gap: 1.125rem;
-  }
-
-  .auth-field { display: flex; flex-direction: column; gap: .45rem; }
-
-  .auth-label {
-    font-size: .72rem; font-weight: 500; color: var(--text-muted);
-    letter-spacing: .08em; text-transform: uppercase;
-  }
-
-  .auth-input {
-    background: var(--surface-2); border: 1px solid var(--border);
-    border-radius: 10px; padding: .875rem 1rem;
-    font-family: 'Inter', sans-serif; font-size: .9375rem;
-    color: var(--white); outline: none; transition: all .2s ease; width: 100%; cursor: none;
-  }
-  .auth-input::placeholder { color: var(--text-muted); }
-  .auth-input:focus { border-color: var(--lime); box-shadow: 0 0 0 3px rgba(221, 120, 82,0.07); }
-
-  .auth-remember {
-    display: flex; align-items: center; gap: .5rem;
-    font-size: .875rem; color: var(--text-muted); cursor: none;
-  }
-  .auth-remember input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--lime); cursor: none; }
-
-  .auth-submit {
-    background: var(--lime); color: var(--black); border: none;
-    border-radius: 100px; padding: .9rem 1.75rem;
-    font-family: 'Inter', sans-serif; font-size: .9375rem; font-weight: 600;
-    cursor: none; transition: all .22s ease; width: 100%; margin-top: .375rem;
-  }
-  .auth-submit:hover { background: var(--lime-dim); transform: translateY(-2px); box-shadow: 0 10px 28px rgba(221, 120, 82,0.18); }
-
-  .auth-links {
-    display: flex; flex-direction: column; gap: .5rem;
-    margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);
-  }
-  .auth-links a {
-    font-size: .875rem; color: var(--text-muted); text-decoration: none;
-    transition: color .2s ease; display: flex; align-items: center; gap: .4rem;
-  }
-  .auth-links a:hover { color: var(--lime); }
-
-  /* ── ANIMAÇÕES ───────────────────────────────────────── */
-  @keyframes revealUp { from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)} }
-
-  /* ── RESPONSIVE ──────────────────────────────────────── */
-  @media(max-width:768px) {
-    .auth-wrap { grid-template-columns: 1fr; }
-    .auth-editorial { display: none; }
-    .auth-form-side { padding: 2.5rem 1.5rem; min-height: auto; }
-    .auth-form-title { font-size: 2.25rem; }
-  }
-</style>
-
-<div class="auth-wrap">
-
-  <!-- LADO EDITORIAL -->
-  <div class="auth-editorial">
-    <div class="auth-eyebrow">A nova forma de lavar</div>
-    <h1 class="auth-editorial-title">
-      Seu carro,<br>
-      <span>seu jeito.</span>
+  <!-- ── EDITORIAL ──────────────────────────────────── -->
+  <aside class="loov-auth-editorial">
+    <div class="loov-eyebrow"><span class="dot"></span>A NOVA FORMA DE LAVAR</div>
+    <h1 class="loov-h1" style="text-align:left;">
+      Seu carro,<br><span class="accent">seu jeito</span>.
     </h1>
-    <p class="auth-editorial-sub">
+    <p class="loov-lead" style="margin-left:0;text-align:left;">
       Você escolhe o lugar, o horário e o serviço.<br>
       A Loov cuida do resto.
     </p>
-    <div class="auth-editorial-detail">
-      <div class="auth-detail-num">100%</div>
-      <div class="auth-detail-label">online<br><span style="color:#e0dbd0;">sem ligação, sem fila</span></div>
+    <div class="loov-auth-detail-row">
+      <div class="loov-auth-detail-num">100%</div>
+      <div class="loov-auth-detail-label">online<br><span class="weak">sem ligação, sem fila</span></div>
     </div>
-  </div>
+  </aside>
 
-  <!-- FORM -->
-  <div class="auth-form-side">
-    <h2 class="auth-form-title">Bem-vindo<span>.</span></h2>
+  <!-- ── FORM ──────────────────────────────────────── -->
+  <section class="loov-auth-form-side">
+    <div class="loov-eyebrow"><span class="dot"></span>ENTRAR</div>
+    <h2 class="loov-h1" style="font-size:clamp(28px,4vw,40px);text-align:left;">
+      Bem-<span class="accent">vindo</span>.
+    </h2>
+    <p class="loov-lead" style="margin-left:0;text-align:left;margin-bottom:32px;">
+      Entre pra agendar ou gerenciar seu lava-rápido.
+    </p>
 
-    <%= form_for(resource, as: resource_name, url: session_path(resource_name), html: { class: "auth-form" }) do |f| %>
+    <%= form_for(resource, as: resource_name, url: session_path(resource_name)) do |f| %>
 
-      <div class="auth-field">
-        <%= f.label :email, "E-mail", class: "auth-label" %>
+      <div class="loov-field">
+        <%= f.label :email, "E-mail", class: "loov-label" %>
         <%= f.email_field :email, autofocus: true, autocomplete: "email",
-            class: "auth-input", placeholder: "seu@email.com" %>
+            class: "loov-input", placeholder: "seu@email.com" %>
       </div>
 
-      <div class="auth-field">
-        <%= f.label :password, "Senha", class: "auth-label" %>
+      <div class="loov-field">
+        <%= f.label :password, "Senha", class: "loov-label" %>
         <%= f.password_field :password, autocomplete: "current-password",
-            class: "auth-input", placeholder: "••••••••" %>
+            class: "loov-input", placeholder: "••••••••" %>
       </div>
 
       <% if devise_mapping.rememberable? %>
-        <label class="auth-remember">
-          <%= f.check_box :remember_me %>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--graphite);margin-bottom:18px;cursor:pointer;">
+          <%= f.check_box :remember_me, style: "width:16px;height:16px;accent-color:var(--coral-500);" %>
           Lembrar de mim
         </label>
       <% end %>
 
-      <%= f.submit "Entrar", class: "auth-submit" %>
+      <%= f.submit "Entrar", class: "loov-btn-primary loov-btn-block loov-btn-lg" %>
 
     <% end %>
 
-    <div class="auth-links">
+    <div class="loov-footer-row">
       <%= render "devise/shared/links" %>
     </div>
-  </div>
+  </section>
 
 </div>
-
-<script>
-(function() {
-  const cursor = document.getElementById('loov-cursor');
-  const trail  = document.getElementById('loov-cursor-trail');
-  if (cursor && trail) {
-    let mx=-100,my=-100,tx=-100,ty=-100;
-    document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cursor.style.left=mx+'px';cursor.style.top=my+'px';});
-    (function anim(){tx+=(mx-tx)*0.12;ty+=(my-ty)*0.12;trail.style.left=tx+'px';trail.style.top=ty+'px';requestAnimationFrame(anim);})();
-    document.addEventListener('mouseover',e=>{if(e.target.closest('a,button,input,select,textarea'))document.body.classList.add('cursor-hover');});
-    document.addEventListener('mouseout', e=>{if(e.target.closest('a,button,input,select,textarea'))document.body.classList.remove('cursor-hover');});
-    document.addEventListener('mouseleave',()=>{cursor.style.opacity='0';trail.style.opacity='0';});
-    document.addEventListener('mouseenter',()=>{cursor.style.opacity='1';trail.style.opacity='1';});
-  }
-  const pt = document.getElementById('page-transition');
-  if (pt) {
-    document.addEventListener('click',e=>{const link=e.target.closest('a[href]');if(!link)return;const href=link.getAttribute('href');if(!href||href.startsWith('#')||href.startsWith('mailto')||link.target==='_blank')return;if(href.startsWith('http')&&!href.includes(window.location.hostname))return;e.preventDefault();pt.classList.add('enter');setTimeout(()=>window.location.href=href,400);});
-    window.addEventListener('pageshow',()=>{pt.classList.remove('enter');pt.classList.add('exit');setTimeout(()=>pt.classList.remove('exit'),440);});
-  }
-})();
-</script>

@@ -4,18 +4,69 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Link inválido — Loov</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: #fafaf6; color: #28231c;
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      padding: 40px 20px;
+      -webkit-font-smoothing: antialiased;
+    }
+    .card {
+      width: 100%; max-width: 440px;
+      background: #fefefd;
+      border: 1px solid #e0dbd0;
+      border-radius: 24px;
+      padding: 44px 32px;
+      text-align: center;
+      box-shadow: 0 14px 40px rgba(40,35,28,0.06);
+    }
+    .icon-wrap {
+      width: 72px; height: 72px;
+      border-radius: 22px;
+      background: #fdecec; border: 1px solid #f5cccc;
+      margin: 0 auto 18px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; letter-spacing: 2px;
+      color: #c85050; text-transform: uppercase;
+      padding: 6px 14px;
+      background: #fdecec;
+      border: 1px solid #f5cccc;
+      border-radius: 100px;
+      margin-bottom: 14px;
+    }
+    h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 26px;
+      letter-spacing: -0.5px;
+      color: #28231c;
+      margin-bottom: 10px;
+    }
+    p {
+      color: #575148;
+      font-size: 14px; line-height: 1.55;
+    }
+  </style>
 </head>
-<body style="margin:0;background:#fafaf6;">
-<div style="font-family:-apple-system,Helvetica,Arial,sans-serif;background:#fafaf6;min-height:100vh;padding:32px 16px;box-sizing:border-box;">
-  <div style="max-width:420px;margin:0 auto;background:#fefefd;border:1px solid #e0dbd0;border-radius:18px;padding:28px;text-align:center;box-shadow:0 2px 6px rgba(25,20,15,0.05);">
-    <div style="width:64px;height:64px;border-radius:32px;background:#fdecec;border:1px solid #f5cccc;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c85050" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+<body>
+  <div class="card">
+    <div class="icon-wrap">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#c85050" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
     </div>
-    <h1 style="font-size:20px;font-weight:700;letter-spacing:-0.3px;color:#28231c;margin:0 0 6px;">Link inválido</h1>
-    <p style="color:#575148;font-size:13px;line-height:19px;margin:0;">
-      <%= @error %>
-    </p>
+    <div class="eyebrow">LINK INVÁLIDO</div>
+    <h1>Não foi possível continuar</h1>
+    <p><%= @error %></p>
   </div>
-</div>
 </body>
 </html>

@@ -1,63 +1,68 @@
-<div class="max-w-4xl mx-auto mt-16 p-6">
-  <!-- Título da Página -->
-  <h1 class="text-3xl font-semibold text-center mb-8 gradient-text fade-in-welcome">
-    Detalhes do Agendamento
-  </h1>
-
-  <!-- Detalhes do Agendamento -->
-  <div class="appointment-card fade-in-section">
-    <h2 class="text-xl font-medium mb-4" style="color: #28231c;">
-      Agendamento #<%= @appointment.id %>
-    </h2>
-    <p class="flex items-center mb-2" style="color: #B0B0B0;">
-      <i class="fas fa-car-wash mr-2 icon-hover" style="color: #6D54A9;"></i>
-      <strong style="color: #28231c;">Lava-rápido:</strong> <span class="ml-1"><%= @appointment.car_wash.name %></span>
+<div class="loov-page loov-page--narrow">
+  <div class="loov-hero">
+    <div class="loov-eyebrow"><span class="dot"></span>AGENDAMENTO #<%= @appointment.id %></div>
+    <h1 class="loov-h1">
+      Detalhes do <span class="accent">agendamento</span>.
+    </h1>
+    <p class="loov-lead">
+      Confira os detalhes da sua reserva.
     </p>
-    <p class="flex items-center mb-2" style="color: #B0B0B0;">
-      <i class="fas fa-tools mr-2 icon-hover" style="color: #6D54A9;"></i>
-      <strong style="color: #28231c;">Serviço:</strong> <span class="ml-1"><%= @appointment.service.title %></span>
-    </p>
-    <p class="flex items-center mb-2" style="color: #B0B0B0;">
-      <i class="fas fa-clock mr-2 icon-hover" style="color: #6D54A9;"></i>
-      <strong style="color: #28231c;">Data:</strong> <span class="ml-1"><%= @appointment.scheduled_at.strftime("%d/%m/%Y às %H:%M") %></span>
-    </p>
-    <p class="flex items-center mb-2" style="color: #B0B0B0;">
-      <i class="fas fa-money-bill-wave mr-2 icon-hover" style="color: #6D54A9;"></i>
-      <strong style="color: #28231c;">Preço:</strong> <span class="ml-1">R$ <%= @appointment.service.price.to_f.round(2) %></span>
-    </p>
-    <p class="flex items-center mb-2" style="color: #B0B0B0;">
-      <i class="fas fa-info-circle mr-2 icon-hover" style="color: #6D54A9;"></i>
-      <strong style="color: #28231c;">Status:</strong> <span class="ml-1"><%= @appointment.status.capitalize %></span>
-    </p>
-    <% if @appointment.status != 'cancelled' && @appointment.scheduled_at > DateTime.now %>
-      <div class="mt-6">
-        <%= button_to 'Cancelar Agendamento', cancel_appointment_path(@appointment), method: :delete, data: { confirm: 'Tem certeza que deseja cancelar este agendamento?' }, class: 'btn-outline w-full text-center' %>
-      </div>
-    <% end %>
   </div>
 
-  <!-- Script para Animações -->
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // Animação de fade-in para o título
-      const welcomeTitle = document.querySelector('h1.fade-in-welcome');
-      welcomeTitle.style.opacity = '0';
-      welcomeTitle.style.transform = 'translateY(20px)';
-      setTimeout(() => {
-        welcomeTitle.style.opacity = '1';
-        welcomeTitle.style.transform = 'translateY(0)';
-      }, 100);
+  <div class="loov-card loov-card--lg">
+    <% status_pill_class = case @appointment.status
+        when 'confirmed'              then 'loov-pill--success'
+        when 'cancelled'              then 'loov-pill--danger'
+        when 'pending_acceptance'     then 'loov-pill--warn'
+        else 'loov-pill--neutral' end %>
+    <% status_label = case @appointment.status
+        when 'confirmed'           then 'Confirmado'
+        when 'cancelled'           then 'Cancelado'
+        when 'pending_acceptance'  then 'Aguardando aceite'
+        when 'rejected'            then 'Recusado'
+        when 'completed'           then 'Concluído'
+        else @appointment.status.to_s.humanize end %>
 
-      // Animação de fade-in para as seções
-      const sections = document.querySelectorAll('.fade-in-section');
-      sections.forEach((section, index) => {
-        section.style.opacity = '0';
-        section.style.transform = 'translateY(20px)';
-        setTimeout(() => {
-          section.style.opacity = '1';
-          section.style.transform = 'translateY(0)';
-        }, (index + 1) * 200);
-      });
-    });
-  </script>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:18px;">
+      <h2 class="loov-card-title" style="font-size:20px;">
+        <%= @appointment.car_wash.name %>
+      </h2>
+      <span class="loov-pill <%= status_pill_class %>"><%= status_label %></span>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--cream);border:1px solid var(--stone);border-radius:12px;">
+        <div class="loov-card-icon" style="width:36px;height:36px;border-radius:10px;margin:0;font-size:13px;"><i class="fas fa-screwdriver-wrench"></i></div>
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.4px;color:var(--ash);text-transform:uppercase;">Serviço</div>
+          <div style="font-size:14.5px;font-weight:600;color:var(--ink);"><%= @appointment.service.title %></div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--cream);border:1px solid var(--stone);border-radius:12px;">
+        <div class="loov-card-icon" style="width:36px;height:36px;border-radius:10px;margin:0;font-size:13px;"><i class="fas fa-clock"></i></div>
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.4px;color:var(--ash);text-transform:uppercase;">Data e hora</div>
+          <div style="font-size:14.5px;font-weight:600;color:var(--ink);"><%= @appointment.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%d/%m/%Y às %H:%M") %></div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--cream);border:1px solid var(--stone);border-radius:12px;">
+        <div class="loov-card-icon" style="width:36px;height:36px;border-radius:10px;margin:0;font-size:13px;"><i class="fas fa-tag"></i></div>
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.4px;color:var(--ash);text-transform:uppercase;">Valor</div>
+          <div style="font-size:14.5px;font-weight:600;color:var(--ink);">R$ <%= sprintf('%.2f', @appointment.service.price.to_f) %></div>
+        </div>
+      </div>
+    </div>
+
+    <% if @appointment.status != 'cancelled' && @appointment.scheduled_at > DateTime.now %>
+      <hr class="loov-divider">
+      <%= button_to 'CANCELAR AGENDAMENTO', cancel_appointment_path(@appointment),
+          method: :delete,
+          data: { confirm: 'Tem certeza que deseja cancelar este agendamento?' },
+          class: 'loov-btn-secondary loov-btn-block loov-btn-lg',
+          style: 'border-color:rgba(200,80,80,0.3);color:#c85050;' %>
+    <% end %>
+  </div>
 </div>

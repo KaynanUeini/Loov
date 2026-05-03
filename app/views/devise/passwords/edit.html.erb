@@ -1,25 +1,37 @@
-<h2>Change your password</h2>
+<div class="loov-center-page">
+  <div class="loov-center-card">
+    <div class="loov-eyebrow"><span class="dot"></span>NOVA SENHA</div>
+    <h1 class="loov-h1" style="font-size:clamp(28px,4.5vw,38px);">
+      Criar uma <span class="accent">nova senha</span>.
+    </h1>
+    <p class="loov-lead">
+      Defina sua nova senha e recupere o acesso à sua conta.
+    </p>
 
-<%= form_for(resource, as: resource_name, url: password_path(resource_name), html: { method: :put }) do |f| %>
-  <%= render "devise/shared/error_messages", resource: resource %>
-  <%= f.hidden_field :reset_password_token %>
+    <%= form_for(resource, as: resource_name, url: password_path(resource_name), html: { method: :put, style: "text-align:left;" }) do |f| %>
+      <%= render "devise/shared/error_messages", resource: resource %>
+      <%= f.hidden_field :reset_password_token %>
 
-  <div class="field">
-    <%= f.label :password, "New password" %><br />
-    <% if @minimum_password_length %>
-      <em>(<%= @minimum_password_length %> characters minimum)</em><br />
+      <div class="loov-field">
+        <%= f.label :password, "Nova senha", class: "loov-label" %>
+        <%= f.password_field :password, autofocus: true, autocomplete: "new-password",
+            class: "loov-input", placeholder: "••••••••" %>
+        <% if @minimum_password_length %>
+          <div class="loov-help">Mínimo <%= @minimum_password_length %> caracteres.</div>
+        <% end %>
+      </div>
+
+      <div class="loov-field">
+        <%= f.label :password_confirmation, "Confirmar senha", class: "loov-label" %>
+        <%= f.password_field :password_confirmation, autocomplete: "new-password",
+            class: "loov-input", placeholder: "Repita a senha" %>
+      </div>
+
+      <%= f.submit "Alterar senha", class: "loov-btn-primary loov-btn-block loov-btn-lg", style: "margin-top:12px;" %>
     <% end %>
-    <%= f.password_field :password, autofocus: true, autocomplete: "new-password" %>
-  </div>
 
-  <div class="field">
-    <%= f.label :password_confirmation, "Confirm new password" %><br />
-    <%= f.password_field :password_confirmation, autocomplete: "new-password" %>
+    <div class="loov-footer-row">
+      <%= render "devise/shared/links" %>
+    </div>
   </div>
-
-  <div class="actions">
-    <%= f.submit "Change my password" %>
-  </div>
-<% end %>
-
-<%= render "devise/shared/links" %>
+</div>

@@ -1,16 +1,27 @@
-<h2>Forgot your password?</h2>
+<div class="loov-center-page">
+  <div class="loov-center-card">
+    <div class="loov-eyebrow"><span class="dot"></span>RECUPERAR ACESSO</div>
+    <h1 class="loov-h1" style="font-size:clamp(28px,4.5vw,38px);">
+      Esqueceu a <span class="accent">senha</span>?
+    </h1>
+    <p class="loov-lead">
+      Digite seu e-mail. Vamos enviar um link pra você criar uma nova senha.
+    </p>
 
-<%= form_for(resource, as: resource_name, url: password_path(resource_name), html: { method: :post }) do |f| %>
-  <%= render "devise/shared/error_messages", resource: resource %>
+    <%= form_for(resource, as: resource_name, url: password_path(resource_name), html: { method: :post, style: "text-align:left;" }) do |f| %>
+      <%= render "devise/shared/error_messages", resource: resource %>
 
-  <div class="field">
-    <%= f.label :email %><br />
-    <%= f.email_field :email, autofocus: true, autocomplete: "email" %>
+      <div class="loov-field">
+        <%= f.label :email, "E-mail", class: "loov-label" %>
+        <%= f.email_field :email, autofocus: true, autocomplete: "email",
+            class: "loov-input", placeholder: "seu@email.com" %>
+      </div>
+
+      <%= f.submit "Enviar instruções", class: "loov-btn-primary loov-btn-block loov-btn-lg", style: "margin-top:12px;" %>
+    <% end %>
+
+    <div class="loov-footer-row">
+      <%= render "devise/shared/links" %>
+    </div>
   </div>
-
-  <div class="actions">
-    <%= f.submit "Send me reset password instructions" %>
-  </div>
-<% end %>
-
-<%= render "devise/shared/links" %>
+</div>
