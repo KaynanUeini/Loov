@@ -2038,8 +2038,81 @@
   </div>
   <% end %>
 
+  <%
+    # Greeting por horário (substitui "SEU CARRO, SEU JEITO")
+    now_sp_hero = Time.current.in_time_zone("America/Sao_Paulo")
+    h_hero = now_sp_hero.hour
+    greet_hero = if h_hero < 5      then "Boa madrugada"
+                 elsif h_hero < 12  then "Bom dia"
+                 elsif h_hero < 18  then "Boa tarde"
+                 else                    "Boa noite"
+                 end
+    weekdays_hero = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado']
+    months_hero   = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro']
+    day_hero  = weekdays_hero[now_sp_hero.wday].capitalize
+    date_hero = "#{now_sp_hero.day} de #{months_hero[now_sp_hero.month - 1]}"
+    first_name_hero = if user_signed_in?
+      (current_user.display_name.to_s.split(' ').first.presence || current_user.email.split('@').first.capitalize)
+    end
+  %>
+  <style>
+    .home-greet-eyebrow {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; letter-spacing: 2px;
+      color: var(--coral-500) !important; text-transform: uppercase;
+      padding: 6px 14px;
+      background: var(--coral-50);
+      border: 1px solid var(--coral-100);
+      border-radius: 100px;
+      margin-bottom: 16px;
+    }
+    .home-greet-title {
+      font-family: 'Space Grotesk', sans-serif !important;
+      font-weight: 700;
+      font-size: clamp(36px, 6vw, 56px);
+      letter-spacing: -1.2px;
+      line-height: 1.05;
+      color: var(--ink) !important;
+      margin: 0 0 1.75rem 0;
+    }
+    .home-greet-title .greet-name {
+      color: var(--coral-500);
+      position: relative;
+      white-space: nowrap;
+    }
+    .home-greet-title .greet-name::after {
+      content: ''; position: absolute; left: 0; right: 0; bottom: -3px;
+      height: 4px;
+      background: linear-gradient(90deg, var(--coral-300), var(--coral-500));
+      border-radius: 4px;
+      opacity: .7;
+    }
+    .home-greet-wave {
+      display: inline-block;
+      animation: home-greet-wave 2.4s ease-in-out infinite;
+      transform-origin: 70% 70%;
+      font-size: 0.9em;
+      margin-left: 12px;
+    }
+    @keyframes home-greet-wave {
+      0%, 60%, 100% { transform: rotate(0); }
+      10% { transform: rotate(14deg); }
+      20% { transform: rotate(-8deg); }
+      30% { transform: rotate(14deg); }
+      40% { transform: rotate(-4deg); }
+      50% { transform: rotate(10deg); }
+    }
+
+    /* Empilhar localização abaixo da busca (em vez de lado a lado) */
+    .home-search-row { flex-direction: column !important; align-items: stretch !important; }
+    .home-search-row .home-location-btn { justify-content: center; }
+  </style>
   <div class="home-top">
-    <div class="home-tagline">SEU CARRO, <span>SEU JEITO</span>.</div>
+    <div class="home-greet-eyebrow"><%= day_hero %> · <%= date_hero %></div>
+    <h1 class="home-greet-title">
+      <%= greet_hero %><% if first_name_hero %>,<br><span class="greet-name"><%= first_name_hero %></span><% end %><span class="home-greet-wave">👋</span>
+    </h1>
     <%= form_with url: root_path, method: :get, local: true do %>
     <div class="home-search-row">
       <div class="home-search-field" style="position:relative;">
@@ -2088,84 +2161,6 @@
   <% end %>
 
   <% if user_signed_in? && current_user.client? %>
-
-  <%# ── GREETING ─ saudação por horário + nome + dia da semana ─ %>
-  <%
-    now_sp = Time.current.in_time_zone("America/Sao_Paulo")
-    h = now_sp.hour
-    greet = if h < 5      then "Boa madrugada"
-            elsif h < 12  then "Bom dia"
-            elsif h < 18  then "Boa tarde"
-            else               "Boa noite"
-            end
-    weekdays_full = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado']
-    months_full   = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro']
-    day_label  = weekdays_full[now_sp.wday].capitalize
-    date_label = "#{now_sp.day} de #{months_full[now_sp.month - 1]}"
-    first_name = current_user.display_name.to_s.split(' ').first.presence || current_user.email.split('@').first.capitalize
-  %>
-  <style>
-    .greet-section {
-      max-width: 1200px; margin: 0 auto;
-      padding: 2.5rem 1.5rem 1rem;
-    }
-    .greet-eyebrow {
-      display: inline-block;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px; letter-spacing: 2px;
-      color: var(--coral-500); text-transform: uppercase;
-      padding: 6px 14px;
-      background: var(--coral-50);
-      border: 1px solid var(--coral-100);
-      border-radius: 100px;
-      margin-bottom: 18px;
-    }
-    .greet-title {
-      font-family: 'Space Grotesk', sans-serif;
-      font-weight: 700;
-      font-size: clamp(40px, 6vw, 64px);
-      letter-spacing: -1.2px;
-      line-height: 1.05;
-      color: var(--ink);
-      margin: 0;
-    }
-    .greet-title .name {
-      color: var(--coral-500);
-      position: relative;
-      white-space: nowrap;
-    }
-    .greet-title .name::after {
-      content: ''; position: absolute; left: 0; right: 0; bottom: -3px;
-      height: 4px;
-      background: linear-gradient(90deg, var(--coral-300), var(--coral-500));
-      border-radius: 4px;
-      opacity: .7;
-    }
-    .greet-wave {
-      display: inline-block;
-      animation: greet-wave 2.4s ease-in-out infinite;
-      transform-origin: 70% 70%;
-      font-size: 0.95em;
-      margin-left: 12px;
-    }
-    @keyframes greet-wave {
-      0%, 60%, 100% { transform: rotate(0); }
-      10% { transform: rotate(14deg); }
-      20% { transform: rotate(-8deg); }
-      30% { transform: rotate(14deg); }
-      40% { transform: rotate(-4deg); }
-      50% { transform: rotate(10deg); }
-    }
-    @media (max-width: 600px) {
-      .greet-section { padding: 1.75rem 1.25rem .5rem; }
-    }
-  </style>
-  <section class="greet-section">
-    <div class="greet-eyebrow"><%= day_label %> · <%= date_label %></div>
-    <h1 class="greet-title">
-      <%= greet %>,<br><span class="name"><%= first_name %></span><span class="greet-wave">👋</span>
-    </h1>
-  </section>
 
   <%# ── LAST MINUTE — espelha o app (zap icon, ver todos, helper text, cards dark ink) ── %>
   <% if @disponivel_has_location %>
