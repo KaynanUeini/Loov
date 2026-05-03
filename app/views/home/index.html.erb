@@ -2182,7 +2182,10 @@
           <% cw   = slot_data[:car_wash] %>
           <% svc  = slot_data[:services].first %>
           <% addr = [cw.try(:logradouro), cw.try(:bairro)].compact_blank.join(" · ").presence || cw.address.to_s %>
-          <%= link_to checkout_disponivel_index_path(car_wash_id: cw.id, service_id: svc.id, slot: slot_data[:slot].iso8601), class: "lm-card" do %>
+          <%# Mesma lógica do app: o card do Last minute na home leva pra
+              tela /disponivel (lista de todos os slots), pro cliente
+              escolher e confirmar lá — não direto pro checkout. %>
+          <%= link_to disponivel_index_path(latitude: params[:latitude], longitude: params[:longitude]), class: "lm-card" do %>
             <div class="lm-blob"></div>
             <div class="lm-distance-pill">
               <i class="fas fa-location-arrow"></i>
