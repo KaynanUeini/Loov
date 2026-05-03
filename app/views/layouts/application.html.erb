@@ -669,14 +669,14 @@
         const denyInstructions = () => {
           if (isIOS) {
             return '<strong>Permissão negada.</strong><br>'
-                 + 'No iPhone/iPad: toque em <b>"aA"</b> na barra de endereço → '
-                 + '<b>Ajustes do site</b> → <b>Localização</b> → <b>Permitir</b>. '
-                 + 'Depois recarregue a página.';
+                 + '1. Abra <b>Ajustes do iPhone</b> (não no Safari) → <b>Privacidade e Segurança</b> → <b>Serviços de Localização</b> → certifique-se que está <b>ativado</b>.<br>'
+                 + '2. Role até <b>Sites do Safari</b> e selecione <b>Perguntar</b> ou <b>Permitir</b>.<br>'
+                 + '3. Volte ao Safari, recarregue a página e tente de novo.';
           }
           if (isSafari) {
             return '<strong>Permissão negada.</strong><br>'
-                 + 'No Safari: menu <b>Safari</b> → <b>Ajustes para este site</b> → '
-                 + '<b>Localização</b> → <b>Permitir</b>.';
+                 + '1. <b>Ajustes do Sistema</b> → <b>Privacidade e Segurança</b> → <b>Serviços de Localização</b> → ative para Safari.<br>'
+                 + '2. No Safari: <b>Safari</b> menu → <b>Ajustes para este site</b> → <b>Localização: Permitir</b>.';
           }
           return '<strong>Permissão de localização negada.</strong><br>'
                + 'Clique no ícone de cadeado/site na barra de endereço, mude '
@@ -755,21 +755,11 @@
           );
         };
 
-        // Se já temos status "denied" persistente, mostra erro direto
-        if (navigator.permissions && navigator.permissions.query) {
-          navigator.permissions.query({ name: 'geolocation' })
-            .then(p => {
-              if (p.state === 'denied') {
-                showToast(denyInstructions(), true, true);
-                onFail({ code: 1 });
-              } else {
-                tryGeo(true);
-              }
-            })
-            .catch(() => tryGeo(true));
-        } else {
-          tryGeo(true);
-        }
+        // IMPORTANTE: NÃO pré-bloquear com Permissions.query — Safari iOS
+        // retorna estado cacheado mesmo depois do usuário liberar nos
+        // ajustes do iPhone. Sempre tentar o getCurrentPosition real;
+        // se falhar, o err.code===1 mostra o toast com instruções.
+        tryGeo(true);
       };
 
       // Reload com lat/lng nos params
@@ -805,27 +795,9 @@
           } catch (e) {
             localStorage.removeItem('loov_last_coords');
           }
-        } else if (navigator.permissions && navigator.permissions.query) {
-          navigator.permissions.query({ name: 'geolocation' }).then(p => {
-            if (p.state === 'granted') {
-              navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                  try {
-                    localStorage.setItem('loov_last_coords', JSON.stringify({
-                      lat: pos.coords.latitude, lng: pos.coords.longitude
-                    }));
-                  } catch (e) {}
-                  const url = new URL(window.location);
-                  url.searchParams.set('latitude', pos.coords.latitude);
-                  url.searchParams.set('longitude', pos.coords.longitude);
-                  window.location.href = url.toString();
-                },
-                () => {},
-                { enableHighAccuracy: false, timeout: 8000, maximumAge: 60000 }
-              );
-            }
-          }).catch(() => {});
         }
+        // Não auto-pedimos geolocation aqui pra não causar prompt no
+        // primeiro acesso. O usuário aciona via botão "Usar localização".
       }
       <% end %>
 
