@@ -87,16 +87,49 @@ module Owner
           closure.start_date,
           closure.end_date
         )
+        .includes(:user, :service, :car_wash)
+
+      reason_text = closure.reason.presence || "lava-rápido fechado"
+      period_str  = closure.display_period
 
       count = 0
       affected.each do |appointment|
-        appointment.update_columns(status: "cancelled", updated_at: Time.current)
-        # Envia e-mail de cancelamento
+        appointment.update_columns(
+          status:              "cancelled",
+          cancelled_by_role:   "closure",
+          cancellation_reason: "Lava-rápido fechado em #{period_str}#{reason_text.present? ? " (#{reason_text})" : ''}",
+          updated_at:          Time.current,
+        )
+
+        # E-mail
         begin
           AppointmentMailer.closure_cancellation(appointment, closure).deliver_now
         rescue => e
-          Rails.logger.error("[ClosuresController] Erro ao enviar e-mail para appointment ##{appointment.id}: #{e.message}")
+          Rails.logger.error("[ClosuresController] Erro email appt ##{appointment.id}: #{e.message}")
         end
+
+        # Push pro cliente — best-effort
+        if appointment.user.present?
+          begin
+            shop_name = appointment.car_wash&.name || "Lava-rápido"
+            svc_title = appointment.service&.title || "Serviço"
+            when_str  = appointment.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%d/%m às %H:%M")
+            ExpoPushNotifier.new.notify_user(
+              appointment.user,
+              title: "#{shop_name} cancelou sua reserva",
+              body:  "#{svc_title} em #{when_str} foi cancelado: #{reason_text}.",
+              data:  {
+                type:           "appointment_cancelled",
+                appointment_id: appointment.id,
+                car_wash_id:    appointment.car_wash_id,
+                reason:         "closure",
+              }
+            )
+          rescue => e
+            Rails.logger.error("[ClosuresController] Push falhou ##{appointment.id}: #{e.message}")
+          end
+        end
+
         count += 1
       end
       count

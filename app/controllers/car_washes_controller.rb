@@ -88,6 +88,8 @@ class CarWashesController < ApplicationController
             closes_sec = today_oh.closes_at.seconds_since_midnight.to_i rescue 86400
             open_now   = now_seconds >= opens_sec && now_seconds <= closes_sec
           end
+          # CarWashClosure ativo bate hoje? Marca como fechado.
+          open_now = false if open_now && cw.closed_on?(Date.current)
 
           rating_info = rating_map[cw.id] || { avg: 0.0, count: 0 }
 
@@ -159,10 +161,10 @@ class CarWashesController < ApplicationController
         rating_avg    = rating_stats[0].to_f.round(1)
         reviews_count = rating_stats[1].to_i
 
-        # Aberto agora?
+        # Aberto agora? (operating_hours + nenhum CarWashClosure ativo)
         now_sp     = Time.current.in_time_zone("America/Sao_Paulo")
         today_oh   = cw.operating_hours.find_by(day_of_week: now_sp.wday)
-        open_now   = open_at_time?(today_oh, now_sp)
+        open_now   = open_at_time?(today_oh, now_sp) && !cw.closed_on?(now_sp.to_date)
 
         # Próxima vaga (em minutos a partir de agora) — null se fechado o dia inteiro.
         next_slot_minutes = next_available_slot_minutes(cw, now_sp)

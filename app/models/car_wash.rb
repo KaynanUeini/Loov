@@ -33,6 +33,13 @@ class CarWash < ApplicationRecord
     latitude.present? && longitude.present? && latitude != 0.0 && longitude != 0.0
   end
 
+  # Verifica se há um CarWashClosure ativo cobrindo a data informada
+  # (default: hoje). Usado pelos endpoints client-facing pra filtrar/marcar
+  # como fechado lavas-rápidos com fechamento programado.
+  def closed_on?(date = Date.current)
+    car_wash_closures.where("start_date <= ? AND end_date >= ?", date, date).exists?
+  end
+
   def full_address
     [logradouro, bairro, cidade, uf].select(&:present?).join(", ")
   end

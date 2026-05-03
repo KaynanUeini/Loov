@@ -25,6 +25,14 @@ class DisponivelController < ApplicationController
     car_washes_scope = CarWash.where(id: open_car_wash_ids).distinct
     car_washes_scope = car_washes_scope.near([@lat, @lon], 5, units: :km) if @lat && @lon
 
+    # Exclui lava-rápidos com fechamento ativo cobrindo HOJE (férias,
+    # feriado, manutenção). Sub-query mais eficiente que ruby filter.
+    today          = Date.current
+    closed_ids_now = CarWashClosure
+      .where("start_date <= ? AND end_date >= ?", today, today)
+      .pluck(:car_wash_id)
+    car_washes_scope = car_washes_scope.where.not(id: closed_ids_now) if closed_ids_now.any?
+
     # Filtro por car_wash específico — usado pelo BookingScreen quando o
     # cliente clica num slot disponivel_only e quer ir direto pro Last
     # Minute desse lava-rápido.
