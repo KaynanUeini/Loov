@@ -79,15 +79,25 @@ module Owner
     end
 
     def cancel_appointments_in_closure(car_wash, closure)
-      # Busca todos os agendamentos confirmados ou pendentes dentro do período
+      # IMPORTANTE: Time.zone está configurado pra "America/Sao_Paulo"
+      # (config/application.rb), então .in_time_zone retorna corretamente
+      # o início/fim do dia em SP, e o Rails converte pra UTC ao comparar
+      # com scheduled_at (stored como UTC). Isso evita o bug do timezone
+      # double-conversion que ocorre com `AT TIME ZONE` em coluna sem TZ.
+      range_start = closure.start_date.in_time_zone.beginning_of_day
+      range_end   = closure.end_date.in_time_zone.end_of_day
+
       affected = car_wash.appointments
         .where(status: %w[confirmed pending_acceptance])
-        .where(
-          "DATE(scheduled_at AT TIME ZONE 'America/Sao_Paulo') BETWEEN ? AND ?",
-          closure.start_date,
-          closure.end_date
-        )
+        .where(scheduled_at: range_start..range_end)
         .includes(:user, :service, :car_wash)
+
+      Rails.logger.info(
+        "[Closure ##{closure.id}] car_wash=#{car_wash.id} " \
+        "period=#{closure.start_date}..#{closure.end_date} " \
+        "range=#{range_start.iso8601}..#{range_end.iso8601} " \
+        "affected_count=#{affected.size} ids=#{affected.map(&:id).inspect}"
+      )
 
       reason_text = closure.reason.presence || "lava-rápido fechado"
       period_str  = closure.display_period
