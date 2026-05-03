@@ -139,7 +139,7 @@ SP_NEIGHBORHOODS.each_with_index do |hood, idx|
     existing += 1
   else
     numero = (rand(50..2000)).to_s
-    cw = demo_owner.car_washes.create!(
+    attrs = {
       name:              name,
       address:           "#{hood[:logradouro]}, #{numero} - #{hood[:bairro]}, São Paulo - SP",
       capacity_per_slot: 2,
@@ -150,9 +150,14 @@ SP_NEIGHBORHOODS.each_with_index do |hood, idx|
       cidade:            "São Paulo",
       uf:                "SP",
       latitude:          hood[:lat],
-      longitude:         hood[:lng],
-      active:            true
-    )
+      longitude:         hood[:lng]
+    }
+    # `active` só é setado se a coluna existir (evita
+    # UnknownAttributeError em bancos onde a migration que adiciona a
+    # coluna ainda não foi aplicada).
+    attrs[:active] = true if CarWash.column_names.include?("active")
+
+    cw = demo_owner.car_washes.create!(attrs)
     created += 1
   end
 
