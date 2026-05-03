@@ -394,7 +394,7 @@
       <% end %>
       <%= link_to owner_car_wash_appointments_path, class: "#{current_path.include?('appointments') ? 'drawer-active' : ''}" do %><i class="fas fa-calendar-days"></i> Agenda<% end %>
       <%= link_to owner_monthly_costs_path, class: "#{current_path.include?('monthly_costs') ? 'drawer-active' : ''}" do %><i class="fas fa-wallet"></i> Financeiro<% end %>
-      <%= link_to owner_financial_tracking_path, class: "#{current_path.include?('financial_tracking') ? 'drawer-active' : ''}" do %><i class="fas fa-chart-line"></i> Relatórios<% end %>
+      <%= link_to owner_financial_tracking_path, class: "#{current_path.include?('financial_tracking') ? 'drawer-active' : ''}" do %><i class="fas fa-wand-magic-sparkles"></i> IA insights<% end %>
       <%= link_to owner_attendant_invitations_path, class: "#{current_path.include?('attendant') ? 'drawer-active' : ''}" do %><i class="fas fa-users"></i> Equipe<% end %>
       <div class="drawer-sep"></div>
       <%= link_to destroy_user_session_path, method: :delete, class: "drawer-exit" do %><i class="fas fa-arrow-right-from-bracket"></i> Sair<% end %>
@@ -473,7 +473,7 @@
         </li>
         <li><%= link_to "Agenda", owner_car_wash_appointments_path, class: current_path.include?('appointments') ? 'active' : '' %></li>
         <li><%= link_to "Financeiro", owner_monthly_costs_path, class: current_path.include?('monthly_costs') ? 'active' : '' %></li>
-        <li><%= link_to "Relatórios", owner_financial_tracking_path, class: current_path.include?('financial_tracking') ? 'active' : '' %></li>
+        <li><%= link_to "IA insights", owner_financial_tracking_path, class: current_path.include?('financial_tracking') ? 'active' : '' %></li>
         <li><%= link_to "Equipe", owner_attendant_invitations_path, class: current_path.include?('attendant') ? 'active' : '' %></li>
         <li>
           <button class="nav-support-btn" id="nav-support-btn" title="Suporte">

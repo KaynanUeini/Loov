@@ -96,14 +96,21 @@
     font-size: 12.5px; color: var(--ash);
     font-weight: 600; margin-right: 6px;
   }
-  .money-input {
+  /* !important pra anular o global input { border:1px solid var(--stone) !important }
+     que estava criando borda dupla (wrapper + input). */
+  .money-input,
+  input[type="text"].money-input {
     flex: 1; min-width: 0;
-    border: none; outline: none; background: transparent;
-    padding: 11px 0;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 14px; color: var(--ink);
+    border: none !important; outline: none; background: transparent !important;
+    padding: 11px 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 14px !important; color: var(--ink) !important;
     text-align: right;
   }
+  .money-input:focus,
+  input[type="text"].money-input:focus { border: none !important; box-shadow: none !important; }
   .money-input:disabled { opacity: 0.5; cursor: not-allowed; }
 
   /* ── Pending tag (Aguardando aprovação) ─────────────── */
