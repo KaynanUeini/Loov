@@ -1397,6 +1397,535 @@
 
 <% else %>
 
+<% unless user_signed_in? %>
+
+<%# ─── LANDING PUBLICA · DESIGN LOOV (cream/coral) ───────────────────── %>
+<style>
+  .loov-landing * { box-sizing: border-box; }
+
+  .loov-landing {
+    --cream:    #fafaf6;
+    --paper:    #fefefd;
+    --sand:     #f1eee6;
+    --stone:    #e0dbd0;
+    --ash:      #ada699;
+    --graphite: #575148;
+    --ink:      #28231c;
+
+    --coral-50:  #fbeae3;
+    --coral-100: #f5d3c3;
+    --coral-300: #e8a48a;
+    --coral-500: #dd7852;
+    --coral-700: #9c4930;
+
+    background: var(--cream);
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+    min-height: 100vh;
+    padding-top: 60px;
+  }
+
+  /* ── Hero ─────────────────────────────────────────────── */
+  .loov-landing .hero {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 80px 24px 56px;
+    text-align: center;
+    position: relative;
+  }
+  .loov-landing .hero .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--coral-500);
+    text-transform: uppercase;
+    margin-bottom: 22px;
+    padding: 6px 14px;
+    background: var(--coral-50);
+    border: 1px solid var(--coral-100);
+    border-radius: 100px;
+  }
+  .loov-landing .hero .eyebrow .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--coral-500);
+    animation: hero-pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes hero-pulse {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50%     { opacity: .4; transform: scale(.7); }
+  }
+  .loov-landing .hero h1 {
+    font-family: 'Space Grotesk', 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: clamp(40px, 6vw, 68px);
+    letter-spacing: -1.4px;
+    line-height: 1.02;
+    color: var(--ink);
+    margin: 0 0 22px;
+  }
+  .loov-landing .hero h1 .accent {
+    color: var(--coral-500);
+    position: relative;
+    white-space: nowrap;
+  }
+  .loov-landing .hero h1 .accent::after {
+    content: '';
+    position: absolute; left: 0; right: 0; bottom: -4px;
+    height: 4px;
+    background: linear-gradient(90deg, var(--coral-300), var(--coral-500));
+    border-radius: 4px;
+    opacity: .7;
+  }
+  .loov-landing .hero p.lead {
+    font-size: 17px;
+    color: var(--graphite);
+    max-width: 600px;
+    margin: 0 auto 38px;
+  }
+
+  .loov-landing .hero-cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+  }
+  .loov-landing .btn-primary,
+  .loov-landing .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px 28px;
+    border-radius: 100px;
+    text-decoration: none;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 1.4px;
+    font-weight: 600;
+    transition: transform .15s ease, box-shadow .15s ease, background .15s ease, border-color .15s ease, color .15s ease;
+    cursor: pointer;
+    border: none;
+    text-transform: uppercase;
+  }
+  .loov-landing .btn-primary {
+    background: var(--coral-500);
+    color: var(--cream);
+    box-shadow: 0 8px 20px rgba(220,120,82,0.25);
+  }
+  .loov-landing .btn-primary:hover {
+    background: var(--coral-700);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(156,73,48,0.3);
+  }
+  .loov-landing .btn-secondary {
+    background: var(--paper);
+    color: var(--ink);
+    border: 1px solid var(--stone);
+  }
+  .loov-landing .btn-secondary:hover {
+    border-color: var(--coral-500);
+    color: var(--coral-700);
+    transform: translateY(-2px);
+  }
+
+  /* ── Stats inline ─────────────────────────────────────── */
+  .loov-landing .hero-stats {
+    display: flex;
+    justify-content: center;
+    gap: 44px;
+    margin-top: 56px;
+    flex-wrap: wrap;
+  }
+  .loov-landing .hero-stat {
+    text-align: center;
+  }
+  .loov-landing .hero-stat-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: -0.5px;
+    margin-bottom: 4px;
+  }
+  .loov-landing .hero-stat-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.6px;
+    color: var(--ash);
+    text-transform: uppercase;
+  }
+
+  /* ── Features ─────────────────────────────────────────── */
+  .loov-landing .features {
+    max-width: 1100px;
+    margin: 96px auto 0;
+    padding: 0 24px;
+  }
+  .loov-landing .features-header {
+    text-align: center;
+    margin-bottom: 36px;
+  }
+  .loov-landing .features-header .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--coral-500);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .loov-landing .features-header h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; font-size: 32px;
+    color: var(--ink); letter-spacing: -0.5px;
+  }
+  .loov-landing .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+  }
+  .loov-landing .feature-card {
+    background: var(--paper);
+    border: 1px solid var(--stone);
+    border-radius: 20px;
+    padding: 26px;
+    box-shadow: 0 2px 6px rgba(25,20,15,0.04);
+    transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+  }
+  .loov-landing .feature-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 28px rgba(25,20,15,0.07);
+    border-color: var(--coral-100);
+  }
+  .loov-landing .feature-icon {
+    width: 48px; height: 48px;
+    border-radius: 14px;
+    background: var(--coral-50);
+    border: 1px solid var(--coral-100);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 16px;
+    color: var(--coral-700);
+  }
+  .loov-landing .feature-card h3 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 17px; font-weight: 700;
+    color: var(--ink);
+    margin: 0 0 8px;
+    letter-spacing: -0.2px;
+  }
+  .loov-landing .feature-card p {
+    font-size: 13.5px;
+    color: var(--graphite);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  /* ── Lojas próximas ──────────────────────────────────── */
+  .loov-landing .shops-section {
+    max-width: 1100px;
+    margin: 96px auto 0;
+    padding: 0 24px;
+  }
+  .loov-landing .shops-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .loov-landing .shops-header .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 2px;
+    color: var(--coral-500); text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .loov-landing .shops-header h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; font-size: 28px;
+    color: var(--ink); letter-spacing: -0.4px;
+    margin: 0;
+  }
+  .loov-landing .shops-header .see-all {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1.4px;
+    color: var(--coral-700);
+    text-decoration: none;
+    text-transform: uppercase;
+    padding: 8px 16px;
+    border-radius: 100px;
+    border: 1px solid var(--stone);
+    background: var(--paper);
+    transition: all .15s ease;
+  }
+  .loov-landing .shops-header .see-all:hover {
+    background: var(--coral-50);
+    border-color: var(--coral-100);
+  }
+  .loov-landing .shops-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 14px;
+  }
+  .loov-landing .shop-card {
+    background: var(--paper);
+    border: 1px solid var(--stone);
+    border-radius: 18px;
+    padding: 18px;
+    text-decoration: none;
+    color: var(--ink);
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+    display: block;
+  }
+  .loov-landing .shop-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--coral-100);
+    box-shadow: 0 10px 24px rgba(25,20,15,0.06);
+  }
+  .loov-landing .shop-card-top {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 12px;
+  }
+  .loov-landing .shop-avatar {
+    width: 42px; height: 42px;
+    border-radius: 12px;
+    background: var(--coral-50);
+    border: 1px solid var(--coral-100);
+    color: var(--coral-700);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; font-size: 16px;
+    flex-shrink: 0;
+  }
+  .loov-landing .shop-name {
+    font-weight: 600; font-size: 14.5px; color: var(--ink);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    margin-bottom: 2px;
+  }
+  .loov-landing .shop-addr {
+    font-size: 12px; color: var(--graphite);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .loov-landing .shop-meta {
+    display: flex; gap: 10px; align-items: center;
+    margin-top: 14px; padding-top: 12px;
+    border-top: 1px solid var(--stone);
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    letter-spacing: 1.2px;
+  }
+  .loov-landing .open-pill {
+    padding: 4px 10px; border-radius: 100px;
+    border: 1px solid; font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.4px;
+  }
+  .loov-landing .open-pill.is-open  { background:#d6ecde; border-color:#b5d8c1; color:#2d6b42; }
+  .loov-landing .open-pill.is-closed{ background: var(--sand); border-color: var(--stone); color: var(--ink); }
+
+  /* ── CTA bottom ──────────────────────────────────────── */
+  .loov-landing .cta-band {
+    max-width: 1100px;
+    margin: 96px auto 0;
+    padding: 0 24px;
+  }
+  .loov-landing .cta-card {
+    background: linear-gradient(135deg, var(--ink) 0%, #1a1612 100%);
+    color: var(--cream);
+    border-radius: 24px;
+    padding: 48px 32px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .loov-landing .cta-card::before {
+    content: '';
+    position: absolute; top: -50%; right: -20%;
+    width: 380px; height: 380px;
+    background: radial-gradient(circle, var(--coral-500) 0%, transparent 60%);
+    opacity: .25;
+    pointer-events: none;
+  }
+  .loov-landing .cta-card .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 2px;
+    color: var(--coral-300); text-transform: uppercase;
+    margin-bottom: 14px;
+    position: relative;
+  }
+  .loov-landing .cta-card h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; font-size: clamp(26px, 4vw, 36px);
+    letter-spacing: -0.6px;
+    margin: 0 0 14px;
+    position: relative;
+  }
+  .loov-landing .cta-card p {
+    color: var(--ash);
+    font-size: 15px;
+    max-width: 480px;
+    margin: 0 auto 28px;
+    position: relative;
+  }
+  .loov-landing .cta-card .btn-primary {
+    position: relative;
+  }
+
+  /* ── Footer ──────────────────────────────────────────── */
+  .loov-landing .loov-footer {
+    margin-top: 96px;
+    padding: 36px 24px;
+    border-top: 1px solid var(--stone);
+    background: var(--cream);
+    text-align: center;
+  }
+  .loov-landing .loov-footer p {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 1.6px;
+    color: var(--ash); text-transform: uppercase;
+    margin: 0;
+  }
+  .loov-landing .loov-footer a { color: var(--coral-700); text-decoration: none; }
+  .loov-landing .loov-footer a:hover { color: var(--coral-500); }
+
+  /* ── Mobile ──────────────────────────────────────────── */
+  @media (max-width: 600px) {
+    .loov-landing .hero { padding: 56px 20px 36px; }
+    .loov-landing .hero-stats { gap: 28px; margin-top: 40px; }
+    .loov-landing .hero-stat-value { font-size: 22px; }
+    .loov-landing .features { margin-top: 64px; }
+    .loov-landing .features-header h2 { font-size: 24px; }
+    .loov-landing .shops-section { margin-top: 64px; }
+    .loov-landing .shops-header h2 { font-size: 22px; }
+    .loov-landing .cta-band { margin-top: 64px; }
+    .loov-landing .cta-card { padding: 36px 24px; }
+    .loov-landing .loov-footer { margin-top: 64px; }
+  }
+</style>
+
+<div class="loov-landing">
+
+  <%# ── HERO ────────────────────────────────────────────────────────── %>
+  <section class="hero">
+    <div class="eyebrow"><span class="dot"></span>LOOV · LAVA-RÁPIDO ON-DEMAND</div>
+    <h1>
+      Seu carro <span class="accent">limpo</span><br>sem fila, sem ligação.
+    </h1>
+    <p class="lead">
+      Encontre o lava-rápido mais perto, agende em segundos e acompanhe
+      tudo pelo app. Pague na chegada — só vagas reais, sem sair de casa.
+    </p>
+    <div class="hero-cta">
+      <a href="<%= new_user_session_path %>" class="btn-primary">
+        ENTRAR
+        <i class="fas fa-arrow-right" style="font-size:11px;"></i>
+      </a>
+      <a href="<%= new_user_registration_path %>" class="btn-secondary">CRIAR CONTA</a>
+    </div>
+
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="hero-stat-value"><%= CarWash.count %>+</div>
+        <div class="hero-stat-label">Lava-rápidos</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-value">15min</div>
+        <div class="hero-stat-label">Reserva média</div>
+      </div>
+      <div class="hero-stat">
+        <div class="hero-stat-value">0</div>
+        <div class="hero-stat-label">Filas</div>
+      </div>
+    </div>
+  </section>
+
+  <%# ── FEATURES ────────────────────────────────────────────────────── %>
+  <section class="features">
+    <div class="features-header">
+      <div class="label">POR QUE LOOV</div>
+      <h2>Simples, rápido, sem fricção</h2>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <h3>Last minute</h3>
+        <p>Vagas livres nos próximos 30 min, perto de você. Reserve, vá e pague no local — sem precisar ligar.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <h3>Agendamento por horário</h3>
+        <p>Reserve com até 15 dias de antecedência. Lembrete automático e cancelamento sem fricção.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </div>
+        <h3>Avaliações reais</h3>
+        <p>Cada avaliação vem de quem realmente foi atendido. Sem fake review, sem inflação artificial.</p>
+      </div>
+    </div>
+  </section>
+
+  <%# ── LOJAS PRÓXIMAS ──────────────────────────────────────────────── %>
+  <% if @nearby_car_washes.present? %>
+    <section class="shops-section">
+      <div class="shops-header">
+        <div>
+          <div class="label">EXPLORAR</div>
+          <h2>Lava-rápidos perto de você</h2>
+        </div>
+        <%= link_to "VER TODOS", car_washes_path, class: "see-all" %>
+      </div>
+      <div class="shops-grid">
+        <% @nearby_car_washes.first(8).each do |cw| %>
+          <% open = @open_car_wash_ids&.include?(cw.id) %>
+          <a href="<%= car_wash_path(cw) %>" class="shop-card">
+            <div class="shop-card-top">
+              <div class="shop-avatar"><%= cw.name.to_s[0]&.upcase || "?" %></div>
+              <div style="flex:1; min-width:0;">
+                <div class="shop-name"><%= cw.name %></div>
+                <div class="shop-addr">
+                  <%= [cw.bairro, cw.cidade].compact_blank.join(" · ").presence || cw.address.to_s %>
+                </div>
+              </div>
+            </div>
+            <div class="shop-meta">
+              <span class="open-pill <%= open ? 'is-open' : 'is-closed' %>">
+                <%= open ? 'ABERTO' : 'FECHADO' %>
+              </span>
+            </div>
+          </a>
+        <% end %>
+      </div>
+    </section>
+  <% end %>
+
+  <%# ── CTA FINAL ──────────────────────────────────────────────────── %>
+  <section class="cta-band">
+    <div class="cta-card">
+      <div class="label">COMECE AGORA</div>
+      <h2>Pronto pra deixar seu carro limpo?</h2>
+      <p>Crie sua conta em segundos e descubra os lava-rápidos perto de você.</p>
+      <a href="<%= new_user_registration_path %>" class="btn-primary">
+        CRIAR CONTA GRÁTIS
+        <i class="fas fa-arrow-right" style="font-size:11px;"></i>
+      </a>
+    </div>
+  </section>
+
+  <footer class="loov-footer">
+    <p>LOOV · <%= Time.current.year %> · <a href="mailto:suporte@loov.app">SUPORTE</a></p>
+  </footer>
+
+</div>
+
+<% else %>
+
 <%# VIEW CLIENTE / VISITANTE %>
 <div id="loov-cursor"></div>
 <div id="loov-cursor-trail"></div>
@@ -1665,5 +2194,7 @@
 <script>
 function requestGeo(){if(!navigator.geolocation)return;navigator.geolocation.getCurrentPosition(function(pos){localStorage.setItem('loov_last_coords',JSON.stringify({lat:pos.coords.latitude,lng:pos.coords.longitude}));var url=new URL(window.location.href);url.searchParams.set('latitude',pos.coords.latitude);url.searchParams.set('longitude',pos.coords.longitude);window.location.href=url.toString();},function(){alert('Não foi possível obter sua localização.');},{enableHighAccuracy:true,timeout:10000});}
 </script>
+
+<% end %>
 
 <% end %>
