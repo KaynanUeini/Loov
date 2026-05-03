@@ -106,6 +106,17 @@
   .nav-avatar-wrap { display:inline-flex; align-items:center; gap:0.35rem; position:relative; }
   .nav-avatar-dot { width:8px; height:8px; border-radius:50%; background:#ffaa00; position:absolute; top:-1px; right:-1px; border:2px solid var(--cream); }
 
+  /* ── FAVORITOS CLIENTE ── */
+  .nav-fav-btn {
+    position:relative; width:34px; height:34px; border-radius:10px;
+    background:transparent; border:1px solid transparent;
+    display:flex; align-items:center; justify-content:center;
+    color:var(--graphite); font-size:.86rem; cursor:pointer; transition:all .2s;
+    text-decoration:none;
+  }
+  .nav-fav-btn:hover { color:var(--coral-500); background:var(--coral-50); border-color:var(--coral-100); }
+  .nav-fav-btn.active { color:var(--coral-500); background:var(--coral-50); border-color:var(--coral-100); }
+
   /* ── SINO CLIENTE ── */
   .nav-bell-wrap { position:relative; display:inline-flex; align-items:center; }
   .nav-bell-btn {
@@ -350,6 +361,9 @@
       <%= link_to appointments_path, class: "#{current_path == appointments_path ? 'drawer-active' : ''}" do %>
         <i class="fas fa-calendar-check"></i> Meus Agendamentos
       <% end %>
+      <%= link_to client_favorites_path, class: "#{current_path == client_favorites_path ? 'drawer-active' : ''}" do %>
+        <i class="fas fa-heart"></i> Favoritos
+      <% end %>
       <div class="drawer-sep"></div>
       <%= link_to edit_client_profile_path, class: "#{current_user.profile_complete? ? '' : 'drawer-active'}" do %>
         <i class="fas fa-user"></i>
@@ -412,6 +426,11 @@
     <% if user_signed_in? %>
       <% if current_user.client? %>
         <li><%= link_to "Meus Agendamentos", appointments_path, class: current_path == appointments_path ? 'active' : '' %></li>
+        <li>
+          <%= link_to client_favorites_path, class: "nav-fav-btn #{current_path == client_favorites_path ? 'active' : ''}", title: "Favoritos" do %>
+            <i class="fas fa-heart"></i>
+          <% end %>
+        </li>
         <li>
           <div class="nav-bell-wrap">
             <button class="nav-bell-btn" id="nav-bell-btn" title="Notificações">

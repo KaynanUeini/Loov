@@ -1,0 +1,196 @@
+<style>
+  .favs-page { max-width: 760px; margin: 0 auto; padding: 24px 20px 80px; }
+
+  .favs-header { padding: 8px 0 20px; }
+  .favs-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 1.4px;
+    color: var(--ash); text-transform: uppercase;
+  }
+  .favs-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(28px, 5vw, 40px);
+    color: var(--ink); letter-spacing: -0.8px;
+    margin-top: 4px; font-weight: 700;
+  }
+  .favs-count {
+    font-size: 13.5px; color: var(--graphite);
+    margin-top: 6px;
+  }
+
+  .favs-list { display: flex; flex-direction: column; gap: 12px; margin-top: 18px; }
+
+  .fav-row {
+    display: flex; gap: 14px; align-items: stretch;
+    background: var(--paper); border: 1px solid var(--stone);
+    border-radius: 18px; overflow: hidden;
+    text-decoration: none; color: var(--ink);
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+    position: relative;
+  }
+  .fav-row:hover {
+    transform: translateY(-2px);
+    border-color: var(--coral-100);
+    box-shadow: 0 10px 24px rgba(25,20,15,0.06);
+  }
+  .fav-row.is-closed { background: var(--sand); opacity: .8; }
+
+  .fav-photo {
+    width: 100px; flex-shrink: 0;
+    background: #e6ded0;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--graphite); font-size: 30px; font-weight: 700;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .fav-row.is-closed .fav-photo { background: #d8d3ca; color: var(--ash); }
+
+  .fav-body { flex: 1; padding: 14px 16px; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+  .fav-name { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fav-addr { font-size: 12.5px; color: var(--graphite); display: flex; align-items: center; gap: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fav-addr i { color: var(--coral-500); font-size: 10px; }
+  .fav-meta {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 8px; flex-wrap: wrap; font-size: 11.5px;
+  }
+  .fav-rating { display: inline-flex; align-items: center; gap: 4px; color: var(--graphite); font-weight: 600; }
+  .fav-rating i { color: var(--coral-500); font-size: 10px; }
+
+  .fav-unfav-btn {
+    position: absolute; top: 10px; right: 12px;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(254,254,253,0.92);
+    border: 1px solid var(--coral-100);
+    color: var(--coral-500);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 13px;
+    transition: background .15s, color .15s;
+    z-index: 5;
+  }
+  .fav-unfav-btn:hover { background: var(--coral-500); color: var(--cream); border-color: var(--coral-500); }
+
+  .favs-empty {
+    text-align: center; padding: 60px 24px;
+    border: 1px solid var(--stone); border-radius: 20px;
+    background: var(--paper); margin-top: 18px;
+  }
+  .favs-empty-icon {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: var(--coral-50); border: 1px solid var(--coral-100);
+    color: var(--coral-700);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 14px; font-size: 26px;
+  }
+  .favs-empty-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; font-size: 22px;
+    color: var(--ink); margin-bottom: 8px;
+    letter-spacing: -0.3px;
+  }
+  .favs-empty-text {
+    font-size: 13.5px; color: var(--graphite);
+    margin-bottom: 18px; line-height: 1.55;
+    max-width: 380px; margin-left: auto; margin-right: auto;
+  }
+</style>
+
+<div class="favs-page">
+
+  <div class="favs-header">
+    <div class="favs-eyebrow">FAVORITOS</div>
+    <h1 class="favs-title">Lava-rápidos salvos</h1>
+    <% if @favorites_list.any? %>
+      <p class="favs-count"><%= @favorites_list.count %> <%= @favorites_list.count == 1 ? 'lava-rápido' : 'lava-rápidos' %> nos seus favoritos.</p>
+    <% end %>
+  </div>
+
+  <% if @favorites_list.any? %>
+    <div class="favs-list" id="favs-list">
+      <% @favorites_list.each do |fav| %>
+        <% cw         = fav.car_wash %>
+        <% rating     = @rating_map[cw.id] || { avg: 0, count: 0 } %>
+        <% today_oh   = cw.operating_hours.find { |oh| oh.day_of_week.to_i == @today_dow } %>
+        <% now_sp     = Time.current.in_time_zone("America/Sao_Paulo") %>
+        <% now_min    = now_sp.hour * 60 + now_sp.min %>
+        <% is_open    = false %>
+        <% if today_oh && today_oh.opens_at && today_oh.closes_at %>
+          <% opens  = today_oh.opens_at.hour  * 60 + today_oh.opens_at.min %>
+          <% closes = today_oh.closes_at.hour * 60 + today_oh.closes_at.min %>
+          <% is_open = now_min >= opens && now_min <= closes %>
+        <% end %>
+
+        <a href="<%= car_wash_path(cw) %>" class="fav-row <%= 'is-closed' unless is_open %>" data-cw-id="<%= cw.id %>">
+          <button type="button" class="fav-unfav-btn"
+                  onclick="event.preventDefault(); event.stopPropagation(); unfavorite(<%= cw.id %>, this);"
+                  aria-label="Remover dos favoritos">
+            <i class="fas fa-heart"></i>
+          </button>
+          <div class="fav-photo"><%= cw.name.first(2).upcase %></div>
+          <div class="fav-body">
+            <div class="fav-name"><%= cw.name %></div>
+            <div class="fav-addr">
+              <i class="fas fa-location-dot"></i>
+              <span><%= [cw.try(:bairro), cw.try(:cidade)].compact_blank.join(' · ').presence || cw.address.to_s %></span>
+            </div>
+            <div class="fav-meta">
+              <% if is_open %>
+                <span class="loov-pill loov-pill--success" style="font-size:9.5px;padding:2px 8px;">ABERTO</span>
+              <% elsif today_oh %>
+                <span class="loov-pill loov-pill--neutral" style="font-size:9.5px;padding:2px 8px;">ABRE <%= today_oh.opens_at.strftime("%H:%M") %></span>
+              <% else %>
+                <span class="loov-pill loov-pill--neutral" style="font-size:9.5px;padding:2px 8px;">FECHADO</span>
+              <% end %>
+              <% if rating[:count] > 0 %>
+                <span class="fav-rating"><i class="fas fa-star"></i><%= sprintf('%.1f', rating[:avg]) %> <span style="color:var(--ash);font-weight:500;">(<%= rating[:count] %>)</span></span>
+              <% end %>
+            </div>
+          </div>
+        </a>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="favs-empty">
+      <div class="favs-empty-icon"><i class="fas fa-heart"></i></div>
+      <div class="favs-empty-title">Sem favoritos ainda</div>
+      <p class="favs-empty-text">
+        Toque no coração na página de um lava-rápido pra salvá-lo aqui.
+        Seus favoritos ficam acessíveis pra agendar de novo em segundos.
+      </p>
+      <a href="/" class="loov-btn-primary">
+        <i class="fas fa-magnifying-glass"></i> Explorar lava-rápidos
+      </a>
+    </div>
+  <% end %>
+
+</div>
+
+<script>
+function unfavorite(cwId, btn) {
+  if (btn.dataset.busy === '1') return;
+  btn.dataset.busy = '1';
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
+  fetch('/client/favorites/' + cwId, {
+    method: 'DELETE',
+    headers: { 'X-CSRF-Token': csrf, 'Accept': 'application/json' }
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.ok) {
+      const row = btn.closest('.fav-row');
+      if (row) {
+        row.style.transition = 'opacity .25s, transform .25s';
+        row.style.opacity = '0';
+        row.style.transform = 'translateX(20px)';
+        setTimeout(() => {
+          row.remove();
+          if (!document.querySelector('.fav-row')) {
+            window.location.reload();
+          }
+        }, 280);
+      }
+    } else {
+      btn.dataset.busy = '0';
+    }
+  })
+  .catch(() => { btn.dataset.busy = '0'; });
+}
+</script>

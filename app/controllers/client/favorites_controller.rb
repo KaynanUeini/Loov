@@ -11,18 +11,23 @@ module Client
         .order(created_at: :desc)
 
       car_wash_ids = list.map { |f| f.car_wash_id }
-      rating_map = Review.where(car_wash_id: car_wash_ids)
-                         .group(:car_wash_id)
-                         .pluck(:car_wash_id, Arel.sql("AVG(rating)"), Arel.sql("COUNT(*)"))
-                         .each_with_object({}) { |(id, avg, count), h|
-                           h[id] = { avg: avg.to_f.round(1), count: count.to_i }
-                         }
+      @rating_map  = Review.where(car_wash_id: car_wash_ids)
+                           .group(:car_wash_id)
+                           .pluck(:car_wash_id, Arel.sql("AVG(rating)"), Arel.sql("COUNT(*)"))
+                           .each_with_object({}) { |(id, avg, count), h|
+                             h[id] = { avg: avg.to_f.round(1), count: count.to_i }
+                           }
 
-      now_sp     = Time.current.in_time_zone("America/Sao_Paulo")
-      now_min    = now_sp.hour * 60 + now_sp.min
-      today_dow  = now_sp.wday
+      now_sp      = Time.current.in_time_zone("America/Sao_Paulo")
+      now_min     = now_sp.hour * 60 + now_sp.min
+      @today_dow  = now_sp.wday
 
-      render json: list.map { |f| serialize(f.car_wash, rating_map, today_dow, now_min) }
+      @favorites_list = list
+
+      respond_to do |format|
+        format.html
+        format.json { render json: list.map { |f| serialize(f.car_wash, @rating_map, @today_dow, now_min) } }
+      end
     end
 
     # POST /client/favorites { car_wash_id }
@@ -47,7 +52,10 @@ module Client
 
     def ensure_client
       return if current_user&.client?
-      render json: { error: "Acesso negado." }, status: :forbidden
+      respond_to do |format|
+        format.html { redirect_to root_path, alert: "Acesso negado." }
+        format.json { render json: { error: "Acesso negado." }, status: :forbidden }
+      end
     end
 
     def serialize(cw, rating_map = {}, today_dow = nil, now_min = nil)
