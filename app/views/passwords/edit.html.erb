@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Redefinir senha — Loov</title>
+</head>
+<body style="margin:0;background:#fafaf6;">
+<div style="font-family:-apple-system,Helvetica,Arial,sans-serif;background:#fafaf6;min-height:100vh;padding:32px 16px;box-sizing:border-box;">
+  <div style="max-width:420px;margin:0 auto;background:#fefefd;border:1px solid #e0dbd0;border-radius:18px;padding:28px;box-shadow:0 2px 6px rgba(25,20,15,0.05);">
+    <p style="font-family:'JetBrains Mono','Courier New',monospace;font-size:11px;letter-spacing:2px;color:#dd7852;text-transform:uppercase;margin:0 0 6px;">LOOV · NOVA SENHA</p>
+    <h1 style="font-size:22px;font-weight:700;letter-spacing:-0.3px;color:#28231c;margin:0 0 8px;">Redefinir senha</h1>
+    <p style="color:#575148;font-size:13px;line-height:19px;margin:0 0 22px;">
+      Conta: <strong style="color:#28231c;"><%= @user&.email %></strong>
+    </p>
+
+    <% if @error %>
+      <div style="background:#fdecec;border:1px solid #f5cccc;color:#c85050;padding:10px 12px;border-radius:12px;font-size:12px;margin-bottom:14px;">
+        <%= @error %>
+      </div>
+    <% end %>
+
+    <form action="/password/update" method="post" autocomplete="off">
+      <input type="hidden" name="reset_password_token" value="<%= @reset_token %>">
+
+      <label style="display:block;font-family:'JetBrains Mono','Courier New',monospace;font-size:10px;letter-spacing:1.5px;color:#ada699;text-transform:uppercase;margin-bottom:6px;">NOVA SENHA</label>
+      <input type="password" name="password" minlength="6" required
+        style="width:100%;box-sizing:border-box;background:#fafaf6;border:1px solid #e0dbd0;border-radius:12px;padding:12px 14px;font-size:14px;color:#28231c;margin-bottom:14px;">
+
+      <label style="display:block;font-family:'JetBrains Mono','Courier New',monospace;font-size:10px;letter-spacing:1.5px;color:#ada699;text-transform:uppercase;margin-bottom:6px;">CONFIRMAR SENHA</label>
+      <input type="password" name="password_confirmation" minlength="6" required
+        style="width:100%;box-sizing:border-box;background:#fafaf6;border:1px solid #e0dbd0;border-radius:12px;padding:12px 14px;font-size:14px;color:#28231c;margin-bottom:18px;">
+
+      <button type="submit"
+        style="width:100%;background:#dd7852;color:#fafaf6;border:none;border-radius:100px;padding:14px;font-size:13px;font-weight:600;letter-spacing:1.2px;cursor:pointer;">
+        ATUALIZAR SENHA
+      </button>
+    </form>
+
+    <p style="color:#ada699;font-size:11px;line-height:16px;margin:18px 0 0;text-align:center;">
+      Após atualizar, volte ao app e faça login com a nova senha.
+    </p>
+  </div>
+</div>
+</body>
+</html>

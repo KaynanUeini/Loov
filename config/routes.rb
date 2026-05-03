@@ -5,6 +5,11 @@ Rails.application.routes.draw do
     registrations: 'users/registrations'
   }
 
+  # ── Password reset (custom API + página HTML pra setar nova senha) ────────
+  post 'password/forgot',     to: 'passwords#forgot'   # JSON pro app: dispara email
+  get  'password/edit',       to: 'passwords#edit'     # HTML: form pra digitar nova senha
+  post 'password/update',     to: 'passwords#update'   # HTML form submit
+
   resources :car_washes do
     resources :appointments, only: [:create]
     member do
