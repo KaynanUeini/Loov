@@ -1,164 +1,429 @@
-<% Rails.logger.info("Renderizando appointments/index.html.erb") %>
+<%
+MONTHS_PT   = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
+WEEKDAYS_PT = ['dom','seg','ter','qua','qui','sex','sáb']
+
+current_time = Time.current.in_time_zone("America/Sao_Paulo")
+
+# Mesmas regras do app: card "today" só pra confirmados que ainda não passaram
+def is_today_card?(appt, current_time)
+  appt.scheduled_at.in_time_zone("America/Sao_Paulo").to_date == current_time.to_date &&
+    appt.status == 'confirmed' &&
+    appt.scheduled_at >= current_time
+end
+
+def can_cancel?(appt, current_time)
+  return false unless appt.status == 'confirmed'
+  return false if appt.appointment_type == 'disponivel'
+  ((appt.scheduled_at - current_time) / 60.0) > 120
+end
+%>
 
 <style>
-  .flash-msg { display:flex; align-items:center; gap:10px; padding:13px 18px; border-radius:12px; font-size:13.5px; margin-bottom:20px; }
-  .flash-error   { background:#fdecec; border:1px solid #f5cccc; color:var(--rose-500); }
-  .flash-success { background:var(--coral-50); border:1px solid var(--coral-100); color:var(--coral-700); }
+  .appts-page { max-width: 760px; margin: 0 auto; padding: 24px 20px 80px; }
 
-  .next-card {
-    border:1px solid var(--coral-100);
-    background:var(--paper);
-    border-radius:20px;
-    overflow:hidden;
-    margin-bottom:18px;
-    position:relative;
-    box-shadow: 0 6px 20px rgba(220,120,82,0.06);
+  .appts-header {
+    padding: 8px 0 20px;
   }
-  .next-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--coral-500); }
-  .next-card-top { padding:24px 24px 18px 28px; display:flex; align-items:flex-start; justify-content:space-between; gap:20px; flex-wrap:wrap; }
-  .next-card-eyebrow {
-    font-family:'JetBrains Mono', monospace;
-    font-size:10.5px; font-weight:600; letter-spacing:1.6px; text-transform:uppercase;
-    color:var(--coral-500); margin-bottom:8px;
-    display:inline-flex; align-items:center; gap:6px;
+  .appts-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 1.4px;
+    color: var(--ash); text-transform: uppercase;
   }
-  .next-card-eyebrow::before { content:''; display:block; width:18px; height:1px; background:var(--coral-500); }
-  .next-card-name { font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:clamp(24px, 4vw, 34px); line-height:1.05; letter-spacing:-0.5px; color:var(--ink); margin-bottom:6px; }
-  .next-card-address { font-size:13px; color:var(--graphite); display:flex; align-items:center; gap:6px; }
-  .next-card-address i { color:var(--coral-500); font-size:11px; }
-  .next-card-datetime { text-align:right; flex-shrink:0; }
-  .next-card-time { font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:42px; color:var(--coral-500); line-height:1; letter-spacing:-0.5px; }
-  .next-card-date { font-size:12.5px; color:var(--ash); margin-top:4px; font-family:'JetBrains Mono', monospace; letter-spacing:0.5px; }
-  .next-card-bottom { border-top:1px solid var(--stone); padding:16px 24px 16px 28px; display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; }
-  .next-card-service { display:flex; align-items:center; gap:12px; }
-  .next-card-service-icon { width:42px; height:42px; border-radius:12px; background:var(--coral-50); border:1px solid var(--coral-100); display:flex; align-items:center; justify-content:center; color:var(--coral-700); font-size:13px; flex-shrink:0; }
-  .next-card-service-name { font-size:14.5px; font-weight:600; color:var(--ink); }
-  .next-card-service-meta { font-size:12.5px; color:var(--graphite); margin-top:2px; }
-  .next-card-actions { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
-  .cancel-deadline { font-size:12px; color:var(--ash); display:inline-flex; align-items:center; gap:6px; font-family:'JetBrains Mono', monospace; letter-spacing:0.5px; }
-  .cancel-deadline i { font-size:11px; color:var(--graphite); }
-
-  .code-inline {
-    display:inline-flex; align-items:center; gap:6px;
-    background:var(--coral-50); border:1px solid var(--coral-100); border-radius:10px;
-    padding:6px 11px; font-family:'JetBrains Mono', monospace; font-size:11.5px; font-weight:700;
-    color:var(--coral-700); letter-spacing:1.4px; margin-top:10px;
+  .appts-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(28px, 5vw, 40px);
+    color: var(--ink); letter-spacing: -0.8px;
+    margin-top: 4px; font-weight: 700;
   }
-  .code-inline i { font-size:10px; }
 
-  .upcoming-list { display:flex; flex-direction:column; gap:8px; margin-bottom:40px; }
-  .upcoming-item {
-    background:var(--paper); border:1px solid var(--stone);
-    border-radius:14px; overflow:hidden; transition:border-color .2s ease, box-shadow .2s ease;
-    position:relative;
+  /* ── Tabs (sand pill container) ─────────────────────── */
+  .appts-tabs {
+    display: flex; gap: 4px;
+    background: var(--sand); padding: 4px;
+    border-radius: 14px;
+    margin-bottom: 22px;
   }
-  .upcoming-item::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--coral-500); transform:scaleY(0); transform-origin:bottom; transition:transform .3s ease; }
-  .upcoming-item:hover { border-color:var(--coral-100); }
-  .upcoming-item:hover::before, .upcoming-item.expanded::before { transform:scaleY(1); }
-  .upcoming-item.expanded { border-color:var(--coral-100); box-shadow: 0 8px 18px rgba(25,20,15,0.04); }
-  .upcoming-item-header { display:flex; align-items:center; justify-content:space-between; padding:14px 18px 14px 20px; gap:14px; user-select:none; cursor:pointer; }
-  .upcoming-item-left { flex:1; min-width:0; }
-  .upcoming-item-name { font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:17px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; letter-spacing:-0.2px; }
-  .upcoming-item-meta { font-size:12.5px; color:var(--graphite); margin-top:4px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-  .upcoming-item-meta i { color:var(--coral-500); font-size:10.5px; }
-  .upcoming-item-right { display:flex; align-items:center; gap:14px; flex-shrink:0; }
-  .upcoming-item-time { font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:20px; color:var(--ink); text-align:right; letter-spacing:-0.3px; }
-  .upcoming-item-date { font-size:11.5px; color:var(--ash); text-align:right; margin-top:2px; font-family:'JetBrains Mono', monospace; letter-spacing:0.5px; }
-  .upcoming-item-chevron { color:var(--ash); font-size:11px; transition:transform .25s ease; flex-shrink:0; }
-  .upcoming-item.expanded .upcoming-item-chevron { transform:rotate(180deg); color:var(--coral-500); }
-  .upcoming-item-details { max-height:0; overflow:hidden; transition:max-height .35s ease; }
-  .upcoming-item-details.open { max-height:600px; }
-  .upcoming-item-details-inner { border-top:1px solid var(--stone); padding:18px 18px 18px 20px; display:flex; flex-direction:column; gap:10px; }
-  .detail-row { display:flex; align-items:center; justify-content:space-between; gap:14px; }
-  .detail-label { color:var(--ash); font-family:'JetBrains Mono', monospace; font-size:10.5px; letter-spacing:1.4px; text-transform:uppercase; }
-  .detail-value { color:var(--ink); text-align:right; font-size:13.5px; font-weight:500; }
-  .upcoming-item-actions { display:flex; align-items:center; justify-content:flex-end; gap:14px; padding-top:12px; border-top:1px solid var(--stone); margin-top:6px; flex-wrap:wrap; }
-
-  .history-list { display:flex; flex-direction:column; border:1px solid var(--stone); border-radius:16px; overflow:hidden; background:var(--paper); }
-  .history-item { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--stone); gap:14px; transition:background .15s ease; }
-  .history-item:last-child { border-bottom:none; }
-  .history-item:hover { background:var(--cream); }
-  .history-item-left { flex:1; min-width:0; }
-  .history-item-name { font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:15px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .history-item-meta { font-size:12px; color:var(--graphite); margin-top:3px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-  .history-item-meta i { color:var(--coral-500); font-size:10px; }
-  .history-item-right { display:flex; align-items:center; gap:12px; flex-shrink:0; }
-  .history-item-date-main { font-size:13px; color:var(--graphite); text-align:right; font-family:'JetBrains Mono', monospace; letter-spacing:0.5px; }
-  .history-item-date-time { font-size:11px; color:var(--ash); text-align:right; font-family:'JetBrains Mono', monospace; letter-spacing:0.5px; }
-
-  .btn-review {
-    display:inline-flex; align-items:center; gap:6px;
-    padding:6px 14px; border-radius:100px;
-    font-family:'JetBrains Mono', monospace; font-size:10.5px; font-weight:600; letter-spacing:1.4px; text-transform:uppercase;
-    cursor:pointer; background:#fef3c7; color:#7a4814; border:1px solid #fbe2c0; transition:all .2s ease; white-space:nowrap;
+  .appts-tab-btn {
+    flex: 1; height: 40px; border-radius: 10px;
+    background: transparent; border: none;
+    color: var(--ink); cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-size: 13.5px; font-weight: 600;
+    transition: background .15s, box-shadow .15s;
   }
-  .btn-review:hover { background:#fbe2c0; }
-  .reviewed-badge { display:inline-flex; align-items:center; gap:3px; font-size:11.5px; color:var(--ash); }
-  .reviewed-badge i { color:#d6b14a; }
-
-  .loyalty-strip {
-    display:inline-flex; align-items:center; gap:8px;
-    margin-top:10px;
-    background:var(--cream); border:1px solid var(--stone);
-    border-radius:100px; padding:5px 12px;
+  .appts-tab-btn.active {
+    background: var(--paper);
+    box-shadow: 0 2px 6px rgba(40,35,28,0.06);
   }
-  .loy-dots { display:flex; align-items:center; gap:3px; }
-  .loy-dot { width:7px; height:7px; border-radius:50%; background:var(--stone); border:1px solid var(--stone); flex-shrink:0; transition:background .2s; }
-  .loy-dot.filled { background:var(--coral-500); border-color:var(--coral-500); box-shadow:0 0 4px rgba(220,120,82,.4); }
-  .loy-label { font-family:'JetBrains Mono', monospace; font-size:10px; color:var(--graphite); white-space:nowrap; letter-spacing:0.6px; }
-  .loyalty-strip.milestone { background:#fef3c7; border-color:#fbe2c0; }
-  .loyalty-strip.milestone .loy-dot { background:#d6b14a; border-color:#d6b14a; box-shadow:0 0 4px rgba(214,177,74,.4); }
-  .loyalty-strip.milestone .loy-label { color:#7a4814; font-weight:700; }
 
-  .review-overlay { position:fixed; inset:0; background:rgba(40,35,28,0.55); z-index:1000; display:flex; align-items:center; justify-content:center; padding:18px; opacity:0; pointer-events:none; transition:opacity .25s ease; backdrop-filter:blur(8px); }
-  .review-overlay.open { opacity:1; pointer-events:all; }
-  .review-modal { background:var(--paper); border:1px solid var(--stone); border-radius:20px; padding:32px; width:100%; max-width:480px; transform:translateY(20px); transition:transform .25s cubic-bezier(.16,1,.3,1); box-shadow: 0 24px 60px rgba(40,35,28,0.18); }
-  .review-overlay.open .review-modal { transform:translateY(0); }
-  .review-modal-title { font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:24px; color:var(--ink); margin-bottom:4px; letter-spacing:-0.4px; }
-  .review-modal-sub { font-size:13.5px; color:var(--graphite); margin-bottom:24px; }
-  .stars-row { display:flex; gap:8px; margin-bottom:22px; }
-  .star-btn { background:none; border:none; cursor:pointer; font-size:28px; color:var(--stone); transition:color .15s ease, transform .15s ease; padding:0; }
-  .star-btn.active { color:#d6b14a; }
-  .star-btn:hover { transform:scale(1.15); }
-  .tags-row { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px; }
-  .tag-btn { padding:6px 14px; border-radius:100px; font-size:12.5px; cursor:pointer; background:var(--cream); color:var(--graphite); border:1px solid var(--stone); transition:all .15s ease; }
-  .tag-btn.selected { background:var(--coral-50); color:var(--coral-700); border-color:var(--coral-100); }
-  .review-textarea { width:100%; background:var(--paper); border:1px solid var(--stone); border-radius:12px; padding:12px 14px; font-size:14px; color:var(--ink); font-family:'Inter', sans-serif; resize:none; box-sizing:border-box; margin-bottom:20px; transition:border-color .2s ease; }
-  .review-textarea:focus { outline:none; border-color:var(--coral-500); }
-  .review-textarea::placeholder { color:var(--ash); }
-  .review-modal-actions { display:flex; gap:10px; }
-  .btn-modal-cancel { flex:1; padding:12px; border-radius:100px; background:var(--paper); color:var(--graphite); border:1px solid var(--stone); font-family:'JetBrains Mono', monospace; font-size:11.5px; font-weight:600; letter-spacing:1.4px; text-transform:uppercase; cursor:pointer; transition:all .2s ease; }
-  .btn-modal-cancel:hover { border-color:var(--coral-500); color:var(--coral-700); }
-  .btn-modal-submit { flex:2; padding:12px; border-radius:100px; background:var(--coral-500); color:var(--cream); border:none; font-family:'JetBrains Mono', monospace; font-size:11.5px; font-weight:600; letter-spacing:1.4px; text-transform:uppercase; cursor:pointer; transition:background .2s ease; }
-  .btn-modal-submit:hover:not(:disabled) { background:var(--coral-700); }
-  .btn-modal-submit:disabled { opacity:.45; cursor:not-allowed; }
-
-  .btn-cancel-appt {
-    display:inline-flex; align-items:center; gap:6px;
-    padding:8px 16px; border-radius:100px;
-    font-family:'JetBrains Mono', monospace; font-size:10.5px; font-weight:600; letter-spacing:1.4px; text-transform:uppercase;
-    background:var(--paper); color:var(--rose-500); border:1px solid #f5cccc; transition:all .15s ease; cursor:pointer;
+  /* ── Flash ──────────────────────────────────────────── */
+  .flash-msg {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px; border-radius: 14px;
+    margin-bottom: 14px; font-size: 13.5px;
   }
-  .btn-cancel-appt:hover { background:#fdecec; }
+  .flash-msg.flash-error   { background: #fdecec; border: 1px solid #f5cccc; color: #7a3838; }
+  .flash-msg.flash-success { background: #d6ecde; border: 1px solid #b5d8c1; color: #2d6b42; }
 
-  .empty-state { text-align:center; padding:60px 24px; border:1px solid var(--stone); border-radius:20px; background:var(--paper); }
-  .empty-icon { font-size:36px; color:var(--stone); margin-bottom:14px; }
-  .empty-title { font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:24px; color:var(--ink); margin-bottom:8px; letter-spacing:-0.3px; }
-  .empty-text { font-size:14px; color:var(--graphite); margin-bottom:22px; line-height:1.6; }
+  /* ── Card ──────────────────────────────────────────── */
+  .appt-list { display: flex; flex-direction: column; gap: 12px; }
 
-  @media (max-width:640px) {
-    .next-card-top { flex-direction:column; }
-    .next-card-datetime { text-align:left; }
+  .appt-card {
+    padding: 16px; border-radius: 18px;
+    background: var(--paper);
+    border: 1px solid var(--stone);
+    position: relative; overflow: hidden;
   }
+  .appt-card.today {
+    background: var(--ink); border-color: var(--ink); color: var(--cream);
+  }
+  .appt-card-blob {
+    position: absolute; top: -30px; right: -30px;
+    width: 120px; height: 120px; border-radius: 50%;
+    background: var(--coral-500); opacity: .2; pointer-events: none;
+  }
+
+  .appt-inner {
+    display: flex; gap: 14px; position: relative;
+  }
+  .date-col {
+    width: 56px; flex-shrink: 0;
+    padding-right: 14px; border-right: 1px solid var(--stone);
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .appt-card.today .date-col { border-right-color: rgba(255,255,255,0.15); }
+  .date-dow, .date-mon {
+    font-size: 10px; text-transform: uppercase;
+    color: var(--graphite); opacity: .65;
+    font-family: 'JetBrains Mono', monospace; letter-spacing: 0.3px;
+  }
+  .date-day {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 30px; font-weight: 700;
+    line-height: 32px; color: var(--ink);
+    letter-spacing: -1px;
+  }
+  .date-mon { margin-top: 2px; }
+  .appt-card.today .date-dow,
+  .appt-card.today .date-day,
+  .appt-card.today .date-mon { color: var(--cream); }
+
+  .appt-body { flex: 1; min-width: 0; }
+
+  .appt-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 0.5px;
+    color: var(--ash); margin-bottom: 4px;
+  }
+  .appt-card.today .appt-id { color: #b5ae9f; }
+
+  .shop-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 16px; font-weight: 600;
+    color: var(--ink); margin-top: 8px;
+    letter-spacing: -0.2px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .appt-card.today .shop-name { color: var(--cream); }
+  .service-name {
+    font-size: 12px; color: var(--graphite);
+    margin-top: 2px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .appt-card.today .service-name { color: #c9c4ba; }
+
+  .time-price {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 20px; font-weight: 700;
+    color: var(--ink); margin-top: 12px;
+    letter-spacing: -0.4px;
+  }
+  .appt-card.today .time-price { color: var(--coral-500); }
+
+  /* ── Code block (pill + hint) ───────────────────────── */
+  .code-block {
+    display: flex; align-items: center; gap: 10px;
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 12px;
+  }
+  .code-block.light {
+    background: var(--coral-50);
+    border: 1px solid var(--coral-100);
+  }
+  .code-block.ink {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.14);
+  }
+  .code-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 10px; border-radius: 100px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; font-weight: 600; letter-spacing: 1px;
+    flex-shrink: 0;
+  }
+  .code-pill.light { background: var(--coral-500); color: var(--cream); }
+  .code-pill.ink   { background: var(--cream);     color: var(--ink); }
+  .code-hint {
+    flex: 1; font-size: 11px; line-height: 15px;
+  }
+  .code-hint.light { color: var(--coral-700); }
+  .code-hint.ink   { color: var(--cream); }
+
+  /* ── Stars rows ────────────────────────────────────── */
+  .stars-row-result {
+    display: flex; align-items: center; gap: 3px;
+    margin-top: 10px;
+  }
+  .stars-row-result i { font-size: 12px; }
+  .stars-hint {
+    color: var(--ash); font-size: 11px; margin-left: 6px;
+  }
+
+  .rate-row {
+    display: flex; align-items: center; gap: 10px;
+    margin-top: 14px; padding-top: 12px;
+    border-top: 1px solid var(--stone);
+  }
+  .rate-row-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 12.5px; font-weight: 600; color: var(--graphite);
+  }
+  .rate-row-stars {
+    display: flex; gap: 8px;
+  }
+  .rate-row-star-btn {
+    background: none; border: none; cursor: pointer;
+    padding: 2px;
+    color: var(--coral-500);
+    transition: transform .12s ease;
+  }
+  .rate-row-star-btn:hover { transform: scale(1.18); }
+  .rate-row-star-btn i { font-size: 16px; }
+
+  /* ── Actions (today card) ──────────────────────────── */
+  .card-actions {
+    display: flex; gap: 8px;
+    margin-top: 14px; position: relative;
+  }
+  .action-primary {
+    flex: 1; background: var(--coral-500);
+    color: var(--cream); border: none;
+    padding: 10px; border-radius: 100px;
+    text-align: center; cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px; font-weight: 600;
+    text-decoration: none;
+    transition: background .15s;
+  }
+  .action-primary:hover { background: var(--coral-700); color: var(--cream); }
+  .action-ghost {
+    flex: 1; background: transparent;
+    border: 1px solid rgba(255,255,255,0.25);
+    color: var(--cream);
+    padding: 10px; border-radius: 100px;
+    text-align: center; cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px; font-weight: 600;
+  }
+  .action-ghost:hover { background: rgba(255,255,255,0.08); }
+
+  /* Cancel link no rodapé pra cards futuros não-hoje */
+  .cancel-link {
+    display: inline-flex; align-items: center; gap: 5px;
+    margin-top: 12px; padding: 4px 0;
+    background: none; border: none; cursor: pointer;
+    color: var(--ash); font-size: 11.5px;
+    font-family: 'Inter', sans-serif;
+  }
+  .cancel-link:hover { color: var(--rose-500); }
+
+  /* ── Empty state ───────────────────────────────────── */
+  .appts-empty {
+    text-align: center; padding: 60px 24px;
+    border: 1px solid var(--stone); border-radius: 20px;
+    background: var(--paper);
+  }
+  .appts-empty-icon {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--coral-50); border: 1px solid var(--coral-100);
+    color: var(--coral-700);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 14px; font-size: 22px;
+  }
+  .appts-empty-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; font-size: 20px;
+    color: var(--ink); margin-bottom: 6px;
+    letter-spacing: -0.3px;
+  }
+  .appts-empty-text {
+    font-size: 13.5px; color: var(--graphite);
+    margin-bottom: 18px; line-height: 1.55;
+  }
+
+  /* ── Review modal ──────────────────────────────────── */
+  .review-overlay {
+    position: fixed; inset: 0; z-index: 300;
+    background: rgba(40,35,28,0.55); backdrop-filter: blur(8px);
+    display: none; align-items: center; justify-content: center;
+    padding: 1rem; opacity: 0; transition: opacity .25s ease;
+  }
+  .review-overlay.open { display: flex; opacity: 1; }
+  .review-modal {
+    background: var(--paper); border: 1px solid var(--stone);
+    border-radius: 22px; padding: 32px; width: 100%; max-width: 480px;
+    transform: translateY(20px); transition: transform .25s cubic-bezier(.16,1,.3,1);
+    box-shadow: 0 24px 60px rgba(40,35,28,0.18);
+  }
+  .review-overlay.open .review-modal { transform: translateY(0); }
+  .review-modal-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; font-size: 22px;
+    color: var(--ink); margin-bottom: 4px;
+    letter-spacing: -0.4px;
+  }
+  .review-modal-sub {
+    font-size: 13.5px; color: var(--graphite); margin-bottom: 22px;
+  }
+  .stars-input-row { display: flex; gap: 6px; margin-bottom: 16px; justify-content: center; }
+  .star-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--stone); font-size: 28px; padding: 6px;
+    transition: color .15s, transform .12s;
+  }
+  .star-btn.active { color: var(--coral-500); }
+  .star-btn:hover { transform: scale(1.15); }
+
+  .tags-input-row {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-bottom: 14px;
+  }
+  .tag-btn {
+    padding: 6px 12px; border-radius: 100px;
+    background: var(--paper); border: 1px solid var(--stone);
+    color: var(--graphite); font-size: 12px;
+    cursor: pointer; transition: all .15s;
+  }
+  .tag-btn:hover { border-color: var(--coral-300); }
+  .tag-btn.selected {
+    background: var(--coral-50); border-color: var(--coral-500);
+    color: var(--coral-700); font-weight: 600;
+  }
+
+  .review-textarea {
+    width: 100%; padding: 12px 14px; border-radius: 12px;
+    background: var(--cream); border: 1px solid var(--stone);
+    color: var(--ink); font-family: 'Inter', sans-serif;
+    font-size: 14px; resize: vertical; outline: none;
+    margin-bottom: 18px; min-height: 80px;
+  }
+  .review-textarea:focus { border-color: var(--coral-500); }
+
+  .review-actions { display: flex; gap: 10px; }
+  .btn-modal-cancel {
+    flex: 1; padding: 12px; border-radius: 100px;
+    background: var(--paper); color: var(--graphite);
+    border: 1px solid var(--stone);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase;
+    cursor: pointer; transition: all .2s ease;
+  }
+  .btn-modal-cancel:hover { border-color: var(--coral-500); color: var(--coral-700); }
+  .btn-modal-submit {
+    flex: 2; padding: 12px; border-radius: 100px;
+    background: var(--coral-500); color: var(--cream); border: none;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase;
+    cursor: pointer; transition: background .2s ease;
+  }
+  .btn-modal-submit:hover:not(:disabled) { background: var(--coral-700); }
+  .btn-modal-submit:disabled { opacity: .45; cursor: not-allowed; }
+
+  /* ── Cancel modal ──────────────────────────────────── */
+  .cancel-overlay {
+    position: fixed; inset: 0; z-index: 310;
+    background: rgba(40,35,28,0.55); backdrop-filter: blur(8px);
+    display: none; align-items: flex-end; justify-content: center;
+    padding: 0;
+  }
+  .cancel-overlay.open { display: flex; }
+  .cancel-sheet {
+    background: var(--paper);
+    width: 100%; max-width: 480px;
+    border-radius: 22px 22px 0 0;
+    padding: 14px 22px 28px;
+    box-shadow: 0 -10px 30px rgba(40,35,28,0.18);
+    text-align: center;
+  }
+  @media (min-width: 600px) {
+    .cancel-overlay { align-items: center; padding: 1rem; }
+    .cancel-sheet   { border-radius: 22px; padding: 28px 26px 22px; }
+  }
+  .cancel-handle {
+    width: 36px; height: 4px;
+    background: var(--stone); border-radius: 99px;
+    margin: 0 auto 14px;
+  }
+  .cancel-icon-circle {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: #fdecec; border: 1px solid #f5cccc;
+    color: #c85050;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 14px; font-size: 22px;
+  }
+  .cancel-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 19px; font-weight: 700;
+    color: var(--ink); letter-spacing: -0.3px;
+    margin-bottom: 14px;
+  }
+  .cancel-summary {
+    background: var(--cream); border: 1px solid var(--stone);
+    border-radius: 14px; padding: 14px 16px;
+    margin-bottom: 14px;
+  }
+  .cancel-shop {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 15px; font-weight: 600; color: var(--ink);
+  }
+  .cancel-when {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; color: var(--graphite);
+    margin-top: 4px;
+  }
+  .cancel-desc {
+    font-size: 13px; color: var(--graphite);
+    line-height: 1.55; margin-bottom: 16px;
+  }
+  .btn-cancel-confirm {
+    width: 100%; padding: 14px;
+    background: var(--rose-500); color: var(--cream);
+    border: none; border-radius: 100px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase;
+    cursor: pointer; margin-bottom: 8px;
+    transition: background .15s;
+  }
+  .btn-cancel-confirm:hover { background: #a83a3a; }
+  .btn-cancel-back {
+    width: 100%; padding: 13px;
+    background: transparent; color: var(--graphite);
+    border: none; cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase;
+  }
+  .btn-cancel-back:hover { color: var(--ink); }
 </style>
 
+<%# Review modal %>
 <div class="review-overlay" id="review-overlay">
   <div class="review-modal">
     <div class="review-modal-title">Avaliar <span id="modal-car-wash-name" style="color:var(--coral-500);"></span></div>
     <div class="review-modal-sub">Como foi sua experiência?</div>
     <%= form_with url: client_reviews_path, method: :post, data: { turbo: false }, id: "review-form" do |f| %>
       <%= f.hidden_field :appointment_id, id: "review-appointment-id" %>
-      <div class="stars-row" id="stars-row">
+      <div class="stars-input-row" id="stars-row">
         <% (1..5).each do |i| %>
           <button type="button" class="star-btn" data-value="<%= i %>" onclick="setStar(<%= i %>)">
             <i class="fas fa-star"></i>
@@ -166,14 +431,14 @@
         <% end %>
       </div>
       <%= f.hidden_field :rating, id: "review-rating", value: "" %>
-      <div class="tags-row" id="tags-row">
+      <div class="tags-input-row" id="tags-row">
         <% Review::TAGS.each do |tag| %>
           <button type="button" class="tag-btn" data-tag="<%= tag %>" onclick="toggleTag(this)"><%= tag %></button>
         <% end %>
       </div>
       <%= f.hidden_field :tags, id: "review-tags", value: "" %>
       <%= f.text_area :comment, class: "review-textarea", rows: 3, placeholder: "Comentário opcional..." %>
-      <div class="review-modal-actions">
+      <div class="review-actions">
         <button type="button" class="btn-modal-cancel" onclick="closeReviewModal()">Cancelar</button>
         <%= f.submit "Enviar Avaliação", class: "btn-modal-submit", id: "review-submit", disabled: true %>
       </div>
@@ -181,17 +446,29 @@
   </div>
 </div>
 
-<div class="loov-page">
-
-  <div class="loov-hero">
-    <div class="loov-eyebrow"><span class="dot"></span>SUA AGENDA</div>
-    <h1 class="loov-h1">Meus <span class="accent">agendamentos</span>.</h1>
-    <p class="loov-lead">Acompanhe sua próxima reserva, gerencie cancelamentos e revise o histórico.</p>
-    <div class="loov-cta-row">
-      <%= link_to car_washes_path, class: "loov-btn-primary" do %>
-        <i class="fas fa-plus"></i> Novo agendamento
-      <% end %>
+<%# Cancel modal %>
+<div class="cancel-overlay" id="cancel-overlay">
+  <div class="cancel-sheet">
+    <div class="cancel-handle"></div>
+    <div class="cancel-icon-circle"><i class="fas fa-circle-xmark"></i></div>
+    <div class="cancel-title">Cancelar agendamento?</div>
+    <div class="cancel-summary">
+      <div class="cancel-shop" id="cancel-shop">—</div>
+      <div class="cancel-when" id="cancel-when">—</div>
     </div>
+    <div class="cancel-desc">O horário será liberado e esta ação não pode ser desfeita.</div>
+    <%= form_with url: "#", method: :delete, local: true, data: { turbo: false }, id: "cancel-form" do %>
+      <button type="submit" class="btn-cancel-confirm">Cancelar agendamento</button>
+    <% end %>
+    <button type="button" class="btn-cancel-back" onclick="closeCancelModal()">Voltar</button>
+  </div>
+</div>
+
+<div class="appts-page">
+
+  <div class="appts-header">
+    <div class="appts-eyebrow">HISTÓRICO</div>
+    <h1 class="appts-title">Meus agendamentos</h1>
   </div>
 
   <% if flash[:alert] %>
@@ -201,241 +478,239 @@
     <div class="flash-msg flash-success" id="flash-notice"><i class="fas fa-circle-check"></i><span><%= flash[:notice] %></span></div>
   <% end %>
 
-  <% current_time = Time.current.in_time_zone("America/Sao_Paulo") %>
+  <div class="appts-tabs">
+    <button class="appts-tab-btn active" data-tab="proximos">Próximos</button>
+    <button class="appts-tab-btn" data-tab="passados">Anteriores</button>
+  </div>
 
-  <% if @upcoming_appointments.empty? && @past_appointments.empty? %>
-    <div class="empty-state">
-      <div class="empty-icon"><i class="fas fa-calendar-xmark"></i></div>
-      <div class="empty-title">Tudo limpo por aqui</div>
-      <p class="empty-text">Você ainda não fez nenhum agendamento.<br>Que tal marcar o primeiro?</p>
-      <%= link_to "Explorar lava-rápidos", car_washes_path, class: "loov-btn-primary" %>
-    </div>
-
-  <% else %>
-
+  <%# ── Tab Próximos ─────────────────────────────────── %>
+  <div id="tab-proximos">
     <% if @upcoming_appointments.any? %>
-      <% next_appt          = @upcoming_appointments.first %>
-      <% next_is_ongoing    = @ongoing_appointments.include?(next_appt.id) %>
-      <% next_minutes_until = ((next_appt.scheduled_at - current_time) / 60).to_i %>
-      <% next_can_cancel    = !next_is_ongoing && next_appt.regular? && next_minutes_until > 120 %>
-      <% next_cancel_deadline = next_appt.scheduled_at.in_time_zone("America/Sao_Paulo") - 2.hours %>
-      <% next_show_code     = @client_code.present? && (next_is_ongoing || next_minutes_until <= 30) %>
+      <div class="appt-list">
+        <% @upcoming_appointments.each do |appt| %>
+          <% sched_sp   = appt.scheduled_at.in_time_zone("America/Sao_Paulo") %>
+          <% is_today_a = is_today_card?(appt, current_time) %>
+          <% is_ongoing = @ongoing_appointments.include?(appt.id) %>
+          <% mins_until = ((appt.scheduled_at - current_time) / 60.0).to_i %>
+          <% show_code  = @client_code.present? && (is_ongoing || mins_until <= 30) && appt.status == 'confirmed' %>
+          <% can_can    = can_cancel?(appt, current_time) %>
+          <% dow_label  = is_today_a ? 'hoje' : WEEKDAYS_PT[sched_sp.wday] %>
 
-      <div class="next-card">
-        <div class="next-card-top">
-          <div>
-            <div class="next-card-eyebrow">
-              <%= next_is_ongoing ? "Em andamento agora" : "Próximo agendamento" %>
-            </div>
-            <div class="next-card-name"><%= next_appt.car_wash.name %></div>
-            <div class="next-card-address">
-              <i class="fas fa-location-dot"></i>
-              <%= next_appt.car_wash.address %>
-            </div>
-            <% if next_show_code %>
-              <div class="code-inline">
-                <i class="fas fa-hashtag"></i>
-                Código: <strong style="margin-left:2px;"><%= @client_code %></strong>
-              </div>
-            <% end %>
-            <% if (loy = @loyalty_by_car_wash[next_appt.car_wash_id]) %>
-              <% proj = loy[:visits] + 1 %>
-              <% proj_cycle = proj % loy[:goal] %>
-              <% proj_milestone = proj_cycle == 0 %>
-              <% proj_filled = proj_milestone ? loy[:goal] : proj_cycle %>
-              <div class="loyalty-strip <%= proj_milestone ? 'milestone' : '' %>">
-                <div class="loy-dots">
-                  <% loy[:goal].times do |i| %>
-                    <span class="loy-dot <%= i < proj_filled ? 'filled' : '' %>"></span>
-                  <% end %>
-                </div>
-                <span class="loy-label">
-                  <% if proj_milestone %>
-                    <i class="fas fa-trophy" style="font-size:9px;margin-right:2px;"></i> <%= loy[:reward] %> desbloqueado!
-                  <% else %>
-                    <%= proj_filled %>/<%= loy[:goal] %> visitas · <%= loy[:reward] %>
-                  <% end %>
-                </span>
-              </div>
-            <% end %>
-          </div>
-          <div class="next-card-datetime">
-            <div class="next-card-time"><%= next_appt.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%H:%M") %></div>
-            <div class="next-card-date"><%= next_appt.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%d/%m/%Y") %></div>
-          </div>
-        </div>
-        <div class="next-card-bottom">
-          <div class="next-card-service">
-            <div class="next-card-service-icon"><i class="fas fa-wrench"></i></div>
-            <div>
-              <div class="next-card-service-name"><%= next_appt.service.title %></div>
-              <div class="next-card-service-meta"><%= next_appt.service.duration %> min · R$ <%= number_with_precision(next_appt.service.price, precision: 2, separator: ',') %></div>
-            </div>
-          </div>
-          <div class="next-card-actions">
-            <% if next_can_cancel %>
-              <div class="cancel-deadline">
-                <i class="fas fa-clock"></i>
-                Cancele até <%= next_cancel_deadline.strftime("%H:%M") %> de <%= next_cancel_deadline.strftime("%d/%m") %>
-              </div>
-              <%= form_with url: cancel_appointment_path(next_appt), method: :delete, local: true, data: { turbo: false, confirm: "Tem certeza que deseja cancelar?" } do %>
-                <%= submit_tag "Cancelar", class: "btn-cancel-appt" %>
-              <% end %>
-            <% elsif !next_is_ongoing && next_appt.regular? && next_minutes_until <= 120 %>
-              <span class="cancel-deadline"><i class="fas fa-lock"></i> Cancelamento encerrado</span>
-            <% end %>
-          </div>
-        </div>
-      </div>
+          <div class="appt-card <%= 'today' if is_today_a %>">
+            <% if is_today_a %><div class="appt-card-blob"></div><% end %>
 
-      <% other_upcoming = @upcoming_appointments[1..] %>
-      <% if other_upcoming.any? %>
-        <div class="upcoming-list">
-          <% other_upcoming.each do |appt| %>
-            <% is_ongoing      = @ongoing_appointments.include?(appt.id) %>
-            <% minutes_until   = ((appt.scheduled_at - current_time) / 60).to_i %>
-            <% can_cancel      = !is_ongoing && appt.regular? && minutes_until > 120 %>
-            <% cancel_deadline = appt.scheduled_at.in_time_zone("America/Sao_Paulo") - 2.hours %>
-            <% show_code_item  = @client_code.present? && (is_ongoing || minutes_until <= 30) %>
-            <div class="upcoming-item" data-appt-id="<%= appt.id %>">
-              <div class="upcoming-item-header" onclick="toggleUpcoming(<%= appt.id %>)">
-                <div class="upcoming-item-left">
-                  <div class="upcoming-item-name"><%= appt.car_wash.name %></div>
-                  <div class="upcoming-item-meta">
-                    <i class="fas fa-wrench"></i> <%= appt.service.title %>
-                    &middot;
-                    <i class="fas fa-location-dot"></i> <%= appt.car_wash.address.truncate(35) %>
-                  </div>
-                  <% if show_code_item %>
-                    <div class="code-inline" style="margin-top:8px;">
-                      <i class="fas fa-hashtag"></i> Código: <strong style="margin-left:2px;"><%= @client_code %></strong>
-                    </div>
-                  <% end %>
-                  <% if (loy = @loyalty_by_car_wash[appt.car_wash_id]) %>
-                    <% proj = loy[:visits] + 1 %>
-                    <% proj_cycle = proj % loy[:goal] %>
-                    <% proj_milestone = proj_cycle == 0 %>
-                    <% proj_filled = proj_milestone ? loy[:goal] : proj_cycle %>
-                    <div class="loyalty-strip <%= proj_milestone ? 'milestone' : '' %>">
-                      <div class="loy-dots">
-                        <% loy[:goal].times do |i| %>
-                          <span class="loy-dot <%= i < proj_filled ? 'filled' : '' %>"></span>
-                        <% end %>
-                      </div>
-                      <span class="loy-label">
-                        <% if proj_milestone %>
-                          <i class="fas fa-trophy" style="font-size:9px;margin-right:2px;"></i> <%= loy[:reward] %> desbloqueado!
-                        <% else %>
-                          <%= proj_filled %>/<%= loy[:goal] %> visitas · <%= loy[:reward] %>
-                        <% end %>
-                      </span>
-                    </div>
-                  <% end %>
-                </div>
-                <div class="upcoming-item-right">
-                  <div>
-                    <div class="upcoming-item-time"><%= appt.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%H:%M") %></div>
-                    <div class="upcoming-item-date"><%= appt.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%d/%m/%Y") %></div>
-                  </div>
-                  <i class="fas fa-chevron-down upcoming-item-chevron"></i>
-                </div>
+            <div class="appt-inner">
+              <div class="date-col">
+                <span class="date-dow"><%= dow_label %></span>
+                <span class="date-day"><%= sched_sp.day %></span>
+                <span class="date-mon"><%= MONTHS_PT[sched_sp.month - 1] %></span>
               </div>
-              <div class="upcoming-item-details" id="details-<%= appt.id %>">
-                <div class="upcoming-item-details-inner">
-                  <div class="detail-row"><span class="detail-label">Serviço</span><span class="detail-value"><%= appt.service.title %></span></div>
-                  <div class="detail-row"><span class="detail-label">Duração</span><span class="detail-value"><%= appt.service.duration %> min</span></div>
-                  <div class="detail-row"><span class="detail-label">Endereço</span><span class="detail-value"><%= appt.car_wash.address %></span></div>
-                  <div class="detail-row">
-                    <span class="detail-label">Valor</span>
-                    <span class="detail-value" style="color:var(--coral-500); font-family:'Space Grotesk',sans-serif; font-size:18px; font-weight:700;">R$ <%= number_with_precision(appt.service.price, precision: 2, separator: ',') %></span>
-                  </div>
-                  <div class="upcoming-item-actions">
-                    <% if can_cancel %>
-                      <span class="cancel-deadline"><i class="fas fa-clock"></i> Cancele até <%= cancel_deadline.strftime("%H:%M") %> de <%= cancel_deadline.strftime("%d/%m") %></span>
-                      <%= form_with url: cancel_appointment_path(appt), method: :delete, local: true, data: { turbo: false, confirm: "Tem certeza que deseja cancelar?" } do %>
-                        <%= submit_tag "Cancelar agendamento", class: "btn-cancel-appt" %>
-                      <% end %>
-                    <% elsif !is_ongoing && appt.regular? %>
-                      <span class="cancel-deadline"><i class="fas fa-lock"></i> Cancelamento encerrado</span>
-                    <% else %>
-                      <span style="font-size:12.5px;color:var(--ash);">Cancelamento indisponível</span>
-                    <% end %>
-                  </div>
-                </div>
-              </div>
-            </div>
-          <% end %>
-        </div>
-      <% end %>
 
-    <% else %>
-      <div class="empty-state" style="margin-bottom:32px;">
-        <div class="empty-icon"><i class="fas fa-calendar-check"></i></div>
-        <div class="empty-title">Nenhum agendamento futuro</div>
-        <p class="empty-text">Seu carro merece atenção. Agende agora.</p>
-        <%= link_to "Explorar lava-rápidos", car_washes_path, class: "loov-btn-primary" %>
-      </div>
-    <% end %>
+              <div class="appt-body">
+                <div class="appt-id">#LV-<%= sprintf('%04d', appt.id) %></div>
+                <div class="shop-name"><%= appt.car_wash.name %></div>
+                <div class="service-name">
+                  <%= appt.service.title %><% if appt.service.duration.present? %> · <%= appt.service.duration %>min<% end %>
+                </div>
+                <div class="time-price">
+                  <%= sched_sp.strftime("%H:%M") %> · R$ <%= sprintf('%.2f', appt.service.price.to_f).gsub('.', ',') %>
+                </div>
 
-    <% if @past_appointments.any? %>
-      <div class="loov-section">
-        <div class="loov-section-header">
-          <div>
-            <div class="loov-section-label">HISTÓRICO</div>
-            <h2 class="loov-h2">Atendimentos anteriores</h2>
-          </div>
-          <span class="loov-pill loov-pill--neutral"><%= @past_appointments.count %> agendamento<%= @past_appointments.count == 1 ? '' : 's' %></span>
-        </div>
-        <div class="history-list">
-          <% @past_appointments.each do |appt| %>
-            <div class="history-item">
-              <div class="history-item-left">
-                <div class="history-item-name"><%= appt.car_wash.name %></div>
-                <div class="history-item-meta">
-                  <i class="fas fa-wrench"></i> <%= appt.service.title %>
-                  &middot;
-                  <i class="fas fa-clock"></i> <%= appt.service.duration %> min
-                </div>
-              </div>
-              <div class="history-item-right">
-                <div>
-                  <div class="history-item-date-main"><%= appt.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%d/%m/%Y") %></div>
-                  <div class="history-item-date-time"><%= appt.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%H:%M") %></div>
-                </div>
-                <% if appt.review.present? %>
-                  <div class="reviewed-badge">
-                    <% appt.review.rating.times do %><i class="fas fa-star"></i><% end %>
+                <% if show_code %>
+                  <div class="code-block <%= is_today_a ? 'ink' : 'light' %>">
+                    <span class="code-pill <%= is_today_a ? 'ink' : 'light' %>">
+                      <i class="fas fa-shield"></i><%= @client_code %>
+                    </span>
+                    <span class="code-hint <%= is_today_a ? 'ink' : 'light' %>">
+                      Passe esse código pro lava-rápido na chegada
+                    </span>
                   </div>
-                <% elsif appt.status == 'attended' %>
-                  <button class="btn-review" onclick="openReviewModal(<%= appt.id %>, '<%= j appt.car_wash.name %>')">
-                    <i class="fas fa-star"></i> Avaliar
-                  </button>
-                <% elsif appt.status == 'no_show' %>
-                <% else %>
-                  <span class="loov-pill loov-pill--neutral">Pendente</span>
                 <% end %>
               </div>
             </div>
-          <% end %>
-        </div>
+
+            <% if is_today_a %>
+              <div class="card-actions">
+                <% if appt.car_wash.try(:address).present? %>
+                  <% map_q = ERB::Util.url_encode(appt.car_wash.address) %>
+                  <a href="https://www.google.com/maps/search/?api=1&query=<%= map_q %>" target="_blank" rel="noopener" class="action-primary">Ver rota</a>
+                <% end %>
+                <% if can_can %>
+                  <button type="button" class="action-ghost"
+                          onclick="openCancelModal(<%= appt.id %>, '<%= j appt.car_wash.name %>', '<%= dow_label %> <%= sched_sp.day %> <%= MONTHS_PT[sched_sp.month - 1] %> · <%= sched_sp.strftime("%H:%M") %>', '<%= cancel_appointment_path(appt) %>')">
+                    Cancelar
+                  </button>
+                <% end %>
+              </div>
+            <% else %>
+              <% if can_can %>
+                <button type="button" class="cancel-link"
+                        onclick="openCancelModal(<%= appt.id %>, '<%= j appt.car_wash.name %>', '<%= dow_label %> <%= sched_sp.day %> <%= MONTHS_PT[sched_sp.month - 1] %> · <%= sched_sp.strftime("%H:%M") %>', '<%= cancel_appointment_path(appt) %>')">
+                  <i class="fas fa-xmark"></i> Cancelar agendamento
+                </button>
+              <% end %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="appts-empty">
+        <div class="appts-empty-icon"><i class="fas fa-calendar-xmark"></i></div>
+        <div class="appts-empty-title">Nenhum agendamento próximo</div>
+        <p class="appts-empty-text">Suas reservas confirmadas aparecem aqui.</p>
+        <%= link_to "Explorar lava-rápidos", car_washes_path, class: "loov-btn-primary" %>
       </div>
     <% end %>
+  </div>
 
-  <% end %>
+  <%# ── Tab Anteriores ───────────────────────────────── %>
+  <div id="tab-passados" style="display: none;">
+    <% if @past_appointments.any? %>
+      <div class="appt-list">
+        <% @past_appointments.each do |appt| %>
+          <% sched_sp = appt.scheduled_at.in_time_zone("America/Sao_Paulo") %>
+          <% reviewed = appt.review.present? %>
+          <% rating   = appt.review&.rating.to_i %>
+
+          <div class="appt-card">
+            <div class="appt-inner">
+              <div class="date-col">
+                <span class="date-dow"><%= WEEKDAYS_PT[sched_sp.wday] %></span>
+                <span class="date-day"><%= sched_sp.day %></span>
+                <span class="date-mon"><%= MONTHS_PT[sched_sp.month - 1] %></span>
+              </div>
+
+              <div class="appt-body">
+                <div class="appt-id">#LV-<%= sprintf('%04d', appt.id) %></div>
+                <div class="shop-name"><%= appt.car_wash.name %></div>
+                <div class="service-name">
+                  <%= appt.service.title %><% if appt.service.duration.present? %> · <%= appt.service.duration %>min<% end %>
+                </div>
+                <div class="time-price">
+                  <%= sched_sp.strftime("%H:%M") %> · R$ <%= sprintf('%.2f', appt.service.price.to_f).gsub('.', ',') %>
+                </div>
+
+                <% if appt.status == 'attended' && reviewed && rating > 0 %>
+                  <div class="stars-row-result">
+                    <% 5.times do |n| %>
+                      <i class="fas fa-star" style="color: <%= n < rating ? 'var(--coral-500)' : 'var(--stone)' %>;"></i>
+                    <% end %>
+                    <span class="stars-hint">sua avaliação</span>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+
+            <% if appt.status == 'attended' && !reviewed %>
+              <div class="rate-row">
+                <span class="rate-row-label">Avalie</span>
+                <div class="rate-row-stars">
+                  <% (1..5).each do |n| %>
+                    <button type="button" class="rate-row-star-btn"
+                            onclick="openReviewModal(<%= appt.id %>, '<%= j appt.car_wash.name %>', <%= n %>)">
+                      <i class="fas fa-star"></i>
+                    </button>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="appts-empty">
+        <div class="appts-empty-icon"><i class="fas fa-clock-rotate-left"></i></div>
+        <div class="appts-empty-title">Sem anteriores</div>
+        <p class="appts-empty-text">Atendimentos concluídos aparecem nesta aba.</p>
+      </div>
+    <% end %>
+  </div>
+
 </div>
 
 <script>
 (function() {
-  window.toggleUpcoming=function(id){var item=document.querySelector('[data-appt-id="'+id+'"]'),details=document.getElementById('details-'+id),isOpen=item.classList.contains('expanded');document.querySelectorAll('.upcoming-item').forEach(function(el){el.classList.remove('expanded');var d=el.querySelector('.upcoming-item-details');if(d)d.classList.remove('open');});if(!isOpen){item.classList.add('expanded');details.classList.add('open');}};
-
-  window.openReviewModal=function(id,name){document.getElementById('review-appointment-id').value=id;document.getElementById('modal-car-wash-name').textContent=name;document.getElementById('review-rating').value='';document.getElementById('review-tags').value='';document.getElementById('review-submit').disabled=true;document.querySelectorAll('.star-btn').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.tag-btn').forEach(b=>b.classList.remove('selected'));var ta=document.querySelector('.review-textarea');if(ta)ta.value='';document.getElementById('review-overlay').classList.add('open');};
-  window.closeReviewModal=function(){document.getElementById('review-overlay').classList.remove('open');};
-  document.getElementById('review-overlay').addEventListener('click',function(e){if(e.target===this)window.closeReviewModal();});
-  window.setStar=function(val){document.getElementById('review-rating').value=val;document.getElementById('review-submit').disabled=false;document.querySelectorAll('.star-btn').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.value)<=val));};
-  window.toggleTag=function(btn){btn.classList.toggle('selected');var sel=Array.from(document.querySelectorAll('.tag-btn.selected')).map(b=>b.dataset.tag);document.getElementById('review-tags').value=sel.join(',');};
-
-  document.addEventListener('DOMContentLoaded',function(){
-    ['flash-notice','flash-error'].forEach(function(id){var el=document.getElementById(id);if(!el)return;setTimeout(function(){el.style.transition='opacity .5s ease';el.style.opacity='0';setTimeout(function(){el.style.display='none';},500);},6000);});
+  // ── Tabs ────────────────────────────────────────────
+  document.querySelectorAll('.appts-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const t = btn.dataset.tab;
+      document.querySelectorAll('.appts-tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-proximos').style.display = (t === 'proximos') ? '' : 'none';
+      document.getElementById('tab-passados').style.display = (t === 'passados') ? '' : 'none';
+    });
   });
+
+  // ── Review modal ────────────────────────────────────
+  window.openReviewModal = function(id, name, prefillRating) {
+    document.getElementById('review-appointment-id').value = id;
+    document.getElementById('modal-car-wash-name').textContent = name;
+    const ratingVal = prefillRating ? Number(prefillRating) : '';
+    document.getElementById('review-rating').value = ratingVal || '';
+    document.getElementById('review-tags').value = '';
+    document.getElementById('review-submit').disabled = !ratingVal;
+    document.querySelectorAll('.star-btn').forEach(b => {
+      b.classList.toggle('active', ratingVal && parseInt(b.dataset.value) <= ratingVal);
+    });
+    document.querySelectorAll('.tag-btn').forEach(b => b.classList.remove('selected'));
+    const ta = document.querySelector('.review-textarea');
+    if (ta) ta.value = '';
+    document.getElementById('review-overlay').classList.add('open');
+  };
+
+  window.closeReviewModal = function() {
+    document.getElementById('review-overlay').classList.remove('open');
+  };
+
+  document.getElementById('review-overlay').addEventListener('click', function(e) {
+    if (e.target === this) window.closeReviewModal();
+  });
+
+  window.setStar = function(val) {
+    document.getElementById('review-rating').value = val;
+    document.getElementById('review-submit').disabled = false;
+    document.querySelectorAll('.star-btn').forEach(b => {
+      b.classList.toggle('active', parseInt(b.dataset.value) <= val);
+    });
+  };
+
+  window.toggleTag = function(btn) {
+    btn.classList.toggle('selected');
+    const sel = Array.from(document.querySelectorAll('.tag-btn.selected')).map(b => b.dataset.tag);
+    document.getElementById('review-tags').value = sel.join(',');
+  };
+
+  // ── Cancel modal ────────────────────────────────────
+  window.openCancelModal = function(id, shopName, whenStr, cancelUrl) {
+    document.getElementById('cancel-shop').textContent = shopName;
+    document.getElementById('cancel-when').textContent = whenStr;
+    document.getElementById('cancel-form').action = cancelUrl;
+    document.getElementById('cancel-overlay').classList.add('open');
+  };
+
+  window.closeCancelModal = function() {
+    document.getElementById('cancel-overlay').classList.remove('open');
+  };
+
+  document.getElementById('cancel-overlay').addEventListener('click', function(e) {
+    if (e.target === this) window.closeCancelModal();
+  });
+
+  // ── Auto-dismiss flash ──────────────────────────────
+  document.addEventListener('DOMContentLoaded', function() {
+    ['flash-notice', 'flash-error'].forEach(function(id) {
+      const el = document.getElementById(id); if (!el) return;
+      setTimeout(() => {
+        el.style.transition = 'opacity .5s ease';
+        el.style.opacity = '0';
+        setTimeout(() => el.style.display = 'none', 500);
+      }, 6000);
+    });
+  });
+
+  // ── Auto-refresh ticker ──────────────────────────────
+  // Re-renderiza cards quando a hora atual cruza a fronteira de "hoje"
+  // pra que o card siga a regra do app (today→ink, past→reload).
+  setTimeout(() => { window.location.reload(); }, 1000 * 60 * 5);
 })();
 </script>
