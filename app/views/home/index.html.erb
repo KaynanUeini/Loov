@@ -1646,8 +1646,10 @@
 (function(){
   const cursor=document.getElementById('loov-cursor'),trail=document.getElementById('loov-cursor-trail');
   if(cursor&&trail){let mx=-100,my=-100,tx=-100,ty=-100;document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cursor.style.left=mx+'px';cursor.style.top=my+'px';});(function anim(){tx+=(mx-tx)*0.12;ty+=(my-ty)*0.12;trail.style.left=tx+'px';trail.style.top=ty+'px';requestAnimationFrame(anim);})();document.addEventListener('mouseover',e=>{if(e.target.closest('a,button,input,select,textarea,.cw-card'))document.body.classList.add('cursor-hover');});document.addEventListener('mouseout',e=>{if(e.target.closest('a,button,input,select,textarea,.cw-card'))document.body.classList.remove('cursor-hover');});document.addEventListener('mouseleave',()=>{cursor.style.opacity='0';trail.style.opacity='0';});document.addEventListener('mouseenter',()=>{cursor.style.opacity='1';trail.style.opacity='1';});}
-  const pt=document.getElementById('page-transition');
-  if(pt){document.addEventListener('click',e=>{const link=e.target.closest('a[href]');if(!link)return;const href=link.getAttribute('href');if(!href||href.startsWith('#')||href.startsWith('mailto')||link.target==='_blank')return;if(href.startsWith('http')&&!href.includes(window.location.hostname))return;e.preventDefault();pt.classList.add('enter');setTimeout(()=>window.location.href=href,400);});window.addEventListener('pageshow',()=>{pt.classList.remove('enter');pt.classList.add('exit');setTimeout(()=>pt.classList.remove('exit'),440);});}
+  // Page-transition handler removido — interceptava clicks em <a> e
+  // fazia setTimeout/redirect, quebrando navegação no mobile (eventos
+  // touch são processados de forma diferente). Navegação nativa do
+  // browser cuida de transições com mais robustez cross-platform.
   <% if user_signed_in? && current_user.client? %>
   const saved=localStorage.getItem('loov_last_coords');
   const up=new URLSearchParams(window.location.search);
