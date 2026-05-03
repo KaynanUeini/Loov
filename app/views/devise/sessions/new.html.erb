@@ -1,10 +1,42 @@
+<%
+  now_sp_login = Time.current.in_time_zone("America/Sao_Paulo")
+  h_login = now_sp_login.hour
+  greet_login = if h_login < 5      then "Boa madrugada"
+                elsif h_login < 12  then "Bom dia"
+                elsif h_login < 18  then "Boa tarde"
+                else                     "Boa noite"
+                end
+  weekdays_login = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado']
+  months_login   = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro']
+  day_login   = weekdays_login[now_sp_login.wday].capitalize
+  date_login  = "#{now_sp_login.day} de #{months_login[now_sp_login.month - 1]}"
+%>
+
+<style>
+  .login-wave {
+    display: inline-block;
+    animation: login-wave 2.4s ease-in-out infinite;
+    transform-origin: 70% 70%;
+    font-size: 0.85em;
+    margin-left: 8px;
+  }
+  @keyframes login-wave {
+    0%, 60%, 100% { transform: rotate(0); }
+    10% { transform: rotate(14deg); }
+    20% { transform: rotate(-8deg); }
+    30% { transform: rotate(14deg); }
+    40% { transform: rotate(-4deg); }
+    50% { transform: rotate(10deg); }
+  }
+</style>
+
 <div class="loov-auth">
 
   <!-- ── EDITORIAL ──────────────────────────────────── -->
   <aside class="loov-auth-editorial">
-    <div class="loov-eyebrow"><span class="dot"></span>A NOVA FORMA DE LAVAR</div>
+    <div class="loov-eyebrow"><span class="dot"></span><%= day_login %> · <%= date_login %></div>
     <h1 class="loov-h1" style="text-align:left;">
-      Seu carro,<br><span class="accent">seu jeito</span>.
+      <%= greet_login %><br><span class="accent">por aqui</span><span class="login-wave">👋</span>
     </h1>
     <p class="loov-lead" style="margin-left:0;text-align:left;">
       Você escolhe o lugar, o horário e o serviço.<br>
