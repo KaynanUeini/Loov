@@ -1,216 +1,431 @@
 <style>
-  .how-row { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin:8px 0 32px; }
-  .how-card {
-    background:var(--paper);
-    border:1px solid var(--stone);
-    border-radius:16px;
-    padding:18px 20px;
-    position:relative; overflow:hidden;
+  /* Página dark padrão Loov — espelha DisponivelScreen.js do app */
+  .disp-wrap {
+    background: var(--obsidian);
+    min-height: 100vh;
+    margin-top: -60px; /* compensa o navbar fixed cream — aqui queremos full-bleed dark */
+    padding-top: 60px;
   }
-  .how-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--coral-500); opacity:.5; }
-  .how-num { font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:32px; color:var(--coral-100); line-height:1; margin-bottom:6px; letter-spacing:-0.5px; }
-  .how-text { font-size:13px; color:var(--graphite); line-height:1.55; }
-  .how-text strong { color:var(--ink); font-weight:600; }
+  body.disp-active { background: var(--obsidian); }
 
-  .geo-banner { margin-bottom:24px; }
-  .geo-inner {
-    background:var(--coral-50); border:1px solid var(--coral-100); border-radius:14px;
-    padding:14px 16px; display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+  .disp-back {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 44px; height: 44px; border-radius: 22px;
+    background: rgba(254,254,253,0.08);
+    border: 1px solid rgba(254,254,253,0.12);
+    color: var(--cream);
+    margin: 14px 20px 0;
+    text-decoration: none;
+    transition: background .15s ease;
   }
-  .geo-text { font-size:13.5px; color:var(--graphite); }
-  .geo-btn {
-    background:var(--coral-500); border:none; border-radius:100px;
-    padding:8px 16px; font-family:'JetBrains Mono', monospace; font-size:11px; font-weight:600; letter-spacing:1.4px; text-transform:uppercase;
-    color:var(--cream); cursor:pointer; transition:background .15s;
-  }
-  .geo-btn:hover { background:var(--coral-700); }
+  .disp-back:hover { background: rgba(254,254,253,0.14); color: var(--cream); }
 
-  .slot-group { margin-bottom:32px; }
-  .slot-cw-header { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:14px; flex-wrap:wrap; }
-  .slot-cw-name { font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:22px; color:var(--ink); letter-spacing:-0.3px; line-height:1.2; }
-  .slot-cw-meta { font-size:12.5px; color:var(--graphite); margin-top:4px; }
-  .slot-cw-meta i { color:var(--coral-500); margin-right:4px; }
-  .slot-price-from {
-    font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:1.4px; text-transform:uppercase;
-    color:var(--coral-700); background:var(--coral-50); border:1px solid var(--coral-100);
-    padding:5px 11px; border-radius:100px;
+  .disp-page {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 16px 20px 80px;
   }
 
-  .slot-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:12px; }
-
-  .slot-card {
-    background:var(--paper); border:1px solid var(--stone);
-    border-radius:18px; padding:18px;
-    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
-    position:relative; overflow:hidden;
-    text-decoration:none; display:block;
+  /* ── Hero ─────────────────────────────────────────────── */
+  .disp-hero { padding: 12px 0 28px; }
+  .disp-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--coral-500);
+    color: var(--cream);
+    padding: 6px 12px;
+    border-radius: 100px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 1.4px; text-transform: lowercase;
+    margin-bottom: 16px;
   }
-  .slot-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--coral-500); transform:scaleY(0); transform-origin:bottom; transition:transform .3s cubic-bezier(.16,1,.3,1); }
-  .slot-card:hover { border-color:var(--coral-100); box-shadow: 0 12px 28px rgba(25,20,15,0.06); transform:translateY(-2px); }
-  .slot-card:hover::before { transform:scaleY(1); }
-
-  .slot-time { font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:32px; color:var(--coral-500); line-height:1; letter-spacing:-0.5px; }
-  .slot-today { font-family:'JetBrains Mono', monospace; font-size:10px; color:var(--ash); letter-spacing:1.4px; text-transform:uppercase; margin-top:4px; }
-
-  .slot-services { margin-top:14px; display:flex; flex-direction:column; gap:6px; }
-  .slot-svc { display:flex; align-items:center; justify-content:space-between; gap:8px; }
-  .slot-svc-name { font-size:13px; color:var(--ink); font-weight:500; }
-  .slot-svc-meta { display:flex; align-items:center; gap:8px; }
-  .slot-svc-dur { font-size:11.5px; color:var(--ash); }
-  .slot-svc-price { font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:13px; color:var(--graphite); }
-
-  .slot-cta { margin-top:16px; display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
-  .slot-prepay-tag { font-family:'JetBrains Mono', monospace; font-size:9.5px; color:var(--ash); letter-spacing:1.2px; text-transform:uppercase; }
-  .slot-cta-btn {
-    display:inline-flex; align-items:center; gap:6px;
-    background:var(--coral-500); color:var(--cream); border:none; border-radius:100px;
-    padding:8px 16px; font-family:'JetBrains Mono', monospace; font-size:11px; font-weight:600; letter-spacing:1.4px; text-transform:uppercase;
-    cursor:pointer; transition:background .15s, transform .15s;
+  .disp-badge i { font-size: 11px; }
+  .disp-h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: clamp(34px, 5.5vw, 52px);
+    line-height: 1.05;
+    color: var(--cream);
+    letter-spacing: -1px;
+    margin: 0;
   }
-  .slot-cta-btn:hover { background:var(--coral-700); transform:translateY(-1px); }
+  .disp-h1 .accent { color: var(--coral-500); }
 
-  .svc-select-overlay { display:none; margin-top:14px; padding-top:14px; border-top:1px solid var(--stone); }
-  .svc-select-overlay.open { display:block; }
-  .svc-select-label { font-family:'JetBrains Mono', monospace; font-size:10.5px; font-weight:600; letter-spacing:1.6px; text-transform:uppercase; color:var(--ash); margin-bottom:8px; }
-  .svc-btn {
-    display:flex; align-items:center; justify-content:space-between; width:100%;
-    padding:10px 14px; background:var(--cream); border:1px solid var(--stone);
-    border-radius:10px; margin-bottom:6px; cursor:pointer; transition:all .15s;
-    text-align:left; text-decoration:none;
+  /* ── Info strip ───────────────────────────────────────── */
+  .disp-info-strip {
+    display: flex; align-items: center; gap: 14px;
+    background: rgba(254,254,253,0.05);
+    border: 1px solid rgba(254,254,253,0.10);
+    border-radius: 16px;
+    padding: 14px 18px;
+    margin-bottom: 24px;
   }
-  .svc-btn:hover { border-color:var(--coral-500); background:var(--coral-50); }
-  .svc-btn-name { font-size:13px; color:var(--ink); font-weight:500; }
-  .svc-btn-right { display:flex; align-items:center; gap:10px; }
-  .svc-btn-dur { font-size:11.5px; color:var(--ash); }
-  .svc-btn-price { font-family:'Space Grotesk', sans-serif; font-weight:600; font-size:13px; color:var(--coral-700); }
+  .strip-icon {
+    width: 44px; height: 44px; border-radius: 14px;
+    background: rgba(220,120,82,0.18);
+    border: 1px solid rgba(220,120,82,0.30);
+    color: var(--coral-500);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .strip-label { color: var(--cream); font-size: 14px; font-weight: 600; }
+  .strip-value {
+    color: #b5ae9f; font-size: 12.5px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.5px; margin-top: 2px;
+  }
 
-  .empty-state { text-align:center; padding:60px 24px; background:var(--paper); border:1px solid var(--stone); border-radius:20px; }
-  .empty-icon { font-size:36px; color:var(--stone); margin-bottom:14px; }
-  .empty-title { font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:24px; color:var(--ink); margin-bottom:8px; letter-spacing:-0.3px; }
-  .empty-text { font-size:14px; color:var(--graphite); max-width:380px; margin:0 auto 22px; line-height:1.6; }
+  /* ── Geo banner / Empty state ─────────────────────────── */
+  .disp-banner {
+    background: rgba(220,120,82,0.10);
+    border: 1px solid rgba(220,120,82,0.25);
+    border-radius: 18px;
+    padding: 18px 20px;
+    margin-bottom: 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 14px; flex-wrap: wrap;
+  }
+  .disp-banner-text { color: var(--cream); font-size: 13.5px; }
+  .disp-banner-text i { color: var(--coral-500); margin-right: 6px; }
+  .disp-banner-btn {
+    background: var(--coral-500); color: var(--cream);
+    border: none; border-radius: 100px;
+    padding: 10px 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase;
+    cursor: pointer; transition: background .15s;
+  }
+  .disp-banner-btn:hover { background: var(--coral-700); }
 
-  @media (max-width:600px) {
-    .how-row { grid-template-columns:1fr; }
+  .disp-empty {
+    background: rgba(254,254,253,0.04);
+    border: 1px solid rgba(254,254,253,0.08);
+    border-radius: 20px;
+    padding: 56px 24px;
+    text-align: center;
+  }
+  .disp-empty-icon {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: rgba(220,120,82,0.15);
+    color: var(--coral-500);
+    margin: 0 auto 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+  }
+  .disp-empty-title {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+    font-size: 22px; color: var(--cream);
+    letter-spacing: -0.3px; margin-bottom: 8px;
+  }
+  .disp-empty-text {
+    font-size: 14px; color: #b5ae9f; line-height: 1.55;
+    max-width: 380px; margin: 0 auto;
+  }
+
+  /* ── Card escuro (espelha cardDark do app) ───────────── */
+  .disp-list { display: flex; flex-direction: column; gap: 12px; }
+
+  .disp-card-dark {
+    background: var(--ink);
+    border-radius: 24px;
+    padding: 22px;
+    position: relative; overflow: hidden;
+    border: 1px solid rgba(254,254,253,0.05);
+  }
+  .disp-blob {
+    position: absolute; top: -50px; right: -50px;
+    width: 220px; height: 220px;
+    border-radius: 50%;
+    background: var(--coral-500);
+    pointer-events: none;
+  }
+
+  .disp-top {
+    display: flex; align-items: flex-start; gap: 14px;
+    position: relative;
+  }
+  .shop-info { flex: 1; min-width: 0; }
+  .shop-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 19px;
+    color: var(--cream);
+    letter-spacing: -0.3px;
+    line-height: 1.2;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .shop-addr {
+    color: #c9c4ba;
+    font-size: 12.5px;
+    margin-top: 4px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .shop-addr-sub {
+    color: #8a857c;
+    font-size: 11.5px;
+    margin-top: 2px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .disp-distance-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: rgba(220,120,82,0.18);
+    border: 1px solid rgba(220,120,82,0.35);
+    color: var(--coral-500);
+    padding: 4px 10px;
+    border-radius: 100px;
+    font-size: 11px; font-weight: 600;
+    flex-shrink: 0;
+  }
+  .disp-distance-pill i { font-size: 10px; }
+
+  /* Service pills */
+  .disp-svc-pills {
+    display: flex; gap: 6px;
+    margin-top: 14px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    position: relative;
+  }
+  .disp-svc-pills::-webkit-scrollbar { height: 0; }
+  .svc-pill {
+    flex-shrink: 0;
+    background: rgba(254,254,253,0.08);
+    border: 1px solid rgba(254,254,253,0.10);
+    border-radius: 100px;
+    padding: 7px 14px;
+    color: var(--cream);
+    font-size: 12.5px; font-weight: 500;
+    cursor: pointer;
+    transition: all .15s ease;
+    white-space: nowrap;
+  }
+  .svc-pill:hover { background: rgba(254,254,253,0.12); }
+  .svc-pill.active {
+    background: var(--cream);
+    color: var(--ink);
+    border-color: var(--cream);
+    font-weight: 600;
+  }
+
+  /* Bottom row */
+  .disp-bottom {
+    display: flex; align-items: center; gap: 14px;
+    margin-top: 18px;
+    position: relative;
+  }
+  .bottom-left { flex: 1; min-width: 0; }
+  .bottom-slot-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1.6px;
+    color: var(--coral-500);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .bottom-price {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 42px;
+    color: var(--coral-500);
+    letter-spacing: -1.5px;
+    line-height: 1;
+  }
+  .bottom-subtext {
+    color: #c9c4ba; font-size: 12.5px;
+    margin-top: 8px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  .arrow-btn {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: var(--coral-500);
+    border: none;
+    color: var(--cream);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    cursor: pointer;
+    transition: background .15s ease, transform .15s ease, box-shadow .15s ease;
+    text-decoration: none;
+    flex-shrink: 0;
+    box-shadow: 0 8px 20px rgba(220,120,82,0.35);
+  }
+  .arrow-btn:hover {
+    background: var(--coral-700);
+    transform: translateY(-2px);
+    color: var(--cream);
+    box-shadow: 0 10px 24px rgba(156,73,48,0.4);
+  }
+
+  @media (max-width: 600px) {
+    .disp-page { padding: 12px 16px 80px; }
+    .disp-card-dark { padding: 18px; border-radius: 20px; }
+    .bottom-price { font-size: 36px; }
+    .arrow-btn { width: 48px; height: 48px; font-size: 18px; }
   }
 </style>
 
-<div class="loov-page loov-page--wide">
+<script>document.body.classList.add('disp-active');</script>
 
-  <div class="loov-hero">
-    <div class="loov-eyebrow"><span class="dot"></span>VAGAS AGORA</div>
-    <h1 class="loov-h1"><span class="accent">Disponíveis</span> agora.</h1>
-    <p class="loov-lead">Lava-rápidos com vagas nos próximos 120 minutos. Reserve em segundos.</p>
-  </div>
+<div class="disp-wrap">
 
-  <div class="how-row">
-    <div class="how-card">
-      <div class="how-num">01</div>
-      <div class="how-text"><strong>Escolha o slot</strong><br>Veja vagas abertas perto de você agora.</div>
-    </div>
-    <div class="how-card">
-      <div class="how-num">02</div>
-      <div class="how-text"><strong>Pague 35% agora</strong><br>Garante sua vaga. O dono tem 3 min para confirmar.</div>
-    </div>
-    <div class="how-card">
-      <div class="how-num">03</div>
-      <div class="how-text"><strong>Vá ao lava-rápido</strong><br>Pague o restante (65%) no local.</div>
-    </div>
-  </div>
+  <a href="/" class="disp-back" aria-label="Voltar">
+    <i class="fas fa-chevron-left"></i>
+  </a>
 
-  <% unless @lat %>
-  <div class="geo-banner">
-    <div class="geo-inner">
-      <span class="geo-text"><i class="fas fa-location-dot" style="color:var(--coral-500);margin-right:6px;"></i>Permita sua localização para ver vagas mais próximas.</span>
-      <button class="geo-btn" onclick="requestGeo()">Usar minha localização</button>
-    </div>
-  </div>
-  <% end %>
+  <div class="disp-page">
 
-  <% if @available_slots.empty? %>
-    <div class="empty-state">
-      <div class="empty-icon"><i class="fas fa-car-wash"></i></div>
-      <div class="empty-title">Nenhuma vaga agora</div>
-      <p class="empty-text">Não encontramos lava-rápidos com vagas disponíveis nos próximos 120 minutos. Tente o agendamento normal ou volte em alguns minutos.</p>
-      <%= link_to car_washes_path, class: "loov-btn-primary" do %>
-        <i class="fas fa-calendar"></i> Ver agendamentos
-      <% end %>
+    <%# ── Hero ────────────────────────────────────────────── %>
+    <div class="disp-hero">
+      <span class="disp-badge"><i class="fas fa-bolt"></i> last minute</span>
+      <h1 class="disp-h1">
+        Vagas <span class="accent">agora</span>,<br>perto de você.
+      </h1>
     </div>
 
-  <% else %>
-
-    <% @available_slots.each_with_index do |slot_data, idx| %>
-    <div class="slot-group">
-
-      <div class="slot-cw-header">
-        <div>
-          <div class="slot-cw-name"><%= slot_data[:car_wash].name %></div>
-          <div class="slot-cw-meta">
-            <i class="fas fa-location-dot"></i>
-            <%= slot_data[:car_wash].address %>
-            <% if @lat && @lon && slot_data[:car_wash].latitude %>
-              <% dist = slot_data[:car_wash].distance_to([@lat, @lon], :km) %>
-              · <%= number_with_precision(dist, precision: 1) %> km
-            <% end %>
-          </div>
+    <%# ── Info strip ──────────────────────────────────────── %>
+    <% slots_count = @available_slots.size %>
+    <div class="disp-info-strip">
+      <div class="strip-icon"><i class="fas fa-location-dot"></i></div>
+      <div style="flex:1;">
+        <div class="strip-label">
+          <%= slots_count %> <%= slots_count == 1 ? "vaga disponível" : "vagas disponíveis" %>
         </div>
-        <span class="slot-price-from">A partir de R$ <%= number_with_precision(slot_data[:min_price], precision: 0) %></span>
+        <div class="strip-value">raio de 5 km · próximos 30 min</div>
       </div>
-
-      <div class="slot-grid">
-        <% slot_data[:slots].first(4).each do |slot_time| %>
-        <div class="slot-card" data-cw="<%= slot_data[:car_wash].id %>" data-slot="<%= slot_time.iso8601 %>">
-          <div class="slot-time"><%= slot_time.strftime("%H:%M") %></div>
-          <div class="slot-today">Hoje · <%= slot_time.strftime("%d/%m") %></div>
-
-          <div class="slot-services">
-            <% slot_data[:services].first(3).each do |svc| %>
-            <div class="slot-svc">
-              <span class="slot-svc-name"><%= svc.title %></span>
-              <div class="slot-svc-meta">
-                <span class="slot-svc-dur"><%= svc.duration %>min</span>
-                <span class="slot-svc-price">R$<%= number_with_precision(svc.price, precision: 0) %></span>
-              </div>
-            </div>
-            <% end %>
-          </div>
-
-          <div class="slot-cta">
-            <span class="slot-prepay-tag">35% agora · resto no local</span>
-            <button class="slot-cta-btn" onclick="openServiceSelect(this)" data-cw="<%= slot_data[:car_wash].id %>" data-slot="<%= slot_time.iso8601 %>">
-              Reservar <i class="fas fa-arrow-right"></i>
-            </button>
-          </div>
-
-          <div class="svc-select-overlay">
-            <div class="svc-select-label">Escolha o serviço</div>
-            <% slot_data[:services].each do |svc| %>
-            <%= link_to checkout_disponivel_index_path(car_wash_id: slot_data[:car_wash].id, service_id: svc.id, slot: slot_time.iso8601), class: "svc-btn" do %>
-              <span class="svc-btn-name"><%= svc.title %></span>
-              <div class="svc-btn-right">
-                <span class="svc-btn-dur"><%= svc.duration %>min</span>
-                <span class="svc-btn-price">R$<%= number_with_precision(svc.price, precision: 0) %></span>
-              </div>
-            <% end %>
-            <% end %>
-          </div>
-
-        </div>
-        <% end %>
-      </div>
-
     </div>
+
+    <%# ── Geo banner (sem lat) ────────────────────────────── %>
+    <% unless @lat %>
+      <div class="disp-banner">
+        <span class="disp-banner-text">
+          <i class="fas fa-location-dot"></i>
+          Permita sua localização para ver vagas perto de você.
+        </span>
+        <button class="disp-banner-btn" onclick="requestGeo()">USAR LOCALIZAÇÃO</button>
+      </div>
     <% end %>
 
-  <% end %>
+    <%# ── Empty state ─────────────────────────────────────── %>
+    <% if @lat && @available_slots.empty? %>
+      <div class="disp-empty">
+        <div class="disp-empty-icon"><i class="fas fa-bolt"></i></div>
+        <div class="disp-empty-title">Nenhum slot disponível</div>
+        <p class="disp-empty-text">
+          Sem lava-rápidos com horários livres nos próximos 30 min num raio de 5 km.
+        </p>
+      </div>
+
+    <%# ── Lista de cards (espelha DisponivelCard) ─────────── %>
+    <% elsif @available_slots.any? %>
+      <div class="disp-list">
+        <% @available_slots.each_with_index do |slot_data, idx| %>
+          <% cw       = slot_data[:car_wash] %>
+          <% slot_iso = slot_data[:slots].first.iso8601 %>
+          <% slot_str = slot_data[:slots].first.strftime("%H:%M") %>
+          <% services = slot_data[:services] %>
+          <% first    = services.first %>
+
+          <% addr_line = [cw.try(:logradouro), cw.try(:bairro)].compact_blank.join(" · ").presence || cw.address.to_s %>
+          <% city_line = [cw.try(:cidade), cw.try(:uf)].compact_blank.join(" · ") %>
+          <% distance = (@lat && cw.has_valid_coordinates?) ? cw.distance_to([@lat, @lon], :km).round(1) : nil %>
+
+          <div class="disp-card-dark"
+               data-cw-id="<%= cw.id %>"
+               data-slot="<%= slot_iso %>"
+               style="--blob-opacity:<%= [0.20 - idx * 0.03, 0.05].max %>;">
+            <div class="disp-blob" style="opacity:<%= [0.20 - idx * 0.03, 0.05].max %>;"></div>
+
+            <div class="disp-top">
+              <div class="shop-info">
+                <div class="shop-name"><%= cw.name %></div>
+                <% if addr_line.present? %>
+                  <div class="shop-addr"><%= addr_line %></div>
+                <% end %>
+                <% if city_line.present? %>
+                  <div class="shop-addr-sub"><%= city_line %></div>
+                <% end %>
+              </div>
+              <% if distance %>
+                <div class="disp-distance-pill">
+                  <i class="fas fa-map-pin"></i><%= sprintf('%.1f km', distance) %>
+                </div>
+              <% end %>
+            </div>
+
+            <% if services.count > 1 %>
+              <div class="disp-svc-pills">
+                <% services.each_with_index do |svc, i| %>
+                  <button class="svc-pill <%= 'active' if i == 0 %>"
+                          data-svc-id="<%= svc.id %>"
+                          data-price="<%= number_with_precision(svc.price, precision: 0) %>"
+                          data-title="<%= svc.title %>"
+                          data-duration="<%= svc.duration %>"
+                          onclick="selectService(this)">
+                    <%= svc.title %>
+                  </button>
+                <% end %>
+              </div>
+            <% end %>
+
+            <div class="disp-bottom">
+              <div class="bottom-left">
+                <div class="bottom-slot-label">HOJE · <%= slot_str %></div>
+                <div class="bottom-price">R$<span class="price-val"><%= number_with_precision(first.price, precision: 0) %></span></div>
+                <div class="bottom-subtext">
+                  <span class="svc-name"><%= first.title.presence || "Lavagem" %></span>
+                  <% if first.duration.present? && first.duration > 0 %>
+                    · <span class="svc-dur"><%= first.duration %>min</span>
+                  <% end %>
+                  <% if distance %>
+                    · <%= sprintf('%.1f km', distance) %>
+                  <% end %>
+                </div>
+              </div>
+
+              <a href="<%= checkout_disponivel_index_path(car_wash_id: cw.id, service_id: first.id, slot: slot_iso) %>"
+                 class="arrow-btn" data-base-url="<%= checkout_disponivel_index_path %>"
+                 aria-label="Reservar">
+                <i class="fas fa-arrow-right"></i>
+              </a>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+  </div>
 </div>
 
 <script>
-function openServiceSelect(btn) {
-  const card    = btn.closest('.slot-card');
-  const overlay = card.querySelector('.svc-select-overlay');
-  const isOpen  = overlay.classList.contains('open');
-  document.querySelectorAll('.svc-select-overlay.open').forEach(o => o.classList.remove('open'));
-  if (!isOpen) overlay.classList.add('open');
+function selectService(btn) {
+  const card = btn.closest('.disp-card-dark');
+  if (!card) return;
+
+  card.querySelectorAll('.svc-pill').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+
+  const svcId    = btn.dataset.svcId;
+  const price    = btn.dataset.price;
+  const title    = btn.dataset.title;
+  const duration = btn.dataset.duration;
+
+  const priceEl = card.querySelector('.price-val');
+  const nameEl  = card.querySelector('.svc-name');
+  const durEl   = card.querySelector('.svc-dur');
+
+  if (priceEl) priceEl.textContent = price;
+  if (nameEl)  nameEl.textContent  = title;
+  if (durEl)   durEl.textContent   = duration + 'min';
+
+  const cwId = card.dataset.cwId;
+  const slot = card.dataset.slot;
+  const arrow = card.querySelector('.arrow-btn');
+  if (arrow) {
+    const params = new URLSearchParams({ car_wash_id: cwId, service_id: svcId, slot: slot });
+    arrow.href = '/disponivel/checkout?' + params.toString();
+  }
 }
 
 function requestGeo() {
