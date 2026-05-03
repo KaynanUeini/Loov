@@ -175,7 +175,7 @@
 
   .ai-flip-card {
     perspective: 1200px;
-    min-height: 200px;
+    min-height: 240px;
     cursor: pointer;
     background: transparent;
     border: none;
@@ -185,7 +185,7 @@
     font-family: inherit;
   }
   .ai-flip-inner {
-    position: relative; width: 100%; min-height: 200px; height: 100%;
+    position: relative; width: 100%; min-height: 240px; height: 100%;
     transition: transform .55s cubic-bezier(.4,.0,.2,1);
     transform-style: preserve-3d;
   }
@@ -224,12 +224,26 @@
     font-size: 10.5px; letter-spacing: 1.4px; font-weight: 700;
     color: var(--ink); text-transform: uppercase;
   }
+  /* Tamanho ajustado pra cada card poder mostrar números OU frases curtas
+     da análise sem cortar. Antes 28px estava grande pra textos. */
   .ai-flip-front-value {
     font-family: 'Space Grotesk', sans-serif;
-    font-size: 28px; font-weight: 700; letter-spacing: -0.5px;
-    color: var(--ink); line-height: 1.05;
+    font-size: 16px; font-weight: 600; letter-spacing: -0.2px;
+    color: var(--ink); line-height: 1.4;
     margin: 4px 0 10px;
-    word-break: break-word;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 6;
+    -webkit-box-orient: vertical;
+    word-break: normal;
+    overflow-wrap: anywhere;
+  }
+  /* Quando o conteúdo é curto (≤20 chars, número), volta pro display grande */
+  .ai-flip-front-value.is-numeric {
+    font-size: 26px; font-weight: 700; letter-spacing: -0.5px;
+    line-height: 1.05;
+    -webkit-line-clamp: unset;
+    display: block;
   }
   .ai-flip-front-foot {
     margin-top: auto;
@@ -432,7 +446,8 @@
 
   @media (max-width: 720px) {
     .ai-page { padding: 40px 16px 64px; }
-    .ai-flip-front-value { font-size: 24px; }
+    .ai-flip-front-value { font-size: 14.5px; }
+    .ai-flip-front-value.is-numeric { font-size: 24px; }
     .ai-decision-card { padding: 18px; }
   }
 </style>
@@ -678,7 +693,10 @@
 
       var delta = statusToDelta(status);
       var preview = text.split(/(?<=[.!?])\s/)[0] || text;
-      if (preview.length > 90) preview = preview.slice(0, 87) + '...';
+      if (preview.length > 110) preview = preview.slice(0, 107) + '...';
+      // Numérico/curto vira display grande; texto longo fica em formato legível
+      var isNumericPreview = preview.length <= 20 && /^[\sR$0-9.,%+\-]+$/.test(preview);
+      var frontValueClass = isNumericPreview ? 'ai-flip-front-value is-numeric' : 'ai-flip-front-value';
 
       var card = document.createElement('button');
       card.type = 'button';
@@ -693,7 +711,7 @@
               '<span class="ai-flip-icon" style="background:' + cfg.tint + ';border-color:' + cfg.border + ';color:' + cfg.color + ';">' + cfg.icon + '</span>' +
               '<span class="ai-flip-front-label">' + escapeHtml(cfg.label.toUpperCase()) + '</span>' +
             '</div>' +
-            '<div class="ai-flip-front-value">' + boldifyNumbers(preview) + '</div>' +
+            '<div class="' + frontValueClass + '">' + boldifyNumbers(preview) + '</div>' +
             '<div class="ai-flip-front-foot">' +
               '<span class="ai-flip-delta ai-flip-delta--' + delta.cls + '">' + delta.icon + ' ' + escapeHtml(delta.label) + '</span>' +
               '<span class="ai-flip-hint">virar</span>' +
