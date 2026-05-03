@@ -10,13 +10,10 @@ Rails.application.routes.draw do
   get  'password/edit',       to: 'passwords#edit'     # HTML: form pra digitar nova senha
   post 'password/update',     to: 'passwords#update'   # HTML form submit
 
-  # /car_washes (listagem) foi descontinuada — a home logada já mostra
-  # os lava-rápidos com filtros (perto de mim, melhores avaliados, etc.).
-  # Qualquer link antigo cai na home. `as: :car_washes` preserva o
-  # helper car_washes_path usado em diversas views.
-  get '/car_washes', to: redirect('/'), as: :car_washes
-
-  resources :car_washes, except: [:index] do
+  # /car_washes — mantido pois o app mobile chama aqui em JSON pra listar
+  # lava-rápidos. Web HTML redireciona pra home dentro do controller
+  # (ver CarWashesController#index).
+  resources :car_washes do
     resources :appointments, only: [:create]
     member do
       get 'manage'

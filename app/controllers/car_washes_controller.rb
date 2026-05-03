@@ -54,7 +54,10 @@ class CarWashesController < ApplicationController
     end
 
     respond_to do |format|
-      format.html
+      # /car_washes (listagem HTML) foi descontinuada — a home logada já
+      # mostra os lava-rápidos com filtros. Redireciona pra raiz mantendo
+      # query params (latitude/longitude) pra contexto.
+      format.html { redirect_to root_path(request.query_parameters) }
       format.json do
         lat_param = params[:latitude].presence&.to_f
         lng_param = params[:longitude].presence&.to_f
