@@ -2104,28 +2104,48 @@
     first_name = current_user.display_name.to_s.split(' ').first.presence || current_user.email.split('@').first.capitalize
   %>
   <style>
-    .greet-section { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1.5rem 0; }
+    .greet-section {
+      max-width: 1200px; margin: 0 auto;
+      padding: 2.5rem 1.5rem 1rem;
+    }
     .greet-eyebrow {
+      display: inline-block;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 11px; letter-spacing: 1.6px;
-      color: var(--ash); text-transform: uppercase;
-      margin-bottom: 6px;
+      font-size: 11px; letter-spacing: 2px;
+      color: var(--coral-500); text-transform: uppercase;
+      padding: 6px 14px;
+      background: var(--coral-50);
+      border: 1px solid var(--coral-100);
+      border-radius: 100px;
+      margin-bottom: 18px;
     }
     .greet-title {
       font-family: 'Space Grotesk', sans-serif;
-      font-size: clamp(26px, 4.5vw, 36px);
       font-weight: 700;
+      font-size: clamp(40px, 6vw, 64px);
+      letter-spacing: -1.2px;
+      line-height: 1.05;
       color: var(--ink);
-      letter-spacing: -0.6px;
-      line-height: 1.15;
-      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      margin: 0;
     }
-    .greet-title .name { color: var(--coral-500); }
+    .greet-title .name {
+      color: var(--coral-500);
+      position: relative;
+      white-space: nowrap;
+    }
+    .greet-title .name::after {
+      content: ''; position: absolute; left: 0; right: 0; bottom: -3px;
+      height: 4px;
+      background: linear-gradient(90deg, var(--coral-300), var(--coral-500));
+      border-radius: 4px;
+      opacity: .7;
+    }
     .greet-wave {
       display: inline-block;
       animation: greet-wave 2.4s ease-in-out infinite;
       transform-origin: 70% 70%;
       font-size: 0.95em;
+      margin-left: 12px;
     }
     @keyframes greet-wave {
       0%, 60%, 100% { transform: rotate(0); }
@@ -2135,18 +2155,15 @@
       40% { transform: rotate(-4deg); }
       50% { transform: rotate(10deg); }
     }
-    .greet-sub {
-      font-size: 13.5px; color: var(--graphite);
-      margin-top: 6px;
+    @media (max-width: 600px) {
+      .greet-section { padding: 1.75rem 1.25rem .5rem; }
     }
   </style>
   <section class="greet-section">
     <div class="greet-eyebrow"><%= day_label %> · <%= date_label %></div>
     <h1 class="greet-title">
-      <%= greet %>, <span class="name"><%= first_name %></span>
-      <span class="greet-wave">👋</span>
+      <%= greet %>,<br><span class="name"><%= first_name %></span><span class="greet-wave">👋</span>
     </h1>
-    <div class="greet-sub">Vamos deixar o seu carro novo de novo?</div>
   </section>
 
   <%# ── LAST MINUTE — espelha o app (zap icon, ver todos, helper text, cards dark ink) ── %>
