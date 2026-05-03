@@ -1,441 +1,302 @@
 <% Rails.logger.info("Renderizando client/profiles/edit.html.erb") %>
 
-<div id="loov-cursor"></div>
-<div id="loov-cursor-trail"></div>
-<div id="page-transition"></div>
-
 <style>
-  :root {
-    --lime: #dd7852;
-    --lime-dim: #9c4930;
-    --black: #fafaf6;
-    --surface: #fafaf6;
-    --surface-2: #fafaf6;
-    --surface-3: #fefefd;
-    --border: #e0dbd0;
-    --border-soft: #e0dbd0;
-    --text-muted: #ada699;
-    --text-secondary: #ada699;
-    --white: #28231c;
+  .pf-tabs {
+    display: flex; gap: 4px; margin-bottom: 28px;
+    background: var(--paper); border: 1px solid var(--stone);
+    border-radius: 14px; padding: 4px;
+  }
+  .pf-tab {
+    flex: 1; padding: 12px 18px; border-radius: 10px; border: none;
+    background: transparent; color: var(--graphite);
+    font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 600;
+    letter-spacing: 1.4px; text-transform: uppercase;
+    cursor: pointer; transition: all .15s ease;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .pf-tab:hover { color: var(--ink); background: var(--sand); }
+  .pf-tab.active {
+    background: var(--coral-50); color: var(--coral-700);
+    box-shadow: inset 0 0 0 1px var(--coral-100);
+  }
+  .pf-tab.active i { color: var(--coral-500); }
+  .pf-tab i { font-size: 12px; }
+  .pf-tab .pf-dot {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--rose-500);
+    display: inline-block; margin-left: 2px;
   }
 
-  #loov-cursor { position:fixed;width:8px;height:8px;background:var(--lime);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .18s ease,height .18s ease;mix-blend-mode:difference; }
-  #loov-cursor-trail { position:fixed;width:38px;height:38px;border:1px solid rgba(221, 120, 82,0.25);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:width .25s ease,height .25s ease,border-color .25s ease; }
-  body.cursor-hover #loov-cursor { width:14px;height:14px; }
-  body.cursor-hover #loov-cursor-trail { width:58px;height:58px;border-color:rgba(221, 120, 82,0.45); }
-  @media(hover:none){#loov-cursor,#loov-cursor-trail{display:none;}}
+  .pf-tab-content { display: none; }
+  .pf-tab-content.active { display: block; }
 
-  #page-transition { position:fixed;inset:0;z-index:10000;background:#fafaf6;transform:translateY(100%);pointer-events:none; }
-  #page-transition.enter { animation:pgEnter .42s cubic-bezier(.76,0,.24,1) forwards; }
-  #page-transition.exit  { animation:pgExit  .42s cubic-bezier(.76,0,.24,1) forwards; }
-  @keyframes pgEnter { from{transform:translateY(100%)}to{transform:translateY(0)} }
-  @keyframes pgExit  { from{transform:translateY(0)}to{transform:translateY(-100%)} }
+  .pf-card-saved {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 14px; flex-wrap: wrap;
+    padding: 14px 16px; background: var(--cream);
+    border: 1px solid var(--stone); border-radius: 14px;
+  }
+  .pf-card-saved-left { display: flex; align-items: center; gap: 12px; }
+  .pf-card-icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: var(--coral-50); border: 1px solid var(--coral-100);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--coral-700); font-size: 16px; flex-shrink: 0;
+  }
+  .pf-card-info-label {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    letter-spacing: 1.4px; color: var(--ash); text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+  .pf-card-info-val { font-size: 14.5px; font-weight: 600; color: var(--ink); }
 
-  * { box-sizing: border-box; }
-  body { cursor: none; }
+  #stripe-card-element {
+    background: var(--paper); border: 1px solid var(--stone);
+    border-radius: 12px; padding: 14px 16px;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  #stripe-card-element.StripeElement--focus { border-color: var(--coral-500); box-shadow: 0 0 0 3px rgba(220,120,82,0.08); }
+  #stripe-card-element.StripeElement--invalid { border-color: var(--rose-500); }
+  #card-errors { color: var(--rose-500); font-size: 12.5px; margin-top: 6px; min-height: 1rem; }
 
-  .profile-wrap {
-    min-height: 100vh; background: var(--black);
-    font-family: 'Inter', sans-serif;
-    padding-top: 60px; padding-bottom: 5rem;
+  .pf-banner-card-required {
+    display: flex; align-items: flex-start; gap: 10px;
+    background: var(--coral-50); border: 1px solid var(--coral-100);
+    border-radius: 14px; padding: 14px 16px; margin-bottom: 18px;
+  }
+  .pf-banner-card-required i { color: var(--coral-700); margin-top: 2px; flex-shrink: 0; }
+  .pf-banner-card-required-text { font-size: 13.5px; color: var(--graphite); line-height: 1.55; }
+  .pf-banner-card-required-text strong { color: var(--ink); display: block; margin-bottom: 2px; }
+
+  .pf-payment-note {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 14px; font-size: 12px; color: var(--ash);
+  }
+  .pf-payment-note i { color: var(--coral-500); font-size: 11px; }
+
+  .pf-spinner {
+    display: inline-block; width: 14px; height: 14px;
+    border: 2px solid rgba(254,254,253,.4); border-top-color: var(--cream);
+    border-radius: 50%; animation: pf-spin .7s linear infinite;
+  }
+  @keyframes pf-spin { to { transform: rotate(360deg); } }
+
+  .pf-toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    padding: 12px 22px; border-radius: 100px; font-size: 13.5px;
+    display: flex; align-items: center; gap: 8px; z-index: 9999;
+    box-shadow: 0 14px 40px rgba(40,35,28,0.18);
+    animation: pf-toast-up .3s cubic-bezier(.16,1,.3,1) forwards;
+    white-space: nowrap;
+  }
+  .pf-toast--success { background: #d6ecde; border: 1px solid #b5d8c1; color: #2d6b42; }
+  .pf-toast--error   { background: #fdecec; border: 1px solid #f5cccc; color: var(--rose-500); }
+  @keyframes pf-toast-up {
+    from { opacity:0; transform: translateX(-50%) translateY(12px); }
+    to   { opacity:1; transform: translateX(-50%) translateY(0); }
   }
 
-  .profile-inner { max-width: 620px; margin: 0 auto; padding: 3.5rem 1.5rem; }
-
-  .profile-eyebrow {
-    display: inline-flex; align-items: center; gap: .6rem;
-    font-size: .68rem; font-weight: 500; letter-spacing: .25em;
-    text-transform: uppercase; color: var(--lime); margin-bottom: .875rem;
-    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards .1s;
+  .pf-avatar-row {
+    display: flex; align-items: center; gap: 16px;
+    padding: 18px 20px; background: var(--paper);
+    border: 1px solid var(--stone); border-radius: 16px;
+    margin-bottom: 28px;
   }
-  .profile-eyebrow::before { content:''; display:block; width:28px; height:1px; background:var(--lime); }
-
-  .profile-title {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: clamp(2.5rem, 8vw, 4.5rem);
-    line-height: .92; color: var(--white); margin: 0 0 .5rem;
-    opacity: 0; animation: revealUp .9s cubic-bezier(.16,1,.3,1) forwards .2s;
-  }
-  .profile-title span { color: var(--lime); }
-
-  .profile-sub {
-    font-size: .9rem; color: var(--text-muted); margin-bottom: 2rem;
-    opacity: 0; animation: revealUp .9s cubic-bezier(.16,1,.3,1) forwards .3s;
-    line-height: 1.6;
-  }
-
-  .profile-avatar-wrap {
-    display: flex; align-items: center; gap: 1.25rem; margin-bottom: 2rem;
-    opacity: 0; animation: revealUp .9s cubic-bezier(.16,1,.3,1) forwards .35s;
-  }
-  .profile-avatar {
-    width: 64px; height: 64px; border-radius: 16px;
-    background: linear-gradient(135deg, #fefefd, #e0dbd0);
-    border: 1px solid rgba(221, 120, 82,0.2);
-    color: var(--lime); font-family: 'Space Grotesk', sans-serif;
-    font-size: 1.5rem; display: flex; align-items: center; justify-content: center;
+  .pf-avatar-circle {
+    width: 56px; height: 56px; border-radius: 16px;
+    background: var(--coral-50); border: 1px solid var(--coral-100);
+    color: var(--coral-700);
+    font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
   }
-  .profile-avatar-info { display: flex; flex-direction: column; gap: .25rem; }
-  .profile-avatar-name { font-size: .9375rem; font-weight: 500; color: var(--white); }
-  .profile-avatar-email { font-size: .8rem; color: var(--text-muted); }
+  .pf-avatar-name { font-size: 15.5px; font-weight: 600; color: var(--ink); }
+  .pf-avatar-email { font-size: 13px; color: var(--graphite); }
 
-  /* ── TABS ── */
-  .profile-tabs {
-    display: flex; gap: 2px; margin-bottom: 1.75rem;
-    background: var(--surface-2); border: 1px solid var(--border);
-    border-radius: 12px; padding: 4px;
-    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards .38s;
+  .pf-required-badge {
+    display: inline-block; font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px; font-weight: 700; letter-spacing: 1px;
+    padding: 2px 8px; border-radius: 100px; text-transform: uppercase;
+    margin-left: 6px;
   }
-  .profile-tab {
-    flex: 1; padding: .625rem 1rem; border-radius: 9px; border: none;
-    background: transparent; color: var(--text-muted);
-    font-family: 'Inter', sans-serif; font-size: .8rem; font-weight: 500;
-    cursor: pointer; transition: all .2s ease;
-    display: flex; align-items: center; justify-content: center; gap: .4rem;
-  }
-  .profile-tab:hover { color: var(--white); }
-  .profile-tab.active {
-    background: var(--surface-3); color: var(--white);
-    box-shadow: inset 0 0 0 1px rgba(40, 35, 28,0.06);
-  }
-  .profile-tab.active i { color: var(--lime); }
-  .profile-tab i { font-size: .75rem; }
+  .pf-required-badge.req { background: var(--coral-50); color: var(--coral-700); border: 1px solid var(--coral-100); }
+  .pf-required-badge.opt { background: transparent; color: var(--ash); border: 1px solid var(--stone); }
 
-  /* Tab content */
-  .tab-content { display: none; }
-  .tab-content.active { display: block; }
+  .pf-section-title-row {
+    display: flex; align-items: center; gap: 10px;
+    padding-bottom: 12px; margin-bottom: 18px;
+    border-bottom: 1px solid var(--stone);
+  }
+  .pf-section-title-row i { color: var(--coral-500); font-size: 13px; }
+  .pf-section-title-row .pf-section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 700; letter-spacing: 1.6px;
+    color: var(--graphite); text-transform: uppercase;
+  }
 
-  /* ── SEÇÕES ── */
-  .profile-section {
-    background: var(--surface-2); border: 1px solid var(--border);
-    border-radius: 20px; overflow: hidden; margin-bottom: 1rem;
-    opacity: 0; animation: revealUp .9s cubic-bezier(.16,1,.3,1) forwards;
-    position: relative;
+  .field-error-msg {
+    font-size: 12.5px; color: var(--rose-500); margin-top: 4px;
+    display: flex; align-items: center; gap: 5px;
   }
-  .profile-section:nth-child(1) { animation-delay: .4s; }
-  .profile-section:nth-child(2) { animation-delay: .48s; }
-  .profile-section:nth-child(3) { animation-delay: .56s; }
-  .profile-section::before {
-    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
-    width: 2px; background: var(--lime); opacity: .5;
-  }
-  .profile-section-header {
-    padding: 1.25rem 1.5rem 1.25rem 1.75rem;
-    border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; gap: .625rem;
-  }
-  .profile-section-title {
-    font-size: .68rem; font-weight: 600; letter-spacing: .18em;
-    text-transform: uppercase; color: var(--text-muted);
-  }
-  .profile-section-icon { color: var(--lime); font-size: .78rem; }
-  .profile-section-body { padding: 1.5rem 1.5rem 1.5rem 1.75rem; display: flex; flex-direction: column; gap: 1.125rem; }
-
-  /* ── CAMPOS ── */
-  .form-group { display: flex; flex-direction: column; gap: .4rem; }
-  .form-label {
-    font-size: .72rem; font-weight: 500; color: var(--text-muted);
-    letter-spacing: .08em; text-transform: uppercase;
-    display: flex; align-items: center; gap: .4rem;
-  }
-  .form-label-badge {
-    font-size: .58rem; font-weight: 600; letter-spacing: .06em;
-    padding: .15rem .45rem; border-radius: 100px; text-transform: uppercase;
-  }
-  .badge-required { background: rgba(221, 120, 82,.1); color: var(--lime); border: 1px solid rgba(221, 120, 82,.2); }
-  .badge-optional  { background: transparent; color: #e0dbd0; border: 1px solid #e0dbd0; }
-  .form-input {
-    background: var(--surface-3); border: 1px solid var(--border);
-    border-radius: 10px; padding: .875rem 1rem;
-    font-size: .9375rem; color: var(--white);
-    font-family: 'Inter', sans-serif; transition: all .2s ease;
-    width: 100%; cursor: none; outline: none;
-  }
-  .form-input::placeholder { color: var(--text-muted); }
-  .form-input:focus { border-color: var(--lime); box-shadow: 0 0 0 3px rgba(221, 120, 82,0.07); }
-  .form-input:disabled { opacity: .35; cursor: not-allowed; }
-  .form-input.error { border-color: #f87171; box-shadow: 0 0 0 3px rgba(248,113,113,0.07); }
-  .form-hint { font-size: .72rem; color: var(--text-muted); margin-top: .2rem; line-height: 1.5; }
-  .field-error-msg { font-size: .72rem; color: #f87171; margin-top: .3rem; display: flex; align-items: center; gap: .3rem; }
-
-  .profile-actions { opacity: 0; animation: revealUp .9s cubic-bezier(.16,1,.3,1) forwards .64s; }
-  .btn-submit {
-    width: 100%; background: var(--lime); color: var(--black); border: none;
-    border-radius: 100px; padding: .9rem 1.75rem;
-    font-family: 'Inter', sans-serif; font-size: .9375rem; font-weight: 600;
-    cursor: none; transition: all .22s ease;
-  }
-  .btn-submit:hover { background: var(--lime-dim); transform: translateY(-2px); box-shadow: 0 10px 28px rgba(221, 120, 82,0.18); }
-
-  /* ── PAGAMENTO ── */
-  .payment-section {
-    background: var(--surface-2); border: 1px solid var(--border);
-    border-radius: 20px; overflow: hidden; margin-bottom: 1rem;
-    position: relative;
-    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards .4s;
-  }
-  .payment-section::before {
-    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
-    width: 2px; background: var(--lime); opacity: .5;
-  }
-  .payment-section-header {
-    padding: 1.25rem 1.5rem 1.25rem 1.75rem;
-    border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; gap: .625rem;
-  }
-  .payment-section-body { padding: 1.5rem 1.5rem 1.5rem 1.75rem; }
-
-  /* Cartão já cadastrado */
-  .card-saved {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 1rem; flex-wrap: wrap;
-  }
-  .card-saved-left { display: flex; align-items: center; gap: .875rem; }
-  .card-icon {
-    width: 44px; height: 44px; border-radius: 10px;
-    background: rgba(221, 120, 82,.06); border: 1px solid rgba(221, 120, 82,.15);
-    display: flex; align-items: center; justify-content: center;
-    color: var(--lime); font-size: 1rem; flex-shrink: 0;
-  }
-  .card-info-label { font-size: .68rem; color: var(--text-muted); margin-bottom: .15rem; }
-  .card-info-val { font-size: .9375rem; font-weight: 500; color: var(--white); }
-  .btn-remove-card {
-    background: transparent; border: 1px solid #e0dbd0; border-radius: 100px;
-    color: #ada699; font-size: .78rem; padding: .4rem .875rem;
-    cursor: pointer; transition: all .15s; font-family: 'Inter', sans-serif;
-  }
-  .btn-remove-card:hover { border-color: #f87171; color: #f87171; }
-
-  /* Formulário de novo cartão */
-  .card-form-wrap { margin-top: 0; }
-  .card-form-label {
-    font-size: .72rem; font-weight: 500; color: var(--text-muted);
-    letter-spacing: .08em; text-transform: uppercase; margin-bottom: .5rem; display: block;
-  }
-  #stripe-card-element {
-    background: var(--surface-3); border: 1px solid var(--border);
-    border-radius: 10px; padding: .875rem 1rem; transition: border-color .2s;
-  }
-  #stripe-card-element.StripeElement--focus { border-color: var(--lime); }
-  #stripe-card-element.StripeElement--invalid { border-color: #f87171; }
-  #card-errors { color: #f87171; font-size: .75rem; margin-top: .4rem; min-height: 1rem; }
-
-  .btn-save-card {
-    width: 100%; margin-top: 1rem;
-    background: var(--lime); color: #fafaf6; border: none;
-    border-radius: 100px; padding: .875rem;
-    font-family: 'Inter', sans-serif; font-size: .875rem; font-weight: 700;
-    cursor: pointer; transition: all .2s; display: flex; align-items: center; justify-content: center; gap: .4rem;
-  }
-  .btn-save-card:hover:not(:disabled) { background: var(--lime-dim); transform: translateY(-1px); }
-  .btn-save-card:disabled { opacity: .5; cursor: not-allowed; transform: none; }
-
-  .payment-note {
-    display: flex; align-items: center; gap: .5rem;
-    margin-top: .875rem; font-size: .72rem; color: var(--text-muted);
-  }
-  .payment-note i { color: var(--lime); font-size: .65rem; }
-
-  /* Alerta de cartão necessário */
-  .card-required-banner {
-    display: flex; align-items: flex-start; gap: .75rem;
-    background: rgba(221, 120, 82,.04); border: 1px solid rgba(221, 120, 82,.15);
-    border-radius: 12px; padding: 1rem 1.125rem; margin-bottom: 1.25rem;
-  }
-  .card-required-banner i { color: var(--lime); margin-top: .1rem; flex-shrink: 0; }
-  .card-required-banner-text { font-size: .8rem; color: var(--text-muted); line-height: 1.55; }
-  .card-required-banner-text strong { color: var(--white); }
-
-  .spinner { display:inline-block;width:14px;height:14px;border:2px solid rgba(40, 35, 28,.3);border-top-color:#fafaf6;border-radius:50%;animation:spin .7s linear infinite; }
-  @keyframes spin { to{transform:rotate(360deg)} }
-
-  /* ── TOAST ── */
-  .toast-bar {
-    position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%);
-    padding: .875rem 1.5rem; border-radius: 100px; font-size: .875rem;
-    display: flex; align-items: center; gap: .5rem; z-index: 9999;
-    box-shadow: 0 8px 32px rgba(40, 35, 28,0.5);
-    animation: toastUp .3s cubic-bezier(.16,1,.3,1) forwards; white-space: nowrap;
-    font-family: 'Inter', sans-serif;
-  }
-  .toast-success { background: rgba(221, 120, 82,.1); border: 1px solid rgba(221, 120, 82,.25); color: var(--lime); }
-  .toast-error   { background: rgba(248,113,113,.1); border: 1px solid rgba(248,113,113,.25); color: #f87171; }
-
-  @keyframes revealUp { from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)} }
-  @keyframes toastUp  { from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%) translateY(0)} }
-
-  @media(max-width:640px) {
-    .profile-inner { padding: 2.5rem 1.25rem; }
-    .profile-section-body { padding: 1.25rem; }
-    .profile-section-header { padding: 1rem 1.25rem; }
-    .payment-section-body { padding: 1.25rem; }
-  }
+  .loov-input.error { border-color: var(--rose-500) !important; box-shadow: 0 0 0 3px rgba(200,80,80,0.08) !important; }
 </style>
 
-<div class="profile-wrap">
-  <div class="profile-inner">
+<div class="loov-page loov-page--narrow">
 
-    <div class="profile-eyebrow">Conta</div>
-    <h1 class="profile-title">Meu <span>Perfil</span></h1>
-    <p class="profile-sub">Seus dados, do seu jeito. Mantenha tudo atualizado.</p>
-
-    <div class="profile-avatar-wrap">
-      <div class="profile-avatar"><%= current_user.initials %></div>
-      <div class="profile-avatar-info">
-        <div class="profile-avatar-name"><%= current_user.display_name %></div>
-        <div class="profile-avatar-email"><%= current_user.email %></div>
-      </div>
-    </div>
-
-    <% if notice %>
-      <div class="toast-bar toast-success"><i class="fas fa-check-circle"></i> <%= notice %></div>
-    <% end %>
-    <% if flash[:errors] %>
-      <% flash[:errors].each do |msg| %>
-        <div class="toast-bar toast-error"><i class="fas fa-circle-exclamation"></i> <%= msg %></div>
-      <% end %>
-    <% end %>
-    <% if flash[:alert] %>
-      <div class="toast-bar toast-error"><i class="fas fa-circle-exclamation"></i> <%= flash[:alert] %></div>
-    <% end %>
-
-    <!-- TABS -->
-    <div class="profile-tabs">
-      <button class="profile-tab <%= params[:add_card] ? '' : 'active' %>" data-tab="perfil" id="tab-perfil">
-        <i class="fas fa-user"></i> Perfil
-      </button>
-      <button class="profile-tab <%= params[:add_card] ? 'active' : '' %>" data-tab="pagamento" id="tab-pagamento">
-        <i class="fas fa-credit-card"></i> Pagamento
-        <% unless current_user.has_payment_method? %>
-          <span style="width:6px;height:6px;border-radius:50%;background:#f87171;display:inline-block;margin-left:.1rem;"></span>
-        <% end %>
-      </button>
-    </div>
-
-    <!-- ── TAB: PERFIL ── -->
-    <div class="tab-content <%= params[:add_card] ? '' : 'active' %>" id="tab-content-perfil">
-      <%= form_with model: current_user, url: client_profile_path, method: :patch, data: { turbo: false } do |f| %>
-
-        <div class="profile-section">
-          <div class="profile-section-header">
-            <i class="fas fa-user profile-section-icon"></i>
-            <span class="profile-section-title">Dados Pessoais</span>
-          </div>
-          <div class="profile-section-body">
-            <div class="form-group">
-              <%= f.label :full_name, class: "form-label" do %>
-                Nome completo <span class="form-label-badge badge-required">obrigatório</span>
-              <% end %>
-              <%= f.text_field :full_name, class: "form-input", placeholder: "Seu nome completo", id: "full_name_field" %>
-            </div>
-            <div class="form-group">
-              <%= f.label :email, class: "form-label" do %>E-mail<% end %>
-              <%= f.email_field :email, class: "form-input", disabled: true, value: current_user.email %>
-              <div class="form-hint">O e-mail não pode ser alterado aqui.</div>
-            </div>
-            <div class="form-group">
-              <%= f.label :phone, class: "form-label" do %>
-                Telefone <span class="form-label-badge badge-required">obrigatório</span>
-              <% end %>
-              <%= f.text_field :phone, class: "form-input", placeholder: "(11) 99999-9999", id: "phone_field", maxlength: 15 %>
-            </div>
-            <div class="form-group">
-              <%= f.label :cpf, class: "form-label" do %>
-                CPF <span class="form-label-badge badge-optional">opcional</span>
-              <% end %>
-              <%= f.text_field :cpf, class: "form-input", placeholder: "000.000.000-00", id: "cpf_field", maxlength: 14 %>
-            </div>
-          </div>
-        </div>
-
-        <div class="profile-section">
-          <div class="profile-section-header">
-            <i class="fas fa-car profile-section-icon"></i>
-            <span class="profile-section-title">Veículo</span>
-          </div>
-          <div class="profile-section-body">
-            <div class="form-group">
-              <%= f.label :vehicle_model, class: "form-label" do %>
-                Modelo <span class="form-label-badge badge-optional">opcional</span>
-              <% end %>
-              <%= f.text_field :vehicle_model, class: "form-input", placeholder: "Ex: Honda Civic Preto 2022" %>
-              <div class="form-hint">Ajuda o lava-rápido a te encontrar na fila. 🚗</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="profile-actions">
-          <%= f.submit "Salvar perfil", class: "btn-submit" %>
-        </div>
-
-      <% end %>
-    </div>
-
-    <!-- ── TAB: PAGAMENTO ── -->
-    <div class="tab-content <%= params[:add_card] ? 'active' : '' %>" id="tab-content-pagamento">
-
-      <div class="payment-section">
-        <div class="payment-section-header">
-          <i class="fas fa-credit-card profile-section-icon"></i>
-          <span class="profile-section-title">Cartão de pagamento</span>
-        </div>
-        <div class="payment-section-body">
-
-          <% if current_user.has_payment_method? %>
-            <!-- Cartão já cadastrado -->
-            <div class="card-saved">
-              <div class="card-saved-left">
-                <div class="card-icon"><i class="fas fa-credit-card"></i></div>
-                <div>
-                  <div class="card-info-label">Cartão cadastrado</div>
-                  <div class="card-info-val"><%= current_user.card_display %></div>
-                </div>
-              </div>
-              <%= link_to "Remover cartão", remove_payment_method_client_profile_path,
-                          method: :delete,
-                          data: { turbo: false, confirm: "Tem certeza? Você não poderá usar a aba Disponíveis sem um cartão." },
-                          class: "btn-remove-card" %>
-            </div>
-            <div class="payment-note" style="margin-top:1.25rem;">
-              <i class="fas fa-shield-halved"></i>
-              Seu cartão é armazenado com segurança pelo Stripe. A Loov não guarda dados do cartão.
-            </div>
-          <% else %>
-            <!-- Sem cartão — banner explicativo + formulário -->
-            <% if params[:add_card] %>
-            <div class="card-required-banner">
-              <i class="fas fa-bolt"></i>
-              <div class="card-required-banner-text">
-                <strong>Cartão necessário para a aba Disponíveis.</strong>
-                Cadastre um cartão para reservar vagas em tempo real. O valor é autorizado mas só cobrado após o lava-rápido confirmar.
-              </div>
-            </div>
-            <% end %>
-
-            <div class="card-form-wrap">
-              <label class="card-form-label">Dados do cartão</label>
-              <div id="stripe-card-element"></div>
-              <div id="card-errors" role="alert"></div>
-              <button class="btn-save-card" id="btn-save-card">
-                <i class="fas fa-lock"></i> Salvar cartão
-              </button>
-              <div class="payment-note">
-                <i class="fas fa-shield-halved"></i>
-                Pagamento processado com segurança pelo Stripe. Não armazenamos dados do cartão.
-              </div>
-            </div>
-          <% end %>
-
-        </div>
-      </div>
-
-    </div><!-- /tab pagamento -->
-
+  <div class="loov-hero">
+    <div class="loov-eyebrow"><span class="dot"></span>MEU PERFIL</div>
+    <h1 class="loov-h1">
+      Seus dados, do seu <span class="accent">jeito</span>.
+    </h1>
+    <p class="loov-lead">
+      Mantenha tudo atualizado pra agilizar seus agendamentos.
+    </p>
   </div>
+
+  <div class="pf-avatar-row">
+    <div class="pf-avatar-circle"><%= current_user.initials %></div>
+    <div>
+      <div class="pf-avatar-name"><%= current_user.display_name %></div>
+      <div class="pf-avatar-email"><%= current_user.email %></div>
+    </div>
+  </div>
+
+  <% if notice %>
+    <div class="pf-toast pf-toast--success"><i class="fas fa-check-circle"></i> <%= notice %></div>
+  <% end %>
+  <% if flash[:errors] %>
+    <% flash[:errors].each do |msg| %>
+      <div class="pf-toast pf-toast--error"><i class="fas fa-circle-exclamation"></i> <%= msg %></div>
+    <% end %>
+  <% end %>
+  <% if flash[:alert] %>
+    <div class="pf-toast pf-toast--error"><i class="fas fa-circle-exclamation"></i> <%= flash[:alert] %></div>
+  <% end %>
+
+  <div class="pf-tabs">
+    <button class="pf-tab <%= params[:add_card] ? '' : 'active' %>" data-tab="perfil">
+      <i class="fas fa-user"></i> PERFIL
+    </button>
+    <button class="pf-tab <%= params[:add_card] ? 'active' : '' %>" data-tab="pagamento">
+      <i class="fas fa-credit-card"></i> PAGAMENTO
+      <% unless current_user.has_payment_method? %>
+        <span class="pf-dot"></span>
+      <% end %>
+    </button>
+  </div>
+
+  <!-- TAB: PERFIL -->
+  <div class="pf-tab-content <%= params[:add_card] ? '' : 'active' %>" id="pf-tab-perfil">
+    <div class="loov-card loov-card--lg" style="margin-bottom:18px;">
+      <div class="pf-section-title-row">
+        <i class="fas fa-user"></i>
+        <span class="pf-section-label">Dados pessoais</span>
+      </div>
+
+      <%= form_with model: current_user, url: client_profile_path, method: :patch, data: { turbo: false }, id: "pf-form" do |f| %>
+        <div class="loov-field">
+          <%= f.label :full_name, class: "loov-label" do %>
+            Nome completo <span class="pf-required-badge req">obrigatório</span>
+          <% end %>
+          <%= f.text_field :full_name, class: "loov-input", placeholder: "Seu nome completo", id: "full_name_field" %>
+        </div>
+
+        <div class="loov-field">
+          <%= f.label :email, "E-mail", class: "loov-label" %>
+          <%= f.email_field :email, class: "loov-input", disabled: true, value: current_user.email, style: "opacity:.6;cursor:not-allowed;" %>
+          <div class="loov-help">O e-mail não pode ser alterado aqui.</div>
+        </div>
+
+        <div class="loov-field">
+          <%= f.label :phone, class: "loov-label" do %>
+            Telefone <span class="pf-required-badge req">obrigatório</span>
+          <% end %>
+          <%= f.text_field :phone, class: "loov-input", placeholder: "(11) 99999-9999", id: "phone_field", maxlength: 15 %>
+        </div>
+
+        <div class="loov-field">
+          <%= f.label :cpf, class: "loov-label" do %>
+            CPF <span class="pf-required-badge opt">opcional</span>
+          <% end %>
+          <%= f.text_field :cpf, class: "loov-input", placeholder: "000.000.000-00", id: "cpf_field", maxlength: 14 %>
+        </div>
+
+        <hr class="loov-divider">
+
+        <div class="pf-section-title-row" style="border:none;padding-bottom:0;margin-bottom:12px;">
+          <i class="fas fa-car"></i>
+          <span class="pf-section-label">Veículo</span>
+        </div>
+        <div class="loov-field">
+          <%= f.label :vehicle_model, class: "loov-label" do %>
+            Modelo <span class="pf-required-badge opt">opcional</span>
+          <% end %>
+          <%= f.text_field :vehicle_model, class: "loov-input", placeholder: "Ex: Honda Civic Preto 2022" %>
+          <div class="loov-help">Ajuda o lava-rápido a te encontrar na fila.</div>
+        </div>
+
+        <%= f.submit "Salvar perfil", class: "loov-btn-primary loov-btn-block loov-btn-lg", style: "margin-top:8px;" %>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- TAB: PAGAMENTO -->
+  <div class="pf-tab-content <%= params[:add_card] ? 'active' : '' %>" id="pf-tab-pagamento">
+    <div class="loov-card loov-card--lg">
+      <div class="pf-section-title-row">
+        <i class="fas fa-credit-card"></i>
+        <span class="pf-section-label">Cartão de pagamento</span>
+      </div>
+
+      <% if current_user.has_payment_method? %>
+        <div class="pf-card-saved">
+          <div class="pf-card-saved-left">
+            <div class="pf-card-icon"><i class="fas fa-credit-card"></i></div>
+            <div>
+              <div class="pf-card-info-label">CARTÃO CADASTRADO</div>
+              <div class="pf-card-info-val"><%= current_user.card_display %></div>
+            </div>
+          </div>
+          <%= link_to "REMOVER", remove_payment_method_client_profile_path,
+                      method: :delete,
+                      data: { turbo: false, confirm: "Tem certeza? Você não poderá usar a aba Disponíveis sem um cartão." },
+                      class: "loov-btn-secondary loov-btn-sm",
+                      style: "border-color:rgba(200,80,80,.3);color:var(--rose-500);" %>
+        </div>
+        <div class="pf-payment-note">
+          <i class="fas fa-shield-halved"></i>
+          Seu cartão é armazenado com segurança pelo Stripe. A Loov não guarda dados do cartão.
+        </div>
+      <% else %>
+        <% if params[:add_card] %>
+          <div class="pf-banner-card-required">
+            <i class="fas fa-bolt"></i>
+            <div class="pf-banner-card-required-text">
+              <strong>Cartão necessário para a aba Disponíveis.</strong>
+              Cadastre um cartão para reservar vagas em tempo real. O valor é autorizado mas só cobrado após o lava-rápido confirmar.
+            </div>
+          </div>
+        <% end %>
+
+        <div class="loov-field">
+          <label class="loov-label">Dados do cartão</label>
+          <div id="stripe-card-element"></div>
+          <div id="card-errors" role="alert"></div>
+        </div>
+
+        <button id="btn-save-card" class="loov-btn-primary loov-btn-block loov-btn-lg">
+          <i class="fas fa-lock"></i> SALVAR CARTÃO
+        </button>
+
+        <div class="pf-payment-note">
+          <i class="fas fa-shield-halved"></i>
+          Pagamento processado com segurança pelo Stripe. Não armazenamos dados do cartão.
+        </div>
+      <% end %>
+    </div>
+  </div>
+
 </div>
 
-<!-- Dados para o JS -->
 <% if !current_user.has_payment_method? && @setup_client_secret.present? %>
 <script>
   const STRIPE_PK        = "<%= ENV['STRIPE_PUBLISHABLE_KEY'] %>";
@@ -454,133 +315,131 @@
 <% end %>
 
 <script>
-(function() {
-  // CURSOR
-  const cursor = document.getElementById('loov-cursor');
-  const trail  = document.getElementById('loov-cursor-trail');
-  if (cursor && trail) {
-    let mx=-100,my=-100,tx=-100,ty=-100;
-    document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cursor.style.left=mx+'px';cursor.style.top=my+'px';});
-    (function anim(){tx+=(mx-tx)*0.12;ty+=(my-ty)*0.12;trail.style.left=tx+'px';trail.style.top=ty+'px';requestAnimationFrame(anim);})();
-    document.addEventListener('mouseover',e=>{if(e.target.closest('a,button,input,select,textarea'))document.body.classList.add('cursor-hover');});
-    document.addEventListener('mouseout', e=>{if(e.target.closest('a,button,input,select,textarea'))document.body.classList.remove('cursor-hover');});
-    document.addEventListener('mouseleave',()=>{cursor.style.opacity='0';trail.style.opacity='0';});
-    document.addEventListener('mouseenter',()=>{cursor.style.opacity='1';trail.style.opacity='1';});
-  }
+document.addEventListener('DOMContentLoaded', function() {
 
-  // PAGE TRANSITION
-  const pt = document.getElementById('page-transition');
-  if (pt) {
-    document.addEventListener('click',e=>{const link=e.target.closest('a[href]');if(!link)return;const href=link.getAttribute('href');if(!href||href.startsWith('#')||href.startsWith('mailto')||link.target==='_blank')return;if(href.startsWith('http')&&!href.includes(window.location.hostname))return;e.preventDefault();pt.classList.add('enter');setTimeout(()=>window.location.href=href,400);});
-    window.addEventListener('pageshow',()=>{pt.classList.remove('enter');pt.classList.add('exit');setTimeout(()=>pt.classList.remove('exit'),440);});
-  }
-
-  document.addEventListener('DOMContentLoaded', function() {
-
-    // ── TABS ──────────────────────────────────────────────────────────────
-    document.querySelectorAll('.profile-tab').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        const tab = this.dataset.tab;
-        document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-        this.classList.add('active');
-        document.getElementById('tab-content-' + tab).classList.add('active');
-      });
-    });
-
-    // ── MÁSCARAS ──────────────────────────────────────────────────────────
-    var phoneField = document.getElementById('phone_field');
-    var cpfField   = document.getElementById('cpf_field');
-    if (phoneField) {
-      phoneField.addEventListener('input', function() {
-        var v=this.value.replace(/\D/g,'');
-        v=v.length<=10?v.replace(/^(\d{2})(\d{4})(\d{0,4})/,'($1) $2-$3'):v.replace(/^(\d{2})(\d{5})(\d{0,4})/,'($1) $2-$3');
-        this.value=v;
-      });
-    }
-    if (cpfField) {
-      cpfField.addEventListener('input', function() {
-        var v=this.value.replace(/\D/g,'');
-        this.value=v.replace(/^(\d{3})(\d{3})(\d{3})(\d{0,2})/,'$1.$2.$3-$4');
-      });
-    }
-
-    // ── VALIDAÇÃO PERFIL ──────────────────────────────────────────────────
-    var nameField = document.getElementById('full_name_field');
-    function validateField(field) {
-      var val=field.value.trim();field.classList.remove('error');
-      var prev=field.parentElement.querySelector('.field-error-msg');if(prev)prev.remove();
-      if(val===''){field.classList.add('error');var msg=document.createElement('div');msg.className='field-error-msg';msg.innerHTML='<i class="fas fa-circle-exclamation"></i> Campo obrigatório';field.parentElement.appendChild(msg);return false;}
-      return true;
-    }
-    if(nameField)  nameField.addEventListener('blur',()=>validateField(nameField));
-    if(phoneField) phoneField.addEventListener('blur',()=>validateField(phoneField));
-    var form=document.querySelector('form');
-    if(form){form.addEventListener('submit',function(e){var valid=true,first=null;[nameField,phoneField].forEach(function(f){if(!f)return;if(!validateField(f)){if(!first)first=f;valid=false;}});if(!valid){e.preventDefault();first.scrollIntoView({behavior:'smooth',block:'center'});setTimeout(()=>first.focus(),400);}});}
-
-    // ── STRIPE SETUP INTENT ───────────────────────────────────────────────
-    if (HAS_SETUP_INTENT && document.getElementById('stripe-card-element')) {
-      var stripe   = Stripe(STRIPE_PK);
-      var elements = stripe.elements();
-      var card     = elements.create('card', {
-        style: {
-          base: {
-            color: '#28231c', fontFamily: 'DM Sans, sans-serif',
-            fontSize: '15px', '::placeholder': { color: '#ada699' },
-            iconColor: '#dd7852', backgroundColor: '#fefefd'
-          },
-          invalid: { color: '#f87171', iconColor: '#f87171' }
-        },
-        hidePostalCode: true
-      });
-      card.mount('#stripe-card-element');
-      card.on('change', function(e) {
-        document.getElementById('card-errors').textContent = e.error ? e.error.message : '';
-      });
-
-      var saveBtn = document.getElementById('btn-save-card');
-      if (saveBtn) {
-        saveBtn.addEventListener('click', async function() {
-          saveBtn.disabled = true;
-          saveBtn.innerHTML = '<span class="spinner"></span> Salvando...';
-          document.getElementById('card-errors').textContent = '';
-
-          // Confirma o SetupIntent — gera um PaymentMethod
-          var result = await stripe.confirmCardSetup(SETUP_SECRET, {
-            payment_method: { card: card }
-          });
-
-          if (result.error) {
-            document.getElementById('card-errors').textContent = result.error.message;
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = '<i class="fas fa-lock"></i> Salvar cartão';
-            return;
-          }
-
-          // Envia o payment_method_id para o backend salvar no usuário
-          var res = await fetch('/client/profile/attach_payment_method', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN, 'Accept': 'application/json' },
-            body: JSON.stringify({ payment_method_id: result.setupIntent.payment_method })
-          });
-          var data = await res.json();
-
-          if (data.ok) {
-            // Se veio de aba Disponíveis, volta pro slot
-            window.location.href = data.return_to || window.location.href;
-          } else {
-            document.getElementById('card-errors').textContent = data.error || 'Erro ao salvar cartão.';
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = '<i class="fas fa-lock"></i> Salvar cartão';
-          }
-        });
-      }
-    }
-
-    // ── AUTO-DISMISS TOASTS ───────────────────────────────────────────────
-    document.querySelectorAll('.toast-bar').forEach(function(t){
-      setTimeout(function(){t.style.transition='opacity .5s ease';t.style.opacity='0';setTimeout(()=>t.remove(),500);},3500);
+  document.querySelectorAll('.pf-tab').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const tab = this.dataset.tab;
+      document.querySelectorAll('.pf-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.pf-tab-content').forEach(t => t.classList.remove('active'));
+      this.classList.add('active');
+      document.getElementById('pf-tab-' + tab).classList.add('active');
     });
   });
-})();
+
+  const phoneField = document.getElementById('phone_field');
+  const cpfField   = document.getElementById('cpf_field');
+  if (phoneField) {
+    phoneField.addEventListener('input', function() {
+      let v = this.value.replace(/\D/g, '');
+      v = v.length <= 10
+        ? v.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3')
+        : v.replace(/^(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
+      this.value = v;
+    });
+  }
+  if (cpfField) {
+    cpfField.addEventListener('input', function() {
+      let v = this.value.replace(/\D/g, '');
+      this.value = v.replace(/^(\d{3})(\d{3})(\d{3})(\d{0,2})/, '$1.$2.$3-$4');
+    });
+  }
+
+  const nameField = document.getElementById('full_name_field');
+  function validateField(field) {
+    const val = field.value.trim();
+    field.classList.remove('error');
+    const prev = field.parentElement.querySelector('.field-error-msg');
+    if (prev) prev.remove();
+    if (val === '') {
+      field.classList.add('error');
+      const msg = document.createElement('div');
+      msg.className = 'field-error-msg';
+      msg.innerHTML = '<i class="fas fa-circle-exclamation"></i> Campo obrigatório';
+      field.parentElement.appendChild(msg);
+      return false;
+    }
+    return true;
+  }
+  if (nameField)  nameField.addEventListener('blur', () => validateField(nameField));
+  if (phoneField) phoneField.addEventListener('blur', () => validateField(phoneField));
+  const form = document.getElementById('pf-form');
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      let valid = true, first = null;
+      [nameField, phoneField].forEach(f => {
+        if (!f) return;
+        if (!validateField(f)) { if (!first) first = f; valid = false; }
+      });
+      if (!valid) {
+        e.preventDefault();
+        first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => first.focus(), 400);
+      }
+    });
+  }
+
+  if (HAS_SETUP_INTENT && document.getElementById('stripe-card-element')) {
+    const stripe   = Stripe(STRIPE_PK);
+    const elements = stripe.elements();
+    const card     = elements.create('card', {
+      style: {
+        base: {
+          color: '#28231c', fontFamily: 'Inter, sans-serif',
+          fontSize: '15px', '::placeholder': { color: '#ada699' },
+          iconColor: '#dd7852', backgroundColor: '#fefefd'
+        },
+        invalid: { color: '#c85050', iconColor: '#c85050' }
+      },
+      hidePostalCode: true
+    });
+    card.mount('#stripe-card-element');
+    card.on('change', e => {
+      document.getElementById('card-errors').textContent = e.error ? e.error.message : '';
+    });
+
+    const saveBtn = document.getElementById('btn-save-card');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', async function() {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span class="pf-spinner"></span> Salvando...';
+        document.getElementById('card-errors').textContent = '';
+
+        const result = await stripe.confirmCardSetup(SETUP_SECRET, {
+          payment_method: { card: card }
+        });
+
+        if (result.error) {
+          document.getElementById('card-errors').textContent = result.error.message;
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = '<i class="fas fa-lock"></i> SALVAR CARTÃO';
+          return;
+        }
+
+        const res = await fetch('/client/profile/attach_payment_method', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN, 'Accept': 'application/json' },
+          body: JSON.stringify({ payment_method_id: result.setupIntent.payment_method })
+        });
+        const data = await res.json();
+
+        if (data.ok) {
+          window.location.href = data.return_to || window.location.href;
+        } else {
+          document.getElementById('card-errors').textContent = data.error || 'Erro ao salvar cartão.';
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = '<i class="fas fa-lock"></i> SALVAR CARTÃO';
+        }
+      });
+    }
+  }
+
+  document.querySelectorAll('.pf-toast').forEach(t => {
+    setTimeout(() => {
+      t.style.transition = 'opacity .5s ease';
+      t.style.opacity = '0';
+      setTimeout(() => t.remove(), 500);
+    }, 3500);
+  });
+});
 </script>
