@@ -1,19 +1,17 @@
 <%
-MONTHS_PT   = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
-WEEKDAYS_PT = ['dom','seg','ter','qua','qui','sex','sáb']
-
+months_pt    = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
+weekdays_pt  = ['dom','seg','ter','qua','qui','sex','sáb']
 current_time = Time.current.in_time_zone("America/Sao_Paulo")
 
-# Mesmas regras do app: card "today" só pra confirmados que ainda não passaram
-def is_today_card?(appt, current_time)
+is_today_card = lambda do |appt|
   appt.scheduled_at.in_time_zone("America/Sao_Paulo").to_date == current_time.to_date &&
     appt.status == 'confirmed' &&
     appt.scheduled_at >= current_time
 end
 
-def can_cancel?(appt, current_time)
-  return false unless appt.status == 'confirmed'
-  return false if appt.appointment_type == 'disponivel'
+can_cancel = lambda do |appt|
+  next false unless appt.status == 'confirmed'
+  next false if appt.appointment_type == 'disponivel'
   ((appt.scheduled_at - current_time) / 60.0) > 120
 end
 %>
@@ -489,12 +487,12 @@ end
       <div class="appt-list">
         <% @upcoming_appointments.each do |appt| %>
           <% sched_sp   = appt.scheduled_at.in_time_zone("America/Sao_Paulo") %>
-          <% is_today_a = is_today_card?(appt, current_time) %>
+          <% is_today_a = is_today_card.call(appt) %>
           <% is_ongoing = @ongoing_appointments.include?(appt.id) %>
           <% mins_until = ((appt.scheduled_at - current_time) / 60.0).to_i %>
           <% show_code  = @client_code.present? && (is_ongoing || mins_until <= 30) && appt.status == 'confirmed' %>
-          <% can_can    = can_cancel?(appt, current_time) %>
-          <% dow_label  = is_today_a ? 'hoje' : WEEKDAYS_PT[sched_sp.wday] %>
+          <% can_can    = can_cancel.call(appt) %>
+          <% dow_label  = is_today_a ? 'hoje' : weekdays_pt[sched_sp.wday] %>
 
           <div class="appt-card <%= 'today' if is_today_a %>">
             <% if is_today_a %><div class="appt-card-blob"></div><% end %>
@@ -503,7 +501,7 @@ end
               <div class="date-col">
                 <span class="date-dow"><%= dow_label %></span>
                 <span class="date-day"><%= sched_sp.day %></span>
-                <span class="date-mon"><%= MONTHS_PT[sched_sp.month - 1] %></span>
+                <span class="date-mon"><%= months_pt[sched_sp.month - 1] %></span>
               </div>
 
               <div class="appt-body">
@@ -537,7 +535,7 @@ end
                 <% end %>
                 <% if can_can %>
                   <button type="button" class="action-ghost"
-                          onclick="openCancelModal(<%= appt.id %>, '<%= j appt.car_wash.name %>', '<%= dow_label %> <%= sched_sp.day %> <%= MONTHS_PT[sched_sp.month - 1] %> · <%= sched_sp.strftime("%H:%M") %>', '<%= cancel_appointment_path(appt) %>')">
+                          onclick="openCancelModal(<%= appt.id %>, '<%= j appt.car_wash.name %>', '<%= dow_label %> <%= sched_sp.day %> <%= months_pt[sched_sp.month - 1] %> · <%= sched_sp.strftime("%H:%M") %>', '<%= cancel_appointment_path(appt) %>')">
                     Cancelar
                   </button>
                 <% end %>
@@ -545,7 +543,7 @@ end
             <% else %>
               <% if can_can %>
                 <button type="button" class="cancel-link"
-                        onclick="openCancelModal(<%= appt.id %>, '<%= j appt.car_wash.name %>', '<%= dow_label %> <%= sched_sp.day %> <%= MONTHS_PT[sched_sp.month - 1] %> · <%= sched_sp.strftime("%H:%M") %>', '<%= cancel_appointment_path(appt) %>')">
+                        onclick="openCancelModal(<%= appt.id %>, '<%= j appt.car_wash.name %>', '<%= dow_label %> <%= sched_sp.day %> <%= months_pt[sched_sp.month - 1] %> · <%= sched_sp.strftime("%H:%M") %>', '<%= cancel_appointment_path(appt) %>')">
                   <i class="fas fa-xmark"></i> Cancelar agendamento
                 </button>
               <% end %>
@@ -575,9 +573,9 @@ end
           <div class="appt-card">
             <div class="appt-inner">
               <div class="date-col">
-                <span class="date-dow"><%= WEEKDAYS_PT[sched_sp.wday] %></span>
+                <span class="date-dow"><%= weekdays_pt[sched_sp.wday] %></span>
                 <span class="date-day"><%= sched_sp.day %></span>
-                <span class="date-mon"><%= MONTHS_PT[sched_sp.month - 1] %></span>
+                <span class="date-mon"><%= months_pt[sched_sp.month - 1] %></span>
               </div>
 
               <div class="appt-body">
