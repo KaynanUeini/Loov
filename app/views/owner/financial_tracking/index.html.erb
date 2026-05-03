@@ -1,36 +1,283 @@
 <% Rails.logger.info("Renderizando owner/financial_tracking/index.html.erb") %>
 
 <style>
-  /* ── CYCLE BANNER ────────────────────────────────────── */
-  .cycle-banner {
+  /* ── PERIOD PILLS ───────────────────────────────────── */
+  .period-pills {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .period-pill {
+    padding: 8px 16px; border-radius: 100px;
     background: var(--paper); border: 1px solid var(--stone);
-    border-radius: 16px; padding: 16px 22px;
-    margin-bottom: 14px;
+    color: var(--graphite); cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 700; letter-spacing: 1.2px;
+    text-transform: uppercase; text-decoration: none;
+    transition: all .15s ease;
+  }
+  .period-pill:hover {
+    border-color: var(--coral-500);
+    color: var(--coral-700);
+  }
+  .period-pill.active {
+    background: var(--ink); color: var(--cream);
+    border-color: var(--ink);
+  }
+
+  /* ── HERO RECEITA (escuro, ink) ─────────────────────── */
+  .hero-revenue-card {
+    background: var(--ink);
+    border-radius: 22px;
+    padding: 28px 30px;
+    margin-bottom: 18px;
+    color: var(--cream);
+    position: relative; overflow: hidden;
+  }
+  .hero-revenue-card::after {
+    content: ''; position: absolute;
+    right: -120px; top: -80px;
+    width: 320px; height: 320px;
+    background: radial-gradient(circle, var(--coral-500) 0%, transparent 65%);
+    opacity: 0.18; pointer-events: none;
+  }
+  .hero-revenue-top {
     display: flex; align-items: center; justify-content: space-between;
-    flex-wrap: wrap; gap: 12px;
+    gap: 10px; margin-bottom: 12px; flex-wrap: wrap;
+  }
+  .hero-revenue-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; letter-spacing: 1.6px;
+    color: var(--ash); text-transform: uppercase; font-weight: 600;
+  }
+  .hero-revenue-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(36px, 5vw, 50px);
+    font-weight: 700; letter-spacing: -1.2px;
+    color: var(--cream); line-height: 1;
+  }
+  .hero-revenue-sub {
+    font-size: 13px; color: var(--ash);
+    margin-top: 10px;
+  }
+  .hero-revenue-sub strong { color: #f1c0a8; font-weight: 600; }
+
+  /* ── STAT TRIO (Realizado / Em aberto / Custos) ─────── */
+  .stat-trio {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 10px; margin-bottom: 20px;
+  }
+  .stat-trio-card {
+    background: var(--paper); border: 1px solid var(--stone);
+    border-radius: 14px; padding: 14px;
     box-shadow: 0 2px 6px rgba(25,20,15,0.04);
   }
-  .cycle-banner-info { display: flex; flex-direction: column; gap: 3px; }
-  .cycle-banner-label {
+  .stat-trio-icon {
+    color: var(--coral-500); font-size: 12px;
+    margin-bottom: 6px;
+  }
+  .stat-trio-icon.amber { color: var(--amber-500); }
+  .stat-trio-icon.graphite { color: var(--graphite); }
+  .stat-trio-label {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; font-weight: 600; letter-spacing: 1.4px;
+    font-size: 9.5px; letter-spacing: 1.2px;
+    color: var(--ash); text-transform: uppercase;
+    font-weight: 600; margin-bottom: 5px;
+  }
+  .stat-trio-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 17px; font-weight: 700;
+    color: var(--ink); letter-spacing: -0.4px;
+    line-height: 1;
+  }
+
+  /* ── SECTION EYEBROW ────────────────────────────────── */
+  .section-eyebrow {
+    display: flex; align-items: center; justify-content: space-between;
+    margin: 22px 0 12px; gap: 10px; flex-wrap: wrap;
+  }
+  .section-eyebrow-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; letter-spacing: 1.6px;
+    color: var(--ink); text-transform: uppercase; font-weight: 700;
+  }
+  .section-eyebrow-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; letter-spacing: 1.2px;
     color: var(--ash); text-transform: uppercase;
   }
-  .cycle-banner-value {
+
+  /* ── LANÇAR CUSTOS PRIMARY CTA ──────────────────────── */
+  .launch-cta {
+    display: flex; align-items: center; justify-content: center;
+    gap: 10px; width: 100%;
+    background: var(--coral-500); color: var(--cream) !important;
+    border: none; border-radius: 16px;
+    padding: 16px 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; font-weight: 700; letter-spacing: 1.6px;
+    text-transform: uppercase;
+    cursor: pointer; text-decoration: none;
+    box-shadow: 0 8px 22px rgba(220,120,82,0.22);
+    transition: all .2s ease;
+    margin-bottom: 14px;
+  }
+  .launch-cta:hover {
+    background: var(--coral-700);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(156,73,48,0.28);
+    color: var(--cream) !important;
+  }
+
+  /* ── CHART CARD ─────────────────────────────────────── */
+  .chart-card {
+    background: var(--paper); border: 1px solid var(--stone);
+    border-radius: 18px; padding: 18px 20px 14px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 6px rgba(25,20,15,0.04);
+  }
+  .chart-card-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 16px; font-weight: 700;
+    color: var(--ink); letter-spacing: -0.2px;
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .chart-card-title i { color: var(--coral-500); font-size: 13px; }
+  .chart-legend-row {
+    display: flex; gap: 14px; flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .chart-legend-item {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11.5px; color: var(--graphite);
+  }
+  .chart-legend-swatch { width: 12px; height: 8px; border-radius: 2px; }
+  .chart-legend-line-wrap { width: 18px; height: 8px; position: relative; }
+  .chart-legend-line {
+    position: absolute; left: 0; right: 0; top: 50%;
+    height: 2px; transform: translateY(-50%);
+  }
+  .chart-legend-line-dot {
+    position: absolute; left: 5px; top: 0;
+    width: 8px; height: 8px; border-radius: 50%;
+    border: 2px solid var(--ink); background: var(--cream);
+  }
+  .chart-inner { position: relative; height: 280px; }
+  .chart-inner-sm { position: relative; height: 200px; }
+
+  /* ── DRE LIST EXPANSÍVEL ────────────────────────────── */
+  .dre-list { display: flex; flex-direction: column; gap: 10px; }
+  .dre-row {
+    background: var(--paper); border: 1px solid var(--stone);
+    border-radius: 16px; overflow: hidden;
+    transition: border-color .15s ease;
+  }
+  .dre-row.is-current { border-color: var(--coral-100); }
+
+  .dre-row-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 18px;
+    cursor: pointer; user-select: none;
+    transition: background .15s ease;
+  }
+  .dre-row-header:hover { background: var(--sand); }
+
+  .dre-row-main { flex: 1; min-width: 0; }
+  .dre-row-month {
     font-family: 'Space Grotesk', sans-serif;
     font-size: 15px; font-weight: 700;
     color: var(--ink); letter-spacing: -0.2px;
+    margin-bottom: 3px;
   }
-  .cycle-banner-summary {
-    font-size: 13px; color: var(--graphite);
-    line-height: 1.5; max-width: 540px;
+  .dre-row-month .current-dot {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px; letter-spacing: 1.2px;
+    color: var(--coral-500); margin-left: 8px;
+    text-transform: uppercase;
+  }
+  .dre-row-summary { font-size: 12px; color: var(--graphite); }
+  .dre-row-summary strong {
+    color: var(--ink); font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .dre-row-summary strong.profit-neg { color: var(--rose-500); }
+
+  .dre-row-add {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 100px;
+    background: var(--coral-50); border: 1px solid var(--coral-100);
+    color: var(--coral-700); cursor: pointer;
+    text-decoration: none; transition: all .15s ease;
+    flex-shrink: 0;
+  }
+  .dre-row-add:hover {
+    background: var(--coral-500); color: var(--cream);
+    border-color: var(--coral-500);
+  }
+  .dre-row-chevron {
+    color: var(--graphite); font-size: 12px;
+    transition: transform .25s ease; flex-shrink: 0;
+  }
+  .dre-row-chevron.open { transform: rotate(180deg); }
+
+  .dre-row-body {
+    max-height: 0; overflow: hidden;
+    transition: max-height .35s ease;
+    border-top: 1px solid transparent;
+  }
+  .dre-row-body.open {
+    max-height: 600px; border-top-color: var(--stone);
+  }
+  .dre-row-body-inner { padding: 12px 18px 16px; }
+
+  .dre-line {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 5px 0; gap: 10px;
+  }
+  .dre-line-label { font-size: 13px; color: var(--graphite); }
+  .dre-line-amount {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; color: var(--ink);
+  }
+  .dre-line.muted .dre-line-label,
+  .dre-line.muted .dre-line-amount { color: var(--ash); }
+  .dre-line.bold .dre-line-amount { font-weight: 700; }
+  .dre-line.big .dre-line-amount { font-size: 15px; }
+  .dre-line.negative .dre-line-amount { color: var(--rose-500); }
+  .dre-divider { height: 1px; background: var(--stone); margin: 6px 0; }
+
+  .dre-add-cost-inline {
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px; background: var(--coral-50); color: var(--coral-700);
+    border: 1px dashed var(--coral-100); border-radius: 12px;
+    padding: 11px 14px; margin-top: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; font-weight: 700; letter-spacing: 1.2px;
+    text-decoration: none; text-transform: uppercase;
+    transition: all .15s ease;
+  }
+  .dre-add-cost-inline:hover {
+    background: var(--coral-500); color: var(--cream);
+    border-color: var(--coral-500); border-style: solid;
   }
 
-  /* ── ACTION BANNER ───────────────────────────────────── */
+  /* ── FILTER BAR ─────────────────────────────────────── */
+  .filter-bar {
+    display: flex; gap: 12px; align-items: end;
+    flex-wrap: wrap; margin-bottom: 18px;
+  }
+  .filter-bar .loov-field { margin-bottom: 0; min-width: 180px; flex: 1; }
+  .custom-dates {
+    display: none; gap: 12px; width: 100%;
+    margin-top: 8px;
+  }
+  .custom-dates.visible { display: flex; }
+
+  /* ── ACTION BANNER (AI insights) ────────────────────── */
   .action-banner {
     background: var(--coral-50); border: 1px solid var(--coral-100);
-    border-radius: 16px; padding: 16px 22px;
-    margin-bottom: 22px; display: none;
+    border-radius: 16px; padding: 14px 18px;
+    margin-bottom: 16px; display: none;
   }
   .action-banner-label {
     font-family: 'JetBrains Mono', monospace;
@@ -39,181 +286,258 @@
     margin-bottom: 6px;
     display: flex; align-items: center; gap: 6px;
   }
-  .action-banner-text {
-    font-size: 14px; color: var(--ink); line-height: 1.6;
-  }
+  .action-banner-text { font-size: 13.5px; color: var(--ink); line-height: 1.55; }
 
+  .cycle-banner {
+    background: var(--paper); border: 1px solid var(--stone);
+    border-radius: 14px; padding: 14px 18px;
+    margin-bottom: 14px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 10px;
+  }
+  .cycle-banner-info { display: flex; flex-direction: column; gap: 2px; }
+  .cycle-banner-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px; font-weight: 600; letter-spacing: 1.4px;
+    color: var(--ash); text-transform: uppercase;
+  }
+  .cycle-banner-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px; font-weight: 700;
+    color: var(--ink); letter-spacing: -0.2px;
+  }
+  .cycle-banner-summary {
+    font-size: 12.5px; color: var(--graphite);
+    line-height: 1.5; max-width: 540px;
+  }
   .btn-input {
     display: inline-flex; align-items: center; gap: 6px;
     background: var(--coral-50); color: var(--coral-700);
     border: 1px solid var(--coral-100); border-radius: 100px;
-    padding: 8px 16px;
+    padding: 7px 14px;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; font-weight: 700; letter-spacing: 1.2px;
+    font-size: 10.5px; font-weight: 700; letter-spacing: 1.2px;
     cursor: pointer; transition: all 0.2s ease;
     white-space: nowrap; text-transform: uppercase;
   }
   .btn-input:hover { background: var(--coral-500); color: var(--cream); border-color: var(--coral-500); }
-  .btn-input.saved {
-    color: var(--ash); border-color: var(--stone);
-    background: transparent;
-  }
+  .btn-input.saved { color: var(--ash); border-color: var(--stone); background: transparent; }
 
-  /* ── MODAL ───────────────────────────────────────────── */
-  .modal-overlay {
+  /* ── COSTS MODAL (overlay) ──────────────────────────── */
+  .costs-modal-overlay {
     position: fixed; inset: 0;
-    background: rgba(40, 35, 28, 0.45);
-    backdrop-filter: blur(6px);
+    background: rgba(40, 35, 28, 0.55);
+    backdrop-filter: blur(4px);
     z-index: 1000;
-    display: flex; align-items: center; justify-content: center;
-    padding: 22px; opacity: 0; pointer-events: none;
-    transition: opacity 0.25s ease;
+    display: flex; align-items: flex-end; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity .25s ease;
   }
-  .modal-overlay.open { opacity: 1; pointer-events: all; }
-  .modal-box {
-    background: var(--paper); border: 1px solid var(--stone);
-    border-radius: 22px; padding: 28px;
+  @media (min-width: 720px) {
+    .costs-modal-overlay { align-items: center; padding: 20px; }
+  }
+  .costs-modal-overlay.open { opacity: 1; pointer-events: all; }
+
+  .costs-modal-sheet {
+    background: var(--cream);
     width: 100%; max-width: 560px;
-    display: flex; flex-direction: column; gap: 18px;
-    transform: translateY(16px);
-    transition: transform 0.25s cubic-bezier(.16,1,.3,1);
-    box-shadow: 0 20px 60px rgba(25, 20, 15, 0.18);
+    max-height: 85vh; overflow-y: auto;
+    border-radius: 24px 24px 0 0;
+    padding: 12px 22px 22px;
+    transform: translateY(40px);
+    transition: transform .3s cubic-bezier(.16,1,.3,1);
+    box-shadow: 0 -10px 40px rgba(40, 35, 28, 0.25);
   }
-  .modal-overlay.open .modal-box { transform: translateY(0); }
-  .modal-title {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 22px; font-weight: 700;
-    color: var(--ink); letter-spacing: -0.4px;
+  @media (min-width: 720px) {
+    .costs-modal-sheet { border-radius: 24px; transform: translateY(20px); }
   }
-  .modal-sub {
-    font-size: 13.5px; color: var(--graphite);
-    line-height: 1.55; margin-top: -10px;
-  }
-  .modal-textarea {
-    background: var(--paper); border: 1px solid var(--stone);
-    border-radius: 12px; padding: 14px;
-    font-family: 'Inter', sans-serif; font-size: 14px;
-    color: var(--ink); resize: vertical; min-height: 140px;
-    outline: none; transition: border-color 0.2s, box-shadow 0.2s;
-  }
-  .modal-textarea:focus {
-    border-color: var(--coral-500);
-    box-shadow: 0 0 0 3px rgba(220, 120, 82, 0.08);
-  }
-  .modal-textarea::placeholder { color: var(--ash); }
-  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+  .costs-modal-overlay.open .costs-modal-sheet { transform: translateY(0); }
 
-  /* ── FILTER ──────────────────────────────────────────── */
-  .filter-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 14px; align-items: end;
+  .costs-modal-handle {
+    width: 40px; height: 4px; border-radius: 2px;
+    background: var(--stone);
+    margin: 4px auto 14px;
   }
-  .custom-dates {
-    display: none; grid-template-columns: 1fr 1fr;
-    gap: 14px; margin-top: 14px; padding-top: 14px;
-    border-top: 1px solid var(--stone);
+  @media (min-width: 720px) {
+    .costs-modal-handle { display: none; }
   }
-  .custom-dates.visible { display: grid; }
-
-  /* ── KPI GRID ────────────────────────────────────────── */
-  .kpi-grid {
-    display: grid; grid-template-columns: repeat(4, 1fr);
-    gap: 14px; margin-bottom: 18px;
-  }
-  .kpi-card-mini {
-    background: var(--paper); border: 1px solid var(--stone);
-    border-radius: 16px; padding: 18px;
-    display: flex; flex-direction: column; gap: 6px;
-    box-shadow: 0 2px 6px rgba(25, 20, 15, 0.04);
-    position: relative; overflow: hidden;
-  }
-  .kpi-card-mini.accent::before {
-    content: ''; position: absolute;
-    left: 0; top: 0; bottom: 0; width: 3px;
-    background: var(--coral-500);
-  }
-  .kpi-label {
+  .costs-modal-title {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; font-weight: 600; letter-spacing: 1.4px;
-    color: var(--ash); text-transform: uppercase;
+    font-size: 13px; letter-spacing: 1.8px;
+    color: var(--ink); text-transform: uppercase; font-weight: 700;
+    margin-bottom: 4px;
   }
-  .kpi-value {
+  .costs-modal-subtitle {
     font-family: 'Space Grotesk', sans-serif;
-    font-size: 26px; font-weight: 700;
-    color: var(--ink); line-height: 1; letter-spacing: -0.4px;
+    font-size: 17px; font-weight: 700;
+    color: var(--graphite); margin-bottom: 16px;
   }
-  .kpi-value.lime { color: var(--coral-500); }
-  .kpi-sub { font-size: 12px; color: var(--ash); }
-
-  /* ── STATUS BADGES ───────────────────────────────────── */
-  .status-badge {
-    display: inline-flex; align-items: center; gap: 4px;
+  .costs-modal-loading {
+    padding: 60px 0; text-align: center; color: var(--ash);
+  }
+  .costs-modal-content { padding-bottom: 4px; }
+  .costs-modal-actions {
+    display: flex; gap: 10px; margin-top: 16px;
+    padding-top: 14px; border-top: 1px solid var(--stone);
+  }
+  .costs-modal-cancel {
+    flex: 1; padding: 12px;
+    border-radius: 12px; border: 1px solid var(--stone);
+    background: var(--paper); color: var(--graphite);
     font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
+    font-size: 11px; font-weight: 700; letter-spacing: 1.2px;
+    cursor: pointer; text-transform: uppercase;
+  }
+  .costs-modal-confirm {
+    flex: 2; padding: 12px;
+    border-radius: 12px; border: none;
+    background: var(--coral-500); color: var(--cream);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 700; letter-spacing: 1.2px;
+    cursor: pointer; text-transform: uppercase;
+  }
+  .costs-modal-confirm:hover { background: var(--coral-700); }
+
+  .costs-modal-group-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 1.5px;
+    color: var(--coral-700); text-transform: uppercase; font-weight: 700;
+    margin: 14px 0 8px;
+  }
+  .modal-money-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 0;
+  }
+  .modal-money-label-col { flex: 1; }
+  .modal-money-label {
+    font-size: 13px; color: var(--graphite);
+  }
+  .modal-money-input-wrap {
+    display: inline-flex; align-items: center;
+    background: var(--paper); border: 1px solid var(--stone);
+    border-radius: 10px; padding: 0 10px;
+    width: 140px;
+  }
+  .modal-money-input-wrap.pending { border-color: var(--coral-500); background: var(--coral-50); }
+  .modal-money-prefix {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; color: var(--ash); margin-right: 4px;
+  }
+  .modal-money-input {
+    flex: 1; min-width: 0; border: none; outline: none; background: transparent;
+    padding: 9px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; color: var(--ink); text-align: right;
+  }
+  .modal-add-line-btn {
+    display: flex; align-items: center; justify-content: center;
+    gap: 6px; width: 100%;
+    background: var(--coral-50); color: var(--coral-700);
+    border: 1px dashed var(--coral-100); border-radius: 10px;
+    padding: 9px; margin-top: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 700; letter-spacing: 1px;
+    cursor: pointer; text-transform: uppercase;
+  }
+
+  /* ── LEGACY: Tabs (transações + tabelas) ────────────── */
+  .fin-section {
+    background: var(--paper); border: 1px solid var(--stone);
+    border-radius: 18px; margin-bottom: 16px; overflow: hidden;
+    box-shadow: 0 2px 6px rgba(25,20,15,0.04);
+  }
+  .fin-section-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--stone);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
+  }
+  .fin-section-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 16px; font-weight: 700;
+    color: var(--ink); letter-spacing: -0.2px;
+    display: flex; align-items: center; gap: 8px; margin: 0;
+  }
+  .fin-section-title i { color: var(--coral-500); font-size: 13px; }
+
+  .fin-table { width: 100%; border-collapse: collapse; }
+  .fin-table thead th {
+    padding: 11px 16px; text-align: left;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px; font-weight: 600; letter-spacing: 1.4px;
+    color: var(--graphite); text-transform: uppercase;
+    border-bottom: 1px solid var(--stone);
+    background: var(--sand);
+  }
+  .fin-table tbody td {
+    padding: 12px 16px; font-size: 13px;
+    color: var(--ink); border-bottom: 1px solid var(--stone);
+  }
+  .fin-table tbody tr:last-child td { border-bottom: none; }
+  .fin-table tbody tr:hover td { background: var(--sand); }
+  .fin-table tbody tr.hidden-row { display: none; }
+  .td-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; font-weight: 600;
+    color: var(--coral-500);
+  }
+  .td-muted { color: var(--ash); font-size: 12.5px; }
+
+  .btn-csv {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--coral-50); color: var(--coral-700);
+    border: 1px solid var(--coral-100); border-radius: 100px;
+    padding: 7px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; font-weight: 700; letter-spacing: 1.2px;
+    cursor: pointer; transition: all .2s ease;
+    text-decoration: none; white-space: nowrap; text-transform: uppercase;
+  }
+  .btn-csv:hover { background: var(--coral-500); color: var(--cream); border-color: var(--coral-500); }
+
+  .btn-ver-mais {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    width: 100%; padding: 12px;
+    background: transparent; color: var(--graphite);
+    border: none; border-top: 1px solid var(--stone);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; font-weight: 700; letter-spacing: 1.2px;
+    cursor: pointer; transition: all .2s ease;
     text-transform: uppercase;
-    padding: 3px 10px; border-radius: 100px;
-    border: 1px solid;
   }
-  .status-up     { background: #d6ecde; color: #2d6b42; border-color: #b5d8c1; }
-  .status-down   { background: #fdecec; color: var(--rose-500); border-color: #f5cccc; }
-  .status-stable { background: #fbe2c0; color: #7a4814; border-color: #f0d0a0; }
+  .btn-ver-mais:hover { background: var(--sand); color: var(--coral-700); }
 
-  /* ── CHART LEGEND ────────────────────────────────────── */
-  .chart-legend { display: flex; gap: 18px; margin-bottom: 12px; flex-wrap: wrap; }
-  .chart-legend-item {
-    display: flex; align-items: center; gap: 6px;
-    font-size: 12.5px; color: var(--graphite);
-  }
-  .chart-legend-dot {
-    width: 12px; height: 3px; border-radius: 2px;
-  }
-
-  /* ── FLIP CARDS ──────────────────────────────────────── */
+  /* ── FLIP CARDS (AI insights) ───────────────────────── */
   .flip-wrap { perspective: 1200px; margin-bottom: 16px; }
-
   .flip-inner {
     position: relative; transform-style: preserve-3d;
-    transition: transform 0.55s cubic-bezier(.4, 0, .2, 1);
+    transition: transform .55s cubic-bezier(.4, 0, .2, 1);
   }
   .flip-inner.flipped { transform: rotateY(180deg); }
-
   .flip-front, .flip-back {
     background: var(--paper); border: 1px solid var(--stone);
-    border-radius: 20px; padding: 24px;
+    border-radius: 18px; padding: 22px;
     backface-visibility: hidden; -webkit-backface-visibility: hidden;
-    box-shadow: 0 2px 6px rgba(25, 20, 15, 0.04);
+    box-shadow: 0 2px 6px rgba(25,20,15,0.04);
   }
-
   .flip-back {
     position: absolute; top: 0; left: 0;
     width: 100%; height: 100%;
     transform: rotateY(180deg);
     background: var(--sand); border-color: var(--coral-100);
     display: flex; flex-direction: column;
-    justify-content: flex-start;
-    box-sizing: border-box;
     overflow-y: auto;
-    scrollbar-width: thin; scrollbar-color: var(--coral-300) transparent;
-    padding-bottom: 28px;
+    box-sizing: border-box; padding-bottom: 28px;
   }
-  .flip-back::-webkit-scrollbar { width: 4px; }
-  .flip-back::-webkit-scrollbar-thumb { background: var(--coral-300); border-radius: 2px; }
-
   .flip-btn {
-    position: absolute; top: 18px; right: 18px;
+    position: absolute; top: 16px; right: 16px;
     width: 30px; height: 30px; border-radius: 50%;
     background: var(--coral-50); border: 1px solid var(--coral-100);
     color: var(--coral-700); font-size: 16px; font-weight: 700;
     display: flex; align-items: center; justify-content: center;
-    cursor: pointer; transition: all 0.2s ease;
-    line-height: 1; z-index: 2;
+    cursor: pointer; transition: all .2s ease; z-index: 2;
   }
-  .flip-btn:hover {
-    background: var(--coral-500); color: var(--cream);
-    border-color: var(--coral-500);
-    transform: scale(1.08);
-  }
+  .flip-btn:hover { background: var(--coral-500); color: var(--cream); border-color: var(--coral-500); }
 
   .insight-eyebrow {
     font-family: 'JetBrains Mono', monospace;
@@ -221,70 +545,49 @@
     text-transform: uppercase; color: var(--coral-700);
     margin-bottom: 10px;
     display: flex; align-items: center; gap: 6px;
-    flex-shrink: 0;
   }
   .insight-meta {
     display: flex; align-items: center; justify-content: space-between;
     flex-wrap: wrap; gap: 8px;
-    margin-bottom: 14px; padding-bottom: 12px;
+    margin-bottom: 12px; padding-bottom: 10px;
     border-bottom: 1px solid var(--stone);
-    flex-shrink: 0;
   }
-  .insight-meta-left {
-    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  }
-  .insight-meta-date {
-    font-size: 11.5px; color: var(--graphite);
-    letter-spacing: 0;
-  }
+  .insight-meta-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .insight-meta-date { font-size: 11.5px; color: var(--graphite); }
   .insight-meta-date strong { color: var(--ink); }
-
   .btn-refresh {
     display: inline-flex; align-items: center; gap: 5px;
     background: transparent; color: var(--graphite);
     border: 1px solid var(--stone); border-radius: 100px;
     padding: 4px 11px;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
-    cursor: pointer; transition: all 0.2s ease;
+    font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px;
+    cursor: pointer; transition: all .2s ease;
     text-transform: uppercase;
   }
   .btn-refresh:hover { border-color: var(--coral-500); color: var(--coral-700); }
   .btn-refresh:disabled { opacity: 0.45; cursor: not-allowed; }
-
   .insight-title {
     font-family: 'Space Grotesk', sans-serif;
-    font-size: 22px; font-weight: 700;
+    font-size: 20px; font-weight: 700;
     color: var(--ink); line-height: 1.15;
-    margin-bottom: 14px; letter-spacing: -0.4px;
-    flex-shrink: 0;
+    margin-bottom: 12px; letter-spacing: -0.4px;
   }
-  .insight-body {
-    font-size: 14px; color: var(--graphite);
-    line-height: 1.65; margin-bottom: 18px;
-  }
-  .insight-body p { margin-bottom: 10px; }
-  .insight-body p:last-child { margin-bottom: 0; }
+  .insight-body { font-size: 13.5px; color: var(--graphite); line-height: 1.6; margin-bottom: 14px; }
+  .insight-body p { margin-bottom: 8px; }
   .insight-body strong { color: var(--ink); font-weight: 700; }
-
   .btn-flip-back {
     display: inline-flex; align-items: center; gap: 6px;
     background: var(--paper); color: var(--graphite);
     border: 1px solid var(--stone); border-radius: 100px;
     padding: 7px 14px;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; font-weight: 600; letter-spacing: 1.2px;
-    cursor: pointer; transition: all 0.2s ease;
-    align-self: flex-start; flex-shrink: 0;
-    text-transform: uppercase;
+    font-size: 10.5px; font-weight: 600; letter-spacing: 1.2px;
+    cursor: pointer; transition: all .2s ease;
+    align-self: flex-start; text-transform: uppercase;
   }
   .btn-flip-back:hover { border-color: var(--coral-500); color: var(--coral-700); }
-
-  .ai-loading {
-    display: flex; align-items: center; gap: 6px;
-    color: var(--graphite); font-size: 14px;
-    padding: 14px 0;
-  }
+  .ai-loading { display: flex; align-items: center; gap: 6px; color: var(--graphite); font-size: 13px; padding: 12px 0; }
   .ai-loading span {
     width: 7px; height: 7px; border-radius: 50%;
     background: var(--coral-500);
@@ -294,56 +597,75 @@
   .ai-loading span:nth-child(2) { animation-delay: 0.2s; }
   .ai-loading span:nth-child(3) { animation-delay: 0.4s; }
   @keyframes aiPulse {
-    0%,80%,100% { opacity: 0.25; transform: scale(0.8); }
-    40%         { opacity: 1; transform: scale(1); }
+    0%, 80%, 100% { opacity: .25; transform: scale(.8); }
+    40%           { opacity: 1;   transform: scale(1);  }
+  }
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px;
+    text-transform: uppercase;
+    padding: 3px 9px; border-radius: 100px;
+    border: 1px solid;
+  }
+  .status-up     { background: #d6ecde; color: #2d6b42; border-color: #b5d8c1; }
+  .status-down   { background: #fdecec; color: var(--rose-500); border-color: #f5cccc; }
+  .status-stable { background: #fbe2c0; color: #7a4814; border-color: #f0d0a0; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .donut-wrap { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+  .donut-chart { position: relative; width: 130px; height: 130px; flex-shrink: 0; }
+  .donut-legend { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 130px; }
+  .legend-item-row { display: flex; align-items: center; gap: 8px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .legend-text { font-size: 13px; color: var(--ink); font-weight: 500; }
+  .legend-sub { font-size: 11.5px; color: var(--ash); }
+
+  .top-clients-section { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--stone); }
+  .top-clients-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px; font-weight: 600; letter-spacing: 1.4px;
+    color: var(--ash); text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .client-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 0; border-bottom: 1px solid var(--stone);
+  }
+  .client-row:last-child { border-bottom: none; }
+  .client-name { font-size: 13px; color: var(--ink); font-weight: 500; }
+  .client-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; font-weight: 700;
+    color: var(--coral-500);
   }
 
-  /* ── SECTION CARD ────────────────────────────────────── */
-  .card-title {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 17px; font-weight: 700;
-    color: var(--ink); letter-spacing: -0.2px;
-    margin-bottom: 18px;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .card-title i { color: var(--coral-500); font-size: 14px; }
-
-  .chart-wrap { position: relative; height: 280px; }
-  .chart-wrap-sm { position: relative; height: 200px; }
-  .two-col {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 16px; margin-bottom: 16px;
-  }
-
-  /* ── RETENÇÃO ────────────────────────────────────────── */
-  .risk-table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+  .risk-table { width: 100%; border-collapse: collapse; margin-top: 4px; }
   .risk-table th {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
+    font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px;
     color: var(--graphite); text-transform: uppercase;
-    padding: 8px 10px;
+    padding: 7px 8px;
     border-bottom: 1px solid var(--stone);
     text-align: left;
   }
   .risk-table td {
-    font-size: 13px; color: var(--ink);
-    padding: 10px 10px;
+    font-size: 12.5px; color: var(--ink);
+    padding: 9px 8px;
     border-bottom: 1px solid var(--stone);
   }
   .risk-table tr:last-child td { border-bottom: none; }
   .risk-days {
     font-family: 'Space Grotesk', sans-serif;
-    font-size: 14px; font-weight: 700;
-    letter-spacing: -0.2px;
+    font-size: 13px; font-weight: 700;
   }
   .risk-days.high   { color: var(--rose-500); }
   .risk-days.medium { color: #7a4814; }
   .risk-days.low    { color: #2d6b42; }
 
-  /* ── CRESCIMENTO ─────────────────────────────────────── */
   .growth-bars {
     display: flex; align-items: flex-end; gap: 6px;
-    height: 84px; margin: 14px 0;
+    height: 80px; margin: 12px 0;
   }
   .growth-bar-wrap {
     flex: 1; display: flex; flex-direction: column;
@@ -352,183 +674,184 @@
   }
   .growth-bar {
     width: 100%; border-radius: 4px 4px 0 0;
-    background: var(--coral-100);
-    transition: height 0.5s ease; min-height: 4px;
+    background: var(--coral-100); transition: height .5s ease; min-height: 4px;
   }
   .growth-bar.current { background: var(--coral-500); }
   .growth-bar-label {
     font-family: 'JetBrains Mono', monospace;
     font-size: 9px; letter-spacing: 1px;
-    color: var(--ash); text-align: center;
-    white-space: nowrap; text-transform: uppercase;
+    color: var(--ash); text-align: center; white-space: nowrap;
+    text-transform: uppercase;
   }
   .growth-bar-value {
     font-family: 'Space Grotesk', sans-serif;
-    font-size: 12px; font-weight: 700;
-    color: var(--ink);
+    font-size: 11.5px; font-weight: 700; color: var(--ink);
   }
   .growth-kpis {
     display: grid; grid-template-columns: repeat(3, 1fr);
     gap: 1px; background: var(--stone);
     border: 1px solid var(--stone);
     border-radius: 12px; overflow: hidden;
-    margin-top: 14px;
+    margin-top: 12px;
   }
-  .growth-kpi {
-    background: var(--paper); padding: 12px 14px;
-    display: flex; flex-direction: column; gap: 3px;
-  }
+  .growth-kpi { background: var(--paper); padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
   .growth-kpi-label {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 9.5px; letter-spacing: 1.2px;
+    font-size: 9px; letter-spacing: 1.2px;
     color: var(--ash); text-transform: uppercase;
   }
   .growth-kpi-value {
     font-family: 'Space Grotesk', sans-serif;
-    font-size: 18px; font-weight: 700;
+    font-size: 16px; font-weight: 700;
     color: var(--coral-500); letter-spacing: -0.3px;
   }
 
-  /* ── DONUT + CLIENTES ────────────────────────────────── */
-  .donut-wrap { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
-  .donut-chart { position: relative; width: 140px; height: 140px; flex-shrink: 0; }
-  .donut-legend { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 130px; }
-  .legend-item-row { display: flex; align-items: center; gap: 8px; }
-  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-  .legend-text { font-size: 14px; color: var(--ink); font-weight: 500; }
-  .legend-sub { font-size: 12px; color: var(--ash); }
-
-  .client-row {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--stone);
-  }
-  .client-row:last-child { border-bottom: none; }
-  .client-name { font-size: 14px; color: var(--ink); font-weight: 500; }
-  .client-count {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 15px; font-weight: 700;
-    color: var(--coral-500); letter-spacing: -0.2px;
-  }
-
-  .top-clients-section {
-    margin-top: 18px; padding-top: 14px;
-    border-top: 1px solid var(--stone);
-  }
-  .top-clients-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; font-weight: 600; letter-spacing: 1.4px;
-    color: var(--ash); text-transform: uppercase;
-    margin-bottom: 10px;
-  }
-
-  /* ── TABELA / TRANSAÇÕES ─────────────────────────────── */
-  .fin-section {
-    background: var(--paper); border: 1px solid var(--stone);
-    border-radius: 20px; margin-bottom: 16px;
-    overflow: hidden;
-    box-shadow: 0 2px 6px rgba(25, 20, 15, 0.04);
-  }
-  .fin-section-header {
-    padding: 18px 22px;
-    border-bottom: 1px solid var(--stone);
-    display: flex; align-items: center; justify-content: space-between;
-    flex-wrap: wrap; gap: 12px;
-  }
-
-  .fin-table { width: 100%; border-collapse: collapse; }
-  .fin-table thead th {
-    padding: 12px 16px; text-align: left;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; font-weight: 600; letter-spacing: 1.4px;
-    color: var(--graphite); text-transform: uppercase;
-    border-bottom: 1px solid var(--stone);
-    background: var(--sand);
-  }
-  .fin-table tbody td {
-    padding: 14px 16px; font-size: 13.5px;
-    color: var(--ink);
-    border-bottom: 1px solid var(--stone);
-  }
-  .fin-table tbody tr:last-child td { border-bottom: none; }
-  .fin-table tbody tr:hover td { background: var(--sand); }
-  .fin-table tbody tr.hidden-row { display: none; }
-
-  .td-value {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 14.5px; font-weight: 700;
-    color: var(--coral-500); letter-spacing: -0.2px;
-  }
-  .td-muted { color: var(--ash); font-size: 12.5px; }
-
-  .badge {
-    display: inline-flex; align-items: center;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10.5px; font-weight: 700; letter-spacing: 1px;
-    padding: 3px 9px; border-radius: 100px;
-    white-space: nowrap; text-transform: uppercase;
-    border: 1px solid;
-  }
-  .badge-lime {
-    background: var(--coral-50); color: var(--coral-700);
-    border-color: var(--coral-100);
-  }
-
-  .btn-ver-mais {
-    display: flex; align-items: center; justify-content: center; gap: 6px;
-    width: 100%; padding: 14px;
-    background: transparent; color: var(--graphite);
-    border: none; border-top: 1px solid var(--stone);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; font-weight: 600; letter-spacing: 1.2px;
-    cursor: pointer; transition: all 0.2s ease;
-    text-transform: uppercase;
-  }
-  .btn-ver-mais:hover { background: var(--sand); color: var(--coral-700); }
-
-  .btn-csv {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: var(--coral-50); color: var(--coral-700);
-    border: 1px solid var(--coral-100); border-radius: 100px;
-    padding: 8px 16px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; font-weight: 700; letter-spacing: 1.2px;
-    cursor: pointer; transition: all 0.2s ease;
-    text-decoration: none; white-space: nowrap;
-    text-transform: uppercase;
-  }
-  .btn-csv:hover { background: var(--coral-500); color: var(--cream); border-color: var(--coral-500); }
-
-  /* ── EMPTY ───────────────────────────────────────────── */
-  .empty-state-card { text-align: center; padding: 60px 22px; }
-  .empty-icon-lg { font-size: 38px; color: var(--stone); margin-bottom: 14px; }
+  .empty-state-card { text-align: center; padding: 50px 22px; }
+  .empty-icon-lg { font-size: 36px; color: var(--stone); margin-bottom: 12px; }
   .empty-title-lg {
     font-family: 'Space Grotesk', sans-serif;
-    font-size: 22px; font-weight: 700;
+    font-size: 20px; font-weight: 700;
     color: var(--ink); margin-bottom: 6px;
     letter-spacing: -0.3px;
   }
-  .empty-text-lg { font-size: 14px; color: var(--graphite); margin-bottom: 22px; }
+  .empty-text-lg { font-size: 13.5px; color: var(--graphite); margin-bottom: 18px; }
+
+  /* ── INPUT MODAL (AI cycle) ─────────────────────────── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(40, 35, 28, 0.45);
+    backdrop-filter: blur(6px);
+    z-index: 1000;
+    display: flex; align-items: center; justify-content: center;
+    padding: 22px; opacity: 0; pointer-events: none;
+    transition: opacity .25s ease;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal-box {
+    background: var(--paper); border: 1px solid var(--stone);
+    border-radius: 22px; padding: 26px;
+    width: 100%; max-width: 540px;
+    display: flex; flex-direction: column; gap: 16px;
+    transform: translateY(16px);
+    transition: transform .25s cubic-bezier(.16,1,.3,1);
+    box-shadow: 0 20px 60px rgba(25,20,15,0.18);
+  }
+  .modal-overlay.open .modal-box { transform: translateY(0); }
+  .modal-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 20px; font-weight: 700;
+    color: var(--ink); letter-spacing: -0.4px;
+  }
+  .modal-sub {
+    font-size: 13px; color: var(--graphite);
+    line-height: 1.55; margin-top: -8px;
+  }
+  .modal-textarea {
+    background: var(--paper); border: 1px solid var(--stone);
+    border-radius: 12px; padding: 13px;
+    font-family: 'Inter', sans-serif; font-size: 14px;
+    color: var(--ink); resize: vertical; min-height: 120px;
+    outline: none; transition: border-color .2s, box-shadow .2s;
+  }
+  .modal-textarea:focus {
+    border-color: var(--coral-500);
+    box-shadow: 0 0 0 3px rgba(220, 120, 82, 0.08);
+  }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
 
   @media (max-width: 768px) {
-    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .stat-trio { grid-template-columns: 1fr; }
     .two-col { grid-template-columns: 1fr; }
-    .filter-grid { grid-template-columns: 1fr 1fr; }
-    .growth-kpis { grid-template-columns: 1fr; }
-  }
-  @media (max-width: 480px) {
-    .kpi-grid { grid-template-columns: 1fr 1fr; }
-    .filter-grid { grid-template-columns: 1fr; }
-    .donut-wrap { flex-direction: column; }
   }
 </style>
 
-<!-- MODAL INPUT -->
+<%
+  # ── Pré-cálculos derivados do controller (não muda ivars) ─────────
+  car_wash = current_user.linked_car_wash
+
+  # Custos do período (pro stat trio + lucro)
+  total_costs_in_period = 0.0
+  cur = @start_date.beginning_of_month
+  while cur <= @end_date
+    mc = car_wash&.monthly_costs&.find_by(year: cur.year, month: cur.month)
+    if mc
+      ms = [cur, @start_date].max
+      me = [cur.end_of_month, @end_date].min
+      days_overlap = (me - ms).to_i + 1
+      days_in_month = Date.new(cur.year, cur.month, -1).day
+      fraction = days_in_month > 0 ? (days_overlap.to_f / days_in_month) : 0
+      total_costs_in_period += mc.total.to_f * fraction
+    end
+    cur = cur.next_month
+  end
+
+  # Em aberto (confirmados ainda não realizados) no período
+  effective_from = [@start_date.beginning_of_day, Time.current].max
+  open_revenue = 0.0
+  if @end_date.end_of_day >= Time.current
+    open_revenue = car_wash&.appointments
+      &.where(status: "confirmed")
+      &.where(scheduled_at: effective_from..@end_date.end_of_day)
+      &.joins(:service)
+      &.sum("services.price - COALESCE(appointments.commission_amount, 0)").to_f
+  end
+
+  period_profit = @total_sales - total_costs_in_period
+  period_margin = @total_sales > 0 ? ((period_profit / @total_sales) * 100).round(1) : nil
+  period_negative = period_profit < 0
+
+  period_label =
+    case params[:period]
+    when "day"    then "Hoje · #{@start_date.strftime('%d/%m')}"
+    when "week"   then "Semana · #{@start_date.strftime('%d/%m')} – #{@end_date.strftime('%d/%m')}"
+    when "month"  then "#{MonthlyCost::MONTH_NAMES[@start_date.month - 1]} #{@start_date.year}"
+    when "year"   then "Ano · #{@start_date.year}"
+    when "all"    then "Desde #{@start_date.strftime('%d/%m/%Y')}"
+    when "custom" then "#{@start_date.strftime('%d/%m/%y')} – #{@end_date.strftime('%d/%m/%y')}"
+    else               "#{MonthlyCost::MONTH_NAMES[@start_date.month - 1]} #{@start_date.year}"
+    end
+
+  active_period = params[:period].presence || "month"
+
+  # DRE últimos 12 meses (mesma fórmula do MonthlyCostsController#index, sem
+  # mexer em ivars já existentes).
+  dre_12m = (0..11).map do |i|
+    d = i.months.ago
+    yr  = d.year
+    mn  = d.month
+    cost = car_wash&.monthly_costs&.find_by(year: yr, month: mn)
+    revenue = car_wash&.appointments
+      &.where(status: "attended")
+      &.joins(:service)
+      &.where(scheduled_at: d.beginning_of_month..d.end_of_month)
+      &.sum("services.price - COALESCE(appointments.commission_amount, 0)").to_f
+    pending = car_wash&.appointments
+      &.where(status: "confirmed")
+      &.joins(:service)
+      &.where(scheduled_at: Date.today..d.end_of_month)
+      &.sum("services.price - COALESCE(appointments.commission_amount, 0)").to_f
+    total_cost = cost&.total.to_f
+    profit = revenue - total_cost
+    margin = revenue > 0 ? ((profit / revenue) * 100).round(1) : nil
+    {
+      year: yr, month: mn,
+      label: "#{MonthlyCost::MONTH_NAMES[mn - 1]} #{yr}",
+      mes: d.strftime("%b/%y"),
+      revenue: revenue, open_revenue: pending,
+      fixed: cost&.total_fixed.to_f, variable: cost&.total_variable.to_f,
+      total_cost: total_cost, profit: profit, margin: margin,
+      has_cost: cost.present?,
+      cost_record: cost,
+    }
+  end
+%>
+
+<!-- AI INPUT MODAL -->
 <div class="modal-overlay" id="inputModal">
   <div class="modal-box">
     <div class="modal-title">Fechamento do ciclo</div>
-    <div class="modal-sub">O que você tentou nas últimas 2 semanas? Pode ser algo que a análise sugeriu ou uma iniciativa própria. Qual foi o resultado? Esse registro orienta a próxima análise.</div>
-    <textarea class="modal-textarea" id="ownerInputText" placeholder="Ex: Criei o combo Lavagem + Higienização por R$199, vendi 8 combos na primeira semana..."></textarea>
+    <div class="modal-sub">O que você tentou nas últimas 2 semanas? Pode ser algo da análise sugeriu ou uma iniciativa própria. Esse registro orienta a próxima análise.</div>
+    <textarea class="modal-textarea" id="ownerInputText" placeholder="Ex.: Criei o combo Lavagem + Higienização por R$199, vendi 8 combos na primeira semana..."></textarea>
     <div class="modal-actions">
       <button class="loov-btn-ghost" onclick="closeInputModal()">Cancelar</button>
       <button class="loov-btn-primary" onclick="saveOwnerInput()">Salvar e fechar ciclo</button>
@@ -536,58 +859,87 @@
   </div>
 </div>
 
+<!-- COSTS MODAL (lançamento inline; abre via abrirCustosDoMes) -->
+<div class="costs-modal-overlay" id="costsModal">
+  <div class="costs-modal-sheet" id="costsModalSheet">
+    <div class="costs-modal-handle"></div>
+    <div class="costs-modal-title" id="costs-modal-title">LANÇAR CUSTOS</div>
+    <div class="costs-modal-subtitle" id="costs-modal-subtitle">—</div>
+    <div class="costs-modal-content" id="costs-modal-content">
+      <div class="costs-modal-loading">
+        <i class="fas fa-circle-notch fa-spin" style="color: var(--coral-500); font-size: 22px;"></i>
+        <div style="margin-top: 8px; font-size: 13px;">Carregando…</div>
+      </div>
+    </div>
+    <div class="costs-modal-actions">
+      <button class="costs-modal-cancel" onclick="closeCostsModal()">Cancelar</button>
+      <button class="costs-modal-confirm" id="costs-modal-confirm" onclick="saveCostsModal()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <div class="loov-page loov-page--wide">
 
-  <div class="loov-hero">
-    <div class="loov-eyebrow"><span class="dot"></span>Gestão Financeira</div>
-    <h1 class="loov-h1">Análise <span class="accent">completa</span>.</h1>
-    <p class="loov-lead">Acompanhe vendas, retenção, demanda e crescimento — com insights guiados por IA.</p>
+  <div class="loov-hero loov-hero--left">
+    <div class="loov-eyebrow"><span class="dot"></span>Financeiro</div>
+    <h1 class="loov-h1">
+      Faturamento <span class="accent">do mês</span>.
+    </h1>
+    <p class="loov-lead" style="margin-bottom: 22px;">
+      Acompanhe receita, custos e lucro do seu lava-rápido — DRE atualizada automaticamente.
+    </p>
   </div>
 
-  <!-- CYCLE BANNER -->
-  <div class="cycle-banner" id="cycleBanner" style="display:none;">
-    <div class="cycle-banner-info">
-      <div class="cycle-banner-label">Ciclo de análise</div>
-      <div class="cycle-banner-value" id="cycleDates">—</div>
-      <div class="cycle-banner-summary" id="cycleSummary"></div>
-    </div>
-    <button class="btn-input" id="btnInput" onclick="openInputModal()">
-      <i class="fas fa-pen"></i> <span id="btnInputLabel">Fechar ciclo</span>
-    </button>
+  <!-- ─── PERIOD PILLS (filtro rápido) ─────────────────────────── -->
+  <div class="period-pills">
+    <% [
+      ["day",   "Hoje"],
+      ["week",  "Semana"],
+      ["month", "Mês"],
+      ["year",  "Ano"],
+      ["all",   "Tudo"],
+    ].each do |key, label| %>
+      <%= link_to label,
+          owner_financial_tracking_path(period: key),
+          class: "period-pill #{'active' if active_period == key}" %>
+    <% end %>
+    <a href="#filtros" class="period-pill <%= 'active' if active_period == 'custom' %>">Intervalo</a>
   </div>
 
-  <!-- AÇÃO DA SEMANA -->
-  <div class="action-banner" id="actionBanner">
-    <div class="action-banner-label"><i class="fas fa-bolt"></i> Ação desta semana</div>
-    <div class="action-banner-text" id="actionText"></div>
-  </div>
-
-  <%= form_with url: owner_financial_tracking_path, method: :get, local: true do %>
-  <div class="loov-card" style="margin-bottom: 22px;">
-    <div class="filter-grid">
-      <div class="loov-field" style="margin-bottom: 0;">
-        <label class="loov-label">Período</label>
-        <%= select_tag :period, options_for_select([["Hoje","day"],["Esta Semana","week"],["Este Mês","month"],["Este Ano","year"],["Tudo","all"],["Personalizado","custom"]], params[:period]), include_blank: "Selecione", class: "loov-input", id: "period_select" %>
+  <!-- ─── FILTRO (form) ─────────────────────────────────────────── -->
+  <%= form_with url: owner_financial_tracking_path, method: :get, local: true, html: { id: "filtros" } do %>
+    <div class="loov-card" style="margin-bottom: 18px;">
+      <div class="filter-bar">
+        <div class="loov-field">
+          <label class="loov-label">Período</label>
+          <%= select_tag :period,
+              options_for_select([
+                ["Hoje","day"],["Esta Semana","week"],["Este Mês","month"],
+                ["Este Ano","year"],["Tudo","all"],["Personalizado","custom"]
+              ], params[:period]),
+              include_blank: "Selecione", class: "loov-input", id: "period_select" %>
+        </div>
+        <div class="loov-field">
+          <label class="loov-label">Serviço</label>
+          <%= select_tag :service_filter,
+              options_for_select(@service_options.map { |s| [s, s] }, params[:service_filter]),
+              include_blank: "Todos", class: "loov-input" %>
+        </div>
+        <div class="loov-field">
+          <%= submit_tag "Filtrar", class: "loov-btn-primary loov-btn-block" %>
+        </div>
       </div>
-      <div class="loov-field" style="margin-bottom: 0;">
-        <label class="loov-label">Serviço</label>
-        <%= select_tag :service_filter, options_for_select(@service_options.map { |s| [s, s] }, params[:service_filter]), include_blank: "Todos", class: "loov-input" %>
-      </div>
-      <div class="loov-field" style="margin-bottom: 0;">
-        <%= submit_tag "Filtrar", class: "loov-btn-primary loov-btn-block" %>
+      <div class="custom-dates <%= 'visible' if params[:period] == 'custom' %>" id="custom-dates">
+        <div class="loov-field" style="flex: 1;">
+          <label class="loov-label">Data inicial</label>
+          <%= date_field_tag :start_date, params[:start_date] || @start_date, class: "loov-input" %>
+        </div>
+        <div class="loov-field" style="flex: 1;">
+          <label class="loov-label">Data final</label>
+          <%= date_field_tag :end_date, params[:end_date] || @end_date, class: "loov-input" %>
+        </div>
       </div>
     </div>
-    <div class="custom-dates <%= params[:period] == 'custom' ? 'visible' : '' %>" id="custom-dates">
-      <div class="loov-field" style="margin-bottom: 0;">
-        <label class="loov-label">Data inicial</label>
-        <%= date_field_tag :start_date, params[:start_date] || @start_date, class: "loov-input" %>
-      </div>
-      <div class="loov-field" style="margin-bottom: 0;">
-        <label class="loov-label">Data final</label>
-        <%= date_field_tag :end_date, params[:end_date] || @end_date, class: "loov-input" %>
-      </div>
-    </div>
-  </div>
   <% end %>
 
   <%
@@ -597,278 +949,463 @@
                (@is_custom_filter && @sales_by_month.all? { |m| m.total_value.zero? })
   %>
 
-  <% if is_empty %>
-  <div class="loov-card empty-state-card">
-    <div class="empty-icon-lg"><i class="fas fa-chart-line"></i></div>
-    <div class="empty-title-lg">Sem dados</div>
-    <p class="empty-text-lg">Nenhum atendimento concluído encontrado para o período selecionado.</p>
-    <%= link_to "Ver tudo", owner_financial_tracking_path, class: "loov-btn-secondary" %>
-  </div>
-  <% else %>
+  <% unless is_empty %>
 
-  <div class="kpi-grid">
-    <div class="kpi-card-mini accent">
-      <div class="kpi-label">Faturamento</div>
-      <div class="kpi-value lime">R$ <%= number_with_precision(@total_sales, precision: 2) %></div>
-      <div class="kpi-sub">clientes que compareceram</div>
-    </div>
-    <div class="kpi-card-mini">
-      <div class="kpi-label">Atendimentos</div>
-      <div class="kpi-value"><%= @total_appointments %></div>
-      <div class="kpi-sub">concluídos no período</div>
-    </div>
-    <div class="kpi-card-mini">
-      <div class="kpi-label">Ticket médio</div>
-      <div class="kpi-value">R$ <%= number_with_precision(@total_appointments > 0 ? @total_sales / @total_appointments : 0, precision: 2) %></div>
-      <div class="kpi-sub">por atendimento efetivado</div>
-    </div>
-    <div class="kpi-card-mini">
-      <div class="kpi-label"><%= @average_label %></div>
-      <div class="kpi-value">R$ <%= number_with_precision(@average_value, precision: 2) %></div>
-      <div class="kpi-sub">média do período</div>
-    </div>
-  </div>
-
-  <!-- FLIP: VENDAS -->
-  <div class="flip-wrap" id="flip-sales">
-    <div class="flip-inner" id="flip-inner-sales">
-      <div class="flip-front">
-        <button class="flip-btn" onclick="doFlip('sales')" title="Análise com IA">+</button>
-        <div class="card-title"><i class="fas fa-chart-line"></i> Evolução de vendas</div>
-        <div class="chart-legend">
-          <div class="chart-legend-item"><div class="chart-legend-dot" style="background: #dd7852;"></div>Efetivados</div>
-          <div class="chart-legend-item"><div class="chart-legend-dot" style="background: #d6b14a;"></div>Agendados</div>
-        </div>
-        <div class="chart-wrap"><canvas id="salesChart"></canvas></div>
+    <!-- ─── HERO RECEITA (escuro) ──────────────────────────────── -->
+    <div class="hero-revenue-card">
+      <div class="hero-revenue-top">
+        <span class="hero-revenue-label">Faturamento · <%= period_label %></span>
+        <% if period_margin %>
+          <span class="hero-margin-badge <%= 'negative' if period_negative %>" style="display:inline-flex; align-items:center; gap:5px; padding:5px 12px; border-radius:100px; font-family:'JetBrains Mono', monospace; font-size:11px; font-weight:700; letter-spacing:1.1px; text-transform:uppercase; <%= period_negative ? 'background:rgba(200,80,80,0.15); border:1px solid rgba(200,80,80,0.45); color:#f4a8a8;' : 'background:rgba(220,120,82,0.18); border:1px solid rgba(220,120,82,0.42); color:#f1c0a8;' %>">
+            <i class="fas fa-<%= period_negative ? 'arrow-trend-down' : 'arrow-trend-up' %>"></i>
+            <%= period_margin %>% margem
+          </span>
+        <% end %>
       </div>
-      <div class="flip-back">
-        <div class="insight-eyebrow"><i class="fas fa-microchip"></i> Análise de IA</div>
-        <div class="insight-meta" id="insight-meta-sales" style="display:none;"></div>
-        <div class="insight-title">Vendas & Faturamento</div>
-        <div class="insight-body" id="insight-body-sales"><div class="ai-loading"><span></span><span></span><span></span> Aguardando análise...</div></div>
-        <button class="btn-flip-back" onclick="doFlip('sales')"><i class="fas fa-arrow-left"></i> Voltar</button>
+      <div class="hero-revenue-value">
+        R$ <%= number_with_precision(@total_sales, precision: 2, delimiter: '.', separator: ',') %>
       </div>
-    </div>
-  </div>
-
-  <div class="two-col">
-    <div class="flip-wrap" id="flip-services" style="margin-bottom: 0;">
-      <div class="flip-inner" id="flip-inner-services">
-        <div class="flip-front">
-          <button class="flip-btn" onclick="doFlip('services')" title="Análise com IA">+</button>
-          <div class="card-title"><i class="fas fa-spray-can-sparkles"></i> Serviços</div>
-          <div class="chart-wrap-sm"><canvas id="servicesChart"></canvas></div>
-        </div>
-        <div class="flip-back">
-          <div class="insight-eyebrow"><i class="fas fa-microchip"></i> Análise de IA</div>
-          <div class="insight-meta" id="insight-meta-services" style="display:none;"></div>
-          <div class="insight-title">Mix de serviços</div>
-          <div class="insight-body" id="insight-body-services"><div class="ai-loading"><span></span><span></span><span></span> Aguardando análise...</div></div>
-          <button class="btn-flip-back" onclick="doFlip('services')"><i class="fas fa-arrow-left"></i> Voltar</button>
-        </div>
+      <div class="hero-revenue-sub">
+        <%= @total_appointments %> atendimento<%= 's' if @total_appointments != 1 %> · ticket médio
+        <strong>R$ <%= number_with_precision(@total_appointments > 0 ? @total_sales / @total_appointments : 0, precision: 2) %></strong>
       </div>
     </div>
 
-    <div class="flip-wrap" id="flip-clients" style="margin-bottom: 0;">
-      <div class="flip-inner" id="flip-inner-clients">
-        <div class="flip-front">
-          <button class="flip-btn" onclick="doFlip('clients')" title="Análise com IA">+</button>
-          <div class="card-title"><i class="fas fa-users"></i> Clientes</div>
-          <div class="donut-wrap">
-            <div class="donut-chart"><canvas id="clientsChart"></canvas></div>
-            <div class="donut-legend">
-              <div class="legend-item-row"><div class="legend-dot" style="background: #dd7852;"></div><div><div class="legend-text">Recorrentes</div><div class="legend-sub"><%= @recurring_clients %> (<%= @total_clients > 0 ? ((@recurring_clients.to_f / @total_clients) * 100).round : 0 %>%)</div></div></div>
-              <div class="legend-item-row"><div class="legend-dot" style="background: #ada699;"></div><div><div class="legend-text">Novos</div><div class="legend-sub"><%= @new_clients %> (<%= @total_clients > 0 ? ((@new_clients.to_f / @total_clients) * 100).round : 0 %>%)</div></div></div>
+    <!-- ─── STAT TRIO ──────────────────────────────────────────── -->
+    <div class="stat-trio">
+      <div class="stat-trio-card">
+        <div class="stat-trio-icon"><i class="fas fa-circle-check"></i></div>
+        <div class="stat-trio-label">Realizado</div>
+        <div class="stat-trio-value">R$ <%= number_with_precision(@total_sales, precision: 0, delimiter: '.') %></div>
+      </div>
+      <div class="stat-trio-card">
+        <div class="stat-trio-icon amber"><i class="fas fa-clock"></i></div>
+        <div class="stat-trio-label">Em aberto</div>
+        <div class="stat-trio-value">R$ <%= number_with_precision(open_revenue, precision: 0, delimiter: '.') %></div>
+      </div>
+      <div class="stat-trio-card">
+        <div class="stat-trio-icon graphite"><i class="fas fa-circle-minus"></i></div>
+        <div class="stat-trio-label">Custos</div>
+        <div class="stat-trio-value">R$ <%= number_with_precision(total_costs_in_period, precision: 0, delimiter: '.') %></div>
+      </div>
+    </div>
+
+    <!-- AÇÃO DA SEMANA + CYCLE -->
+    <div class="cycle-banner" id="cycleBanner" style="display:none;">
+      <div class="cycle-banner-info">
+        <div class="cycle-banner-label">Ciclo de análise</div>
+        <div class="cycle-banner-value" id="cycleDates">—</div>
+        <div class="cycle-banner-summary" id="cycleSummary"></div>
+      </div>
+      <button class="btn-input" id="btnInput" onclick="openInputModal()">
+        <i class="fas fa-pen"></i> <span id="btnInputLabel">Fechar ciclo</span>
+      </button>
+    </div>
+    <div class="action-banner" id="actionBanner">
+      <div class="action-banner-label"><i class="fas fa-bolt"></i> Ação desta semana</div>
+      <div class="action-banner-text" id="actionText"></div>
+    </div>
+
+    <!-- ─── COMBO CHART (Faturamento Efetivado vs Em aberto) ─── -->
+    <div class="section-eyebrow">
+      <span class="section-eyebrow-title">Evolução · <%= period_label %></span>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-title"><i class="fas fa-chart-line"></i> Vendas no período</div>
+      <div class="chart-legend-row">
+        <div class="chart-legend-item">
+          <div class="chart-legend-swatch" style="background: #dd7852;"></div>Efetivados
+        </div>
+        <div class="chart-legend-item">
+          <div class="chart-legend-swatch" style="background: #d6b14a;"></div>Em aberto / agendados
+        </div>
+      </div>
+      <div class="chart-inner"><canvas id="salesChart"></canvas></div>
+    </div>
+
+    <!-- ─── DRE MENSAL EXPANSÍVEL + LANÇAR CUSTOS ──────────────── -->
+    <div class="section-eyebrow">
+      <span class="section-eyebrow-title">DRE mensal</span>
+      <span class="section-eyebrow-meta">últimos 12 meses</span>
+    </div>
+
+    <button type="button" class="launch-cta" id="btn-lancar-custos"
+            onclick="abrirCustosDoMes(<%= Date.current.year %>, <%= Date.current.month %>)">
+      <i class="fas fa-plus"></i> Lançar custos do mês atual
+    </button>
+
+    <div class="dre-list">
+      <% dre_12m.reverse.each do |d|
+        is_current = d[:year] == Date.current.year && d[:month] == Date.current.month
+        negative   = d[:profit] < 0
+        row_id     = "dre-row-#{d[:year]}-#{d[:month]}"
+      %>
+        <div class="dre-row <%= 'is-current' if is_current %>">
+          <div class="dre-row-header" onclick="toggleDreRow('<%= row_id %>')">
+            <div class="dre-row-main">
+              <div class="dre-row-month">
+                <%= d[:label] %>
+                <% if is_current %><span class="current-dot">● atual</span><% end %>
+              </div>
+              <div class="dre-row-summary">
+                <% if d[:has_cost] %>
+                  Lucro
+                  <strong class="<%= 'profit-neg' if negative %>">
+                    <%= negative ? '-' : '' %>R$ <%= number_with_precision(d[:profit].abs, precision: 0, delimiter: '.') %>
+                  </strong>
+                  <% if d[:margin] %>&nbsp;·&nbsp; <%= d[:margin] %>% margem<% end %>
+                <% else %>
+                  <span style="color: var(--ash);">Custos não lançados</span>
+                  &nbsp;·&nbsp; Faturamento
+                  <strong>R$ <%= number_with_precision(d[:revenue], precision: 0, delimiter: '.') %></strong>
+                <% end %>
+              </div>
+            </div>
+            <button type="button" class="dre-row-add" title="Lançar custos"
+                    onclick="event.stopPropagation(); abrirCustosDoMes(<%= d[:year] %>, <%= d[:month] %>);">
+              <i class="fas fa-plus" style="font-size: 11px;"></i>
+            </button>
+            <i class="fas fa-chevron-down dre-row-chevron" id="<%= row_id %>-chev"></i>
+          </div>
+          <div class="dre-row-body" id="<%= row_id %>">
+            <div class="dre-row-body-inner">
+              <div class="dre-line">
+                <span class="dre-line-label">Faturamento real</span>
+                <span class="dre-line-amount">R$ <%= number_with_precision(d[:revenue], precision: 2) %></span>
+              </div>
+              <div class="dre-line muted">
+                <span class="dre-line-label">Em aberto</span>
+                <span class="dre-line-amount">R$ <%= number_with_precision(d[:open_revenue], precision: 2) %></span>
+              </div>
+              <div class="dre-divider"></div>
+
+              <% if d[:has_cost] %>
+                <div class="dre-line negative">
+                  <span class="dre-line-label">Custos fixos</span>
+                  <span class="dre-line-amount">- R$ <%= number_with_precision(d[:fixed], precision: 2) %></span>
+                </div>
+                <div class="dre-line negative">
+                  <span class="dre-line-label">Custos variáveis</span>
+                  <span class="dre-line-amount">- R$ <%= number_with_precision(d[:variable], precision: 2) %></span>
+                </div>
+                <div class="dre-line negative bold">
+                  <span class="dre-line-label" style="color: var(--ink);">Total custos</span>
+                  <span class="dre-line-amount">- R$ <%= number_with_precision(d[:total_cost], precision: 2) %></span>
+                </div>
+                <div class="dre-divider"></div>
+                <div class="dre-line bold big <%= 'negative' if negative %>">
+                  <span class="dre-line-label" style="color: var(--ink); font-weight: 600;">Lucro líquido</span>
+                  <span class="dre-line-amount">
+                    <%= negative ? '-' : '' %>R$ <%= number_with_precision(d[:profit].abs, precision: 2) %>
+                  </span>
+                </div>
+              <% else %>
+                <button type="button" class="dre-add-cost-inline"
+                        onclick="abrirCustosDoMes(<%= d[:year] %>, <%= d[:month] %>)">
+                  <i class="fas fa-plus"></i> Lançar custos deste mês
+                </button>
+              <% end %>
             </div>
           </div>
-          <% if @top_clients.any? %>
-          <div class="top-clients-section">
-            <div class="top-clients-label">Top clientes</div>
-            <% @top_clients.each do |c| %>
-            <div class="client-row"><span class="client-name"><%= c[:email] %></span><span class="client-count"><%= c[:count] %>x</span></div>
-            <% end %>
+        </div>
+      <% end %>
+    </div>
+
+    <!-- ─── AI: VENDAS (flip card) ─────────────────────────────── -->
+    <div class="section-eyebrow" style="margin-top: 28px;">
+      <span class="section-eyebrow-title">Insights de IA</span>
+    </div>
+
+    <div class="flip-wrap" id="flip-sales">
+      <div class="flip-inner" id="flip-inner-sales">
+        <div class="flip-front">
+          <button class="flip-btn" onclick="doFlip('sales')" title="Análise com IA">+</button>
+          <div class="chart-card-title"><i class="fas fa-chart-line"></i> Análise de vendas</div>
+          <div style="font-size: 13px; color: var(--graphite); line-height: 1.5;">
+            Clique em <strong>+</strong> para gerar uma análise por IA do faturamento, ticket médio e desempenho do período.
           </div>
-          <% end %>
         </div>
         <div class="flip-back">
           <div class="insight-eyebrow"><i class="fas fa-microchip"></i> Análise de IA</div>
-          <div class="insight-meta" id="insight-meta-clients" style="display:none;"></div>
-          <div class="insight-title">Retenção & Fidelização</div>
-          <div class="insight-body" id="insight-body-clients"><div class="ai-loading"><span></span><span></span><span></span> Aguardando análise...</div></div>
-          <button class="btn-flip-back" onclick="doFlip('clients')"><i class="fas fa-arrow-left"></i> Voltar</button>
+          <div class="insight-meta" id="insight-meta-sales" style="display:none;"></div>
+          <div class="insight-title">Vendas & Faturamento</div>
+          <div class="insight-body" id="insight-body-sales">
+            <div class="ai-loading"><span></span><span></span><span></span> Aguardando análise...</div>
+          </div>
+          <button class="btn-flip-back" onclick="doFlip('sales')"><i class="fas fa-arrow-left"></i> Voltar</button>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- FLIP: DEMANDA -->
-  <div class="flip-wrap" id="flip-demand">
-    <div class="flip-inner" id="flip-inner-demand">
-      <div class="flip-front">
-        <button class="flip-btn" onclick="doFlip('demand')" title="Análise com IA">+</button>
-        <div class="card-title"><i class="fas fa-calendar-week"></i> Demanda por dia</div>
-        <div class="chart-wrap-sm"><canvas id="demandChart"></canvas></div>
+    <!-- ─── SERVIÇOS + CLIENTES ────────────────────────────────── -->
+    <div class="two-col">
+      <div class="flip-wrap" id="flip-services" style="margin-bottom: 0;">
+        <div class="flip-inner" id="flip-inner-services">
+          <div class="flip-front">
+            <button class="flip-btn" onclick="doFlip('services')" title="Análise com IA">+</button>
+            <div class="chart-card-title"><i class="fas fa-spray-can-sparkles"></i> Serviços</div>
+            <div class="chart-inner-sm"><canvas id="servicesChart"></canvas></div>
+          </div>
+          <div class="flip-back">
+            <div class="insight-eyebrow"><i class="fas fa-microchip"></i> Análise de IA</div>
+            <div class="insight-meta" id="insight-meta-services" style="display:none;"></div>
+            <div class="insight-title">Mix de serviços</div>
+            <div class="insight-body" id="insight-body-services">
+              <div class="ai-loading"><span></span><span></span><span></span> Aguardando análise...</div>
+            </div>
+            <button class="btn-flip-back" onclick="doFlip('services')"><i class="fas fa-arrow-left"></i> Voltar</button>
+          </div>
+        </div>
       </div>
-      <div class="flip-back">
-        <div class="insight-eyebrow"><i class="fas fa-microchip"></i> Análise de IA</div>
-        <div class="insight-meta" id="insight-meta-demand" style="display:none;"></div>
-        <div class="insight-title">Demanda & Horários</div>
-        <div class="insight-body" id="insight-body-demand"><div class="ai-loading"><span></span><span></span><span></span> Aguardando análise...</div></div>
-        <button class="btn-flip-back" onclick="doFlip('demand')"><i class="fas fa-arrow-left"></i> Voltar</button>
+
+      <div class="flip-wrap" id="flip-clients" style="margin-bottom: 0;">
+        <div class="flip-inner" id="flip-inner-clients">
+          <div class="flip-front">
+            <button class="flip-btn" onclick="doFlip('clients')" title="Análise com IA">+</button>
+            <div class="chart-card-title"><i class="fas fa-users"></i> Clientes</div>
+            <div class="donut-wrap">
+              <div class="donut-chart"><canvas id="clientsChart"></canvas></div>
+              <div class="donut-legend">
+                <div class="legend-item-row">
+                  <div class="legend-dot" style="background: #dd7852;"></div>
+                  <div>
+                    <div class="legend-text">Recorrentes</div>
+                    <div class="legend-sub"><%= @recurring_clients %> (<%= @total_clients > 0 ? ((@recurring_clients.to_f / @total_clients) * 100).round : 0 %>%)</div>
+                  </div>
+                </div>
+                <div class="legend-item-row">
+                  <div class="legend-dot" style="background: #ada699;"></div>
+                  <div>
+                    <div class="legend-text">Novos</div>
+                    <div class="legend-sub"><%= @new_clients %> (<%= @total_clients > 0 ? ((@new_clients.to_f / @total_clients) * 100).round : 0 %>%)</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <% if @top_clients.any? %>
+              <div class="top-clients-section">
+                <div class="top-clients-label">Top clientes</div>
+                <% @top_clients.each do |c| %>
+                  <div class="client-row">
+                    <span class="client-name"><%= c[:email] %></span>
+                    <span class="client-count"><%= c[:count] %>x</span>
+                  </div>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+          <div class="flip-back">
+            <div class="insight-eyebrow"><i class="fas fa-microchip"></i> Análise de IA</div>
+            <div class="insight-meta" id="insight-meta-clients" style="display:none;"></div>
+            <div class="insight-title">Retenção & Fidelização</div>
+            <div class="insight-body" id="insight-body-clients">
+              <div class="ai-loading"><span></span><span></span><span></span> Aguardando análise...</div>
+            </div>
+            <button class="btn-flip-back" onclick="doFlip('clients')"><i class="fas fa-arrow-left"></i> Voltar</button>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="two-col">
-    <div class="flip-wrap" id="flip-retention" style="margin-bottom: 0;">
-      <div class="flip-inner" id="flip-inner-retention">
+    <!-- ─── DEMANDA ────────────────────────────────────────────── -->
+    <div class="flip-wrap" id="flip-demand">
+      <div class="flip-inner" id="flip-inner-demand">
         <div class="flip-front">
-          <button class="flip-btn" onclick="doFlip('retention')" title="Análise com IA">+</button>
-          <div class="card-title"><i class="fas fa-user-clock"></i> Retenção</div>
-          <% if @at_risk_clients.any? %>
-          <div style="font-size: 12.5px; color: var(--graphite); margin-bottom: 10px;">Clientes sem visita há 30–90 dias</div>
-          <table class="risk-table">
-            <thead><tr><th>Cliente</th><th>Última visita</th><th>Ausente</th></tr></thead>
+          <button class="flip-btn" onclick="doFlip('demand')" title="Análise com IA">+</button>
+          <div class="chart-card-title"><i class="fas fa-calendar-week"></i> Demanda por dia</div>
+          <div class="chart-inner-sm"><canvas id="demandChart"></canvas></div>
+        </div>
+        <div class="flip-back">
+          <div class="insight-eyebrow"><i class="fas fa-microchip"></i> Análise de IA</div>
+          <div class="insight-meta" id="insight-meta-demand" style="display:none;"></div>
+          <div class="insight-title">Demanda & Horários</div>
+          <div class="insight-body" id="insight-body-demand">
+            <div class="ai-loading"><span></span><span></span><span></span> Aguardando análise...</div>
+          </div>
+          <button class="btn-flip-back" onclick="doFlip('demand')"><i class="fas fa-arrow-left"></i> Voltar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── RETENÇÃO + CRESCIMENTO ─────────────────────────────── -->
+    <div class="two-col">
+      <div class="flip-wrap" id="flip-retention" style="margin-bottom: 0;">
+        <div class="flip-inner" id="flip-inner-retention">
+          <div class="flip-front">
+            <button class="flip-btn" onclick="doFlip('retention')" title="Análise com IA">+</button>
+            <div class="chart-card-title"><i class="fas fa-user-clock"></i> Retenção</div>
+            <% if @at_risk_clients.any? %>
+              <div style="font-size: 12px; color: var(--graphite); margin-bottom: 8px;">
+                Clientes sem visita há 30–90 dias
+              </div>
+              <table class="risk-table">
+                <thead><tr><th>Cliente</th><th>Última visita</th><th>Ausente</th></tr></thead>
+                <tbody>
+                  <% @at_risk_clients.first(5).each do |c| %>
+                    <tr>
+                      <td><%= c[:cliente] %></td>
+                      <td style="color: var(--ash); font-size: 11.5px;"><%= c[:ultima_visita] %></td>
+                      <td>
+                        <span class="risk-days <%= c[:dias_ausente] > 60 ? 'high' : c[:dias_ausente] > 45 ? 'medium' : 'low' %>"><%= c[:dias_ausente] %>d</span>
+                      </td>
+                    </tr>
+                  <% end %>
+                </tbody>
+              </table>
+              <% if @lost_clients > 0 %>
+                <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--stone); font-size: 12px; color: var(--graphite);">
+                  + <strong style="color: var(--rose-500);"><%= @lost_clients %></strong> clientes perdidos (90+ dias)
+                </div>
+              <% end %>
+            <% else %>
+              <div style="padding: 24px 0; text-align: center; color: var(--graphite); font-size: 13px;">
+                <i class="fas fa-check-circle" style="color: #2d6b42; font-size: 22px; display: block; margin-bottom: 6px;"></i>
+                Nenhum cliente em risco
+              </div>
+            <% end %>
+          </div>
+          <div class="flip-back">
+            <div class="insight-eyebrow"><i class="fas fa-microchip"></i> Análise de IA</div>
+            <div class="insight-meta" id="insight-meta-retention" style="display:none;"></div>
+            <div class="insight-title">Clientes em risco</div>
+            <div class="insight-body" id="insight-body-retention">
+              <div class="ai-loading"><span></span><span></span><span></span> Aguardando análise...</div>
+            </div>
+            <button class="btn-flip-back" onclick="doFlip('retention')"><i class="fas fa-arrow-left"></i> Voltar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="flip-wrap" id="flip-growth" style="margin-bottom: 0;">
+        <div class="flip-inner" id="flip-inner-growth">
+          <div class="flip-front">
+            <button class="flip-btn" onclick="doFlip('growth')" title="Análise com IA">+</button>
+            <div class="chart-card-title"><i class="fas fa-seedling"></i> Crescimento</div>
+            <% if @new_clients_by_month.any? %>
+              <% max_new = @new_clients_by_month.map { |e| e[:novos_clientes] }.max.to_f
+                 max_new = 1 if max_new.zero?
+                 month_names = {"01"=>"Jan","02"=>"Fev","03"=>"Mar","04"=>"Abr","05"=>"Mai","06"=>"Jun","07"=>"Jul","08"=>"Ago","09"=>"Set","10"=>"Out","11"=>"Nov","12"=>"Dez"} %>
+              <div class="growth-bars">
+                <% @new_clients_by_month.each_with_index do |e, i|
+                  pct = [(e[:novos_clientes].to_f / max_new * 100).round, 4].max
+                  label = month_names[e[:mes].split("-").last] || e[:mes].split("-").last
+                  is_cur = (i == @new_clients_by_month.length - 1) %>
+                  <div class="growth-bar-wrap">
+                    <div class="growth-bar-value"><%= e[:novos_clientes] %></div>
+                    <div class="growth-bar <%= 'current' if is_cur %>" style="height: <%= pct %>%;"></div>
+                    <div class="growth-bar-label"><%= label %></div>
+                  </div>
+                <% end %>
+              </div>
+              <div class="growth-kpis">
+                <div class="growth-kpi"><div class="growth-kpi-label">Este mês</div><div class="growth-kpi-value"><%= @this_month_new %></div></div>
+                <div class="growth-kpi"><div class="growth-kpi-label">Mês anterior</div><div class="growth-kpi-value"><%= @prev_month_new %></div></div>
+                <div class="growth-kpi"><div class="growth-kpi-label">Variação</div><div class="growth-kpi-value" style="color: <%= @growth_rate && @growth_rate >= 0 ? 'var(--coral-500)' : 'var(--rose-500)' %>;"><%= @growth_rate ? "#{@growth_rate > 0 ? '+' : ''}#{@growth_rate}%" : "—" %></div></div>
+              </div>
+            <% else %>
+              <div style="padding: 24px 0; text-align: center; color: var(--graphite); font-size: 13px;">Dados insuficientes</div>
+            <% end %>
+          </div>
+          <div class="flip-back">
+            <div class="insight-eyebrow"><i class="fas fa-microchip"></i> Análise de IA</div>
+            <div class="insight-meta" id="insight-meta-growth" style="display:none;"></div>
+            <div class="insight-title">Novos clientes</div>
+            <div class="insight-body" id="insight-body-growth">
+              <div class="ai-loading"><span></span><span></span><span></span> Aguardando análise...</div>
+            </div>
+            <button class="btn-flip-back" onclick="doFlip('growth')"><i class="fas fa-arrow-left"></i> Voltar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── TRANSAÇÕES ──────────────────────────────────────────── -->
+    <div class="fin-section">
+      <div class="fin-section-header">
+        <div class="fin-section-title"><i class="fas fa-list-ul"></i> Transações</div>
+        <%= link_to owner_financial_tracking_path(request.query_parameters.merge(format: "csv")), class: "btn-csv" do %>
+          <i class="fas fa-download"></i> Exportar CSV
+        <% end %>
+      </div>
+      <% if @transactions.any? %>
+        <div style="overflow-x: auto;">
+          <table class="fin-table">
+            <thead><tr><th>Data</th><th>Horário</th><th>Cliente</th><th>Serviço</th><th>Valor</th></tr></thead>
             <tbody>
-              <% @at_risk_clients.first(5).each do |c| %>
-              <tr>
-                <td><%= c[:cliente] %></td>
-                <td style="color: var(--ash); font-size: 12px;"><%= c[:ultima_visita] %></td>
-                <td><span class="risk-days <%= c[:dias_ausente] > 60 ? 'high' : c[:dias_ausente] > 45 ? 'medium' : 'low' %>"><%= c[:dias_ausente] %>d</span></td>
-              </tr>
+              <% @transactions.each_with_index do |t, i| %>
+                <tr class="<%= 'hidden-row txn-extra' if i >= 5 %>">
+                  <td class="td-muted"><%= t.scheduled_at.strftime("%d/%m/%Y") %></td>
+                  <td><%= t.scheduled_at.strftime("%H:%M") %></td>
+                  <td><%= t.user_email %></td>
+                  <td><%= t.service_title %></td>
+                  <td class="td-value">R$ <%= number_with_precision(t.service_price.to_f, precision: 2) %></td>
+                </tr>
               <% end %>
             </tbody>
           </table>
-          <% if @lost_clients > 0 %>
-          <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--stone); font-size: 12.5px; color: var(--graphite);">
-            + <strong style="color: var(--rose-500);"><%= @lost_clients %></strong> clientes perdidos (90+ dias)
-          </div>
-          <% end %>
-          <% else %>
-          <div style="padding: 28px 0; text-align: center; color: var(--graphite); font-size: 14px;">
-            <i class="fas fa-check-circle" style="color: #2d6b42; font-size: 24px; display: block; margin-bottom: 8px;"></i>
-            Nenhum cliente em risco
-          </div>
-          <% end %>
         </div>
-        <div class="flip-back">
-          <div class="insight-eyebrow"><i class="fas fa-microchip"></i> Análise de IA</div>
-          <div class="insight-meta" id="insight-meta-retention" style="display:none;"></div>
-          <div class="insight-title">Clientes em risco</div>
-          <div class="insight-body" id="insight-body-retention"><div class="ai-loading"><span></span><span></span><span></span> Aguardando análise...</div></div>
-          <button class="btn-flip-back" onclick="doFlip('retention')"><i class="fas fa-arrow-left"></i> Voltar</button>
+        <% if @transactions.count > 5 %>
+          <button class="btn-ver-mais" id="btn-ver-mais-txn" onclick="verMais('txn')">
+            <i class="fas fa-chevron-down"></i> Ver mais <%= @transactions.count - 5 %> transações
+          </button>
+        <% end %>
+      <% else %>
+        <div style="padding: 24px; text-align: center; color: var(--graphite); font-size: 13px;">
+          Nenhuma transação encontrada.
         </div>
-      </div>
-    </div>
-
-    <div class="flip-wrap" id="flip-growth" style="margin-bottom: 0;">
-      <div class="flip-inner" id="flip-inner-growth">
-        <div class="flip-front">
-          <button class="flip-btn" onclick="doFlip('growth')" title="Análise com IA">+</button>
-          <div class="card-title"><i class="fas fa-seedling"></i> Crescimento</div>
-          <% if @new_clients_by_month.any? %>
-          <% max_new=@new_clients_by_month.map{|e|e[:novos_clientes]}.max.to_f; max_new=1 if max_new.zero?; month_names={"01"=>"Jan","02"=>"Fev","03"=>"Mar","04"=>"Abr","05"=>"Mai","06"=>"Jun","07"=>"Jul","08"=>"Ago","09"=>"Set","10"=>"Out","11"=>"Nov","12"=>"Dez"} %>
-          <div class="growth-bars">
-            <% @new_clients_by_month.each_with_index do |e,i| %>
-            <% pct=[(e[:novos_clientes].to_f/max_new*100).round,4].max;label=month_names[e[:mes].split("-").last]||e[:mes].split("-").last;is_cur=(i==@new_clients_by_month.length-1) %>
-            <div class="growth-bar-wrap">
-              <div class="growth-bar-value"><%= e[:novos_clientes] %></div>
-              <div class="growth-bar <%= is_cur ? 'current' : '' %>" style="height: <%= pct %>%;"></div>
-              <div class="growth-bar-label"><%= label %></div>
-            </div>
-            <% end %>
-          </div>
-          <div class="growth-kpis">
-            <div class="growth-kpi"><div class="growth-kpi-label">Este mês</div><div class="growth-kpi-value"><%= @this_month_new %></div></div>
-            <div class="growth-kpi"><div class="growth-kpi-label">Mês anterior</div><div class="growth-kpi-value"><%= @prev_month_new %></div></div>
-            <div class="growth-kpi"><div class="growth-kpi-label">Variação</div><div class="growth-kpi-value" style="color: <%= @growth_rate && @growth_rate >= 0 ? 'var(--coral-500)' : 'var(--rose-500)' %>;"><%= @growth_rate ? "#{@growth_rate > 0 ? '+' : ''}#{@growth_rate}%" : "—" %></div></div>
-          </div>
-          <% else %>
-          <div style="padding: 28px 0; text-align: center; color: var(--graphite); font-size: 14px;">Dados insuficientes</div>
-          <% end %>
-        </div>
-        <div class="flip-back">
-          <div class="insight-eyebrow"><i class="fas fa-microchip"></i> Análise de IA</div>
-          <div class="insight-meta" id="insight-meta-growth" style="display:none;"></div>
-          <div class="insight-title">Novos clientes</div>
-          <div class="insight-body" id="insight-body-growth"><div class="ai-loading"><span></span><span></span><span></span> Aguardando análise...</div></div>
-          <button class="btn-flip-back" onclick="doFlip('growth')"><i class="fas fa-arrow-left"></i> Voltar</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- TRANSAÇÕES -->
-  <div class="fin-section">
-    <div class="fin-section-header">
-      <div class="card-title" style="margin-bottom: 0;"><i class="fas fa-list-ul"></i> Transações</div>
-      <%= link_to owner_financial_tracking_path(request.query_parameters.merge(format: "csv")), class: "btn-csv" do %>
-        <i class="fas fa-download"></i> Exportar CSV
       <% end %>
     </div>
-    <% if @transactions.any? %>
-    <div style="overflow-x: auto;">
+
+    <!-- ─── TABELA AGRUPADA (vendas por dia/mês/ano) ────────────── -->
+    <div class="fin-section">
+      <div class="fin-section-header">
+        <div class="fin-section-title">
+          <i class="fas fa-table-list"></i>
+          <% if @is_all_filter %>Vendas por ano<% elsif @is_year_filter || @is_custom_filter %>Vendas por mês<% else %>Vendas por dia<% end %>
+        </div>
+      </div>
       <table class="fin-table">
-        <thead><tr><th>Data</th><th>Horário</th><th>Cliente</th><th>Serviço</th><th>Valor</th></tr></thead>
-        <tbody>
-          <% @transactions.each_with_index do |t, i| %>
-          <tr class="<%= i >= 5 ? 'hidden-row txn-extra' : '' %>">
-            <td class="td-muted"><%= t.scheduled_at.strftime("%d/%m/%Y") %></td>
-            <td><span class="badge badge-lime"><%= t.scheduled_at.strftime("%H:%M") %></span></td>
-            <td><%= t.user_email %></td>
-            <td><%= t.service_title %></td>
-            <td class="td-value">R$ <%= number_with_precision(t.service_price.to_f, precision: 2) %></td>
+        <thead>
+          <tr>
+            <th><% if @is_all_filter %>Ano<% elsif @is_year_filter || @is_custom_filter %>Mês<% else %>Data<% end %></th>
+            <th>Atendimentos</th><th>Faturamento</th>
           </tr>
+        </thead>
+        <tbody>
+          <% if @is_all_filter %>
+            <% @sales_by_year.each do |e| %>
+              <tr><td><%= e.period_start.strftime("%Y") %></td><td><%= e.appointment_count %></td><td class="td-value">R$ <%= number_with_precision(e.total_value, precision: 2) %></td></tr>
+            <% end %>
+          <% elsif @is_year_filter || @is_custom_filter %>
+            <% @sales_by_month.each do |e| %>
+              <tr><td><%= I18n.l(e.period_start, format: "%B/%Y", locale: :"pt-BR") rescue e.period_start.strftime("%m/%Y") %></td><td><%= e.appointment_count %></td><td class="td-value">R$ <%= number_with_precision(e.total_value, precision: 2) %></td></tr>
+            <% end %>
+          <% else %>
+            <% @sales_by_day.each_with_index do |e, i| %>
+              <tr class="<%= 'hidden-row day-extra' if i >= 5 %>"><td class="td-muted"><%= e.sale_date.strftime("%d/%m/%Y") %></td><td><%= e.appointment_count %></td><td class="td-value">R$ <%= number_with_precision(e.total_value, precision: 2) %></td></tr>
+            <% end %>
+            <% if @sales_by_day.count > 5 %>
+              <tr><td colspan="3" style="padding: 0;"><button class="btn-ver-mais" id="btn-ver-mais-day" onclick="verMais('day')"><i class="fas fa-chevron-down"></i> Ver mais <%= @sales_by_day.count - 5 %> dias</button></td></tr>
+            <% end %>
           <% end %>
         </tbody>
       </table>
     </div>
-    <% if @transactions.count > 5 %>
-    <button class="btn-ver-mais" id="btn-ver-mais-txn" onclick="verMais('txn')">
-      <i class="fas fa-chevron-down"></i> Ver mais <%= @transactions.count - 5 %> transações
-    </button>
-    <% end %>
-    <% else %>
-    <div style="padding: 28px; text-align: center; color: var(--graphite); font-size: 14px;">Nenhuma transação encontrada.</div>
-    <% end %>
-  </div>
 
-  <!-- TABELA AGRUPADA -->
-  <div class="fin-section">
-    <div class="fin-section-header">
-      <div class="card-title" style="margin-bottom: 0;">
-        <i class="fas fa-table-list"></i>
-        <% if @is_all_filter %>Vendas por ano<% elsif @is_year_filter || @is_custom_filter %>Vendas por mês<% else %>Vendas por dia<% end %>
-      </div>
+  <% else %>
+    <div class="loov-card empty-state-card">
+      <div class="empty-icon-lg"><i class="fas fa-chart-line"></i></div>
+      <div class="empty-title-lg">Sem dados</div>
+      <p class="empty-text-lg">Nenhum atendimento concluído encontrado para o período selecionado.</p>
+      <%= link_to "Ver tudo", owner_financial_tracking_path, class: "loov-btn-secondary" %>
     </div>
-    <table class="fin-table">
-      <thead>
-        <tr>
-          <th><% if @is_all_filter %>Ano<% elsif @is_year_filter || @is_custom_filter %>Mês<% else %>Data<% end %></th>
-          <th>Atendimentos</th><th>Faturamento</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% if @is_all_filter %>
-          <% @sales_by_year.each do |e| %><tr><td><%= e.period_start.strftime("%Y") %></td><td><%= e.appointment_count %></td><td class="td-value">R$ <%= number_with_precision(e.total_value, precision: 2) %></td></tr><% end %>
-        <% elsif @is_year_filter || @is_custom_filter %>
-          <% @sales_by_month.each do |e| %><tr><td><%= I18n.l(e.period_start, format: "%B/%Y", locale: :"pt-BR") rescue e.period_start.strftime("%m/%Y") %></td><td><%= e.appointment_count %></td><td class="td-value">R$ <%= number_with_precision(e.total_value, precision: 2) %></td></tr><% end %>
-        <% else %>
-          <% @sales_by_day.each_with_index do |e, i| %>
-          <tr class="<%= i >= 5 ? 'hidden-row day-extra' : '' %>"><td class="td-muted"><%= e.sale_date.strftime("%d/%m/%Y") %></td><td><%= e.appointment_count %></td><td class="td-value">R$ <%= number_with_precision(e.total_value, precision: 2) %></td></tr>
-          <% end %>
-          <% if @sales_by_day.count > 5 %>
-          <tr><td colspan="3" style="padding: 0;"><button class="btn-ver-mais" id="btn-ver-mais-day" onclick="verMais('day')"><i class="fas fa-chevron-down"></i> Ver mais <%= @sales_by_day.count - 5 %> dias</button></td></tr>
-          <% end %>
-        <% end %>
-      </tbody>
-    </table>
-  </div>
-
   <% end %>
 
-  <div style="margin-top: 28px;">
-    <%= link_to owner_car_wash_appointments_path, class: "loov-btn-secondary" do %>
+  <div style="margin-top: 28px; display: flex; gap: 10px; flex-wrap: wrap;">
+    <%= link_to owner_monthly_costs_path, class: "loov-btn-secondary" do %>
+      <i class="fas fa-money-bill-wave"></i> DRE & custos mensais
+    <% end %>
+    <%= link_to owner_car_wash_appointments_path, class: "loov-btn-ghost" do %>
       <i class="fas fa-arrow-left"></i> Agendamentos
     <% end %>
   </div>
@@ -877,60 +1414,596 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+// ─── CSRF helper ────────────────────────────────────────
+function csrfToken() {
+  var m = document.querySelector('meta[name="csrf-token"]');
+  return m ? m.getAttribute('content') : '';
+}
+function authedFetch(url, opts) {
+  opts = opts || {};
+  opts.headers = Object.assign({
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+    'X-CSRF-Token': csrfToken()
+  }, opts.headers || {});
+  return fetch(url, opts);
+}
+
+// ─── Period select toggle ───────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
-  var periodSelect=document.getElementById('period_select'),customDates=document.getElementById('custom-dates');
-  if(periodSelect){periodSelect.addEventListener('change',function(){customDates.classList.toggle('visible',this.value==='custom');});}
+  var periodSelect = document.getElementById('period_select');
+  var customDates  = document.getElementById('custom-dates');
+  if (periodSelect) {
+    periodSelect.addEventListener('change', function() {
+      customDates.classList.toggle('visible', this.value === 'custom');
+    });
+  }
 
-  var chartDefaults={color:'#ada699',font:{family:'Inter',size:11}};
-  var salesLabels=<%= raw json_escape(@chart_data.map{|d|d[:date]}.to_json) %>;
-  var salesValues=<%= raw json_escape(@chart_data.map{|d|d[:value]}.to_json) %>;
-  var confirmedValues=<%= raw json_escape(@confirmed_chart_data.map{|d|d[:value]}.to_json) %>;
-  var svcData=<%= raw json_escape(@services_performance.to_json) %>;
-  var demandData=<%= raw json_escape(@demand_by_dow.to_json) %>;
-  var heatmapData=<%= raw json_escape(@heatmap.to_json) %>;
+  // ── Charts ────────────────────────────────────────────
+  var chartDefaults = { color: '#ada699', font: { family: 'Inter', size: 11 } };
+  var salesLabels = <%= raw json_escape(@chart_data.map { |d| d[:date] }.to_json) %>;
+  var salesValues = <%= raw json_escape(@chart_data.map { |d| d[:value] }.to_json) %>;
+  var confirmedValues = <%= raw json_escape(@confirmed_chart_data.map { |d| d[:value] }.to_json) %>;
+  var svcData = <%= raw json_escape(@services_performance.to_json) %>;
+  var demandData = <%= raw json_escape(@demand_by_dow.to_json) %>;
+  var heatmapData = <%= raw json_escape(@heatmap.to_json) %>;
 
-  function fmtBRL(v){return'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});}
+  function fmtBRL(v) { return 'R$ ' + v.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }); }
 
-  function peakHoursForDow(dow){var hours=heatmapData.filter(function(d){return d.dow===dow;}).sort(function(a,b){return b.count-a.count;});if(!hours.length)return null;var topCount=hours[0].count;var top=hours.filter(function(h){return h.count>=topCount*0.7;}).map(function(h){return h.hour;}).sort(function(a,b){return a-b;});if(!top.length)return null;var min=top[0],max=top[top.length-1];return min===max?min+'h':min+'h–'+(max+1)+'h';}
+  function peakHoursForDow(dow) {
+    var hours = heatmapData.filter(function(d) { return d.dow === dow; })
+      .sort(function(a, b) { return b.count - a.count; });
+    if (!hours.length) return null;
+    var topCount = hours[0].count;
+    var top = hours.filter(function(h) { return h.count >= topCount * 0.7; })
+      .map(function(h) { return h.hour; })
+      .sort(function(a, b) { return a - b; });
+    if (!top.length) return null;
+    var min = top[0], max = top[top.length - 1];
+    return min === max ? min + 'h' : min + 'h–' + (max + 1) + 'h';
+  }
 
-  var salesCtx=document.getElementById('salesChart');
-  if(salesCtx){var hasConfirmed=confirmedValues.some(function(v){return v>0;});var datasets=[{label:'Efetivados (R$)',data:salesValues,borderColor:'#dd7852',backgroundColor:'rgba(221, 120, 82,0.08)',borderWidth:2.5,fill:true,tension:0.4,pointBackgroundColor:'#dd7852',pointBorderColor:'#fefefd',pointBorderWidth:2,pointRadius:4,pointHoverRadius:6,order:1}];if(hasConfirmed){datasets.push({label:'Agendados (R$)',data:confirmedValues,borderColor:'#d6b14a',backgroundColor:'rgba(214,177,74,0.06)',borderWidth:2,borderDash:[5,4],fill:false,tension:0.4,pointBackgroundColor:'#d6b14a',pointBorderColor:'#fefefd',pointBorderWidth:2,pointRadius:3,pointHoverRadius:5,order:2});}new Chart(salesCtx,{type:'line',data:{labels:salesLabels,datasets:datasets},options:{responsive:true,maintainAspectRatio:false,interaction:{intersect:false,mode:'index'},plugins:{legend:{display:hasConfirmed,labels:{color:'#575148',font:{family:'Inter',size:12},boxWidth:12}},tooltip:{backgroundColor:'#fefefd',borderColor:'#e0dbd0',borderWidth:1,titleColor:'#dd7852',bodyColor:'#28231c',padding:12,callbacks:{label:function(c){return' '+c.dataset.label+': R$ '+c.parsed.y.toFixed(2);}}}},scales:{x:{grid:{color:'rgba(40, 35, 28,0.04)'},ticks:chartDefaults},y:{beginAtZero:true,grid:{color:'rgba(40, 35, 28,0.04)'},ticks:{...chartDefaults,callback:function(v){return fmtBRL(v);}}}}}}); }
+  var salesCtx = document.getElementById('salesChart');
+  if (salesCtx) {
+    var hasConfirmed = confirmedValues.some(function(v) { return v > 0; });
+    var datasets = [{
+      label: 'Efetivados', data: salesValues,
+      borderColor: '#dd7852', backgroundColor: 'rgba(221, 120, 82, 0.10)',
+      borderWidth: 2.5, fill: true, tension: 0.4,
+      pointBackgroundColor: '#dd7852', pointBorderColor: '#fefefd',
+      pointBorderWidth: 2, pointRadius: 4, pointHoverRadius: 6, order: 1
+    }];
+    if (hasConfirmed) {
+      datasets.push({
+        label: 'Em aberto', data: confirmedValues,
+        borderColor: '#d6b14a', backgroundColor: 'rgba(214, 177, 74, 0.06)',
+        borderWidth: 2, borderDash: [5, 4], fill: false, tension: 0.4,
+        pointBackgroundColor: '#d6b14a', pointBorderColor: '#fefefd',
+        pointBorderWidth: 2, pointRadius: 3, pointHoverRadius: 5, order: 2
+      });
+    }
+    new Chart(salesCtx, {
+      type: 'line',
+      data: { labels: salesLabels, datasets: datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { intersect: false, mode: 'index' },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#fefefd', borderColor: '#e0dbd0', borderWidth: 1,
+            titleColor: '#28231c', bodyColor: '#28231c', padding: 12,
+            callbacks: { label: function(c) { return ' ' + c.dataset.label + ': R$ ' + c.parsed.y.toFixed(2); } }
+          }
+        },
+        scales: {
+          x: { grid: { color: 'rgba(40, 35, 28, 0.04)' }, ticks: chartDefaults },
+          y: { beginAtZero: true, grid: { color: 'rgba(40, 35, 28, 0.04)' },
+               ticks: Object.assign({}, chartDefaults, { callback: function(v) { return fmtBRL(v); } }) }
+        }
+      }
+    });
+  }
 
-  var servicesCtx=document.getElementById('servicesChart');
-  if(servicesCtx&&svcData.length>0){new Chart(servicesCtx,{type:'bar',data:{labels:svcData.map(function(s){return s.title;}),datasets:[{label:'Receita (R$)',data:svcData.map(function(s){return s.revenue;}),backgroundColor:'rgba(221, 120, 82,0.75)',borderRadius:6,yAxisID:'y'},{label:'Volume',data:svcData.map(function(s){return s.count;}),backgroundColor:'rgba(221, 120, 82,0.25)',borderRadius:6,yAxisID:'y1'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#575148',font:{family:'Inter',size:12}}},tooltip:{backgroundColor:'#fefefd',borderColor:'#e0dbd0',borderWidth:1,titleColor:'#dd7852',bodyColor:'#28231c',padding:10,callbacks:{label:function(c){return c.dataset.yAxisID==='y'?' Receita: '+fmtBRL(c.parsed.y):' Volume: '+c.parsed.y+' serviços';}}}},scales:{x:{grid:{display:false},ticks:chartDefaults},y:{beginAtZero:true,grid:{color:'rgba(40, 35, 28,0.04)'},ticks:{...chartDefaults,callback:function(v){return fmtBRL(v);}}},y1:{beginAtZero:true,position:'right',grid:{display:false},ticks:chartDefaults}}}});}
+  var servicesCtx = document.getElementById('servicesChart');
+  if (servicesCtx && svcData.length > 0) {
+    new Chart(servicesCtx, {
+      type: 'bar',
+      data: {
+        labels: svcData.map(function(s) { return s.title; }),
+        datasets: [
+          { label: 'Receita', data: svcData.map(function(s) { return s.revenue; }), backgroundColor: 'rgba(221, 120, 82, 0.85)', borderRadius: 6, yAxisID: 'y' },
+          { label: 'Volume',  data: svcData.map(function(s) { return s.count;   }), backgroundColor: 'rgba(173, 166, 153, 0.65)', borderRadius: 6, yAxisID: 'y1' }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { color: '#575148', font: { family: 'Inter', size: 11 } } },
+          tooltip: {
+            backgroundColor: '#fefefd', borderColor: '#e0dbd0', borderWidth: 1,
+            titleColor: '#28231c', bodyColor: '#28231c', padding: 10,
+            callbacks: { label: function(c) { return c.dataset.yAxisID === 'y' ? ' Receita: ' + fmtBRL(c.parsed.y) : ' Volume: ' + c.parsed.y + ' serviços'; } }
+          }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: chartDefaults },
+          y: { beginAtZero: true, grid: { color: 'rgba(40, 35, 28, 0.04)' },
+               ticks: Object.assign({}, chartDefaults, { callback: function(v) { return fmtBRL(v); } }) },
+          y1:{ beginAtZero: true, position: 'right', grid: { display: false }, ticks: chartDefaults }
+        }
+      }
+    });
+  }
 
-  var clientsCtx=document.getElementById('clientsChart');
-  if(clientsCtx){new Chart(clientsCtx,{type:'doughnut',data:{labels:['Recorrentes','Novos'],datasets:[{data:[<%= @recurring_clients %>,<%= @new_clients %>],backgroundColor:['#dd7852','#ada699'],borderColor:['#dd7852','#575148'],borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{display:false},tooltip:{backgroundColor:'#fefefd',borderColor:'#e0dbd0',borderWidth:1,titleColor:'#dd7852',bodyColor:'#28231c',padding:10}}}});}
+  var clientsCtx = document.getElementById('clientsChart');
+  if (clientsCtx) {
+    new Chart(clientsCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Recorrentes', 'Novos'],
+        datasets: [{
+          data: [<%= @recurring_clients %>, <%= @new_clients %>],
+          backgroundColor: ['#dd7852', '#ada699'],
+          borderColor: ['#dd7852', '#575148'], borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '72%',
+        plugins: { legend: { display: false }, tooltip: {
+          backgroundColor: '#fefefd', borderColor: '#e0dbd0', borderWidth: 1,
+          titleColor: '#28231c', bodyColor: '#28231c', padding: 10
+        }}
+      }
+    });
+  }
 
-  var demandCtx=document.getElementById('demandChart');
-  if(demandCtx&&demandData.length>0){var dayNames=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];var demandCounts=[0,0,0,0,0,0,0];demandData.forEach(function(d){demandCounts[d.dow]=d.count;});var maxVal=Math.max.apply(null,demandCounts);new Chart(demandCtx,{type:'bar',data:{labels:dayNames,datasets:[{label:'Atendimentos',data:demandCounts,backgroundColor:demandCounts.map(function(v){return v===maxVal&&maxVal>0?'#dd7852':'rgba(221, 120, 82,0.25)';}),borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#fefefd',borderColor:'#e0dbd0',borderWidth:1,titleColor:'#dd7852',bodyColor:'#28231c',padding:12,callbacks:{title:function(items){return dayNames[items[0].dataIndex];},label:function(c){var lines=[' '+c.parsed.y+' atendimentos'];var peak=peakHoursForDow(c.dataIndex);if(peak)lines.push(' ⏰ Pico: '+peak);return lines;}}}},scales:{x:{grid:{display:false},ticks:chartDefaults},y:{beginAtZero:true,grid:{color:'rgba(40, 35, 28,0.04)'},ticks:chartDefaults}}}});}
+  var demandCtx = document.getElementById('demandChart');
+  if (demandCtx && demandData.length > 0) {
+    var dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    var demandCounts = [0, 0, 0, 0, 0, 0, 0];
+    demandData.forEach(function(d) { demandCounts[d.dow] = d.count; });
+    var maxVal = Math.max.apply(null, demandCounts);
+    new Chart(demandCtx, {
+      type: 'bar',
+      data: {
+        labels: dayNames,
+        datasets: [{
+          label: 'Atendimentos', data: demandCounts,
+          backgroundColor: demandCounts.map(function(v) { return v === maxVal && maxVal > 0 ? '#dd7852' : 'rgba(221, 120, 82, 0.25)'; }),
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#fefefd', borderColor: '#e0dbd0', borderWidth: 1,
+            titleColor: '#28231c', bodyColor: '#28231c', padding: 12,
+            callbacks: {
+              title: function(items) { return dayNames[items[0].dataIndex]; },
+              label: function(c) {
+                var lines = [' ' + c.parsed.y + ' atendimentos'];
+                var peak = peakHoursForDow(c.dataIndex);
+                if (peak) lines.push(' Pico: ' + peak);
+                return lines;
+              }
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: chartDefaults },
+          y: { beginAtZero: true, grid: { color: 'rgba(40, 35, 28, 0.04)' }, ticks: chartDefaults }
+        }
+      }
+    });
+  }
 
   loadCycleStatus();
 });
 
-var insightCache={},cycleData=null;
+// ─── DRE row toggle ─────────────────────────────────────
+function toggleDreRow(rowId) {
+  var body = document.getElementById(rowId);
+  var chev = document.getElementById(rowId + '-chev');
+  if (!body) return;
+  body.classList.toggle('open');
+  if (chev) chev.classList.toggle('open');
+}
 
-function loadCycleStatus(){fetch('/owner/ai_insights?type=sales',{headers:{'X-CSRF-Token':document.querySelector('meta[name="csrf-token"]').getAttribute('content')}}).then(function(r){return r.json();}).then(function(data){if(data.cached||data.insight){cycleData=data;showCycleBanner(data);if(data.action_of_the_week)showActionBanner(data.action_of_the_week);}}).catch(function(){});}
+// ─── AI insights cycle banner ───────────────────────────
+var insightCache = {}, cycleData = null;
+function loadCycleStatus() {
+  authedFetch('/owner/ai_insights?type=sales')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.cached || data.insight) {
+        cycleData = data;
+        showCycleBanner(data);
+        if (data.action_of_the_week) showActionBanner(data.action_of_the_week);
+      }
+    }).catch(function() {});
+}
+function showCycleBanner(data) {
+  var banner   = document.getElementById('cycleBanner');
+  var dates    = document.getElementById('cycleDates');
+  var summary  = document.getElementById('cycleSummary');
+  var btnLabel = document.getElementById('btnInputLabel');
+  var btn      = document.getElementById('btnInput');
+  if (!data.generated_at) return;
+  dates.textContent = 'Gerado em ' + data.generated_at + ' · próxima em ' + data.next_refresh;
+  if (data.cycle_summary) summary.textContent = data.cycle_summary;
+  if (data.days_remaining <= 0) {
+    btnLabel.textContent = 'Fechar ciclo'; btn.className = 'btn-input';
+  } else if (data.has_input) {
+    btnLabel.textContent = 'Input salvo ✓'; btn.className = 'btn-input saved'; btn.onclick = null;
+  } else {
+    btnLabel.textContent = 'Registrar resultado'; btn.className = 'btn-input';
+  }
+  banner.style.display = 'flex';
+}
+function showActionBanner(text) {
+  var banner = document.getElementById('actionBanner');
+  var el     = document.getElementById('actionText');
+  if (!text || !banner) return;
+  el.textContent = text; banner.style.display = 'block';
+}
+function openInputModal() { document.getElementById('inputModal').classList.add('open'); }
+function closeInputModal() { document.getElementById('inputModal').classList.remove('open'); }
+function saveOwnerInput() {
+  var text = document.getElementById('ownerInputText').value.trim();
+  if (!text) return;
+  authedFetch('/owner/ai_insights/input', { method: 'POST', body: JSON.stringify({ input: text }) })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.ok) {
+        closeInputModal();
+        document.getElementById('btnInputLabel').textContent = 'Input salvo ✓';
+        document.getElementById('btnInput').className = 'btn-input saved';
+        document.getElementById('btnInput').onclick = null;
+      }
+    }).catch(function() {});
+}
 
-function showCycleBanner(data){var banner=document.getElementById('cycleBanner'),dates=document.getElementById('cycleDates'),summary=document.getElementById('cycleSummary'),btnLabel=document.getElementById('btnInputLabel'),btn=document.getElementById('btnInput');if(!data.generated_at)return;dates.textContent='Gerado em '+data.generated_at+' · próxima em '+data.next_refresh;if(data.cycle_summary)summary.textContent=data.cycle_summary;if(data.days_remaining<=0){btnLabel.textContent='Fechar ciclo';btn.className='btn-input';}else if(data.has_input){btnLabel.textContent='Input salvo ✓';btn.className='btn-input saved';btn.onclick=null;}else{btnLabel.textContent='Registrar resultado';btn.className='btn-input';}banner.style.display='flex';}
+// ─── Flip cards ─────────────────────────────────────────
+function doFlip(id) {
+  var inner = document.getElementById('flip-inner-' + id);
+  var wrap  = document.getElementById('flip-' + id);
+  var isFlipped = inner.classList.toggle('flipped');
+  if (isFlipped) {
+    var frontH = inner.querySelector('.flip-front').offsetHeight;
+    var back   = inner.querySelector('.flip-back');
+    back.style.height = frontH + 'px';
+    wrap.style.height = frontH + 'px';
+    loadInsight(id, false);
+  } else {
+    wrap.style.height = '';
+    inner.querySelector('.flip-back').scrollTop = 0;
+  }
+}
+function loadInsight(type, force) {
+  var bodyEl = document.getElementById('insight-body-' + type);
+  var metaEl = document.getElementById('insight-meta-' + type);
+  if (insightCache[type] && !force) { renderInsight(type, insightCache[type]); return; }
+  bodyEl.innerHTML = '<div class="ai-loading"><span></span><span></span><span></span> Analisando ' + getLabel(type) + '...</div>';
+  metaEl.style.display = 'none';
+  authedFetch('/owner/ai_insights', { method: 'POST', body: JSON.stringify({ type: type, force: force ? 'true' : 'false' }) })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.insight) {
+        insightCache[type] = data;
+        if (!cycleData) { cycleData = data; showCycleBanner(data); }
+        if (data.action_of_the_week) showActionBanner(data.action_of_the_week);
+        renderInsight(type, data);
+      } else {
+        bodyEl.innerHTML = '<p>Não foi possível gerar o insight agora.</p>';
+      }
+    }).catch(function() { bodyEl.innerHTML = '<p>Erro de conexão. Tente novamente.</p>'; });
+}
+function renderInsight(type, data) {
+  var bodyEl = document.getElementById('insight-body-' + type);
+  var metaEl = document.getElementById('insight-meta-' + type);
+  var text   = data.insight || '';
+  var status = data.status || 'stable';
+  var genDate = data.generated_at || null;
+  var nextDate = data.next_refresh || null;
+  var daysLeft = data.days_remaining !== undefined ? data.days_remaining : null;
+  var statusMap = {
+    up:     '<span class="status-badge status-up"><i class="fas fa-arrow-up"></i> Subindo</span>',
+    down:   '<span class="status-badge status-down"><i class="fas fa-arrow-down"></i> Queda</span>',
+    stable: '<span class="status-badge status-stable"><i class="fas fa-minus"></i> Estável</span>'
+  };
+  var paragraphs = text.split('\n').filter(function(p) { return p.trim().length > 0; });
+  bodyEl.innerHTML = paragraphs.map(function(p) {
+    var h = p.replace(/R\$\s?[\d.,]+/g, '<strong>$&</strong>')
+             .replace(/\d+[\.,]\d+%/g, '<strong>$&</strong>')
+             .replace(/\d+%/g, '<strong>$&</strong>');
+    return '<p>' + h + '</p>';
+  }).join('');
+  if (genDate && nextDate) {
+    var refreshBtn = (daysLeft !== null && daysLeft > 0)
+      ? '<button class="btn-refresh" disabled>Nova em ' + daysLeft + ' dias</button>'
+      : '<button class="btn-refresh" onclick="forceRefresh(\'' + type + '\')">Gerar nova</button>';
+    metaEl.innerHTML = '<div class="insight-meta-left"><span class="insight-meta-date">Gerado em <strong>' + genDate + '</strong> &middot; próxima em <strong>' + nextDate + '</strong></span>' + (statusMap[status] || statusMap['stable']) + '</div>' + refreshBtn;
+    metaEl.style.display = 'flex';
+  }
+  setTimeout(function() {
+    var inner = document.getElementById('flip-inner-' + type);
+    var wrap  = document.getElementById('flip-' + type);
+    if (!inner || !wrap) return;
+    var frontH = inner.querySelector('.flip-front').offsetHeight;
+    var back   = inner.querySelector('.flip-back');
+    back.style.height = frontH + 'px';
+    wrap.style.height = frontH + 'px';
+    back.scrollTop = 0;
+  }, 60);
+}
+function forceRefresh(type) { insightCache = {}; loadInsight(type, true); }
+function getLabel(type) {
+  return { sales: 'vendas', services: 'serviços', clients: 'clientes',
+           demand: 'demanda', retention: 'retenção', growth: 'crescimento' }[type] || 'dados';
+}
 
-function showActionBanner(text){var banner=document.getElementById('actionBanner'),el=document.getElementById('actionText');if(!text||!banner)return;el.textContent=text;banner.style.display='block';}
+// ─── Ver mais (transações + vendas-por-dia) ─────────────
+function verMais(type) {
+  var rows = document.querySelectorAll(type === 'txn' ? '.txn-extra' : '.day-extra');
+  var btn  = document.getElementById('btn-ver-mais-' + type);
+  var isOpen = btn && btn.dataset.open === '1';
+  rows.forEach(function(r) { r.classList.toggle('hidden-row', isOpen); });
+  if (btn) {
+    if (isOpen) {
+      btn.dataset.open = '0';
+      btn.innerHTML = '<i class="fas fa-chevron-down"></i> Ver mais ' + rows.length + (type === 'txn' ? ' transações' : ' dias');
+    } else {
+      btn.dataset.open = '1';
+      btn.innerHTML = '<i class="fas fa-chevron-up"></i> Ver menos';
+    }
+  }
+}
 
-function openInputModal(){document.getElementById('inputModal').classList.add('open');}
-function closeInputModal(){document.getElementById('inputModal').classList.remove('open');}
+// ─── COSTS MODAL (lança custos inline) ──────────────────
+var costsModalState = { year: null, month: null, data: null };
+var MES_NOMES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
-function saveOwnerInput(){var text=document.getElementById('ownerInputText').value.trim();if(!text)return;fetch('/owner/ai_insights/input',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':document.querySelector('meta[name="csrf-token"]').getAttribute('content')},body:JSON.stringify({input:text})}).then(function(r){return r.json();}).then(function(data){if(data.ok){closeInputModal();document.getElementById('btnInputLabel').textContent='Input salvo ✓';document.getElementById('btnInput').className='btn-input saved';document.getElementById('btnInput').onclick=null;}}).catch(function(){});}
+function abrirCustosDoMes(year, month) {
+  costsModalState.year  = year;
+  costsModalState.month = month;
+  document.getElementById('costs-modal-subtitle').textContent = MES_NOMES[month - 1] + ' ' + year;
+  document.getElementById('costs-modal-content').innerHTML =
+    '<div class="costs-modal-loading"><i class="fas fa-circle-notch fa-spin" style="color: var(--coral-500); font-size: 22px;"></i><div style="margin-top: 8px; font-size: 13px;">Carregando…</div></div>';
+  document.getElementById('costsModal').classList.add('open');
 
-function doFlip(id){var inner=document.getElementById('flip-inner-'+id),wrap=document.getElementById('flip-'+id),isFlipped=inner.classList.toggle('flipped');if(isFlipped){var frontH=inner.querySelector('.flip-front').offsetHeight,back=inner.querySelector('.flip-back');back.style.height=frontH+'px';wrap.style.height=frontH+'px';loadInsight(id,false);}else{wrap.style.height='';inner.querySelector('.flip-back').scrollTop=0;}}
+  authedFetch('/owner/monthly_costs/edit?year=' + year + '&month=' + month)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      costsModalState.data = data;
+      renderCostsModal(data);
+    }).catch(function() {
+      document.getElementById('costs-modal-content').innerHTML =
+        '<div style="padding: 20px; text-align: center; color: var(--rose-500);">Falha ao carregar.</div>';
+    });
+}
 
-function loadInsight(type,force){var bodyEl=document.getElementById('insight-body-'+type),metaEl=document.getElementById('insight-meta-'+type);if(insightCache[type]&&!force){renderInsight(type,insightCache[type]);return;}bodyEl.innerHTML='<div class="ai-loading"><span></span><span></span><span></span> Analisando '+getLabel(type)+'...</div>';metaEl.style.display='none';fetch('/owner/ai_insights',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':document.querySelector('meta[name="csrf-token"]').getAttribute('content')},body:JSON.stringify({type:type,force:force?'true':'false'})}).then(function(r){return r.json();}).then(function(data){if(data.insight){insightCache[type]=data;if(!cycleData){cycleData=data;showCycleBanner(data);}if(data.action_of_the_week)showActionBanner(data.action_of_the_week);renderInsight(type,data);}else{bodyEl.innerHTML='<p>Não foi possível gerar o insight agora.</p>';}}).catch(function(){bodyEl.innerHTML='<p>Erro de conexão. Tente novamente.</p>';});}
+function closeCostsModal() {
+  document.getElementById('costsModal').classList.remove('open');
+}
 
-function renderInsight(type,data){var bodyEl=document.getElementById('insight-body-'+type),metaEl=document.getElementById('insight-meta-'+type),text=data.insight||'',status=data.status||'stable',genDate=data.generated_at||null,nextDate=data.next_refresh||null,daysLeft=data.days_remaining!==undefined?data.days_remaining:null;var statusMap={up:'<span class="status-badge status-up"><i class="fas fa-arrow-up"></i> Subindo</span>',down:'<span class="status-badge status-down"><i class="fas fa-arrow-down"></i> Queda</span>',stable:'<span class="status-badge status-stable"><i class="fas fa-minus"></i> Estável</span>'};var paragraphs=text.split('\n').filter(function(p){return p.trim().length>0;});bodyEl.innerHTML=paragraphs.map(function(p){var h=p.replace(/R\$\s?[\d.,]+/g,'<strong>$&</strong>').replace(/\d+[\.,]\d+%/g,'<strong>$&</strong>').replace(/\d+%/g,'<strong>$&</strong>');return'<p>'+h+'</p>';}).join('');if(genDate&&nextDate){var refreshBtn=(daysLeft!==null&&daysLeft>0)?'<button class="btn-refresh" disabled>⏳ Nova em '+daysLeft+' dias</button>':'<button class="btn-refresh" onclick="forceRefresh(\''+type+'\')">↻ Gerar nova</button>';metaEl.innerHTML='<div class="insight-meta-left"><span class="insight-meta-date">Gerado em <strong>'+genDate+'</strong> &middot; próxima em <strong>'+nextDate+'</strong></span>'+(statusMap[status]||statusMap['stable'])+'</div>'+refreshBtn;metaEl.style.display='flex';}setTimeout(function(){var inner=document.getElementById('flip-inner-'+type),wrap=document.getElementById('flip-'+type);if(!inner||!wrap)return;var frontH=inner.querySelector('.flip-front').offsetHeight,back=inner.querySelector('.flip-back');back.style.height=frontH+'px';wrap.style.height=frontH+'px';back.scrollTop=0;},60);}
+// ESC + click-on-overlay closes
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeCostsModal();
+});
+document.getElementById('costsModal').addEventListener('click', function(e) {
+  if (e.target === this) closeCostsModal();
+});
 
-function forceRefresh(type){insightCache={};loadInsight(type,true);}
-function getLabel(type){return{sales:'vendas',services:'serviços',clients:'clientes',demand:'demanda',retention:'retenção',growth:'crescimento'}[type]||'dados';}
+// ─── Cash-register mask (igual edit.html.erb) ───────────
+function digitsToBRL(d) {
+  if (!d) return '0,00';
+  d = d.toString().replace(/\D/g, '').slice(0, 12) || '0';
+  var c = parseInt(d, 10);
+  var r = (c / 100).toFixed(2);
+  var p = r.split('.');
+  return p[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + p[1];
+}
+function brlToFloat(s) {
+  s = (s || '0,00').toString().replace(/\./g, '').replace(',', '.');
+  return parseFloat(s) || 0;
+}
+function brlToDigits(s) {
+  s = (s || '').toString().replace(/\D/g, '');
+  return s;
+}
 
-function verMais(type){var rows=document.querySelectorAll(type==='txn'?'.txn-extra':'.day-extra'),btn=document.getElementById('btn-ver-mais-'+type),isOpen=btn&&btn.dataset.open==='1';rows.forEach(function(r){r.classList.toggle('hidden-row',isOpen);});if(btn){if(isOpen){btn.dataset.open='0';btn.innerHTML='<i class="fas fa-chevron-down"></i> Ver mais '+rows.length+(type==='txn'?' transações':' dias');}else{btn.dataset.open='1';btn.innerHTML='<i class="fas fa-chevron-up"></i> Ver menos';}}}
+function moneyFieldHTML(opts) {
+  var pending = opts.pending ? ' pending' : '';
+  var dis = opts.pending ? ' disabled' : '';
+  var pendingTag = opts.pending
+    ? '<div style="margin-top:4px;"><span style="display:inline-flex; align-items:center; gap:5px; font-family:\'JetBrains Mono\',monospace; font-size:9.5px; font-weight:700; letter-spacing:1.2px; color:var(--coral-700); background:var(--coral-50); border:1px solid var(--coral-100); border-radius:100px; padding:3px 9px; text-transform:uppercase;"><span style="width:6px; height:6px; border-radius:50%; background:var(--coral-500);"></span>AGUARDANDO APROVAÇÃO</span></div>'
+    : '';
+  return '' +
+    '<div class="modal-money-row">' +
+      '<div class="modal-money-label-col">' +
+        '<span class="modal-money-label">' + opts.label + '</span>' +
+        pendingTag +
+      '</div>' +
+      '<label class="modal-money-input-wrap' + pending + '">' +
+        '<span class="modal-money-prefix">R$</span>' +
+        '<input type="text" class="modal-money-input cost-input" inputmode="numeric" data-key="' + opts.key + '" value="' + digitsToBRL(brlToDigits(opts.value)) + '"' + dis + '>' +
+      '</label>' +
+    '</div>';
+}
+
+function customLineHTML(line, idx) {
+  var pending = line.pending ? ' pending' : '';
+  var dis = line.pending ? ' disabled' : '';
+  var idAttr = line.id != null ? ' data-id="' + line.id + '"' : '';
+  var amount = digitsToBRL(brlToDigits(line.amount));
+  return '' +
+    '<div class="modal-money-row" data-line-row="1" data-cost-type="' + line.cost_type + '"' + idAttr + '>' +
+      '<input type="text" class="modal-line-name" placeholder="Nome" value="' + (line.name || '').replace(/"/g, '&quot;') + '" maxlength="60"' + dis +
+        ' style="flex:1; min-width:0; background:var(--paper); border:1px solid var(--stone); border-radius:10px; padding:9px 10px; font-family:Inter; font-size:13px; color:var(--ink); outline:none;">' +
+      '<label class="modal-money-input-wrap' + pending + '" style="width:120px;">' +
+        '<span class="modal-money-prefix">R$</span>' +
+        '<input type="text" class="modal-money-input modal-line-amount cost-input" inputmode="numeric" value="' + amount + '"' + dis + '>' +
+      '</label>' +
+      '<button type="button" onclick="removeModalLine(this)" style="width:30px; height:30px; border-radius:8px; background:var(--sand); border:1px solid var(--stone); color:var(--graphite); cursor:pointer;"><i class="fas fa-xmark"></i></button>' +
+    '</div>';
+}
+
+function renderCostsModal(data) {
+  var pendingFields = data.pending_fields || [];
+  var pendingLineKeys = (data.pending_line_keys || []).map(String);
+  var customLines = data.custom_lines || [];
+  // Aplica `pending` flag em cada linha
+  customLines = customLines.map(function(l) {
+    var k = l.id != null ? String(l.id) : '';
+    return Object.assign({}, l, { pending: l.pending || pendingLineKeys.indexOf(k) !== -1 });
+  });
+
+  // Legacy migration (se modal SEM pending, e other_fixed/other_variable existem)
+  var legacyLines = [];
+  if (!data.has_pending) {
+    if (Number(data.other_fixed || 0) > 0) {
+      legacyLines.push({ id: null, name: 'Outros fixos', amount: data.other_fixed, cost_type: 'fixed', pending: false, _legacy: true });
+    }
+    if (Number(data.other_variable || 0) > 0) {
+      legacyLines.push({ id: null, name: 'Outros variáveis', amount: data.other_variable, cost_type: 'variable', pending: false, _legacy: true });
+    }
+  }
+  customLines = customLines.concat(legacyLines);
+
+  var fixed    = customLines.filter(function(l) { return l.cost_type === 'fixed'; });
+  var variable = customLines.filter(function(l) { return l.cost_type === 'variable'; });
+
+  // Migra `utilities` legado → electricity quando water/electricity == 0
+  var hasNewUtils = Number(data.water || 0) > 0 || Number(data.electricity || 0) > 0;
+  var electricityValue = data.electricity;
+  if (!hasNewUtils && Number(data.utilities || 0) > 0) {
+    electricityValue = data.utilities;
+  }
+
+  var bannerHtml = '';
+  if (data.has_pending) {
+    bannerHtml = '<div style="display:flex; align-items:center; gap:8px; background:var(--coral-50); border:1px solid var(--coral-100); border-radius:12px; padding:10px 12px; margin-bottom:10px;">' +
+      '<span style="width:6px; height:6px; border-radius:50%; background:var(--coral-500);"></span>' +
+      '<span style="font-size:12px; color:var(--coral-700);">Você tem alterações aguardando aprovação do dono nesse mês.</span>' +
+      '</div>';
+  }
+
+  var html = bannerHtml +
+    '<div class="costs-modal-group-label">FIXOS</div>' +
+    moneyFieldHTML({ key: 'rent',        label: 'Aluguel',  value: data.rent,        pending: pendingFields.indexOf('rent') !== -1 }) +
+    moneyFieldHTML({ key: 'salaries',    label: 'Salários', value: data.salaries,    pending: pendingFields.indexOf('salaries') !== -1 }) +
+    moneyFieldHTML({ key: 'water',       label: 'Água',     value: data.water,       pending: pendingFields.indexOf('water') !== -1 }) +
+    moneyFieldHTML({ key: 'electricity', label: 'Luz',      value: electricityValue, pending: pendingFields.indexOf('electricity') !== -1 }) +
+    '<div id="modal-fixed-list">' + fixed.map(customLineHTML).join('') + '</div>' +
+    '<button type="button" class="modal-add-line-btn" onclick="addModalLine(\'fixed\')"><i class="fas fa-plus"></i> Adicionar custo fixo</button>' +
+    '<div class="costs-modal-group-label" style="margin-top:14px;">VARIÁVEIS</div>' +
+    moneyFieldHTML({ key: 'products',    label: 'Produtos',    value: data.products,    pending: pendingFields.indexOf('products') !== -1 }) +
+    moneyFieldHTML({ key: 'maintenance', label: 'Manutenção',  value: data.maintenance, pending: pendingFields.indexOf('maintenance') !== -1 }) +
+    '<div id="modal-variable-list">' + variable.map(customLineHTML).join('') + '</div>' +
+    '<button type="button" class="modal-add-line-btn" onclick="addModalLine(\'variable\')"><i class="fas fa-plus"></i> Adicionar custo variável</button>' +
+    '<div class="costs-modal-group-label" style="margin-top:14px;">OBSERVAÇÕES</div>' +
+    '<textarea id="modal-notes" placeholder="Opcional" style="width:100%; min-height:60px; background:var(--paper); border:1px solid var(--stone); border-radius:10px; padding:10px 12px; font-family:Inter; font-size:13px; color:var(--ink); resize:vertical; outline:none;"' +
+    (pendingFields.indexOf('notes') !== -1 ? ' disabled' : '') + '>' + (data.notes || '') + '</textarea>';
+
+  document.getElementById('costs-modal-content').innerHTML = html;
+
+  // attach mask to all .cost-input
+  document.querySelectorAll('#costs-modal-content .cost-input').forEach(function(el) {
+    el.addEventListener('input', function() {
+      this.value = digitsToBRL(this.value);
+    });
+  });
+}
+
+function addModalLine(type) {
+  var listId = type === 'fixed' ? 'modal-fixed-list' : 'modal-variable-list';
+  var list = document.getElementById(listId);
+  var div = document.createElement('div');
+  div.innerHTML = customLineHTML({ id: null, name: '', amount: '', cost_type: type, pending: false });
+  var row = div.firstElementChild;
+  list.appendChild(row);
+  var input = row.querySelector('.modal-line-amount');
+  if (input) input.addEventListener('input', function() { this.value = digitsToBRL(this.value); });
+  var name = row.querySelector('.modal-line-name');
+  if (name) name.focus();
+}
+
+function removeModalLine(btn) {
+  var row = btn.closest('[data-line-row="1"]');
+  if (row) row.remove();
+}
+
+function saveCostsModal() {
+  var year = costsModalState.year, month = costsModalState.month;
+  var content = document.getElementById('costs-modal-content');
+
+  function val(key) {
+    var el = content.querySelector('[data-key="' + key + '"]');
+    if (!el || el.disabled) return null; // pending → não envia
+    return brlToFloat(el.value);
+  }
+
+  var lines = [];
+  content.querySelectorAll('[data-line-row="1"]').forEach(function(row) {
+    if (row.querySelector('.modal-line-amount').disabled) return;
+    var name = row.querySelector('.modal-line-name').value.trim();
+    var amt  = brlToFloat(row.querySelector('.modal-line-amount').value);
+    if (!name || amt <= 0) return;
+    var idAttr = row.getAttribute('data-id');
+    var line = {
+      name: name.slice(0, 80),
+      amount: amt,
+      cost_type: row.getAttribute('data-cost-type')
+    };
+    if (idAttr) line.id = idAttr;
+    lines.push(line);
+  });
+
+  // Notes
+  var notesEl = document.getElementById('modal-notes');
+  var notes   = notesEl && !notesEl.disabled ? notesEl.value : (costsModalState.data && costsModalState.data.notes) || '';
+
+  var payload = {
+    monthly_cost: {
+      rent:           val('rent')        != null ? val('rent')        : (costsModalState.data.rent || 0),
+      salaries:       val('salaries')    != null ? val('salaries')    : (costsModalState.data.salaries || 0),
+      water:          val('water')       != null ? val('water')       : (costsModalState.data.water || 0),
+      electricity:    val('electricity') != null ? val('electricity') : (costsModalState.data.electricity || 0),
+      utilities:      0,
+      other_fixed:    0,
+      products:       val('products')    != null ? val('products')    : (costsModalState.data.products || 0),
+      maintenance:    val('maintenance') != null ? val('maintenance') : (costsModalState.data.maintenance || 0),
+      other_variable: 0,
+      notes:          notes
+    },
+    custom_lines: lines
+  };
+
+  var btn = document.getElementById('costs-modal-confirm');
+  btn.disabled = true;
+  btn.textContent = 'Salvando…';
+
+  authedFetch('/owner/monthly_costs/upsert?year=' + year + '&month=' + month, {
+    method: 'POST', body: JSON.stringify(payload)
+  })
+    .then(function(r) { return r.json().catch(function() { return {}; }); })
+    .then(function(data) {
+      btn.disabled = false; btn.textContent = 'Salvar';
+      if (data.ok || data.pending) {
+        closeCostsModal();
+        // recarrega a página pra refletir DRE
+        window.location.reload();
+      } else {
+        alert(data.message || data.error || 'Falha ao salvar.');
+      }
+    }).catch(function() {
+      btn.disabled = false; btn.textContent = 'Salvar';
+      alert('Falha de conexão.');
+    });
+}
 </script>
 
 <% Rails.logger.info("Template owner/financial_tracking/index.html.erb renderizado com sucesso") %>

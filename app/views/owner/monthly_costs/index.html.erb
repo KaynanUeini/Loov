@@ -1,161 +1,311 @@
 <style>
-  .kpi-grid {
-    display: grid; grid-template-columns: repeat(4, 1fr);
-    gap: 14px; margin-bottom: 22px;
-  }
-  .kpi-card-mini {
-    background: var(--paper); border: 1px solid var(--stone);
-    border-radius: 16px; padding: 18px;
-    display: flex; flex-direction: column; gap: 6px;
-    box-shadow: 0 2px 6px rgba(25,20,15,0.04);
+  /* ── Hero card de lucro (escuro, ink) ───────────── */
+  .hero-profit-card {
+    background: var(--ink);
+    border-radius: 22px;
+    padding: 28px 30px;
+    margin-bottom: 22px;
+    color: var(--cream);
     position: relative; overflow: hidden;
   }
-  .kpi-card-mini.accent::before {
+  .hero-profit-card::after {
     content: ''; position: absolute;
-    left: 0; top: 0; bottom: 0; width: 3px;
-    background: var(--coral-500);
+    right: -120px; top: -80px;
+    width: 320px; height: 320px;
+    background: radial-gradient(circle, var(--coral-500) 0%, transparent 65%);
+    opacity: 0.18; pointer-events: none;
   }
-  .kpi-label {
+  .hero-profit-top {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px; gap: 10px; flex-wrap: wrap;
+  }
+  .hero-profit-label {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; font-weight: 600; letter-spacing: 1.4px;
+    font-size: 10.5px; letter-spacing: 1.6px;
+    color: var(--ash); text-transform: uppercase; font-weight: 600;
+  }
+  .hero-profit-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(36px, 5vw, 48px);
+    font-weight: 700; letter-spacing: -1.2px;
+    color: var(--cream); line-height: 1;
+  }
+  .hero-profit-value.negative { color: #f4a8a8; }
+  .hero-margin-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(220, 120, 82, 0.18);
+    border: 1px solid rgba(220, 120, 82, 0.42);
+    color: #f1c0a8;
+    border-radius: 100px; padding: 5px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 700; letter-spacing: 1.1px;
+    text-transform: uppercase;
+  }
+  .hero-margin-badge.negative {
+    background: rgba(200, 80, 80, 0.15);
+    border-color: rgba(200, 80, 80, 0.45);
+    color: #f4a8a8;
+  }
+
+  /* ── KPI mini grid ──────────────────────────────── */
+  .kpi-mini-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 12px; margin-bottom: 22px;
+  }
+  .kpi-mini {
+    background: var(--paper); border: 1px solid var(--stone);
+    border-radius: 14px; padding: 14px;
+    box-shadow: 0 2px 6px rgba(25,20,15,0.04);
+  }
+  .kpi-mini-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px; letter-spacing: 1.2px;
+    color: var(--ash); text-transform: uppercase;
+    font-weight: 600; margin-bottom: 6px;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .kpi-mini-label i { color: var(--coral-500); font-size: 10px; }
+  .kpi-mini-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 18px; font-weight: 700;
+    color: var(--ink); letter-spacing: -0.4px;
+    line-height: 1;
+  }
+  .kpi-mini-value.coral { color: var(--coral-500); }
+  .kpi-mini-value.warn  { color: #7a4814; }
+  .kpi-mini-value.muted { color: var(--ash); }
+  .kpi-mini-value.danger{ color: var(--rose-500); }
+
+  /* ── Section header (eyebrow estilo app) ────────── */
+  .section-eyebrow {
+    display: flex; align-items: center; justify-content: space-between;
+    margin: 22px 0 10px; gap: 10px; flex-wrap: wrap;
+  }
+  .section-eyebrow-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; letter-spacing: 1.6px;
+    color: var(--ink); text-transform: uppercase; font-weight: 700;
+  }
+  .section-eyebrow-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; letter-spacing: 1.2px;
     color: var(--ash); text-transform: uppercase;
   }
-  .kpi-value {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 26px; font-weight: 700;
-    color: var(--ink); line-height: 1;
-    letter-spacing: -0.4px;
-  }
-  .kpi-value.coral { color: var(--coral-500); }
-  .kpi-value.danger { color: var(--rose-500); }
-  .kpi-value.warn   { color: #7a4814; }
-  .kpi-value.muted  { color: var(--ash); }
-  .kpi-sub { font-size: 12px; color: var(--ash); }
 
-  .fin-section {
+  /* ── Lançar custos primary CTA ──────────────────── */
+  .launch-cta {
+    display: flex; align-items: center; justify-content: center;
+    gap: 10px; width: 100%;
+    background: var(--coral-500); color: var(--cream) !important;
+    border: none; border-radius: 16px;
+    padding: 16px 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; font-weight: 700; letter-spacing: 1.6px;
+    text-transform: uppercase;
+    cursor: pointer; text-decoration: none;
+    box-shadow: 0 8px 22px rgba(220,120,82,0.22);
+    transition: all .2s ease;
+    margin-bottom: 14px;
+  }
+  .launch-cta:hover {
+    background: var(--coral-700);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(156,73,48,0.28);
+    color: var(--cream) !important;
+  }
+
+  /* ── Chart card (combo) ─────────────────────────── */
+  .chart-card {
     background: var(--paper); border: 1px solid var(--stone);
-    border-radius: 20px; overflow: hidden;
+    border-radius: 18px; padding: 18px 20px 14px;
     margin-bottom: 16px;
     box-shadow: 0 2px 6px rgba(25,20,15,0.04);
   }
-  .fin-section-header {
-    padding: 18px 22px;
-    border-bottom: 1px solid var(--stone);
-    display: flex; align-items: center; justify-content: space-between;
-    flex-wrap: wrap; gap: 10px;
-  }
-  .fin-section-title {
+  .chart-card-title {
     font-family: 'Space Grotesk', sans-serif;
-    font-size: 17px; font-weight: 700;
+    font-size: 16px; font-weight: 700;
     color: var(--ink); letter-spacing: -0.2px;
+    margin-bottom: 12px;
     display: flex; align-items: center; gap: 8px;
   }
-  .fin-section-title i { color: var(--coral-500); font-size: 14px; }
-
-  .chart-wrap { padding: 22px; }
-  .chart-inner { position: relative; height: 260px; }
-
-  .dre-table { width: 100%; border-collapse: collapse; }
-  .dre-table thead th {
-    padding: 12px 18px; text-align: left;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; font-weight: 600; letter-spacing: 1.4px;
-    color: var(--graphite); text-transform: uppercase;
-    border-bottom: 1px solid var(--stone);
-    background: var(--sand);
-    white-space: nowrap;
+  .chart-card-title i { color: var(--coral-500); font-size: 13px; }
+  .chart-legend-row {
+    display: flex; gap: 14px; flex-wrap: wrap;
+    margin-bottom: 8px;
   }
-  .dre-table tbody td {
-    padding: 14px 18px; font-size: 14px;
-    color: var(--ink); border-bottom: 1px solid var(--stone);
+  .chart-legend-item {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11.5px; color: var(--graphite);
   }
-  .dre-table tbody tr:last-child td { border-bottom: none; }
-  .dre-table tbody tr:hover td { background: var(--sand); }
-  .dre-table tbody tr.row-pending td { background: rgba(216, 178, 74, 0.05); }
-  .dre-table tbody tr.row-pending:hover td { background: rgba(216, 178, 74, 0.10); }
+  .chart-legend-swatch {
+    width: 12px; height: 8px; border-radius: 2px;
+  }
+  .chart-legend-line-wrap {
+    width: 18px; height: 8px; position: relative;
+  }
+  .chart-legend-line {
+    position: absolute; left: 0; right: 0; top: 50%;
+    height: 2px; transform: translateY(-50%);
+  }
+  .chart-legend-line-dot {
+    position: absolute; left: 5px; top: 0;
+    width: 8px; height: 8px; border-radius: 50%;
+    border: 2px solid var(--ink);
+    background: var(--cream);
+  }
+  .chart-inner { position: relative; height: 280px; }
 
-  .td-mes { font-weight: 600; }
-  .td-value {
+  /* ── DRE list expansível ────────────────────────── */
+  .dre-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .dre-row {
+    background: var(--paper); border: 1px solid var(--stone);
+    border-radius: 16px; overflow: hidden;
+    transition: border-color .15s ease;
+  }
+  .dre-row.is-current {
+    border-color: var(--coral-100);
+    background: var(--paper);
+  }
+  .dre-row.has-pending-revenue {
+    background: linear-gradient(0deg, rgba(216,178,74,0.04), rgba(216,178,74,0.04)), var(--paper);
+  }
+
+  .dre-row-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 18px;
+    cursor: pointer; user-select: none;
+    transition: background .15s ease;
+  }
+  .dre-row-header:hover { background: var(--sand); }
+
+  .dre-row-main { flex: 1; min-width: 0; }
+  .dre-row-month {
     font-family: 'Space Grotesk', sans-serif;
-    font-size: 14.5px; font-weight: 600;
-    letter-spacing: -0.2px;
+    font-size: 15px; font-weight: 700;
+    color: var(--ink); letter-spacing: -0.2px;
+    margin-bottom: 3px;
   }
-  .td-coral  { color: var(--coral-500); }
-  .td-danger { color: var(--rose-500); }
-  .td-warn   { color: #7a4814; }
-  .td-muted  { color: var(--ash); font-size: 13px; }
-
-  .margin-pill {
-    display: inline-flex; align-items: center;
+  .dre-row-month .current-dot {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 10.5px; font-weight: 700; letter-spacing: 1px;
-    padding: 3px 10px; border-radius: 100px;
-    border: 1px solid;
+    font-size: 9.5px; letter-spacing: 1.2px;
+    color: var(--coral-500); margin-left: 8px;
+    text-transform: uppercase;
   }
-  .margin-positive { background: #d6ecde; color: #2d6b42; border-color: #b5d8c1; }
-  .margin-negative { background: #fdecec; color: var(--rose-500); border-color: #f5cccc; }
-  .margin-neutral  { background: #fbe2c0; color: #7a4814; border-color: #f0d0a0; }
-
-  .pending-badge {
-    display: inline-flex; align-items: center; gap: 5px;
+  .dre-row-summary {
+    font-size: 12px; color: var(--graphite);
+  }
+  .dre-row-summary strong {
+    color: var(--ink); font-weight: 600;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
-    color: #7a4814;
-    background: #fbe2c0; border: 1px solid #f0d0a0;
-    border-radius: 100px; padding: 3px 10px;
-    text-transform: uppercase; white-space: nowrap;
   }
+  .dre-row-summary strong.profit-neg { color: var(--rose-500); }
 
-  .no-cost-badge {
-    display: inline-flex; align-items: center; gap: 5px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; font-weight: 600; letter-spacing: 1.2px;
-    color: var(--ash); text-transform: uppercase;
-    border: 1px dashed var(--stone); border-radius: 100px;
-    padding: 3px 10px;
+  .dre-row-add {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 100px;
+    background: var(--coral-50); border: 1px solid var(--coral-100);
+    color: var(--coral-700); cursor: pointer;
+    text-decoration: none; transition: all .15s ease;
+    flex-shrink: 0;
   }
-
-  .btn-launch-sm {
-    display: inline-flex; align-items: center; gap: 5px;
-    background: var(--coral-50); color: var(--coral-700);
-    border: 1px solid var(--coral-100); border-radius: 100px;
-    padding: 5px 12px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10.5px; font-weight: 700; letter-spacing: 1.2px;
-    cursor: pointer; transition: all 0.2s ease;
-    text-decoration: none; text-transform: uppercase;
-  }
-  .btn-launch-sm:hover {
+  .dre-row-add:hover {
     background: var(--coral-500); color: var(--cream);
     border-color: var(--coral-500);
   }
-
-  .btn-icon {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 30px; height: 30px; border-radius: 8px;
-    border: 1px solid var(--stone); background: var(--paper);
-    color: var(--graphite); cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 12px;
-  }
-  .btn-icon:hover { border-color: var(--coral-500); color: var(--coral-700); }
-  .btn-icon.danger:hover { border-color: var(--rose-500); color: var(--rose-500); }
-
-  .legend-row {
-    display: flex; gap: 22px;
-    padding: 14px 22px;
-    border-top: 1px solid var(--stone);
-    flex-wrap: wrap;
-  }
-  .legend-item {
-    display: flex; align-items: center; gap: 6px;
-    font-size: 12px; color: var(--graphite);
-  }
-  .legend-dot {
-    width: 8px; height: 8px; border-radius: 50%;
+  .dre-row-chevron {
+    color: var(--graphite); font-size: 12px;
+    transition: transform .25s ease;
     flex-shrink: 0;
   }
+  .dre-row-chevron.open { transform: rotate(180deg); }
 
+  .dre-row-body {
+    max-height: 0; overflow: hidden;
+    transition: max-height .35s ease;
+    border-top: 1px solid transparent;
+  }
+  .dre-row-body.open {
+    max-height: 600px;
+    border-top-color: var(--stone);
+  }
+  .dre-row-body-inner { padding: 12px 18px 16px; }
+
+  .dre-line {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 5px 0; gap: 10px;
+  }
+  .dre-line-label {
+    font-size: 13px; color: var(--graphite);
+  }
+  .dre-line-amount {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; color: var(--ink);
+  }
+  .dre-line.muted .dre-line-label,
+  .dre-line.muted .dre-line-amount { color: var(--ash); }
+  .dre-line.bold .dre-line-amount { font-weight: 700; }
+  .dre-line.big .dre-line-amount  { font-size: 15px; }
+  .dre-line.negative .dre-line-amount { color: var(--rose-500); }
+  .dre-divider {
+    height: 1px; background: var(--stone);
+    margin: 6px 0;
+  }
+  .dre-margin-pill-wrap {
+    display: flex; justify-content: flex-end; margin-top: 8px;
+  }
+  .dre-margin-pill {
+    display: inline-flex; align-items: center;
+    background: var(--coral-50); border: 1px solid var(--coral-100);
+    color: var(--coral-700);
+    border-radius: 100px; padding: 4px 11px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .dre-margin-pill.negative {
+    background: #fdecec; border-color: #f5cccc;
+    color: var(--rose-500);
+  }
+
+  .dre-add-cost-inline {
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px;
+    background: var(--coral-50); color: var(--coral-700);
+    border: 1px dashed var(--coral-100); border-radius: 12px;
+    padding: 11px 14px; margin-top: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; font-weight: 700; letter-spacing: 1.2px;
+    text-decoration: none; text-transform: uppercase;
+    transition: all .15s ease;
+  }
+  .dre-add-cost-inline:hover {
+    background: var(--coral-500); color: var(--cream);
+    border-color: var(--coral-500); border-style: solid;
+  }
+
+  .dre-row-actions {
+    display: flex; gap: 6px; margin-top: 12px;
+    padding-top: 10px; border-top: 1px solid var(--stone);
+  }
+  .dre-action-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: 100px;
+    background: var(--paper); border: 1px solid var(--stone);
+    color: var(--graphite); cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; text-decoration: none;
+    transition: all .15s ease;
+  }
+  .dre-action-btn:hover {
+    border-color: var(--coral-500); color: var(--coral-700);
+  }
+  .dre-action-btn.danger:hover {
+    border-color: var(--rose-500); color: var(--rose-500);
+  }
+
+  /* ── Flash messages ─────────────────────────────── */
   .flash-msg {
     display: flex; align-items: center; gap: 10px;
     padding: 12px 18px; border-radius: 12px;
@@ -164,174 +314,248 @@
   .flash-success { background: #d6ecde; border: 1px solid #b5d8c1; color: #2d6b42; }
   .flash-error   { background: #fdecec; border: 1px solid #f5cccc; color: var(--rose-500); }
 
-  @media (max-width: 900px) {
-    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-  }
-  @media (max-width: 480px) {
-    .kpi-grid { grid-template-columns: 1fr 1fr; }
+  @media (max-width: 768px) {
+    .kpi-mini-grid { grid-template-columns: repeat(2, 1fr); }
+    .hero-profit-card { padding: 22px 20px; }
   }
 </style>
 
 <div class="loov-page loov-page--wide">
 
-  <div class="loov-hero loov-hero--left" style="display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap;">
-    <div>
-      <div class="loov-eyebrow"><span class="dot"></span>Gestão</div>
-      <h1 class="loov-h1" style="margin-bottom: 0 !important;">
-        Financeiro<span class="accent">.</span>
-      </h1>
-    </div>
-    <%= link_to edit_owner_monthly_costs_path(year: Date.current.year, month: Date.current.month), class: "loov-btn-primary" do %>
-      <i class="fas fa-plus"></i> Lançar custos
-    <% end %>
+  <div class="loov-hero loov-hero--left">
+    <div class="loov-eyebrow"><span class="dot"></span>Financeiro</div>
+    <h1 class="loov-h1">
+      Faturamento <span class="accent">do mês</span>.
+    </h1>
+    <p class="loov-lead" style="margin-bottom: 24px;">
+      Acompanhe receita, custos e lucro do seu lava-rápido — DRE atualizada automaticamente.
+    </p>
   </div>
 
   <% if flash[:notice] %>
-  <div class="flash-msg flash-success"><i class="fas fa-circle-check"></i> <%= flash[:notice] %></div>
+    <div class="flash-msg flash-success"><i class="fas fa-circle-check"></i> <%= flash[:notice] %></div>
   <% end %>
   <% if flash[:alert] %>
-  <div class="flash-msg flash-error"><i class="fas fa-circle-exclamation"></i> <%= flash[:alert] %></div>
+    <div class="flash-msg flash-error"><i class="fas fa-circle-exclamation"></i> <%= flash[:alert] %></div>
   <% end %>
 
   <%
     current_dre      = @dre.last
-    avg_margin       = @dre.select { |d| d[:margem] }.map { |d| d[:margem] }.then { |ms| ms.any? ? (ms.sum / ms.size).round(1) : nil }
-    total_profit     = @dre.sum { |d| d[:lucro] }
+    avg_margin       = @dre.select { |d| d[:margem] }.map { |d| d[:margem] }.then { |ms| ms.any? ? (ms.sum.to_f / ms.size).round(1) : nil }
     months_with_cost = @dre.count { |d| d[:tem_custo] }
-    current_pending  = current_dre&.dig(:receita_aberto).to_f
+    total_revenue_12m = @dre.sum { |d| d[:faturamento].to_f }
+    total_cost_12m    = @dre.sum { |d| d[:custos].to_f }
+    total_profit_12m  = @dre.sum { |d| d[:lucro].to_f }
+    current_pending   = current_dre&.dig(:receita_aberto).to_f
+    current_revenue   = current_dre&.dig(:faturamento).to_f
+    current_profit    = current_dre&.dig(:lucro).to_f
+    current_margin    = current_dre&.dig(:margem)
+    current_negative  = current_profit < 0
   %>
 
-  <div class="kpi-grid">
-    <div class="kpi-card-mini accent">
-      <div class="kpi-label">Faturamento este mês</div>
-      <div class="kpi-value coral">R$&nbsp;<%= number_with_precision(current_dre&.dig(:faturamento).to_f, precision: 0, delimiter: '.') %></div>
-      <div class="kpi-sub">clientes que compareceram</div>
-    </div>
-    <div class="kpi-card-mini">
-      <div class="kpi-label">Em aberto</div>
-      <div class="kpi-value warn">R$&nbsp;<%= number_with_precision(current_pending, precision: 0, delimiter: '.') %></div>
-      <div class="kpi-sub">confirmados, não realizados</div>
-    </div>
-    <div class="kpi-card-mini">
-      <div class="kpi-label">Lucro este mês</div>
-      <% if current_dre && current_dre[:tem_custo] %>
-        <div class="kpi-value <%= current_dre[:lucro] >= 0 ? 'coral' : 'danger' %>">R$&nbsp;<%= number_with_precision(current_dre[:lucro].abs, precision: 0, delimiter: '.') %></div>
-        <div class="kpi-sub"><%= current_dre[:lucro] >= 0 ? 'lucro líquido' : 'prejuízo' %></div>
-      <% else %>
-        <div class="kpi-value muted">—</div>
-        <div class="kpi-sub">custos não cadastrados</div>
+  <!-- ─── HERO LUCRO (mês atual) ──────────────────── -->
+  <div class="hero-profit-card">
+    <div class="hero-profit-top">
+      <span class="hero-profit-label">
+        Lucro · <%= current_dre ? "#{current_dre[:mes_label]} #{current_dre[:ano]}" : "—" %>
+      </span>
+      <% if current_dre && current_dre[:tem_custo] && current_margin %>
+        <span class="hero-margin-badge <%= 'negative' if current_negative %>">
+          <i class="fas fa-<%= current_negative ? 'arrow-trend-down' : 'arrow-trend-up' %>"></i>
+          <%= current_margin %>% margem
+        </span>
       <% end %>
     </div>
-    <div class="kpi-card-mini">
-      <div class="kpi-label">Margem média 12m</div>
+    <% if current_dre && current_dre[:tem_custo] %>
+      <div class="hero-profit-value <%= 'negative' if current_negative %>">
+        R$ <%= number_with_precision(current_profit.abs, precision: 2, delimiter: '.', separator: ',') %>
+      </div>
+    <% else %>
+      <div class="hero-profit-value" style="color: var(--ash);">—</div>
+      <div style="font-size: 13px; color: var(--ash); margin-top: 8px;">
+        Lance os custos do mês para ver o lucro líquido.
+      </div>
+    <% end %>
+  </div>
+
+  <!-- ─── KPI mini grid (Realizado / Em aberto / Custos / Margem média) ─── -->
+  <div class="kpi-mini-grid">
+    <div class="kpi-mini">
+      <div class="kpi-mini-label"><i class="fas fa-circle-check"></i>Realizado</div>
+      <div class="kpi-mini-value coral">
+        R$ <%= number_with_precision(current_revenue, precision: 0, delimiter: '.') %>
+      </div>
+    </div>
+    <div class="kpi-mini">
+      <div class="kpi-mini-label"><i class="fas fa-clock"></i>Em aberto</div>
+      <div class="kpi-mini-value <%= current_pending > 0 ? 'warn' : 'muted' %>">
+        R$ <%= number_with_precision(current_pending, precision: 0, delimiter: '.') %>
+      </div>
+    </div>
+    <div class="kpi-mini">
+      <div class="kpi-mini-label"><i class="fas fa-circle-minus"></i>Custos</div>
+      <div class="kpi-mini-value">
+        R$ <%= number_with_precision(current_dre&.dig(:custos).to_f, precision: 0, delimiter: '.') %>
+      </div>
+    </div>
+    <div class="kpi-mini">
+      <div class="kpi-mini-label"><i class="fas fa-chart-line"></i>Margem 12m</div>
       <% if avg_margin %>
-        <div class="kpi-value <%= avg_margin >= 20 ? 'coral' : avg_margin >= 0 ? '' : 'danger' %>"><%= avg_margin %>%</div>
-        <div class="kpi-sub"><%= months_with_cost %> meses com dados</div>
+        <div class="kpi-mini-value <%= avg_margin >= 20 ? 'coral' : avg_margin >= 0 ? '' : 'danger' %>">
+          <%= avg_margin %>%
+        </div>
       <% else %>
-        <div class="kpi-value muted">—</div>
-        <div class="kpi-sub">cadastre custos mensais</div>
+        <div class="kpi-mini-value muted">—</div>
       <% end %>
     </div>
   </div>
 
+  <!-- ─── COMBO CHART (Faturamento + Custos + Lucro) ─── -->
   <% if months_with_cost > 0 %>
-  <div class="fin-section">
-    <div class="fin-section-header">
-      <div class="fin-section-title"><i class="fas fa-chart-bar"></i> Faturamento vs Custos vs Lucro</div>
+    <div class="section-eyebrow">
+      <span class="section-eyebrow-title">Evolução · Últimos 12 meses</span>
     </div>
-    <div class="chart-wrap">
+    <div class="chart-card">
+      <div class="chart-card-title"><i class="fas fa-chart-column"></i> Faturamento vs Custos vs Lucro</div>
+      <div class="chart-legend-row">
+        <div class="chart-legend-item">
+          <div class="chart-legend-swatch" style="background: #dd7852;"></div>Faturamento
+        </div>
+        <div class="chart-legend-item">
+          <div class="chart-legend-swatch" style="background: #ada699;"></div>Custos
+        </div>
+        <div class="chart-legend-item">
+          <div class="chart-legend-line-wrap">
+            <div class="chart-legend-line" style="background: #28231c;"></div>
+            <div class="chart-legend-line-dot"></div>
+          </div>Lucro
+        </div>
+      </div>
       <div class="chart-inner"><canvas id="dreChart"></canvas></div>
     </div>
-  </div>
   <% end %>
 
-  <div class="fin-section">
-    <div class="fin-section-header">
-      <div class="fin-section-title"><i class="fas fa-table-list"></i> DRE mensal</div>
-    </div>
-    <div style="overflow-x: auto;">
-      <table class="dre-table">
-        <thead>
-          <tr>
-            <th>Mês</th>
-            <th>Faturamento real</th>
-            <th>Em aberto</th>
-            <th>Custos fixos</th>
-            <th>Custos variáveis</th>
-            <th>Total custos</th>
-            <th>Lucro líquido</th>
-            <th>Margem</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <% @dre.reverse.each do |d| %>
-          <%
-            is_current  = d[:ano] == Date.current.year && d[:mes_num] == Date.current.month
-            has_pending = d[:receita_aberto].to_f > 0
-          %>
-          <tr class="<%= is_current && has_pending ? 'row-pending' : '' %>">
-            <td class="td-mes">
-              <%= d[:mes_label] %> <%= d[:ano] %>
-              <% if is_current %>
-                <span style="font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1.2px; color: var(--coral-500); margin-left: 6px; text-transform: uppercase;">● atual</span>
-              <% end %>
-            </td>
-
-            <td><span class="td-value td-coral">R$ <%= number_with_precision(d[:faturamento], precision: 2) %></span></td>
-
-            <td>
-              <% if is_current && has_pending %>
-                <span class="pending-badge"><i class="fas fa-clock"></i> R$ <%= number_with_precision(d[:receita_aberto], precision: 2) %></span>
-              <% else %>
-                <span class="td-muted">—</span>
-              <% end %>
-            </td>
-
-            <% if d[:tem_custo] %>
-              <% cost = @car_wash.monthly_costs.find_by(year: d[:ano], month: d[:mes_num]) %>
-              <td class="td-muted">R$ <%= number_with_precision(cost&.total_fixed.to_f, precision: 2) %></td>
-              <td class="td-muted">R$ <%= number_with_precision(cost&.total_variable.to_f, precision: 2) %></td>
-              <td><span class="td-value td-warn">R$ <%= number_with_precision(d[:custos], precision: 2) %></span></td>
-              <td><span class="td-value <%= d[:lucro] >= 0 ? 'td-coral' : 'td-danger' %>"><%= d[:lucro] < 0 ? '▼ ' : '' %>R$ <%= number_with_precision(d[:lucro].abs, precision: 2) %></span></td>
-              <td>
-                <% if d[:margem] %>
-                  <span class="margin-pill <%= d[:margem] >= 20 ? 'margin-positive' : d[:margem] >= 0 ? 'margin-neutral' : 'margin-negative' %>"><%= d[:margem] %>%</span>
-                <% end %>
-              </td>
-              <td>
-                <div style="display: flex; gap: 6px; align-items: center;">
-                  <%= link_to edit_owner_monthly_costs_path(year: d[:ano], month: d[:mes_num]), class: "btn-icon" do %>
-                    <i class="fas fa-pen"></i>
-                  <% end %>
-                  <%= button_to owner_monthly_cost_path(cost), method: :delete, form: { style: "display:inline;" }, data: { confirm: "Remover custos de #{d[:mes_label]}?" }, class: "btn-icon danger" do %>
-                    <i class="fas fa-trash-can"></i>
-                  <% end %>
-                </div>
-              </td>
-            <% else %>
-              <td colspan="5"><span class="no-cost-badge"><i class="fas fa-circle-info"></i> Custos não lançados</span></td>
-              <td>
-                <%= link_to edit_owner_monthly_costs_path(year: d[:ano], month: d[:mes_num]), class: "btn-launch-sm" do %>
-                  <i class="fas fa-plus"></i> Lançar
-                <% end %>
-              </td>
-            <% end %>
-          </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="legend-row">
-      <div class="legend-item"><div class="legend-dot" style="background: var(--coral-500);"></div> Faturamento real = clientes que compareceram</div>
-      <div class="legend-item"><div class="legend-dot" style="background: #d6b14a;"></div> Em aberto = agendamentos confirmados ainda não realizados</div>
-    </div>
+  <!-- ─── DRE MENSAL EXPANSÍVEL ────────────────────── -->
+  <div class="section-eyebrow">
+    <span class="section-eyebrow-title">DRE mensal</span>
+    <span class="section-eyebrow-meta">últimos 12 meses</span>
   </div>
 
-  <div style="margin-top: 28px;">
+  <%= link_to edit_owner_monthly_costs_path(year: Date.current.year, month: Date.current.month), class: "launch-cta", id: "btn-lancar-custos" do %>
+    <i class="fas fa-plus"></i> Lançar custos do mês atual
+  <% end %>
+
+  <div class="dre-list">
+    <% @dre.reverse.each_with_index do |d, idx|
+      is_current   = d[:ano] == Date.current.year && d[:mes_num] == Date.current.month
+      negative     = d[:lucro].to_f < 0
+      has_cost     = d[:tem_custo]
+      has_pending  = d[:receita_aberto].to_f > 0
+      cost_record  = (@car_wash || current_user.linked_car_wash)&.monthly_costs&.find_by(year: d[:ano], month: d[:mes_num])
+      row_id       = "dre-row-#{d[:ano]}-#{d[:mes_num]}"
+    %>
+      <div class="dre-row <%= 'is-current' if is_current %> <%= 'has-pending-revenue' if is_current && has_pending %>"
+           data-month-key="<%= d[:ano] %>-<%= d[:mes_num] %>">
+        <div class="dre-row-header" onclick="toggleDreRow('<%= row_id %>')">
+          <div class="dre-row-main">
+            <div class="dre-row-month">
+              <%= d[:mes_label] %> <%= d[:ano] %>
+              <% if is_current %><span class="current-dot">● atual</span><% end %>
+            </div>
+            <div class="dre-row-summary">
+              <% if has_cost %>
+                Lucro
+                <strong class="<%= 'profit-neg' if negative %>">
+                  <%= negative ? '-' : '' %>R$ <%= number_with_precision(d[:lucro].abs, precision: 0, delimiter: '.') %>
+                </strong>
+                <% if d[:margem] %>
+                  &nbsp;·&nbsp; <%= d[:margem] %>% margem
+                <% end %>
+              <% else %>
+                <span style="color: var(--ash);">Custos não lançados</span>
+                &nbsp;·&nbsp; Faturamento
+                <strong>R$ <%= number_with_precision(d[:faturamento], precision: 0, delimiter: '.') %></strong>
+              <% end %>
+            </div>
+          </div>
+          <%= link_to edit_owner_monthly_costs_path(year: d[:ano], month: d[:mes_num]),
+              class: "dre-row-add", title: "Lançar custos",
+              onclick: "event.stopPropagation();" do %>
+            <i class="fas fa-plus" style="font-size: 11px;"></i>
+          <% end %>
+          <i class="fas fa-chevron-down dre-row-chevron" id="<%= row_id %>-chev"></i>
+        </div>
+
+        <div class="dre-row-body" id="<%= row_id %>">
+          <div class="dre-row-body-inner">
+            <div class="dre-line">
+              <span class="dre-line-label">Faturamento real</span>
+              <span class="dre-line-amount">R$ <%= number_with_precision(d[:faturamento], precision: 2) %></span>
+            </div>
+            <div class="dre-line muted">
+              <span class="dre-line-label">Em aberto</span>
+              <span class="dre-line-amount">R$ <%= number_with_precision(d[:receita_aberto], precision: 2) %></span>
+            </div>
+            <div class="dre-divider"></div>
+
+            <% if has_cost && cost_record %>
+              <div class="dre-line negative">
+                <span class="dre-line-label">Custos fixos</span>
+                <span class="dre-line-amount">- R$ <%= number_with_precision(cost_record.total_fixed.to_f, precision: 2) %></span>
+              </div>
+              <div class="dre-line negative">
+                <span class="dre-line-label">Custos variáveis</span>
+                <span class="dre-line-amount">- R$ <%= number_with_precision(cost_record.total_variable.to_f, precision: 2) %></span>
+              </div>
+              <div class="dre-line negative bold">
+                <span class="dre-line-label" style="color: var(--ink);">Total custos</span>
+                <span class="dre-line-amount">- R$ <%= number_with_precision(d[:custos], precision: 2) %></span>
+              </div>
+              <div class="dre-divider"></div>
+              <div class="dre-line bold big <%= 'negative' if negative %>">
+                <span class="dre-line-label" style="color: var(--ink); font-weight: 600;">Lucro líquido</span>
+                <span class="dre-line-amount">
+                  <%= negative ? '-' : '' %>R$ <%= number_with_precision(d[:lucro].abs, precision: 2) %>
+                </span>
+              </div>
+              <% if d[:margem] %>
+                <div class="dre-margin-pill-wrap">
+                  <span class="dre-margin-pill <%= 'negative' if d[:margem].to_f < 0 %>">
+                    Margem <%= d[:margem] %>%
+                  </span>
+                </div>
+              <% end %>
+              <div class="dre-row-actions">
+                <%= link_to edit_owner_monthly_costs_path(year: d[:ano], month: d[:mes_num]), class: "dre-action-btn" do %>
+                  <i class="fas fa-pen"></i> Editar
+                <% end %>
+                <% if cost_record %>
+                  <%= button_to owner_monthly_cost_path(cost_record),
+                      method: :delete,
+                      form: { style: "display:inline;" },
+                      data: { confirm: "Remover custos de #{d[:mes_label]} #{d[:ano]}?" },
+                      class: "dre-action-btn danger" do %>
+                    <i class="fas fa-trash-can"></i> Remover
+                  <% end %>
+                <% end %>
+              </div>
+            <% else %>
+              <%= link_to edit_owner_monthly_costs_path(year: d[:ano], month: d[:mes_num]), class: "dre-add-cost-inline" do %>
+                <i class="fas fa-plus"></i> Lançar custos deste mês
+              <% end %>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+
+  <div style="margin-top: 32px; display: flex; gap: 10px; flex-wrap: wrap;">
     <%= link_to owner_financial_tracking_path, class: "loov-btn-secondary" do %>
       <i class="fas fa-chart-line"></i> Ver análise completa
+    <% end %>
+    <%= link_to owner_car_wash_appointments_path, class: "loov-btn-ghost" do %>
+      <i class="fas fa-arrow-left"></i> Voltar
     <% end %>
   </div>
 
@@ -339,6 +563,16 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+// ─── DRE row toggle (acordeão) ───────────────────────
+function toggleDreRow(rowId) {
+  var body = document.getElementById(rowId);
+  var chev = document.getElementById(rowId + '-chev');
+  if (!body) return;
+  body.classList.toggle('open');
+  if (chev) chev.classList.toggle('open');
+}
+
+// ─── Combo chart (Faturamento + Custos + Lucro) ──────
 document.addEventListener('DOMContentLoaded', function() {
   var dreCtx = document.getElementById('dreChart');
   if (!dreCtx) return;
@@ -353,25 +587,73 @@ document.addEventListener('DOMContentLoaded', function() {
     data: {
       labels: labels,
       datasets: [
-        { label: 'Faturamento real', data: fat,    backgroundColor: 'rgba(221, 120, 82, 0.6)', borderRadius: 6, order: 2 },
-        { label: 'Custos',           data: costs,  backgroundColor: 'rgba(214, 177, 74, 0.55)', borderRadius: 6, order: 2 },
-        { label: 'Lucro',            data: profit, type: 'line', borderColor: '#dd7852', backgroundColor: 'rgba(221, 120, 82, 0.08)', borderWidth: 2.5, fill: true, tension: 0.4, pointBackgroundColor: '#dd7852', pointBorderColor: '#fefefd', pointBorderWidth: 2, pointRadius: 5, order: 1 }
+        {
+          label: 'Faturamento',
+          data: fat,
+          backgroundColor: 'rgba(221, 120, 82, 0.85)',
+          borderRadius: 6,
+          order: 2,
+          barPercentage: 0.7,
+          categoryPercentage: 0.8,
+        },
+        {
+          label: 'Custos',
+          data: costs,
+          backgroundColor: 'rgba(173, 166, 153, 0.85)',
+          borderRadius: 6,
+          order: 2,
+          barPercentage: 0.7,
+          categoryPercentage: 0.8,
+        },
+        {
+          label: 'Lucro',
+          data: profit,
+          type: 'line',
+          borderColor: '#28231c',
+          backgroundColor: 'rgba(40, 35, 28, 0.06)',
+          borderWidth: 2.5,
+          fill: false,
+          tension: 0.35,
+          pointBackgroundColor: '#fefefd',
+          pointBorderColor: '#28231c',
+          pointBorderWidth: 2.5,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          order: 1,
+        }
       ]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { labels: { color: '#575148', font: { family: 'Inter', size: 12 } } },
+        legend: { display: false },
         tooltip: {
           backgroundColor: '#fefefd', borderColor: '#e0dbd0', borderWidth: 1,
-          titleColor: '#dd7852', bodyColor: '#28231c', padding: 12,
-          callbacks: { label: function(c) { return ' ' + c.dataset.label + ': R$ ' + c.parsed.y.toFixed(2); } }
+          titleColor: '#28231c', bodyColor: '#28231c', padding: 12,
+          titleFont: { family: 'Space Grotesk', weight: 'bold', size: 13 },
+          bodyFont:  { family: 'Inter', size: 12 },
+          callbacks: {
+            label: function(c) { return ' ' + c.dataset.label + ': R$ ' + c.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+          }
         }
       },
       scales: {
-        x: { grid: { color: 'rgba(40, 35, 28, 0.04)' }, ticks: { color: '#ada699', font: { family: 'Inter', size: 11 } } },
-        y: { beginAtZero: true, grid: { color: 'rgba(40, 35, 28, 0.04)' }, ticks: { color: '#ada699', font: { family: 'Inter', size: 11 }, callback: function(v) { return 'R$ ' + v.toLocaleString('pt-BR'); } } }
+        x: {
+          grid: { color: 'rgba(40, 35, 28, 0.04)' },
+          ticks: { color: '#ada699', font: { family: 'JetBrains Mono', size: 10 } }
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: 'rgba(40, 35, 28, 0.04)' },
+          ticks: {
+            color: '#ada699', font: { family: 'JetBrains Mono', size: 10 },
+            callback: function(v) {
+              if (Math.abs(v) >= 1000) return 'R$ ' + (v / 1000).toFixed(0) + 'k';
+              return 'R$ ' + v.toLocaleString('pt-BR');
+            }
+          }
+        }
       }
     }
   });
