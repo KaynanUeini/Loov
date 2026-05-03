@@ -98,6 +98,23 @@ SP_NEIGHBORHOODS = [
   { bairro: "Parelheiros",       logradouro: "Avenida Sadamu Inoue",        lat: -23.8266, lng: -46.7281, cep: "04944001" },
   { bairro: "Campo Limpo",       logradouro: "Estrada do Campo Limpo",      lat: -23.6451, lng: -46.7565, cep: "05777001" },
   { bairro: "Jaguaré",           logradouro: "Avenida Jaguaré",             lat: -23.5453, lng: -46.7484, cep: "05346001" },
+
+  # ── OSASCO ────────────────────────────────────────────
+  { bairro: "Centro",                    logradouro: "Avenida dos Autonomistas",  lat: -23.5326, lng: -46.7920, cep: "06020010", cidade: "Osasco" },
+  { bairro: "Vila Yara",                 logradouro: "Avenida Hilário Pereira de Souza", lat: -23.5210, lng: -46.7745, cep: "06026001", cidade: "Osasco" },
+  { bairro: "Bussocaba",                 logradouro: "Rua Bussocaba",            lat: -23.5390, lng: -46.8120, cep: "06146001", cidade: "Osasco" },
+  { bairro: "Presidente Altino",         logradouro: "Avenida dos Autonomistas",  lat: -23.5435, lng: -46.7580, cep: "06210001", cidade: "Osasco" },
+  { bairro: "Quitaúna",                  logradouro: "Avenida Manuel Constantino", lat: -23.5040, lng: -46.7700, cep: "06277001", cidade: "Osasco" },
+  { bairro: "Vila Osasco",               logradouro: "Rua Antônio Carlos",        lat: -23.5310, lng: -46.7980, cep: "06093001", cidade: "Osasco" },
+  { bairro: "Bonfim",                    logradouro: "Rua Bonfim",                lat: -23.5500, lng: -46.7820, cep: "06116001", cidade: "Osasco" },
+  { bairro: "Helena Maria",              logradouro: "Rua Helena Maria",          lat: -23.5095, lng: -46.7830, cep: "06236001", cidade: "Osasco" },
+  { bairro: "Jardim das Flores",         logradouro: "Rua das Flores",            lat: -23.5530, lng: -46.8160, cep: "06110001", cidade: "Osasco" },
+  { bairro: "Rochdale",                  logradouro: "Rua Rochdale",              lat: -23.5160, lng: -46.7995, cep: "06170001", cidade: "Osasco" },
+  { bairro: "Adalgisa",                  logradouro: "Rua Adalgisa",              lat: -23.5190, lng: -46.8085, cep: "06180001", cidade: "Osasco" },
+  { bairro: "Industrial Anhanguera",     logradouro: "Avenida dos Autonomistas",  lat: -23.5210, lng: -46.7290, cep: "06270001", cidade: "Osasco" },
+  { bairro: "Cidade de Deus",            logradouro: "Avenida Cidade de Deus",    lat: -23.5450, lng: -46.7460, cep: "06028001", cidade: "Osasco" },
+  { bairro: "Jardim Piratininga",        logradouro: "Rua Piratininga",           lat: -23.5410, lng: -46.8050, cep: "06122001", cidade: "Osasco" },
+  { bairro: "Vila Campesina",            logradouro: "Avenida Eusébio Matoso",    lat: -23.5275, lng: -46.7660, cep: "06023001", cidade: "Osasco" },
 ].freeze
 
 # Templates de nomes pra dar variedade — mistura formal/casual.
@@ -139,15 +156,16 @@ SP_NEIGHBORHOODS.each_with_index do |hood, idx|
     existing += 1
   else
     numero = (rand(50..2000)).to_s
+    cidade = hood[:cidade] || "São Paulo"
     attrs = {
       name:              name,
-      address:           "#{hood[:logradouro]}, #{numero} - #{hood[:bairro]}, São Paulo - SP",
+      address:           "#{hood[:logradouro]}, #{numero} - #{hood[:bairro]}, #{cidade} - SP",
       capacity_per_slot: 2,
       cep:               hood[:cep],
       logradouro:        hood[:logradouro],
       numero:            numero,
       bairro:            hood[:bairro],
-      cidade:            "São Paulo",
+      cidade:            cidade,
       uf:                "SP",
       latitude:          hood[:lat],
       longitude:         hood[:lng]

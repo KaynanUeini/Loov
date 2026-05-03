@@ -2308,7 +2308,7 @@
   </section>
 
   <%# ── LOJAS — header + filter pills + lista ── %>
-  <% all_shops = (@nearby_car_washes + @top_car_washes).uniq { |c| c.id }.first(16) %>
+  <% all_shops = (@nearby_car_washes + @top_car_washes).uniq { |c| c.id }.first(60) %>
   <style>
     .shops-section { max-width: 1200px; margin: 0 auto; padding: 1rem 1.5rem 2rem; }
     .shops-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }

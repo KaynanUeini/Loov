@@ -52,15 +52,19 @@ class HomeController < ApplicationController
     end
 
     # ── SEÇÕES: abertos primeiro ───────────────────────────────────────────
+    # Aumentado de 8 → 50 pra suportar dezenas de lava-rápidos seedados
+    # (60+ bairros de SP, agora também Osasco). Os filtros client-side
+    # (Aberto agora / Perto de mim / Melhores avaliados / categoria) já
+    # filtram visualmente; o gargalo era apenas o cap no controller.
     @nearby_car_washes = @car_washes
-      .first(16)
+      .first(80)
       .sort_by { |cw| @open_car_wash_ids.include?(cw.id) ? 0 : 1 }
-      .first(8)
+      .first(50)
 
     @top_car_washes = CarWash.all
       .select { |cw| cw.reviews.any? }
       .sort_by { |cw| [@open_car_wash_ids.include?(cw.id) ? 0 : 1, -cw.reviews.average(:rating).to_f] }
-      .first(8)
+      .first(20)
 
     @location_name = params[:location_name].presence
 
