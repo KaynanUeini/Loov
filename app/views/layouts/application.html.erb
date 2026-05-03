@@ -10,11 +10,11 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&family=Montserrat:wght@400;500;700&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
   <link rel="stylesheet" href="/assets/tailwind.css">
   <link rel="stylesheet" href="/assets/application.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
   <script src="https://js.stripe.com/v3/"></script>
   <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
   <style>
     #matter-wrap-container {
       position: fixed;
@@ -661,17 +661,55 @@
         opts = opts || {};
         const onOk   = opts.onOk   || function() {};
         const onFail = opts.onFail || function() {};
-        const showToast = (msg, isError) => {
+
+        const ua = (navigator.userAgent || '').toLowerCase();
+        const isIOS    = /ipad|iphone|ipod/.test(ua) || (ua.includes('mac') && navigator.maxTouchPoints > 1);
+        const isSafari = /safari/.test(ua) && !/chrome|crios|fxios/.test(ua);
+
+        const denyInstructions = () => {
+          if (isIOS) {
+            return '<strong>Permissão negada.</strong><br>'
+                 + 'No iPhone/iPad: toque em <b>"aA"</b> na barra de endereço → '
+                 + '<b>Ajustes do site</b> → <b>Localização</b> → <b>Permitir</b>. '
+                 + 'Depois recarregue a página.';
+          }
+          if (isSafari) {
+            return '<strong>Permissão negada.</strong><br>'
+                 + 'No Safari: menu <b>Safari</b> → <b>Ajustes para este site</b> → '
+                 + '<b>Localização</b> → <b>Permitir</b>.';
+          }
+          return '<strong>Permissão de localização negada.</strong><br>'
+               + 'Clique no ícone de cadeado/site na barra de endereço, mude '
+               + 'Localização para "Permitir" e recarregue.';
+        };
+
+        const showToast = (msg, isError, longLived) => {
+          // Remove toasts antigos
+          document.querySelectorAll('[data-loov-geo-toast]').forEach(n => n.remove());
           const t = document.createElement('div');
+          t.setAttribute('data-loov-geo-toast', '1');
           t.style.cssText = 'position:fixed;left:50%;top:24px;transform:translateX(-50%);z-index:99999;'
             + 'background:' + (isError ? '#fdecec' : '#d6ecde')
             + ';border:1px solid ' + (isError ? '#f5cccc' : '#b5d8c1')
-            + ';color:' + (isError ? '#c85050' : '#2d6b42')
-            + ';padding:12px 20px;border-radius:100px;font-family:Inter,sans-serif;font-size:13.5px;'
-            + 'font-weight:500;box-shadow:0 14px 40px rgba(40,35,28,0.18);max-width:90vw;text-align:center;';
+            + ';color:' + (isError ? '#7a3838' : '#2d6b42')
+            + ';padding:14px 22px;border-radius:18px;font-family:Inter,sans-serif;font-size:13.5px;'
+            + 'font-weight:500;box-shadow:0 14px 40px rgba(40,35,28,0.18);max-width:min(440px,92vw);'
+            + 'line-height:1.55;text-align:left;';
           t.innerHTML = msg;
+          if (longLived) {
+            const close = document.createElement('button');
+            close.innerText = '×';
+            close.style.cssText = 'position:absolute;top:6px;right:10px;background:none;border:none;'
+              + 'font-size:20px;color:inherit;opacity:.6;cursor:pointer;line-height:1;padding:0;';
+            close.onclick = () => t.remove();
+            t.style.position = 'fixed';
+            t.style.paddingRight = '32px';
+            t.appendChild(close);
+          }
           document.body.appendChild(t);
-          setTimeout(() => { t.style.transition='opacity .4s'; t.style.opacity='0'; setTimeout(()=>t.remove(),400); }, 5500);
+          if (!longLived) {
+            setTimeout(() => { t.style.transition='opacity .4s'; t.style.opacity='0'; setTimeout(()=>t.remove(),400); }, 5500);
+          }
         };
 
         if (!navigator.geolocation) {
@@ -687,7 +725,7 @@
             (pos) => onOk(pos),
             (err) => {
               if (err.code === 1) {
-                showToast('Permissão de localização negada. Libere nas configurações do site (cadeado na barra de endereço) e tente de novo.', true);
+                showToast(denyInstructions(), true, true);
                 onFail(err);
               } else if (err.code === 2) {
                 if (highAccuracy) {
@@ -722,7 +760,7 @@
           navigator.permissions.query({ name: 'geolocation' })
             .then(p => {
               if (p.state === 'denied') {
-                showToast('Permissão de localização negada. Libere nas configurações do site (cadeado na barra de endereço).', true);
+                showToast(denyInstructions(), true, true);
                 onFail({ code: 1 });
               } else {
                 tryGeo(true);
