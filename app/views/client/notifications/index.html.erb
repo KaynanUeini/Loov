@@ -1,0 +1,215 @@
+<style>
+  .notif-page { max-width: 760px; margin: 0 auto; padding: 24px 20px 80px; }
+
+  .notif-header { padding: 8px 0 20px; }
+  .notif-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 1.4px;
+    color: var(--ash); text-transform: uppercase;
+  }
+  .notif-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(28px, 5vw, 40px);
+    color: var(--ink); letter-spacing: -0.8px;
+    margin-top: 4px; font-weight: 700;
+  }
+  .notif-count {
+    font-size: 13.5px; color: var(--graphite);
+    margin-top: 6px;
+  }
+  .notif-actions {
+    display: flex; justify-content: flex-end;
+    margin-top: 12px;
+  }
+  .notif-mark-all {
+    background: transparent; border: none;
+    color: var(--coral-700);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 1.2px;
+    text-transform: uppercase; cursor: pointer;
+    padding: 6px 12px; border-radius: 100px;
+    transition: background .15s;
+  }
+  .notif-mark-all:hover { background: var(--coral-50); }
+
+  .notif-list { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+
+  .notif-card {
+    display: flex; gap: 14px;
+    padding: 16px; background: var(--paper);
+    border: 1px solid var(--stone); border-radius: 16px;
+    transition: border-color .15s, transform .15s, box-shadow .15s;
+    position: relative;
+  }
+  .notif-card.unread { border-color: var(--coral-100); background: var(--coral-50); }
+  .notif-card.unread::before {
+    content: ''; position: absolute;
+    top: 14px; right: 14px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--coral-500);
+  }
+
+  .notif-icon {
+    width: 42px; height: 42px; flex-shrink: 0;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .notif-icon.appt-confirmed { background: #dceaf3; color: #2a5f8a; border: 1px solid #b5cee0; }
+  .notif-icon.appt-rejected,
+  .notif-icon.appt-cancelled { background: #fdecec; color: var(--rose-500); border: 1px solid #f5cccc; }
+  .notif-icon.review-available { background: var(--coral-50); color: var(--coral-700); border: 1px solid var(--coral-100); }
+  .notif-icon.owner-message { background: #fbe2c0; color: #7a4814; border: 1px solid #f0d0a0; }
+  .notif-icon.default { background: var(--sand); color: var(--graphite); border: 1px solid var(--stone); }
+
+  .notif-body { flex: 1; min-width: 0; padding-right: 16px; }
+  .notif-card-title {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px; font-weight: 600;
+    color: var(--ink); margin-bottom: 3px;
+  }
+  .notif-desc {
+    font-size: 13px; color: var(--graphite);
+    line-height: 1.5;
+  }
+  .notif-when {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; letter-spacing: 0.4px;
+    color: var(--ash); margin-top: 6px;
+  }
+
+  .notif-empty {
+    text-align: center; padding: 60px 24px;
+    border: 1px solid var(--stone); border-radius: 20px;
+    background: var(--paper); margin-top: 18px;
+  }
+  .notif-empty-icon {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: var(--coral-50); border: 1px solid var(--coral-100);
+    color: var(--coral-700);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 14px; font-size: 26px;
+  }
+  .notif-empty-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; font-size: 22px;
+    color: var(--ink); margin-bottom: 8px;
+    letter-spacing: -0.3px;
+  }
+  .notif-empty-text {
+    font-size: 13.5px; color: var(--graphite);
+    line-height: 1.55;
+    max-width: 380px; margin-left: auto; margin-right: auto;
+  }
+</style>
+
+<div class="notif-page">
+
+  <div class="notif-header">
+    <div class="notif-eyebrow">NOTIFICAÇÕES</div>
+    <h1 class="notif-title">Suas atualizações</h1>
+    <% unread_count = @notifications.count { |n| !n[:read] } %>
+    <% if @notifications.any? %>
+      <p class="notif-count">
+        <%= @notifications.count %> <%= @notifications.count == 1 ? 'notificação' : 'notificações' %><% if unread_count > 0 %> · <strong style="color:var(--coral-700);"><%= unread_count %> não <%= unread_count == 1 ? 'lida' : 'lidas' %></strong><% end %>.
+      </p>
+      <% if unread_count > 0 %>
+        <div class="notif-actions">
+          <button type="button" class="notif-mark-all" onclick="markAllRead(this)">
+            <i class="fas fa-check-double" style="margin-right:5px;"></i>MARCAR TODAS COMO LIDAS
+          </button>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+
+  <% if @notifications.any? %>
+    <div class="notif-list" id="notif-list">
+      <% @notifications.each do |n| %>
+        <% icon_class = case n[:type]
+            when 'appointment_confirmed' then 'appt-confirmed'
+            when 'appointment_rejected'  then 'appt-rejected'
+            when 'appointment_cancelled' then 'appt-cancelled'
+            when 'review_available'      then 'review-available'
+            when 'owner_message'         then 'owner-message'
+            else 'default' end %>
+        <% icon_fa = case n[:type]
+            when 'appointment_confirmed' then 'fa-calendar-check'
+            when 'appointment_rejected'  then 'fa-calendar-xmark'
+            when 'appointment_cancelled' then 'fa-calendar-xmark'
+            when 'review_available'      then 'fa-star'
+            when 'owner_message'         then 'fa-message'
+            else 'fa-bell' end %>
+        <% time_str = begin
+            t = Time.iso8601(n[:created_at]).in_time_zone("America/Sao_Paulo")
+            diff = (Time.current - t).to_i
+            if diff < 60 then 'agora'
+            elsif diff < 3600 then "há #{diff / 60}min"
+            elsif diff < 86400 then "há #{diff / 3600}h"
+            elsif diff < 604800 then "há #{diff / 86400}d"
+            else t.strftime("%d/%m · %H:%M") end
+          rescue
+            ''
+          end %>
+
+        <div class="notif-card <%= 'unread' unless n[:read] %>" data-notif-id="<%= n[:id] %>">
+          <div class="notif-icon <%= icon_class %>">
+            <i class="fas <%= icon_fa %>"></i>
+          </div>
+          <div class="notif-body">
+            <div class="notif-card-title"><%= n[:title] %></div>
+            <div class="notif-desc"><%= n[:desc] %></div>
+            <% if time_str.present? %>
+              <div class="notif-when"><%= time_str %></div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="notif-empty">
+      <div class="notif-empty-icon"><i class="fas fa-bell"></i></div>
+      <div class="notif-empty-title">Tudo em dia</div>
+      <p class="notif-empty-text">
+        Você não tem notificações novas. Vamos te avisar aqui sobre confirmações,
+        cancelamentos, mensagens dos lava-rápidos e quando puder avaliar.
+      </p>
+    </div>
+  <% end %>
+
+</div>
+
+<script>
+function markAllRead(btn) {
+  if (btn.dataset.busy === '1') return;
+  btn.dataset.busy = '1';
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
+  fetch('/client/notifications/read_all', {
+    method: 'POST',
+    headers: { 'X-CSRF-Token': csrf, 'Accept': 'application/json' }
+  })
+  .then(r => r.json())
+  .then(() => {
+    document.querySelectorAll('.notif-card.unread').forEach(c => c.classList.remove('unread'));
+    btn.style.opacity = '0.4';
+    btn.disabled = true;
+  })
+  .catch(() => { btn.dataset.busy = '0'; });
+}
+
+// Marca individual como lida ao clicar no card
+document.querySelectorAll('.notif-card').forEach(card => {
+  card.addEventListener('click', function() {
+    if (!this.classList.contains('unread')) return;
+    const id = this.dataset.notifId;
+    if (!id) return;
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
+    fetch('/client/notifications/' + encodeURIComponent(id) + '/read', {
+      method: 'PATCH',
+      headers: { 'X-CSRF-Token': csrf, 'Accept': 'application/json' }
+    }).catch(() => {});
+    this.classList.remove('unread');
+  });
+});
+</script>

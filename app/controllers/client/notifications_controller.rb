@@ -15,7 +15,12 @@ module Client
     before_action :ensure_client
 
     def index
-      render json: build_notifications
+      respond_to do |format|
+        format.html do
+          @notifications = build_notifications
+        end
+        format.json { render json: build_notifications }
+      end
     end
 
     # PATCH /client/notifications/:id/read
@@ -43,7 +48,10 @@ module Client
 
     def ensure_client
       return if current_user&.client?
-      render json: { error: "Acesso negado." }, status: :forbidden
+      respond_to do |format|
+        format.html { redirect_to root_path, alert: "Acesso negado." }
+        format.json { render json: { error: "Acesso negado." }, status: :forbidden }
+      end
     end
 
     def build_notifications

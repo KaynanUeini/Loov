@@ -364,6 +364,10 @@
       <%= link_to client_favorites_path, class: "#{current_path == client_favorites_path ? 'drawer-active' : ''}" do %>
         <i class="fas fa-heart"></i> Favoritos
       <% end %>
+      <%= link_to client_notifications_path, class: "#{current_path == client_notifications_path ? 'drawer-active' : ''}" do %>
+        <i class="fas fa-bell"></i> Notificações
+        <span id="drawer-notif-badge" style="margin-left:auto;display:none;font-size:0.65rem;color:var(--coral-700);background:var(--coral-50);border:1px solid var(--coral-100);border-radius:100px;padding:2px 8px;font-family:'JetBrains Mono',monospace;font-weight:700;"></span>
+      <% end %>
       <div class="drawer-sep"></div>
       <%= link_to edit_client_profile_path, class: "#{current_user.profile_complete? ? '' : 'drawer-active'}" do %>
         <i class="fas fa-user"></i>
@@ -598,8 +602,14 @@
       if (dropdown.classList.contains('open')) return;
       fetch('/client/notifications', { headers: { Accept: 'application/json' } })
         .then(r => r.json()).then(data => {
-          const seenAt   = getSeenAt();
-          const newCount = data.filter(i => i.notif_at && new Date(i.notif_at) > seenAt).length;
+          // Conta não-lidas (campo `read` do controller). Fallback pra
+          // notif_at + seenAt pra compatibilidade com versão antiga.
+          const seenAt = getSeenAt();
+          const newCount = data.filter(i => {
+            if (typeof i.read === 'boolean') return !i.read;
+            return i.notif_at && new Date(i.notif_at) > seenAt;
+          }).length;
+
           if (newCount > 0) {
             bellBtn.classList.add('has-notif');
             bellBadge.textContent = newCount;
@@ -607,6 +617,17 @@
           } else {
             bellBtn.classList.remove('has-notif');
             bellBadge.classList.remove('visible');
+          }
+
+          // Espelha no badge do drawer mobile
+          const drawerBadge = document.getElementById('drawer-notif-badge');
+          if (drawerBadge) {
+            if (newCount > 0) {
+              drawerBadge.textContent = newCount;
+              drawerBadge.style.display = 'inline-block';
+            } else {
+              drawerBadge.style.display = 'none';
+            }
           }
         }).catch(() => {});
     }
