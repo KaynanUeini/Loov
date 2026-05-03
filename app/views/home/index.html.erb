@@ -2192,7 +2192,22 @@
 </script>
 
 <script>
-function requestGeo(){if(!navigator.geolocation)return;navigator.geolocation.getCurrentPosition(function(pos){localStorage.setItem('loov_last_coords',JSON.stringify({lat:pos.coords.latitude,lng:pos.coords.longitude}));var url=new URL(window.location.href);url.searchParams.set('latitude',pos.coords.latitude);url.searchParams.set('longitude',pos.coords.longitude);window.location.href=url.toString();},function(){alert('Não foi possível obter sua localização.');},{enableHighAccuracy:true,timeout:10000});}
+function requestGeo(){
+  if (typeof window.loovGeoReload === 'function') { window.loovGeoReload(); return; }
+  if (!navigator.geolocation) { alert('Seu navegador não suporta localização.'); return; }
+  navigator.geolocation.getCurrentPosition(function(pos){
+    try { localStorage.setItem('loov_last_coords', JSON.stringify({lat:pos.coords.latitude, lng:pos.coords.longitude})); } catch(e){}
+    var url = new URL(window.location.href);
+    url.searchParams.set('latitude', pos.coords.latitude);
+    url.searchParams.set('longitude', pos.coords.longitude);
+    window.location.href = url.toString();
+  }, function(err){
+    if (err.code === 1) alert('Permissão de localização negada. Libere nas configurações do site.');
+    else if (err.code === 2) alert('Não conseguimos detectar sua localização. Verifique se o GPS está ativo.');
+    else if (err.code === 3) alert('A busca demorou demais. Tente de novo.');
+    else alert('Não foi possível obter sua localização.');
+  }, {enableHighAccuracy:true, timeout:8000, maximumAge:0});
+}
 </script>
 
 <% end %>
