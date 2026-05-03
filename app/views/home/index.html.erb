@@ -2087,81 +2087,434 @@
   <% end %>
 
   <% if user_signed_in? && current_user.client? %>
-  <div class="home-section">
-    <div class="home-section-header">
-      <span class="home-section-title">Disponíveis</span>
-      <% if @disponivel_has_location %><%= link_to "Ver mais", disponivel_index_path(latitude: params[:latitude], longitude: params[:longitude]), class: "home-section-link" %><% end %>
+
+  <%# ── LAST MINUTE — espelha o app (zap icon, ver todos, helper text, cards dark ink) ── %>
+  <% if @disponivel_has_location %>
+  <style>
+    .lm-section { max-width: 1200px; margin: 0 auto; padding: 1.75rem 1.5rem 0; }
+    .lm-header  { display: flex; align-items: center; justify-content: space-between; margin-bottom: .35rem; }
+    .lm-title-row { display: flex; align-items: center; gap: 8px; }
+    .lm-title-row i { color: var(--coral-500); font-size: 1.1rem; }
+    .lm-title { font-family: 'Space Grotesk', sans-serif; font-size: 1.0625rem; font-weight: 700; color: var(--ink); letter-spacing: -.2px; }
+    .lm-link  { font-size: .8125rem; font-weight: 600; color: var(--coral-500); text-decoration: none; }
+    .lm-link:hover { color: var(--coral-700); }
+    .lm-helper { font-size: .8125rem; color: var(--graphite); margin-bottom: 14px; }
+    .lm-scroll { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 24px; -webkit-overflow-scrolling: touch; scroll-snap-type: x mandatory; }
+    .lm-scroll::-webkit-scrollbar { height: 0; }
+    .lm-card {
+      flex-shrink: 0; width: 240px;
+      background: var(--ink); border-radius: 20px;
+      padding: 18px; position: relative; overflow: hidden;
+      text-decoration: none; color: var(--cream);
+      transition: transform .15s ease, box-shadow .15s ease;
+      scroll-snap-align: start;
+    }
+    .lm-card:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(40,35,28,.18); }
+    .lm-blob {
+      position: absolute; top: -30px; right: -30px;
+      width: 140px; height: 140px; border-radius: 50%;
+      background: var(--coral-500); opacity: .2; pointer-events: none;
+    }
+    .lm-distance-pill {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: rgba(221,120,82,0.18);
+      border: 1px solid rgba(221,120,82,0.35);
+      color: var(--coral-500);
+      padding: 4px 10px; border-radius: 100px;
+      font-size: 11px; font-weight: 600;
+      position: relative;
+    }
+    .lm-distance-pill i { font-size: 10px; }
+    .lm-shop {
+      color: var(--cream); font-size: 16px;
+      margin-top: 12px;
+      letter-spacing: -.3px;
+      font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+      position: relative;
+    }
+    .lm-meta {
+      color: #b5ae9f; font-size: 11px;
+      margin-top: 4px; line-height: 15px;
+      position: relative;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .lm-price-row {
+      display: flex; align-items: baseline; justify-content: space-between;
+      margin-top: 14px; position: relative;
+    }
+    .lm-price {
+      font-size: 36px; color: var(--coral-500);
+      letter-spacing: -1px;
+      font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+      line-height: 1;
+    }
+    .lm-slot {
+      color: var(--cream); font-size: 18px;
+      font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+      letter-spacing: -.3px;
+    }
+    .lm-svc { color: #c9c4ba; font-size: 12px; margin-top: 6px; position: relative; }
+    .lm-empty {
+      max-width: 1200px; margin: 0 auto; padding: 0 1.5rem 1.5rem;
+      display: flex; align-items: center; gap: 12px;
+      background: var(--paper); border: 1px solid var(--stone);
+      border-radius: 16px; padding: 16px 20px;
+    }
+    .lm-empty i { color: var(--coral-500); font-size: 22px; }
+    .lm-empty-title { font-size: 14px; font-weight: 600; color: var(--ink); }
+    .lm-empty-text  { font-size: 12.5px; color: var(--graphite); margin-top: 2px; }
+  </style>
+
+  <section class="lm-section">
+    <div class="lm-header">
+      <div class="lm-title-row">
+        <i class="fas fa-bolt"></i>
+        <span class="lm-title">Last minute</span>
+      </div>
+      <%= link_to "Ver todos →", disponivel_index_path(latitude: params[:latitude], longitude: params[:longitude]), class: "lm-link" %>
     </div>
-    <% if !@disponivel_has_location %>
-      <div class="geo-banner"><p class="geo-banner-text"><i class="fas fa-location-dot" style="color:var(--lime);margin-right:.35rem;"></i>Permita sua localização para ver vagas disponíveis agora.</p><button class="geo-banner-btn" onclick="requestGeo()">Usar localização</button></div>
-    <% elsif @disponivel_slots.any? %>
-      <div class="h-scroll">
+    <p class="lm-helper">Vagas abertas nos próximos 30 min perto de você.</p>
+
+    <% if @disponivel_slots.any? %>
+      <div class="lm-scroll">
         <% @disponivel_slots.each do |slot_data| %>
-        <div class="disp-card">
-          <div class="disp-card-header">
-            <div class="disp-card-time"><%= slot_data[:slot].strftime("%H:%M") %></div>
-            <div class="disp-card-badge"><div class="disp-badge-dot"></div>AGORA</div>
-          </div>
-          <div class="disp-card-name"><%= slot_data[:car_wash].name %></div>
-          <div class="disp-card-dist"><i class="fas fa-location-arrow" style="font-size:.58rem;color:var(--lime);"></i><%= slot_data[:distance_km] %> km de você</div>
-          <div class="disp-services">
-            <% slot_data[:services].first(3).each_with_index do |svc, i| %>
-            <div class="disp-svc-row">
-              <span class="disp-svc-name"><%= svc.title %></span>
-              <span class="disp-svc-price" style="<%= i == slot_data[:services].first(3).length - 1 ? 'color:var(--lime);' : '' %>">R$ <%= number_with_precision(svc.price, precision: 0) %></span>
+          <% cw   = slot_data[:car_wash] %>
+          <% svc  = slot_data[:services].first %>
+          <% addr = [cw.try(:logradouro), cw.try(:bairro)].compact_blank.join(" · ").presence || cw.address.to_s %>
+          <%= link_to checkout_disponivel_index_path(car_wash_id: cw.id, service_id: svc.id, slot: slot_data[:slot].iso8601), class: "lm-card" do %>
+            <div class="lm-blob"></div>
+            <div class="lm-distance-pill">
+              <i class="fas fa-location-arrow"></i>
+              <%= slot_data[:distance_km] %> km
             </div>
-            <% end %>
-          </div>
-          <%= link_to checkout_disponivel_index_path(car_wash_id: slot_data[:car_wash].id, service_id: slot_data[:services].first.id, slot: slot_data[:slot].iso8601), class: "disp-btn" do %><i class="fas fa-bolt"></i> RESERVAR<% end %>
-        </div>
+            <div class="lm-shop"><%= cw.name %></div>
+            <div class="lm-meta"><%= addr.presence || "—" %></div>
+            <div class="lm-price-row">
+              <span class="lm-price">R$<%= number_with_precision(svc.price, precision: 0) %></span>
+              <span class="lm-slot"><%= slot_data[:slot].strftime("%H:%M") %></span>
+            </div>
+            <div class="lm-svc"><%= svc.title.presence || "Lavagem" %></div>
+          <% end %>
         <% end %>
       </div>
     <% else %>
-      <div class="empty-banner"><i class="fas fa-car-wash"></i><div><div class="empty-banner-title">Nenhuma vaga disponível agora</div><div class="empty-banner-text">Sem vagas nos próximos 30 min num raio de 5km.</div></div></div>
+      <div class="lm-empty">
+        <i class="fas fa-bolt"></i>
+        <div>
+          <div class="lm-empty-title">Nenhuma vaga disponível agora</div>
+          <div class="lm-empty-text">Sem vagas nos próximos 30 min num raio de 5km.</div>
+        </div>
+      </div>
     <% end %>
+  </section>
+  <% else %>
+  <div class="home-section">
+    <div class="home-section-header">
+      <div class="lm-title-row">
+        <i class="fas fa-bolt" style="color:var(--coral-500);"></i>
+        <span class="home-section-title" style="color:var(--ink);">Last minute</span>
+      </div>
+    </div>
+    <div class="geo-banner">
+      <p class="geo-banner-text">
+        <i class="fas fa-location-dot" style="color:var(--coral-500);margin-right:.35rem;"></i>
+        Permita sua localização para ver vagas disponíveis agora.
+      </p>
+      <button class="geo-banner-btn" onclick="requestGeo()">Usar localização</button>
+    </div>
   </div>
-  <div class="home-divider"><div class="home-divider-line"></div></div>
   <% end %>
 
-  <div class="home-section">
-    <div class="home-section-header">
-      <span class="home-section-title">Na sua área</span>
-      <%= link_to "Ver mais", (params[:latitude].present? ? car_washes_path(latitude: params[:latitude], longitude: params[:longitude]) : car_washes_path), class: "home-section-link" %>
-    </div>
-    <% if @nearby_car_washes.any? %>
-    <div class="h-scroll">
-      <% @nearby_car_washes.each do |cw| %>
-      <% min_price=cw.services.minimum(:price); reviews=cw.reviews; avg_rating=reviews.any? ? reviews.average(:rating).to_f : nil; is_open=@open_car_wash_ids&.include?(cw.id); opens_today=cw.operating_hours.find_by(day_of_week: Time.current.in_time_zone("America/Sao_Paulo").wday) %>
-      <div class="cw-card" onclick="window.location='<%= car_wash_path(cw) %>'" style="cursor:none;">
-        <div class="cw-card-top"><div class="cw-card-avatar"><%= cw.name.first(2).upcase %></div><div class="cw-card-avatar-info"><div class="cw-card-name"><%= cw.name %></div><% if avg_rating %><div style="display:flex;align-items:center;gap:.2rem;flex-wrap:wrap;"><div class="cw-card-stars"><% 5.times do |s| %><i class="fas fa-star" style="color:<%= s < avg_rating.round ? '#dd7852' : '#575148' %>;"></i><% end %></div><span class="cw-card-rating-val"><%= sprintf('%.1f', avg_rating) %></span><span class="cw-card-rating-ct">(<%= reviews.count %>)</span></div><% end %></div></div>
-        <div class="cw-card-meta"><div class="cw-card-addr"><i class="fas fa-location-dot"></i><span><%= cw.address || "Endereço não informado" %></span></div><div class="cw-card-row"><% if is_open %><div class="cw-status-open"><div class="cw-status-open-dot"></div>ABERTO</div><% elsif opens_today %><div class="cw-status-closed">ABRE ÀS <%= opens_today.opens_at.strftime("%H:%M") %></div><% else %><div class="cw-status-closed">FECHADO</div><% end %><% if params[:latitude].present? && cw.latitude && cw.longitude %><span class="cw-card-dist"><%= number_with_precision(cw.distance_to([params[:latitude].to_f, params[:longitude].to_f], :km), precision: 1) %> KM</span><% end %></div></div>
-        <%= link_to "Ver detalhes", car_wash_path(cw), class: "cw-card-btn" %>
-      </div>
+  <%# ── O QUE SEU CARRO PRECISA — categorias scroll horizontal ── %>
+  <style>
+    .cat-section { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1.5rem 0; }
+    .cat-title {
+      font-family: 'Space Grotesk', sans-serif; font-size: 1.0625rem; font-weight: 700;
+      color: var(--ink); letter-spacing: -.2px;
+      margin-bottom: 12px;
+    }
+    .cat-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 24px; -webkit-overflow-scrolling: touch; }
+    .cat-scroll::-webkit-scrollbar { height: 0; }
+    .cat-tile {
+      flex-shrink: 0;
+      width: 92px; height: 88px;
+      border-radius: 16px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 6px; padding: 0 8px;
+      cursor: pointer; user-select: none;
+      position: relative;
+      transition: transform .12s ease;
+      border: 2px solid transparent;
+    }
+    .cat-tile:hover { transform: translateY(-2px); }
+    .cat-tile.active { border-color: var(--ink); }
+    .cat-tile i { font-size: 20px; }
+    .cat-tile-label {
+      font-size: 11px; font-weight: 600;
+      text-align: center; line-height: 1.15;
+      max-width: 100%; overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap;
+    }
+    .cat-tile-check {
+      position: absolute; top: 5px; right: 5px;
+      width: 16px; height: 16px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--paper); font-size: 9px;
+    }
+    .cat-clear {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: transparent; border: none;
+      color: var(--graphite); font-size: 12px; font-weight: 600;
+      padding: 0 1.5rem; margin-top: -16px; margin-bottom: 16px;
+      cursor: pointer;
+    }
+  </style>
+
+  <% cats = [
+    { key: 'lavagem',           label: 'Lavagem',         icon: 'fa-droplet',     bg: '#d1e1ed', fg: '#2a5f8a' },
+    { key: 'polimento',         label: 'Polimento',       icon: 'fa-feather',     bg: '#f7e4a8', fg: '#7a5a10' },
+    { key: 'higienizacao',      label: 'Higienização',    icon: 'fa-wind',        bg: '#d6ecde', fg: '#2a6840' },
+    { key: 'cristalizacao',     label: 'Cristalização',   icon: 'fa-gem',         bg: '#e0e0f5', fg: '#3d4180' },
+    { key: 'vitrificacao',      label: 'Vitrificação',    icon: 'fa-shield',      bg: '#cde7e8', fg: '#1f5b66' },
+    { key: 'enceramento',       label: 'Enceramento',     icon: 'fa-circle',      bg: '#f0d9c0', fg: '#7a4818' },
+    { key: 'hidratacao',        label: 'Hidratação Couro', icon: 'fa-layer-group',bg: '#e8d4b8', fg: '#6b4818' },
+    { key: 'motor',             label: 'Motor',           icon: 'fa-microchip',   bg: '#dde0e3', fg: '#3a4148' },
+    { key: 'plasticos',         label: 'Plásticos',       icon: 'fa-arrows-rotate', bg: '#e8d4ee', fg: '#5a2778' },
+    { key: 'farois',            label: 'Faróis',          icon: 'fa-sun',         bg: '#fbe2c0', fg: '#7a4814' },
+    { key: 'impermeabilizacao', label: 'Impermeab.',      icon: 'fa-umbrella',    bg: '#cce4f5', fg: '#1f5078' },
+    { key: 'oxi',               label: 'Oxi-sanitiz.',    icon: 'fa-filter',      bg: '#d4ebd9', fg: '#286b48' },
+    { key: 'outros',            label: 'Outros',          icon: 'fa-th-large',    bg: '#f5d3c3', fg: '#9c4930' },
+  ] %>
+
+  <section class="cat-section">
+    <div class="cat-title">O que seu carro precisa?</div>
+    <div class="cat-scroll" id="cat-scroll">
+      <% cats.each do |cat| %>
+        <div class="cat-tile" data-cat="<%= cat[:key] %>"
+             style="background:<%= cat[:bg] %>; color:<%= cat[:fg] %>;">
+          <i class="fas <%= cat[:icon] %>" style="color:<%= cat[:fg] %>;"></i>
+          <span class="cat-tile-label" style="color:<%= cat[:fg] %>;"><%= cat[:label] %></span>
+          <span class="cat-tile-check" style="background:<%= cat[:fg] %>;display:none;"><i class="fas fa-check"></i></span>
+        </div>
       <% end %>
     </div>
-    <% end %>
-  </div>
+    <button class="cat-clear" id="cat-clear" style="display:none;">
+      <i class="fas fa-xmark"></i> Limpar filtro
+    </button>
+  </section>
 
-  <div class="home-divider"><div class="home-divider-line"></div></div>
+  <%# ── LOJAS — header + filter pills + lista ── %>
+  <% all_shops = (@nearby_car_washes + @top_car_washes).uniq { |c| c.id }.first(16) %>
+  <style>
+    .shops-section { max-width: 1200px; margin: 0 auto; padding: 1rem 1.5rem 2rem; }
+    .shops-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .shops-title  { font-family: 'Space Grotesk', sans-serif; font-size: 1.0625rem; font-weight: 700; color: var(--ink); letter-spacing: -.2px; }
 
-  <div class="home-section">
-    <div class="home-section-header">
-      <span class="home-section-title">Top Performance</span>
-      <%= link_to "Ver mais", car_washes_path(sort: 'top_rated'), class: "home-section-link" %>
+    .shops-filters { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 16px; -webkit-overflow-scrolling: touch; }
+    .shops-filters::-webkit-scrollbar { height: 0; }
+    .filter-pill {
+      flex-shrink: 0;
+      height: 34px; padding: 0 14px;
+      border-radius: 17px;
+      border: 1px solid var(--stone);
+      background: transparent;
+      color: var(--ink);
+      font-size: 13px; font-weight: 500;
+      text-transform: capitalize;
+      cursor: pointer;
+      transition: all .15s ease;
+      white-space: nowrap;
+      display: inline-flex; align-items: center;
+    }
+    .filter-pill.active { background: var(--ink); border-color: var(--ink); color: var(--cream); }
+    .filter-pill:hover:not(.active) { border-color: var(--coral-500); color: var(--coral-700); }
+
+    .shops-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 14px;
+    }
+    .shop-row {
+      display: flex; gap: 14px; align-items: stretch;
+      background: var(--paper); border: 1px solid var(--stone);
+      border-radius: 18px; overflow: hidden;
+      text-decoration: none; color: var(--ink);
+      transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+      cursor: pointer;
+    }
+    .shop-row:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(25,20,15,0.06); border-color: var(--coral-100); }
+    .shop-row.is-closed { background: var(--sand); border-color: var(--stone); opacity: .75; }
+    .shop-photo {
+      width: 100px; flex-shrink: 0;
+      background: #e6ded0;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--graphite); font-size: 30px; font-weight: 700;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    .shop-row.is-closed .shop-photo { background: #d8d3ca; color: var(--ash); }
+    .shop-body { flex: 1; padding: 14px 16px; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+    .shop-name { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .shop-addr { font-size: 12.5px; color: var(--graphite); display: flex; align-items: center; gap: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .shop-addr i { color: var(--coral-500); font-size: 10px; }
+    .shop-bottom { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; font-size: 11.5px; }
+    .shop-rating { display: inline-flex; align-items: center; gap: 4px; color: var(--graphite); font-weight: 600; }
+    .shop-rating i { color: var(--coral-500); font-size: 10px; }
+    .shop-empty {
+      grid-column: 1 / -1;
+      text-align: center; padding: 36px 16px;
+      background: var(--paper); border: 1px dashed var(--stone);
+      border-radius: 18px;
+      color: var(--graphite);
+    }
+    .shop-empty i { font-size: 22px; color: var(--ash); margin-bottom: 8px; }
+    .shop-empty-text { font-size: 14px; }
+  </style>
+
+  <section class="shops-section">
+    <div class="shops-header">
+      <span class="shops-title">Lojas</span>
     </div>
-    <% if @top_car_washes.any? %>
-    <div class="h-scroll">
-      <% @top_car_washes.each do |cw| %>
-      <% min_price=cw.services.minimum(:price); reviews=cw.reviews; avg_rating=reviews.any? ? reviews.average(:rating).to_f : nil; is_open=@open_car_wash_ids&.include?(cw.id); opens_today=cw.operating_hours.find_by(day_of_week: Time.current.in_time_zone("America/Sao_Paulo").wday) %>
-      <div class="cw-card" onclick="window.location='<%= car_wash_path(cw) %>'" style="cursor:none;">
-        <div class="cw-card-top"><div class="cw-card-avatar"><%= cw.name.first(2).upcase %></div><div class="cw-card-avatar-info"><div class="cw-card-name"><%= cw.name %></div><% if avg_rating %><div style="display:flex;align-items:center;gap:.2rem;flex-wrap:wrap;"><div class="cw-card-stars"><% 5.times do |s| %><i class="fas fa-star" style="color:<%= s < avg_rating.round ? '#dd7852' : '#575148' %>;"></i><% end %></div><span class="cw-card-rating-val"><%= sprintf('%.1f', avg_rating) %></span><span class="cw-card-rating-ct">(<%= reviews.count %>)</span></div><% else %><div style="font-size:.68rem;color:#575148;margin-top:.15rem;">Sem avaliações ainda</div><% end %></div></div>
-        <div class="cw-card-meta"><div class="cw-card-addr"><i class="fas fa-location-dot"></i><span><%= cw.address || "Endereço não informado" %></span></div><% if min_price %><div style="font-size:.75rem;color:var(--text-muted);display:flex;align-items:center;gap:.3rem;"><i class="fas fa-tag" style="font-size:.6rem;"></i>A partir de <strong style="color:var(--white);margin-left:.2rem;">R$ <%= number_with_precision(min_price, precision: 0) %></strong></div><% end %><div class="cw-card-row"><% if is_open %><div class="cw-status-open"><div class="cw-status-open-dot"></div>ABERTO</div><% elsif opens_today %><div class="cw-status-closed">ABRE ÀS <%= opens_today.opens_at.strftime("%H:%M") %></div><% else %><div class="cw-status-closed">FECHADO</div><% end %></div></div>
-        <%= link_to "Ver detalhes", car_wash_path(cw), class: "cw-card-btn" %>
-      </div>
+    <div class="shops-filters" id="shops-filters">
+      <button class="filter-pill active" data-filter="todos">Todos</button>
+      <button class="filter-pill" data-filter="aberto agora">Aberto agora</button>
+      <% if params[:latitude].present? %>
+        <button class="filter-pill" data-filter="perto de mim">Perto de mim</button>
       <% end %>
+      <button class="filter-pill" data-filter="melhores avaliados">Melhores avaliados</button>
     </div>
-    <% end %>
-  </div>
+
+    <div class="shops-grid" id="shops-grid">
+      <% all_shops.each do |cw| %>
+        <% reviews    = cw.reviews %>
+        <% avg_rating = reviews.any? ? reviews.average(:rating).to_f : 0 %>
+        <% review_ct  = reviews.count %>
+        <% is_open    = @open_car_wash_ids&.include?(cw.id) %>
+        <% opens_today = cw.operating_hours.find_by(day_of_week: Time.current.in_time_zone("America/Sao_Paulo").wday) %>
+        <% distance_km = (params[:latitude].present? && cw.has_valid_coordinates?) ? cw.distance_to([params[:latitude].to_f, params[:longitude].to_f], :km).to_f.round(2) : nil %>
+        <% svc_cats   = cw.services.pluck(:category).compact.map(&:downcase).join(',') %>
+        <a href="<%= car_wash_path(cw) %>"
+           class="shop-row <%= 'is-closed' unless is_open %>"
+           data-open="<%= is_open ? '1' : '0' %>"
+           data-rating="<%= avg_rating %>"
+           data-review-ct="<%= review_ct %>"
+           data-distance="<%= distance_km || 9999 %>"
+           data-categories="<%= svc_cats %>">
+          <div class="shop-photo"><%= cw.name.first(2).upcase %></div>
+          <div class="shop-body">
+            <div class="shop-name"><%= cw.name %></div>
+            <div class="shop-addr">
+              <i class="fas fa-location-dot"></i>
+              <span><%= [cw.try(:bairro), cw.try(:cidade)].compact_blank.join(" · ").presence || cw.address.to_s %></span>
+            </div>
+            <div class="shop-bottom">
+              <% if is_open %>
+                <span class="loov-pill loov-pill--success" style="font-size:9.5px;padding:2px 8px;">ABERTO</span>
+              <% elsif opens_today %>
+                <span class="loov-pill loov-pill--neutral" style="font-size:9.5px;padding:2px 8px;">ABRE <%= opens_today.opens_at.strftime("%H:%M") %></span>
+              <% else %>
+                <span class="loov-pill loov-pill--neutral" style="font-size:9.5px;padding:2px 8px;">FECHADO</span>
+              <% end %>
+              <% if avg_rating > 0 %>
+                <span class="shop-rating"><i class="fas fa-star"></i><%= sprintf('%.1f', avg_rating) %> <span style="color:var(--ash);font-weight:500;">(<%= review_ct %>)</span></span>
+              <% end %>
+              <% if distance_km %>
+                <span style="color:var(--graphite);font-weight:500;"><%= sprintf('%.1f', distance_km) %> km</span>
+              <% end %>
+            </div>
+          </div>
+        </a>
+      <% end %>
+      <div class="shop-empty" id="shops-empty" style="display:none;">
+        <i class="fas fa-magnifying-glass"></i>
+        <div class="shop-empty-text">Nenhum lava-rápido corresponde a esses filtros.</div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+  (function() {
+    const tiles      = document.querySelectorAll('.cat-tile');
+    const clearBtn   = document.getElementById('cat-clear');
+    const pills      = document.querySelectorAll('.filter-pill');
+    const grid       = document.getElementById('shops-grid');
+    const emptyEl    = document.getElementById('shops-empty');
+    const allShops   = grid ? Array.from(grid.querySelectorAll('.shop-row')) : [];
+    let activeCat    = null;
+    let activeFilter = 'todos';
+
+    function applyFilters() {
+      const visible = allShops.filter(card => {
+        const cats   = (card.dataset.categories || '').toLowerCase();
+        const open   = card.dataset.open === '1';
+        if (activeCat && !cats.includes(activeCat)) return false;
+        if (activeFilter === 'aberto agora' && !open) return false;
+        return true;
+      });
+
+      // Ordenação por filtro
+      let sorted = visible.slice();
+      if (activeFilter === 'perto de mim') {
+        sorted.sort((a, b) => parseFloat(a.dataset.distance) - parseFloat(b.dataset.distance));
+      } else if (activeFilter === 'melhores avaliados') {
+        sorted.sort((a, b) => parseFloat(b.dataset.rating) - parseFloat(a.dataset.rating));
+      }
+
+      // Re-render: hide all, then re-append visible em ordem
+      allShops.forEach(c => { c.style.display = 'none'; });
+      sorted.forEach(c => { c.style.display = ''; grid.appendChild(c); });
+
+      if (emptyEl) {
+        emptyEl.style.display = sorted.length === 0 ? '' : 'none';
+        grid.appendChild(emptyEl);
+      }
+    }
+
+    tiles.forEach(tile => {
+      tile.addEventListener('click', function() {
+        const key = this.dataset.cat;
+        if (activeCat === key) {
+          activeCat = null;
+          this.classList.remove('active');
+          this.querySelector('.cat-tile-check').style.display = 'none';
+        } else {
+          tiles.forEach(t => {
+            t.classList.remove('active');
+            t.querySelector('.cat-tile-check').style.display = 'none';
+          });
+          activeCat = key;
+          this.classList.add('active');
+          this.querySelector('.cat-tile-check').style.display = '';
+        }
+        if (clearBtn) clearBtn.style.display = activeCat ? 'inline-flex' : 'none';
+        applyFilters();
+      });
+    });
+
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function() {
+        activeCat = null;
+        tiles.forEach(t => {
+          t.classList.remove('active');
+          t.querySelector('.cat-tile-check').style.display = 'none';
+        });
+        clearBtn.style.display = 'none';
+        applyFilters();
+      });
+    }
+
+    pills.forEach(pill => {
+      pill.addEventListener('click', function() {
+        pills.forEach(p => p.classList.remove('active'));
+        this.classList.add('active');
+        activeFilter = this.dataset.filter;
+        applyFilters();
+      });
+    });
+  })();
+  </script>
+
+  <% end %>
 
   <div class="home-divider"><div class="home-divider-line"></div></div>
   <footer class="loov-footer">
