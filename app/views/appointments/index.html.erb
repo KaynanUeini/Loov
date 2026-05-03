@@ -3,9 +3,10 @@ months_pt    = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov
 weekdays_pt  = ['dom','seg','ter','qua','qui','sex','sáb']
 current_time = Time.current.in_time_zone("America/Sao_Paulo")
 
-is_today_card = lambda do |appt|
+is_last_minute = lambda { |appt| appt.appointment_type == 'disponivel' }
+
+is_today_date = lambda do |appt|
   appt.scheduled_at.in_time_zone("America/Sao_Paulo").to_date == current_time.to_date &&
-    appt.status == 'confirmed' &&
     appt.scheduled_at >= current_time
 end
 
@@ -487,15 +488,16 @@ end
       <div class="appt-list">
         <% @upcoming_appointments.each do |appt| %>
           <% sched_sp   = appt.scheduled_at.in_time_zone("America/Sao_Paulo") %>
-          <% is_today_a = is_today_card.call(appt) %>
+          <% is_lm     = is_last_minute.call(appt) %>
+          <% is_today  = is_today_date.call(appt) %>
           <% is_ongoing = @ongoing_appointments.include?(appt.id) %>
           <% mins_until = ((appt.scheduled_at - current_time) / 60.0).to_i %>
           <% show_code  = @client_code.present? && (is_ongoing || mins_until <= 30) && appt.status == 'confirmed' %>
           <% can_can    = can_cancel.call(appt) %>
-          <% dow_label  = is_today_a ? 'hoje' : weekdays_pt[sched_sp.wday] %>
+          <% dow_label  = is_today ? 'hoje' : weekdays_pt[sched_sp.wday] %>
 
-          <div class="appt-card <%= 'today' if is_today_a %>">
-            <% if is_today_a %><div class="appt-card-blob"></div><% end %>
+          <div class="appt-card <%= 'today' if is_lm %>">
+            <% if is_lm %><div class="appt-card-blob"></div><% end %>
 
             <div class="appt-inner">
               <div class="date-col">
@@ -515,11 +517,11 @@ end
                 </div>
 
                 <% if show_code %>
-                  <div class="code-block <%= is_today_a ? 'ink' : 'light' %>">
-                    <span class="code-pill <%= is_today_a ? 'ink' : 'light' %>">
+                  <div class="code-block <%= is_lm ? 'ink' : 'light' %>">
+                    <span class="code-pill <%= is_lm ? 'ink' : 'light' %>">
                       <i class="fas fa-shield"></i><%= @client_code %>
                     </span>
-                    <span class="code-hint <%= is_today_a ? 'ink' : 'light' %>">
+                    <span class="code-hint <%= is_lm ? 'ink' : 'light' %>">
                       Passe esse código pro lava-rápido na chegada
                     </span>
                   </div>
@@ -527,7 +529,7 @@ end
               </div>
             </div>
 
-            <% if is_today_a %>
+            <% if is_lm && is_today %>
               <div class="card-actions">
                 <% if appt.car_wash.try(:address).present? %>
                   <% map_q = ERB::Util.url_encode(appt.car_wash.address) %>
