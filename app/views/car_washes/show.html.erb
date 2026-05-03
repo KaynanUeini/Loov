@@ -6,341 +6,429 @@ avg_rating       = reviews.any? ? reviews.average(:rating).to_f.round(1) : nil
 review_count     = reviews.count
 counts_by_star   = (1..5).map { |s| [s, reviews.where(rating: s).count] }.to_h
 today_dow        = Date.current.wday
-is_open          = @car_wash.operating_hours.exists?(day_of_week: today_dow)
 opens_today      = @car_wash.operating_hours.find_by(day_of_week: today_dow)
-categories       = @car_wash.services.where.not(category: [nil, '']).pluck(:category).uniq
+now_sp           = Time.current.in_time_zone("America/Sao_Paulo")
+is_open_now      = opens_today.present? &&
+                   now_sp.seconds_since_midnight >= opens_today.opens_at.seconds_since_midnight &&
+                   now_sp.seconds_since_midnight < opens_today.closes_at.seconds_since_midnight &&
+                   !@car_wash.closed_on?(now_sp.to_date)
+min_price        = @car_wash.services.minimum(:price)
 is_client        = user_signed_in? && current_user.client?
 is_owner_manage  = user_signed_in? && current_user.owner? && @car_wash.user == current_user
+
+# Categoria → ícone Font Awesome + paleta (espelha CATEGORY_MAP do app)
+def cat_meta(category, idx)
+  key = category.to_s.downcase.strip
+  table = {
+    'lavagem'                    => { icon: 'fa-droplet',       bg: '#d1e1ed', fg: '#2a5f8a' },
+    'polimento'                  => { icon: 'fa-feather',       bg: '#f7e4a8', fg: '#7a5a10' },
+    'higienização'               => { icon: 'fa-wind',          bg: '#d6ecde', fg: '#2a6840' },
+    'higienizacao'               => { icon: 'fa-wind',          bg: '#d6ecde', fg: '#2a6840' },
+    'cristalização'              => { icon: 'fa-gem',           bg: '#e0e0f5', fg: '#3d4180' },
+    'cristalizacao'              => { icon: 'fa-gem',           bg: '#e0e0f5', fg: '#3d4180' },
+    'vitrificação'               => { icon: 'fa-shield',        bg: '#cde7e8', fg: '#1f5b66' },
+    'vitrificacao'               => { icon: 'fa-shield',        bg: '#cde7e8', fg: '#1f5b66' },
+    'enceramento'                => { icon: 'fa-circle',        bg: '#f0d9c0', fg: '#7a4818' },
+    'hidratação de couro'        => { icon: 'fa-layer-group',   bg: '#e8d4b8', fg: '#6b4818' },
+    'hidratacao de couro'        => { icon: 'fa-layer-group',   bg: '#e8d4b8', fg: '#6b4818' },
+    'hidratação couro'           => { icon: 'fa-layer-group',   bg: '#e8d4b8', fg: '#6b4818' },
+    'hidratacao couro'           => { icon: 'fa-layer-group',   bg: '#e8d4b8', fg: '#6b4818' },
+    'limpeza de motor'           => { icon: 'fa-microchip',     bg: '#dde0e3', fg: '#3a4148' },
+    'motor'                      => { icon: 'fa-microchip',     bg: '#dde0e3', fg: '#3a4148' },
+    'revitalização de plásticos' => { icon: 'fa-arrows-rotate', bg: '#e8d4ee', fg: '#5a2778' },
+    'revitalizacao de plasticos' => { icon: 'fa-arrows-rotate', bg: '#e8d4ee', fg: '#5a2778' },
+    'plásticos'                  => { icon: 'fa-arrows-rotate', bg: '#e8d4ee', fg: '#5a2778' },
+    'plasticos'                  => { icon: 'fa-arrows-rotate', bg: '#e8d4ee', fg: '#5a2778' },
+    'polimento de faróis'        => { icon: 'fa-sun',           bg: '#fbe2c0', fg: '#7a4814' },
+    'polimento de farois'        => { icon: 'fa-sun',           bg: '#fbe2c0', fg: '#7a4814' },
+    'faróis'                     => { icon: 'fa-sun',           bg: '#fbe2c0', fg: '#7a4814' },
+    'farois'                     => { icon: 'fa-sun',           bg: '#fbe2c0', fg: '#7a4814' },
+    'impermeabilização'          => { icon: 'fa-umbrella',      bg: '#cce4f5', fg: '#1f5078' },
+    'impermeabilizacao'          => { icon: 'fa-umbrella',      bg: '#cce4f5', fg: '#1f5078' },
+    'oxi-sanitização'            => { icon: 'fa-filter',        bg: '#d4ebd9', fg: '#286b48' },
+    'oxi-sanitizacao'            => { icon: 'fa-filter',        bg: '#d4ebd9', fg: '#286b48' },
+    'oxi'                        => { icon: 'fa-filter',        bg: '#d4ebd9', fg: '#286b48' },
+    'outros'                     => { icon: 'fa-th-large',      bg: '#f5d3c3', fg: '#9c4930' },
+  }
+  fallback = [
+    { icon: 'fa-droplet',       bg: '#d1e1ed', fg: '#2a5f8a' },
+    { icon: 'fa-feather',       bg: '#f7e4a8', fg: '#7a5a10' },
+    { icon: 'fa-sun',           bg: '#fbe2c0', fg: '#7a4814' },
+    { icon: 'fa-star',          bg: '#d6ecde', fg: '#2a6840' },
+    { icon: 'fa-gem',           bg: '#e0e0f5', fg: '#3d4180' },
+    { icon: 'fa-shield',        bg: '#cde7e8', fg: '#1f5b66' },
+    { icon: 'fa-circle',        bg: '#f0d9c0', fg: '#7a4818' },
+    { icon: 'fa-wind',          bg: '#d4ebd9', fg: '#286b48' },
+    { icon: 'fa-layer-group',   bg: '#e8d4b8', fg: '#6b4818' },
+    { icon: 'fa-umbrella',      bg: '#cce4f5', fg: '#1f5078' },
+    { icon: 'fa-arrows-rotate', bg: '#e8d4ee', fg: '#5a2778' },
+    { icon: 'fa-microchip',     bg: '#dde0e3', fg: '#3a4148' },
+  ]
+  table[key] || fallback[idx % fallback.size]
+end
+
+def today_hours_short(opens_today)
+  return '—' unless opens_today&.opens_at && opens_today&.closes_at
+  fmt = ->(t) {
+    h = t.hour
+    m = t.min
+    m == 0 ? h.to_s : sprintf('%d:%02d', h, m)
+  }
+  "#{fmt.call(opens_today.opens_at)}–#{fmt.call(opens_today.closes_at)}h"
+end
 %>
 
 <style>
-  .cw-show-hero-row {
-    display: flex; align-items: flex-end; justify-content: space-between;
-    gap: 24px; margin-bottom: 32px; flex-wrap: wrap;
+  /* ── full-bleed: a página neutraliza o padding do main pra hero correr até as bordas ── */
+  body { background: var(--cream); }
+  .cw-page { margin-top: -60px; padding-top: 60px; }
+
+  /* ── HERO ───────────────────────────────────────────── */
+  .cw-hero {
+    height: 280px;
+    background: #e6ded0;
+    position: relative;
   }
-  .cw-show-avatar {
-    width: 56px; height: 56px; border-radius: 14px;
-    background: var(--coral-50);
-    border: 1px solid var(--coral-100);
+  .cw-hero-placeholder {
+    position: absolute; inset: 0;
     display: flex; align-items: center; justify-content: center;
-    font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700;
-    color: var(--coral-700); margin-bottom: 14px;
+    color: var(--stone); font-size: 56px;
   }
-  .cw-show-meta { display: flex; flex-direction: column; gap: 6px; }
-  .cw-show-meta-item {
-    display: flex; align-items: center; gap: 8px;
-    font-size: 14px; color: var(--graphite);
+  .cw-hero-overlay {
+    position: absolute; top: 70px; left: 16px; right: 16px;
+    display: flex; justify-content: space-between; align-items: center;
+    z-index: 5;
   }
-  .cw-show-meta-item i {
-    color: var(--coral-500); font-size: 11px;
-    width: 14px; flex-shrink: 0;
-  }
-  .cw-show-meta-item strong { color: var(--ink); font-weight: 600; }
-
-  .cw-show-divider { height: 1px; background: var(--stone); margin-bottom: 32px; }
-
-  .cw-show-layout {
-    display: grid; grid-template-columns: 1fr 380px;
-    gap: 28px; align-items: start;
-  }
-  .cw-show-left { display: flex; flex-direction: column; gap: 22px; }
-
-  #cart-pill {
-    position: fixed; top: 78px; right: 24px; z-index: 200;
-    display: none; align-items: center; gap: 10px;
-    background: var(--coral-500); color: var(--cream);
-    border-radius: 100px; padding: 7px 16px 7px 8px;
-    font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600;
-    box-shadow: 0 8px 22px rgba(220,120,82,0.32);
+  .glass-btn {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid rgba(255,255,255,0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink); font-size: 16px;
+    text-decoration: none;
+    transition: transform .15s, box-shadow .15s;
+    box-shadow: 0 6px 16px rgba(40,35,28,0.12);
     cursor: pointer;
-    animation: cwPillIn .3s cubic-bezier(.16,1,.3,1) forwards;
   }
-  #cart-pill.visible { display: flex; }
-  #cart-pill-icon {
-    width: 26px; height: 26px; border-radius: 50%;
-    background: rgba(255,255,255,0.18);
-    display: flex; align-items: center; justify-content: center; font-size: 11px;
+  .glass-btn:hover { transform: scale(1.06); color: var(--coral-700); }
+  .glass-btn.fav-active {
+    background: var(--coral-500); border-color: var(--coral-500); color: var(--cream);
   }
-  @keyframes cwPillIn { from { opacity: 0; transform: translateY(-8px) scale(.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  .glass-btn.fav-active:hover { color: var(--cream); }
 
-  .cat-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
-  .cat-tab {
-    padding: 7px 14px; border-radius: 100px;
-    font-family: 'Inter', sans-serif;
-    font-size: 12.5px; font-weight: 500;
-    border: 1px solid var(--stone); background: var(--paper);
-    color: var(--graphite); cursor: pointer;
-    transition: all .15s ease;
+  /* ── STATS CARD overlapping hero ───────────────────── */
+  .cw-stats-wrap {
+    max-width: 760px;
+    margin: -40px auto 0;
+    padding: 0 16px;
+    position: relative; z-index: 10;
   }
-  .cat-tab:hover { border-color: var(--coral-300); color: var(--coral-700); }
-  .cat-tab.active { background: var(--coral-500); color: var(--cream); border-color: var(--coral-500); }
-
-  .services-grid { display: flex; flex-direction: column; gap: 10px; }
-  .svc-card {
-    display: flex; align-items: center;
-    padding: 18px 20px;
-    background: var(--paper); border: 1px solid var(--stone);
-    border-radius: 16px; cursor: pointer;
-    transition: all .18s ease;
-    gap: 16px; position: relative; overflow: hidden;
+  .cw-stats-card {
+    background: var(--paper);
+    border: 1px solid var(--stone);
+    border-radius: 22px;
+    padding: 22px 24px;
+    box-shadow: 0 12px 32px rgba(40,35,28,0.07);
   }
-  .svc-card::before {
-    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
-    width: 3px; background: var(--coral-500);
-    transform: scaleY(0); transform-origin: bottom;
-    transition: transform .25s cubic-bezier(.16,1,.3,1);
-  }
-  .svc-card:hover { border-color: var(--coral-300); background: var(--sand); }
-  .svc-card:hover::before { transform: scaleY(1); }
-  .svc-card.selected { border-color: var(--coral-500); background: var(--coral-50); }
-  .svc-card.selected::before { transform: scaleY(1); }
-
-  .svc-card-left { flex: 1; min-width: 0; }
-  .svc-card-name {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 16px; font-weight: 700;
-    color: var(--ink); margin-bottom: 4px;
-    letter-spacing: -0.2px;
-  }
-  .svc-card-desc { font-size: 13px; color: var(--graphite); line-height: 1.45; }
-  .svc-card-tags { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
-  .svc-card-tag {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
-    color: var(--coral-700);
-    background: var(--coral-50);
-    border: 1px solid var(--coral-100);
-    border-radius: 100px; padding: 3px 8px;
-    text-transform: uppercase;
-  }
-  .svc-card-right { text-align: right; flex-shrink: 0; }
-  .svc-card-price {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 22px; font-weight: 700;
-    color: var(--coral-500); line-height: 1; letter-spacing: -0.4px;
-  }
-  .svc-card-duration {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10.5px; letter-spacing: 1.2px;
-    color: var(--ash); margin-top: 4px; text-transform: uppercase;
-  }
-  .svc-card-select {
-    width: 34px; height: 34px; border-radius: 50%;
-    border: 1.5px solid var(--stone); background: var(--paper);
-    display: flex; align-items: center; justify-content: center;
-    color: var(--ash); font-size: 12px;
-    flex-shrink: 0; transition: all .18s ease;
-  }
-  .svc-card:hover .svc-card-select { border-color: var(--coral-300); color: var(--coral-700); }
-  .svc-card.selected .svc-card-select { background: var(--coral-500); border-color: var(--coral-500); color: var(--cream); }
-
-  .cw-panel {
-    background: var(--paper); border: 1px solid var(--stone);
-    border-radius: 18px; overflow: hidden;
-  }
-  .cw-panel-header {
-    padding: 16px 20px; border-bottom: 1px solid var(--stone);
-    display: flex; align-items: center; gap: 8px;
-    flex-wrap: wrap;
-  }
-  .cw-panel-title {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 16px; font-weight: 700;
-    color: var(--ink); letter-spacing: -0.2px;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .cw-panel-title i { color: var(--coral-500); font-size: 13px; }
-
-  .hours-list { padding: 6px 20px; }
-  .hour-item {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 0; border-bottom: 1px solid var(--stone);
-  }
-  .hour-item:last-child { border-bottom: none; }
-  .hour-day { font-size: 14px; color: var(--ink); font-weight: 500; }
-  .hour-time {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12.5px; color: var(--graphite);
-  }
-
-  .reviews-summary {
-    display: flex; align-items: center; gap: 18px;
-    margin-left: auto;
-  }
-  .reviews-avg {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 36px; font-weight: 700;
-    color: var(--coral-500); line-height: 1; letter-spacing: -0.6px;
-  }
-  .reviews-avg-meta { display: flex; flex-direction: column; gap: 3px; }
-  .reviews-stars { color: var(--coral-500); font-size: 12px; letter-spacing: 1px; }
-  .reviews-count {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; letter-spacing: 1.2px;
-    color: var(--ash); text-transform: uppercase;
-  }
-  .rating-bars { display: flex; flex-direction: column; gap: 4px; min-width: 140px; }
-  .rating-bar-row {
-    display: flex; align-items: center; gap: 7px;
-    font-size: 11px; color: var(--graphite);
-  }
-  .rating-bar-track {
-    flex: 1; height: 4px;
-    background: var(--sand); border-radius: 99px; overflow: hidden;
-  }
-  .rating-bar-fill { height: 100%; background: var(--coral-500); border-radius: 99px; }
-  .rating-bar-ct { min-width: 14px; text-align: right; color: var(--ash); }
-
-  .reviews-body { padding: 18px 20px; }
-  .reviews-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  .cw-stats-top {
+    display: flex; justify-content: space-between; align-items: flex-start;
     gap: 14px;
   }
-  .review-card {
-    background: var(--sand); border: 1px solid var(--stone);
-    border-radius: 14px; padding: 16px;
-    display: flex; flex-direction: column; gap: 10px;
-  }
-  .review-top { display: flex; align-items: center; justify-content: space-between; }
-  .review-user { display: flex; align-items: center; gap: 10px; }
-  .review-avatar {
-    width: 32px; height: 32px; border-radius: 50%;
-    background: var(--coral-50);
-    border: 1px solid var(--coral-100);
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Space Grotesk', sans-serif; font-size: 13px; font-weight: 700;
-    color: var(--coral-700); flex-shrink: 0;
-  }
-  .review-user-name { font-size: 13.5px; font-weight: 600; color: var(--ink); }
-  .review-date { font-size: 11px; color: var(--ash); }
-  .review-stars { display: flex; gap: 2px; }
-  .review-star { font-size: 11.5px; color: var(--stone); }
-  .review-star.filled { color: var(--coral-500); }
-  .review-tags { display: flex; flex-wrap: wrap; gap: 5px; }
-  .review-tag {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
-    color: var(--coral-700);
-    background: var(--coral-50);
-    border: 1px solid var(--coral-100);
-    border-radius: 100px; padding: 3px 8px; text-transform: uppercase;
-  }
-  .review-comment {
-    font-size: 13.5px; color: var(--graphite);
-    line-height: 1.55; font-style: italic;
-  }
-  .review-comment::before { content: '"'; color: var(--coral-500); font-style: normal; }
-  .review-comment::after  { content: '"'; color: var(--coral-500); font-style: normal; }
-
-  .reviews-empty {
-    text-align: center; padding: 28px 0;
-    display: flex; flex-direction: column; align-items: center; gap: 10px;
-  }
-  .reviews-empty-icon {
-    width: 46px; height: 46px; border-radius: 14px;
-    background: var(--sand); border: 1px solid var(--stone);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px; color: var(--ash);
-  }
-  .reviews-empty-title {
+  .cw-stats-shop {
     font-family: 'Space Grotesk', sans-serif;
-    font-size: 16px; font-weight: 700; color: var(--ink);
+    font-size: 22px; font-weight: 700;
+    color: var(--ink); letter-spacing: -0.5px;
+    margin: 0;
   }
-  .reviews-empty-sub { font-size: 12.5px; color: var(--graphite); }
+  .cw-stats-hood {
+    font-size: 13px; color: var(--graphite);
+    margin-top: 4px;
+  }
+  .cw-status-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 6px 12px; border-radius: 100px;
+    font-family: 'Inter', sans-serif;
+    font-size: 11.5px; font-weight: 600;
+    flex-shrink: 0; white-space: nowrap;
+  }
+  .cw-status-badge.is-open    { background: #d1ebd6; color: #2d6b42; }
+  .cw-status-badge.is-closed  { background: var(--sand); color: var(--graphite); border: 1px solid var(--stone); }
+  .cw-status-badge i { font-size: 11px; }
 
-  .booking-panel {
-    position: sticky; top: 78px;
-    background: var(--paper); border: 1px solid var(--stone);
-    border-radius: 22px; overflow: hidden;
-    box-shadow: 0 8px 22px rgba(40,35,28,0.05);
+  .cw-stats-row {
+    display: flex; gap: 16px;
+    margin-top: 16px; padding-top: 16px;
+    border-top: 1px solid var(--stone);
   }
-  .booking-panel-header {
-    padding: 18px 22px 14px; border-bottom: 1px solid var(--stone);
-    display: flex; align-items: center; gap: 8px;
+  .cw-stat-col { flex: 1; text-align: center; }
+  .cw-stat-sep { width: 1px; background: var(--stone); }
+  .cw-stat-top {
+    display: flex; align-items: center; justify-content: center;
+    gap: 5px;
   }
-  .booking-panel-icon { color: var(--coral-500); font-size: 14px; }
-  .booking-panel-title {
+  .cw-stat-top i { font-size: 13px; }
+  .cw-stat-value {
     font-family: 'Space Grotesk', sans-serif;
-    font-size: 18px; font-weight: 700;
+    font-size: 15.5px; font-weight: 600;
     color: var(--ink); letter-spacing: -0.2px;
   }
-  .booking-panel-body { padding: 20px 22px; }
-
-  .booking-empty {
-    text-align: center; padding: 36px 12px;
-    display: flex; flex-direction: column; align-items: center; gap: 12px;
+  .cw-stat-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px; letter-spacing: 0.6px;
+    color: var(--ash); text-transform: uppercase;
+    margin-top: 2px;
   }
-  .booking-empty-icon {
-    width: 54px; height: 54px; border-radius: 16px;
-    background: var(--sand); border: 2px dashed var(--stone);
+
+  /* ── TABS ──────────────────────────────────────────── */
+  .cw-tabs-wrap { max-width: 760px; margin: 0 auto; padding: 22px 16px 14px; }
+  .cw-tabs-bar {
+    display: flex; gap: 4px;
+  }
+  .cw-tab-btn {
+    flex: 1; height: 42px;
+    border-radius: 100px;
+    background: transparent; border: none;
+    color: var(--graphite);
+    font-family: 'Inter', sans-serif;
+    font-size: 13.5px; font-weight: 600;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+  }
+  .cw-tab-btn:hover { background: var(--sand); color: var(--ink); }
+  .cw-tab-btn.active { background: var(--ink); color: var(--cream); }
+
+  .cw-content {
+    max-width: 760px; margin: 0 auto;
+    padding: 4px 16px 32px;
+  }
+
+  /* ── SERVICE CARDS (app style) ─────────────────────── */
+  .svc-list { display: flex; flex-direction: column; gap: 10px; }
+  .svc-card {
+    display: flex; align-items: center; gap: 14px;
+    padding: 16px;
+    background: var(--paper);
+    border: 1px solid var(--stone);
+    border-radius: 18px;
+    cursor: pointer;
+    transition: all .18s ease;
+    position: relative;
+  }
+  .svc-card:hover { border-color: var(--coral-300); transform: translateY(-1px); }
+  .svc-card.selected {
+    border-color: var(--coral-500);
+    background: var(--coral-50);
+    box-shadow: 0 0 0 3px rgba(220,120,82,0.08);
+  }
+  .svc-icon-box {
+    width: 52px; height: 52px;
+    border-radius: 14px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 18px; color: var(--ash);
+    flex-shrink: 0;
+    font-size: 22px;
+  }
+  .svc-info { flex: 1; min-width: 0; }
+  .svc-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 15.5px; font-weight: 600;
+    color: var(--ink); letter-spacing: -0.2px;
+    margin-bottom: 2px;
+  }
+  .svc-desc {
+    font-size: 12.5px; color: var(--graphite);
+    margin-bottom: 4px;
+    overflow: hidden; text-overflow: ellipsis;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
+  .svc-duration {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: var(--ash);
+    letter-spacing: 0.5px;
+  }
+  .svc-price {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 22px; font-weight: 700;
+    color: var(--ink); letter-spacing: -0.5px;
+    flex-shrink: 0;
+  }
+  .svc-card.selected .svc-price { color: var(--coral-700); }
+
+  .svc-empty {
+    padding: 40px 16px; text-align: center;
+    color: var(--graphite); font-size: 14px;
+  }
+
+  /* ── REVIEWS ───────────────────────────────────────── */
+  .reviews-empty {
+    padding: 56px 24px; text-align: center;
+    color: var(--ash);
+  }
+  .reviews-empty i { font-size: 28px; margin-bottom: 12px; display: block; }
+
+  .review-card {
+    background: var(--paper);
+    border: 1px solid var(--stone);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 10px;
+  }
+  .review-header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 8px;
+  }
+  .review-avatar {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--coral-50);
+    border: 1px solid var(--coral-100);
+    color: var(--coral-700);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px; font-weight: 600;
+    flex-shrink: 0;
+  }
+  .review-author {
+    color: var(--ink); font-size: 13.5px; font-weight: 600;
+  }
+  .review-date {
+    color: var(--ash); font-size: 10.5px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.4px;
+    margin-top: 1px;
+  }
+  .review-stars {
+    display: flex; gap: 2px;
+    flex-shrink: 0;
+  }
+  .review-stars i {
+    font-size: 11px;
+  }
+  .review-comment {
+    color: var(--graphite); font-size: 13.5px;
+    line-height: 1.5;
+  }
+  .review-tags {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-top: 10px;
+  }
+  .review-tag {
+    background: var(--sand);
+    border-radius: 100px;
+    padding: 4px 10px;
+    color: var(--graphite);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 0.5px;
+  }
+
+  /* ── ABOUT ─────────────────────────────────────────── */
+  .info-card {
+    background: var(--paper);
+    border: 1px solid var(--stone);
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 12px;
+  }
+  .info-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 1.2px;
+    color: var(--ash); text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .info-body {
+    color: var(--ink); font-size: 14px; line-height: 24px;
+  }
+  .hours-row {
+    display: flex; justify-content: space-between;
+    padding: 5px 0;
+  }
+  .hours-row.today {
+    color: var(--coral-700); font-weight: 600;
+  }
+  .hours-row .day { font-size: 13.5px; color: var(--graphite); }
+  .hours-row.today .day { color: var(--coral-700); }
+  .hours-row .time { font-size: 13.5px; color: var(--ink); font-weight: 500; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.4px; }
+  .hours-row.today .time { color: var(--coral-700); }
+
+  /* ── BOOKING PANEL (preserva todos os IDs/JS) ───────── */
+  .booking-section {
+    max-width: 760px; margin: 0 auto;
+    padding: 24px 16px 96px;
+  }
+  .booking-panel {
+    background: var(--paper);
+    border: 1px solid var(--stone);
+    border-radius: 22px;
+    overflow: hidden;
+  }
+  .booking-header {
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--stone);
+    display: flex; align-items: center; gap: 10px;
+    background: var(--cream);
+  }
+  .booking-header i { color: var(--coral-500); font-size: 14px; }
+  .booking-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 16px; font-weight: 700;
+    color: var(--ink); letter-spacing: -0.2px;
+  }
+  .booking-body { padding: 22px; }
+
+  .booking-empty { text-align: center; padding: 28px 12px; }
+  .booking-empty-icon {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--coral-50); border: 1px solid var(--coral-100);
+    color: var(--coral-700);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 14px;
+    font-size: 22px;
   }
   .booking-empty-title {
     font-family: 'Space Grotesk', sans-serif;
-    font-size: 16px; font-weight: 700; color: var(--ink);
-  }
-  .booking-empty-sub {
-    font-size: 13px; color: var(--graphite);
-    line-height: 1.5; max-width: 220px;
-  }
-
-  .booking-svc-row {
-    display: flex; align-items: flex-start; justify-content: space-between;
-    gap: 12px; padding: 14px;
-    background: var(--coral-50);
-    border: 1px solid var(--coral-100);
-    border-radius: 14px; margin-bottom: 18px;
-  }
-  .booking-svc-name {
-    font-family: 'Space Grotesk', sans-serif;
     font-size: 16px; font-weight: 700;
-    color: var(--ink); margin-bottom: 3px;
+    color: var(--ink); margin-bottom: 6px;
     letter-spacing: -0.2px;
   }
-  .booking-svc-dur {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; letter-spacing: 1.2px;
-    color: var(--graphite); text-transform: uppercase;
+  .booking-empty-sub { font-size: 13px; color: var(--graphite); line-height: 1.5; }
+
+  .booking-svc-row {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 14px 16px; background: var(--coral-50);
+    border: 1px solid var(--coral-100); border-radius: 14px;
+    margin-bottom: 18px;
   }
-  .booking-svc-price {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 22px; font-weight: 700;
-    color: var(--coral-500); letter-spacing: -0.4px; flex-shrink: 0; line-height: 1;
-  }
+  .booking-svc-name { font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 600; color: var(--ink); }
+  .booking-svc-dur  { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--coral-700); margin-top: 3px; }
+  .booking-svc-price { font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; color: var(--coral-700); }
 
   .booking-field { margin-bottom: 16px; }
   .booking-label {
+    display: block;
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px; font-weight: 600; letter-spacing: 1.4px;
-    text-transform: uppercase; color: var(--graphite);
-    margin-bottom: 7px; display: block;
+    color: var(--graphite); text-transform: uppercase;
+    margin-bottom: 8px;
   }
-
-  .booking-input,
-  .flatpickr-input.form-control.input { display: none; }
-  .flatpickr-input.flatpickr-mobile { display: none; }
-
   #bk-date-alt {
-    width: 100%; background: var(--paper) !important;
-    border: 1px solid var(--stone) !important;
-    border-radius: 12px !important;
-    padding: 12px 16px !important;
-    font-family: 'Inter', sans-serif !important; font-size: 14px !important;
-    color: var(--ink) !important; outline: none;
-    transition: border-color .15s, box-shadow .15s;
-    appearance: none; -webkit-appearance: none;
-    cursor: pointer;
+    width: 100%;
+    background: var(--cream);
+    border: 1px solid var(--stone);
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px; color: var(--ink);
+    outline: none; cursor: pointer;
+    transition: border-color .15s;
   }
-  #bk-date-alt:focus { border-color: var(--coral-500) !important; box-shadow: 0 0 0 3px rgba(220,120,82,0.08) !important; }
-  #bk-date-alt::placeholder { color: var(--ash) !important; }
+  #bk-date-alt:focus { border-color: var(--coral-500); }
 
   .time-grid {
-    display: grid; grid-template-columns: repeat(4, 1fr);
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(74px, 1fr));
     gap: 6px; margin-bottom: 18px;
   }
   .time-slot {
-    padding: 9px 4px; border-radius: 10px;
+    padding: 10px 4px; border-radius: 10px;
     border: 1px solid var(--stone); background: var(--paper);
     font-family: 'Inter', sans-serif; font-size: 13px;
     color: var(--graphite); cursor: pointer;
@@ -353,16 +441,11 @@ is_owner_manage  = user_signed_in? && current_user.owner? && @car_wash.user == c
     background: var(--coral-500); border-color: var(--coral-500);
     color: var(--cream); font-weight: 600;
   }
-
   .time-slot.disponivel-only {
-    background: transparent;
-    border: 1px dashed var(--coral-100);
-    color: var(--ash);
-    cursor: not-allowed;
-    font-size: 11.5px;
+    background: transparent; border: 1px dashed var(--coral-100);
+    color: var(--ash); cursor: not-allowed; font-size: 11.5px;
     display: flex; flex-direction: column; align-items: center;
-    gap: 2px;
-    padding: 7px 2px;
+    gap: 2px; padding: 7px 2px;
   }
   .disp-tag-mini {
     display: flex; align-items: center; gap: 2px;
@@ -371,12 +454,10 @@ is_owner_manage  = user_signed_in? && current_user.owner? && @car_wash.user == c
     color: var(--coral-500); font-weight: 700;
     text-transform: uppercase;
   }
-
   .disp-lock-banner {
     display: none;
     align-items: flex-start; gap: 10px;
-    background: var(--coral-50);
-    border: 1px solid var(--coral-100);
+    background: var(--coral-50); border: 1px solid var(--coral-100);
     border-radius: 12px; padding: 10px 14px;
     font-size: 12.5px; color: var(--graphite);
     line-height: 1.5; margin-bottom: 12px;
@@ -387,30 +468,30 @@ is_owner_manage  = user_signed_in? && current_user.owner? && @car_wash.user == c
 
   .booking-summary {
     border-top: 1px solid var(--stone);
-    padding-top: 14px; margin-top: 14px;
-    display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;
+    padding-top: 14px; margin-top: 4px;
+    display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;
   }
-  .booking-summary-row {
+  .summary-row {
     display: flex; justify-content: space-between; align-items: center;
     font-size: 13px;
   }
-  .booking-summary-label {
+  .summary-label {
     font-family: 'JetBrains Mono', monospace;
     font-size: 10.5px; letter-spacing: 1.2px;
     color: var(--ash); text-transform: uppercase;
   }
-  .booking-summary-val { color: var(--ink); font-weight: 500; }
-  .booking-total-row {
+  .summary-val { color: var(--ink); font-weight: 500; }
+  .summary-total-row {
     display: flex; justify-content: space-between; align-items: flex-end;
   }
-  .booking-total-label {
+  .summary-total-label {
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px; letter-spacing: 1.4px;
     color: var(--graphite); text-transform: uppercase;
   }
-  .booking-total-val {
+  .summary-total-val {
     font-family: 'Space Grotesk', sans-serif;
-    font-size: 28px; font-weight: 700;
+    font-size: 32px; font-weight: 700;
     color: var(--coral-500); line-height: 1; letter-spacing: -0.5px;
   }
 
@@ -418,7 +499,7 @@ is_owner_manage  = user_signed_in? && current_user.owner? && @car_wash.user == c
     width: 100%;
     background: var(--coral-500); color: var(--cream);
     border: none; border-radius: 100px;
-    padding: 14px;
+    padding: 15px;
     font-family: 'JetBrains Mono', monospace;
     font-size: 12px; font-weight: 600; letter-spacing: 1.4px;
     text-transform: uppercase;
@@ -441,13 +522,9 @@ is_owner_manage  = user_signed_in? && current_user.owner? && @car_wash.user == c
   }
   .booking-note i { color: var(--coral-500); font-size: 11px; }
 
-  .booking-nudge { text-align: center; padding: 24px 12px; }
-  .booking-nudge-text {
-    font-size: 14px; color: var(--graphite);
-    margin-bottom: 16px; line-height: 1.55;
-  }
-  .booking-nudge-text strong { color: var(--ink); }
+  .booking-nudge { text-align: center; padding: 22px 12px; }
 
+  /* Flatpickr theming Loov */
   .flatpickr-calendar { background: var(--paper) !important; border: 1px solid var(--stone) !important; border-radius: 16px !important; box-shadow: 0 16px 40px rgba(40,35,28,0.12) !important; font-family: 'Inter', sans-serif !important; }
   .flatpickr-day { color: var(--graphite) !important; border-radius: 10px !important; }
   .flatpickr-day.selected, .flatpickr-day.selected:hover { background: var(--coral-500) !important; border-color: var(--coral-500) !important; color: var(--cream) !important; }
@@ -463,253 +540,214 @@ is_owner_manage  = user_signed_in? && current_user.owner? && @car_wash.user == c
   .flatpickr-day.day-no-hours { color: var(--stone) !important; pointer-events: none !important; cursor: not-allowed !important; }
   .flatpickr-day.day-closed { color: rgba(200,80,80,0.5) !important; background: rgba(200,80,80,0.06) !important; border-color: rgba(200,80,80,0.18) !important; text-decoration: line-through !important; pointer-events: none !important; cursor: not-allowed !important; }
 
-  .mobile-cta {
-    display: none;
-    position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
-    padding: 12px 18px;
-    background: rgba(254,254,253,0.95);
-    backdrop-filter: blur(20px);
-    border-top: 1px solid var(--stone);
-  }
-  .mobile-cta-inner {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 14px; max-width: 640px; margin: 0 auto;
-  }
-  .mobile-cta-info { display: flex; flex-direction: column; gap: 2px; }
-  .mobile-cta-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; letter-spacing: 1.4px;
-    color: var(--ash); text-transform: uppercase;
-  }
-  .mobile-cta-name {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 15px; font-weight: 700;
-    color: var(--ink); line-height: 1; letter-spacing: -0.2px;
-  }
-  .mobile-cta-btn {
-    display: inline-flex; align-items: center; gap: 8px;
-    background: var(--coral-500); color: var(--cream);
-    border: none; border-radius: 100px;
-    padding: 11px 22px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; font-weight: 600; letter-spacing: 1.4px;
-    text-decoration: none; text-transform: uppercase;
-    transition: background .18s;
-    white-space: nowrap; flex-shrink: 0;
-    cursor: pointer;
-  }
-  .mobile-cta-btn:hover { background: var(--coral-700); }
-
-  @media (max-width: 960px) {
-    .cw-show-layout { grid-template-columns: 1fr; }
-    .cw-show-right { display: none; }
-    .mobile-cta { display: block; }
-    .loov-page { padding-bottom: 96px; }
-    #cart-pill { display: none !important; }
-    .rating-bars { display: none; }
-    .reviews-grid { grid-template-columns: 1fr; }
-  }
-  @media (max-width: 640px) {
-    .cw-show-hero-row { flex-direction: column; align-items: flex-start; }
+  @media (max-width: 600px) {
+    .cw-hero { height: 240px; }
+    .cw-stats-card { padding: 18px 18px; }
+    .cw-stats-shop { font-size: 19px; }
+    .cw-stat-value { font-size: 13.5px; }
+    .cw-stat-label { font-size: 9px; }
+    .cw-tab-btn { font-size: 12.5px; }
   }
 </style>
 
-<% if is_client %>
-<div id="cart-pill" onclick="scrollToBooking()">
-  <div id="cart-pill-icon"><i class="fas fa-calendar-check"></i></div>
-  <span id="cart-pill-label">Agendar</span>
-</div>
-<% end %>
+<div class="cw-page">
 
-<div class="loov-page loov-page--wide">
-  <div style="margin-bottom: 24px;">
-    <%= link_to :back, class: "loov-btn-ghost loov-btn-sm" do %>
-      <i class="fas fa-arrow-left"></i> Voltar
-    <% end %>
+  <%# ── HERO ──────────────────────────────────────────── %>
+  <div class="cw-hero">
+    <div class="cw-hero-placeholder"><i class="fas fa-image"></i></div>
+    <div class="cw-hero-overlay">
+      <a href="<%= car_washes_path %>" class="glass-btn" aria-label="Voltar">
+        <i class="fas fa-arrow-left"></i>
+      </a>
+      <% if is_client %>
+        <% favorited = current_user.favorite_car_washes.exists?(car_wash_id: @car_wash.id) %>
+        <button type="button" class="glass-btn <%= 'fav-active' if favorited %>" id="fav-btn"
+                onclick="toggleFavorite(this)"
+                data-cw-id="<%= @car_wash.id %>"
+                data-favorited="<%= favorited %>"
+                aria-label="Favoritar">
+          <i class="<%= favorited ? 'fas' : 'far' %> fa-heart"></i>
+        </button>
+      <% else %>
+        <% if is_owner_manage %>
+          <a href="<%= manage_car_wash_path(@car_wash) %>" class="glass-btn" aria-label="Gerenciar">
+            <i class="fas fa-gear"></i>
+          </a>
+        <% end %>
+      <% end %>
+    </div>
   </div>
 
-  <div class="cw-show-hero-row">
-    <div>
-      <div class="loov-eyebrow"><span class="dot"></span>LAVA-RÁPIDO</div>
-      <div class="cw-show-avatar"><%= @car_wash.name.first(2).upcase %></div>
-      <h1 class="loov-h1" style="margin-bottom: 18px;"><%= @car_wash.name %></h1>
-      <div class="cw-show-meta">
-        <div class="cw-show-meta-item">
-          <i class="fas fa-location-dot"></i>
-          <span><%= @car_wash.address || "Endereço não informado" %></span>
+  <%# ── STATS CARD overlapping hero ─────────────────── %>
+  <div class="cw-stats-wrap">
+    <div class="cw-stats-card">
+      <div class="cw-stats-top">
+        <div style="flex:1; min-width:0;">
+          <h1 class="cw-stats-shop"><%= @car_wash.name %></h1>
+          <div class="cw-stats-hood">
+            <%= [@car_wash.try(:bairro), @car_wash.try(:cidade)].compact_blank.join(' · ').presence || @car_wash.address.to_s %>
+          </div>
         </div>
-        <% if avg_rating %>
-        <div class="cw-show-meta-item">
-          <i class="fas fa-star"></i>
-          <strong><%= sprintf('%.1f', avg_rating) %></strong>
-          <span>(<%= review_count %> <%= review_count == 1 ? 'avaliação' : 'avaliações' %>)</span>
-        </div>
+        <% if is_open_now %>
+          <span class="cw-status-badge is-open"><i class="fas fa-check"></i>Aberto</span>
+        <% else %>
+          <span class="cw-status-badge is-closed"><i class="fas fa-moon"></i>Fechado</span>
         <% end %>
-        <div class="cw-show-meta-item">
-          <% if is_open %>
-          <i class="fas fa-circle" style="color: var(--coral-500); font-size: 8px;"></i>
-          <strong style="color: var(--coral-700);">Aberto agora</strong>
-          <% if opens_today %><span>· até <%= opens_today.closes_at.strftime("%H:%M") %></span><% end %>
-          <% elsif opens_today %>
-          <i class="fas fa-circle" style="color: var(--ash); font-size: 8px;"></i>
-          <span>Abre às <%= opens_today.opens_at.strftime("%H:%M") %></span>
-          <% else %>
-          <i class="fas fa-circle" style="color: var(--ash); font-size: 8px;"></i>
-          <span>Fechado hoje</span>
-          <% end %>
+      </div>
+
+      <div class="cw-stats-row">
+        <div class="cw-stat-col">
+          <div class="cw-stat-top">
+            <i class="fas fa-star" style="color: var(--coral-500);"></i>
+            <span class="cw-stat-value"><%= avg_rating ? sprintf('%.1f', avg_rating) : '—' %></span>
+          </div>
+          <div class="cw-stat-label">
+            <%= review_count > 0 ? "#{review_count} #{review_count == 1 ? 'AVALIAÇÃO' : 'AVALIAÇÕES'}" : "SEM AVALIAÇÕES" %>
+          </div>
+        </div>
+        <div class="cw-stat-sep"></div>
+        <div class="cw-stat-col">
+          <div class="cw-stat-top">
+            <i class="fas fa-clock" style="color: var(--graphite);"></i>
+            <span class="cw-stat-value"><%= today_hours_short(opens_today) %></span>
+          </div>
+          <div class="cw-stat-label">HOJE</div>
+        </div>
+        <div class="cw-stat-sep"></div>
+        <div class="cw-stat-col">
+          <div class="cw-stat-top">
+            <i class="fas fa-droplet" style="color: #4b8ec0;"></i>
+            <span class="cw-stat-value">R$<%= min_price ? number_with_precision(min_price, precision: 0) : '—' %></span>
+          </div>
+          <div class="cw-stat-label">A PARTIR</div>
         </div>
       </div>
     </div>
-    <div style="display: flex; gap: 10px; flex-shrink: 0;">
-      <% if is_owner_manage %>
-      <%= link_to manage_car_wash_path(@car_wash), class: "loov-btn-secondary" do %>
-        <i class="fas fa-gear"></i> Gerenciar
-      <% end %>
-      <% end %>
+  </div>
+
+  <%# ── TABS ────────────────────────────────────────── %>
+  <div class="cw-tabs-wrap">
+    <div class="cw-tabs-bar">
+      <button class="cw-tab-btn active" data-tab="servicos">Serviços</button>
+      <button class="cw-tab-btn" data-tab="reviews">Reviews</button>
+      <button class="cw-tab-btn" data-tab="sobre">Sobre</button>
     </div>
   </div>
 
-  <div class="cw-show-divider"></div>
+  <%# ── CONTENT ─────────────────────────────────────── %>
+  <div class="cw-content">
 
-  <div class="cw-show-layout">
-    <div class="cw-show-left">
+    <%# Tab Serviços %>
+    <div class="cw-tab-content" id="tab-servicos">
       <% if @car_wash.services.any? %>
-      <div>
-        <% if categories.any? %>
-        <div class="cat-tabs">
-          <button class="cat-tab active" data-cat="all">Todos</button>
-          <% categories.each do |cat| %>
-          <button class="cat-tab" data-cat="<%= cat %>"><%= cat %></button>
-          <% end %>
-        </div>
-        <% end %>
-        <div class="services-grid" id="services-grid">
-          <% @car_wash.services.each do |service| %>
-          <div class="svc-card"
-            data-cat="<%= service.category %>"
-            data-id="<%= service.id %>"
-            data-title="<%= j service.title %>"
-            data-price="<%= service.price.to_f %>"
-            data-duration="<%= service.duration %>"
-            onclick="selectService(this)">
-            <div class="svc-card-left">
-              <div class="svc-card-name"><%= service.title %></div>
-              <% if service.description.present? %>
-              <div class="svc-card-desc"><%= service.description %></div>
-              <% end %>
-              <% if service.category.present? %>
-              <div class="svc-card-tags">
-                <span class="svc-card-tag"><%= service.category %></span>
-                <span class="svc-card-tag"><%= service.duration %> min</span>
+        <div class="svc-list" id="services-grid">
+          <% @car_wash.services.each_with_index do |service, i| %>
+            <% meta = cat_meta(service.category, i) %>
+            <div class="svc-card"
+                 data-cat="<%= service.category %>"
+                 data-id="<%= service.id %>"
+                 data-title="<%= j service.title %>"
+                 data-price="<%= service.price.to_f %>"
+                 data-duration="<%= service.duration %>"
+                 onclick="selectService(this)">
+              <div class="svc-icon-box" style="background:<%= meta[:bg] %>; color:<%= meta[:fg] %>;">
+                <i class="fas <%= meta[:icon] %>"></i>
               </div>
-              <% end %>
+              <div class="svc-info">
+                <div class="svc-name"><%= service.title %></div>
+                <% if service.description.present? %>
+                  <div class="svc-desc"><%= service.description %></div>
+                <% end %>
+                <div class="svc-duration"><%= service.duration || 30 %> min</div>
+              </div>
+              <div class="svc-price">R$<%= number_with_precision(service.price, precision: 0) %></div>
             </div>
-            <div class="svc-card-right">
-              <div class="svc-card-price">R$ <%= number_with_precision(service.price, precision: 0) %></div>
-              <div class="svc-card-duration"><%= service.duration %> min</div>
-            </div>
-            <div class="svc-card-select"><i class="fas fa-plus"></i></div>
-          </div>
           <% end %>
         </div>
-      </div>
+      <% else %>
+        <div class="svc-empty">Este lava-rápido ainda não cadastrou serviços.</div>
       <% end %>
+    </div>
 
-      <div class="cw-panel">
-        <div class="cw-panel-header">
-          <span class="cw-panel-title"><i class="fas fa-clock"></i> Horários de funcionamento</span>
-        </div>
-        <div class="hours-list">
-          <% if @car_wash.operating_hours.any? %>
-          <% @car_wash.operating_hours.order(Arel.sql("CASE day_of_week WHEN 0 THEN 7 ELSE day_of_week END")).each do |hour| %>
-          <% day_name = %w[Domingo Segunda Terça Quarta Quinta Sexta Sábado][hour.day_of_week] %>
-          <% is_today_h = hour.day_of_week == today_dow %>
-          <div class="hour-item">
-            <span class="hour-day" style="<%= is_today_h ? 'color: var(--coral-700);' : '' %>"><%= day_name %></span>
-            <span class="hour-time" style="<%= is_today_h ? 'color: var(--ink); font-weight: 600;' : '' %>"><%= hour.opens_at.strftime("%H:%M") %> – <%= hour.closes_at.strftime("%H:%M") %></span>
-          </div>
-          <% end %>
-          <% else %>
-          <p style="font-size: 13.5px; color: var(--ash); padding: 10px 0;">Horários não informados.</p>
-          <% end %>
-        </div>
-      </div>
-
-      <div class="cw-panel">
-        <div class="cw-panel-header">
-          <span class="cw-panel-title"><i class="fas fa-star"></i> Avaliações</span>
-          <% if avg_rating %>
-          <div class="reviews-summary">
-            <div>
-              <div class="reviews-avg"><%= sprintf('%.1f', avg_rating) %></div>
-              <div class="reviews-avg-meta">
-                <div class="reviews-stars"><% 5.times do |i| %><%= i < avg_rating.round ? '★' : '☆' %><% end %></div>
-                <div class="reviews-count"><%= review_count %> <%= review_count == 1 ? 'avaliação' : 'avaliações' %></div>
+    <%# Tab Reviews %>
+    <div class="cw-tab-content" id="tab-reviews" style="display:none;">
+      <% if reviews.any? %>
+        <% reviews.each do |review| %>
+          <div class="review-card">
+            <div class="review-header">
+              <div class="review-avatar"><%= (review.user&.display_name || 'C').strip[0]&.upcase || 'C' %></div>
+              <div style="flex:1; min-width:0;">
+                <div class="review-author"><%= review.user&.display_name || 'Cliente' %></div>
+                <div class="review-date"><%= review.created_at.strftime("%d/%m/%y") %></div>
+              </div>
+              <div class="review-stars">
+                <% 5.times do |n| %>
+                  <i class="fas fa-star" style="color:<%= n < review.rating ? 'var(--coral-500)' : 'var(--stone)' %>;"></i>
+                <% end %>
               </div>
             </div>
-            <div class="rating-bars">
-              <% [5,4,3,2,1].each do |star| %>
-              <% count = counts_by_star[star] || 0 %>
-              <% pct = review_count > 0 ? (count.to_f / review_count * 100).round : 0 %>
-              <div class="rating-bar-row">
-                <span><%= star %>★</span>
-                <div class="rating-bar-track"><div class="rating-bar-fill" style="width: <%= pct %>%"></div></div>
-                <span class="rating-bar-ct"><%= count %></span>
-              </div>
-              <% end %>
-            </div>
-          </div>
-          <% end %>
-        </div>
-        <div class="reviews-body">
-          <% if reviews.any? %>
-          <div class="reviews-grid">
-            <% reviews.each do |review| %>
-            <div class="review-card">
-              <div class="review-top">
-                <div class="review-user">
-                  <div class="review-avatar"><%= review.user.display_name.first.upcase %></div>
-                  <div>
-                    <div class="review-user-name"><%= review.user.display_name.split(' ').first %></div>
-                    <div class="review-date"><%= review.created_at.strftime("%d/%m/%Y") %></div>
-                  </div>
-                </div>
-                <div class="review-stars">
-                  <% 5.times do |i| %><span class="review-star <%= i < review.rating ? 'filled' : '' %>">★</span><% end %>
-                </div>
-              </div>
-              <% if review.tags_list.any? %>
-              <div class="review-tags"><% review.tags_list.each do |tag| %><span class="review-tag"><%= tag %></span><% end %></div>
-              <% end %>
-              <% if review.comment.present? %>
+            <% if review.comment.present? %>
               <div class="review-comment"><%= review.comment %></div>
-              <% end %>
-            </div>
+            <% end %>
+            <% if review.tags_list.any? %>
+              <div class="review-tags">
+                <% review.tags_list.each do |tag| %>
+                  <span class="review-tag"><%= tag %></span>
+                <% end %>
+              </div>
             <% end %>
           </div>
-          <% else %>
-          <div class="reviews-empty">
-            <div class="reviews-empty-icon"><i class="fas fa-star"></i></div>
-            <div class="reviews-empty-title">Nenhuma avaliação ainda</div>
-            <div class="reviews-empty-sub">Seja o primeiro a avaliar.</div>
-          </div>
+        <% end %>
+      <% else %>
+        <div class="reviews-empty">
+          <i class="fas fa-message"></i>
+          <div>Sem avaliações ainda</div>
+        </div>
+      <% end %>
+    </div>
+
+    <%# Tab Sobre %>
+    <div class="cw-tab-content" id="tab-sobre" style="display:none;">
+      <div class="info-card">
+        <div class="info-label">Horário</div>
+        <% if @car_wash.operating_hours.any? %>
+          <% @car_wash.operating_hours.order(Arel.sql("CASE day_of_week WHEN 0 THEN 7 ELSE day_of_week END")).each do |hour| %>
+            <% day_name = %w[Domingo Segunda Terça Quarta Quinta Sexta Sábado][hour.day_of_week] %>
+            <% is_today_h = hour.day_of_week == today_dow %>
+            <div class="hours-row <%= 'today' if is_today_h %>">
+              <span class="day"><%= day_name %></span>
+              <span class="time"><%= hour.opens_at.strftime("%H:%M") %> — <%= hour.closes_at.strftime("%H:%M") %></span>
+            </div>
           <% end %>
+        <% else %>
+          <div class="info-body">Não informado</div>
+        <% end %>
+      </div>
+      <div class="info-card">
+        <div class="info-label">Endereço</div>
+        <div class="info-body"><%= @car_wash.try(:logradouro) || @car_wash.address || '—' %></div>
+        <div class="info-body" style="color: var(--graphite); font-size: 13px;">
+          <%= [@car_wash.try(:bairro), @car_wash.try(:cidade), @car_wash.try(:uf)].compact_blank.join(' · ').presence || '' %>
         </div>
       </div>
     </div>
 
-    <div class="cw-show-right" id="booking-panel-wrap">
-      <div class="booking-panel" id="booking-panel">
-        <div class="booking-panel-header">
-          <i class="fas fa-calendar-check booking-panel-icon"></i>
-          <span class="booking-panel-title">Agendar</span>
-        </div>
-        <div class="booking-panel-body">
-          <% if is_client %>
+  </div>
+
+  <%# ── BOOKING PANEL (preserva todos os IDs/JS) ─────── %>
+  <% if @car_wash.services.any? %>
+  <div class="booking-section" id="booking-section">
+    <div class="booking-panel" id="booking-panel">
+      <div class="booking-header">
+        <i class="fas fa-calendar-check"></i>
+        <span class="booking-title">Agendar</span>
+      </div>
+      <div class="booking-body">
+        <% if is_client %>
           <div id="booking-empty" class="booking-empty">
             <div class="booking-empty-icon"><i class="fas fa-hand-pointer"></i></div>
             <div class="booking-empty-title">Selecione um serviço</div>
-            <div class="booking-empty-sub">Clique em qualquer serviço ao lado para iniciar o agendamento.</div>
+            <div class="booking-empty-sub">Toque em qualquer serviço acima para iniciar o agendamento.</div>
           </div>
 
           <div id="booking-selected" style="display: none;">
@@ -723,7 +761,7 @@ is_owner_manage  = user_signed_in? && current_user.owner? && @car_wash.user == c
 
             <div class="booking-field">
               <label class="booking-label" for="bk-date-alt">Data</label>
-              <input type="text" id="bk-date-alt" placeholder="DD/MM/AAAA" readonly />
+              <input type="text" id="bk-date-alt" placeholder="DD/MM/AAAA" readonly>
             </div>
 
             <div class="booking-field">
@@ -742,194 +780,260 @@ is_owner_manage  = user_signed_in? && current_user.owner? && @car_wash.user == c
             </div>
 
             <div class="booking-summary" id="bk-summary" style="display: none;">
-              <div class="booking-summary-row">
-                <span class="booking-summary-label">Serviço</span>
-                <span class="booking-summary-val" id="bk-sum-svc">—</span>
+              <div class="summary-row">
+                <span class="summary-label">Serviço</span>
+                <span class="summary-val" id="bk-sum-svc">—</span>
               </div>
-              <div class="booking-summary-row">
-                <span class="booking-summary-label">Data</span>
-                <span class="booking-summary-val" id="bk-sum-date">—</span>
+              <div class="summary-row">
+                <span class="summary-label">Data</span>
+                <span class="summary-val" id="bk-sum-date">—</span>
               </div>
-              <div class="booking-summary-row">
-                <span class="booking-summary-label">Horário</span>
-                <span class="booking-summary-val" id="bk-sum-time">—</span>
+              <div class="summary-row">
+                <span class="summary-label">Horário</span>
+                <span class="summary-val" id="bk-sum-time">—</span>
               </div>
-              <div style="height: 1px; background: var(--stone); margin: 4px 0;"></div>
-              <div class="booking-total-row">
-                <span class="booking-total-label">Total</span>
-                <span class="booking-total-val" id="bk-sum-price">—</span>
+              <div style="height:1px; background:var(--stone); margin:4px 0;"></div>
+              <div class="summary-total-row">
+                <span class="summary-total-label">Total</span>
+                <span class="summary-total-val" id="bk-sum-price">—</span>
               </div>
             </div>
 
             <%= form_with url: appointments_path, method: :post, local: true, id: "booking-form", data: { turbo: false } do |f| %>
-            <input type="hidden" name="appointment[car_wash_id]" value="<%= @car_wash.id %>">
-            <input type="hidden" name="appointment[service_id]"  id="bk-service-id">
-            <input type="hidden" name="appointment[date]"        id="bk-date-val">
-            <input type="hidden" name="appointment[time]"        id="bk-time-val">
-            <button type="submit" class="btn-confirm" id="btn-confirm" disabled>
-              <i class="fas fa-calendar-check"></i> Confirmar agendamento
-            </button>
+              <input type="hidden" name="appointment[car_wash_id]" value="<%= @car_wash.id %>">
+              <input type="hidden" name="appointment[service_id]"  id="bk-service-id">
+              <input type="hidden" name="appointment[date]"        id="bk-date-val">
+              <input type="hidden" name="appointment[time]"        id="bk-time-val">
+              <button type="submit" class="btn-confirm" id="btn-confirm" disabled>
+                <i class="fas fa-calendar-check"></i> Confirmar agendamento
+              </button>
             <% end %>
             <p class="booking-note"><i class="fas fa-info-circle"></i> Sem cobrança antecipada. Pague no local.</p>
           </div>
-
-          <% else %>
+        <% else %>
           <div class="booking-nudge">
-            <div class="booking-empty-icon" style="margin: 0 auto 14px;"><i class="fas fa-lock"></i></div>
-            <p class="booking-nudge-text">Faça <strong>login</strong> ou <strong>crie uma conta</strong> gratuita para agendar.</p>
+            <div class="booking-empty-icon"><i class="fas fa-lock"></i></div>
+            <p style="font-size: 14px; color: var(--graphite); line-height: 1.55; margin-bottom: 16px;">
+              Faça <strong style="color: var(--ink);">login</strong> ou <strong style="color: var(--ink);">crie uma conta</strong> gratuita para agendar.
+            </p>
             <%= link_to "Entrar", new_user_session_path, class: "loov-btn-primary loov-btn-block", style: "margin-bottom: 10px;" %>
             <%= link_to "Criar conta", new_user_registration_path, class: "loov-btn-secondary loov-btn-block" %>
           </div>
-          <% end %>
-        </div>
+        <% end %>
       </div>
     </div>
   </div>
-</div>
+  <% end %>
 
-<% if is_client %>
-<div class="mobile-cta">
-  <div class="mobile-cta-inner">
-    <div class="mobile-cta-info">
-      <span class="mobile-cta-label">Agendar em</span>
-      <span class="mobile-cta-name"><%= @car_wash.name %></span>
-    </div>
-    <button type="button" class="mobile-cta-btn" onclick="scrollToBooking()">
-      <i class="fas fa-calendar-plus"></i> Agendar
-    </button>
-  </div>
 </div>
-<% end %>
 
 <script>
-  window.carWashId      = <%= @car_wash.id %>;
-  window.operatingHours = <%= @car_wash.operating_hours.map { |oh| { day_of_week: oh.day_of_week, opens_at: oh.opens_at.hour * 60 + oh.opens_at.min, closes_at: oh.closes_at.hour * 60 + oh.closes_at.min } }.to_json.html_safe %>;
+  window.carWashId       = <%= @car_wash.id %>;
+  window.operatingHours  = <%= @car_wash.operating_hours.map { |oh| { day_of_week: oh.day_of_week, opens_at: oh.opens_at.hour * 60 + oh.opens_at.min, closes_at: oh.closes_at.hour * 60 + oh.closes_at.min } }.to_json.html_safe %>;
   window.capacityPerSlot = <%= @car_wash.capacity_per_slot %>;
-  window.operatingDays  = <%= @car_wash.operating_hours.pluck(:day_of_week).to_json.html_safe %>;
-  window.closureDates   = <%= @closures.flat_map { |c| (c.start_date..c.end_date).map { |d| d.strftime("%Y-%m-%d") } }.to_json.html_safe %>;
+  window.operatingDays   = <%= @car_wash.operating_hours.pluck(:day_of_week).to_json.html_safe %>;
+  window.closureDates    = <%= @closures.flat_map { |c| (c.start_date..c.end_date).map { |d| d.strftime("%Y-%m-%d") } }.to_json.html_safe %>;
 </script>
 
 <script>
 (function() {
-  document.querySelectorAll('.cat-tab').forEach(tab=>{
-    tab.addEventListener('click',()=>{
-      document.querySelectorAll('.cat-tab').forEach(t=>t.classList.remove('active'));
-      tab.classList.add('active');
-      const cat=tab.dataset.cat;
-      document.querySelectorAll('.svc-card').forEach(card=>{
-        card.style.display=(cat==='all'||card.dataset.cat===cat)?'flex':'none';
-      });
+  // ── Tabs ────────────────────────────────────────────
+  document.querySelectorAll('.cw-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const t = btn.dataset.tab;
+      document.querySelectorAll('.cw-tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.cw-tab-content').forEach(c => c.style.display = 'none');
+      document.getElementById('tab-' + t).style.display = '';
     });
   });
 
-  let selectedService=null, selectedDate=null, selectedTime=null, fpInstance=null, submitLocked=false;
-  const openDays=window.operatingDays||[], closureDates=window.closureDates||[];
+  // ── Favoritar ────────────────────────────────────────
+  window.toggleFavorite = function(btn) {
+    if (btn.dataset.busy === '1') return;
+    btn.dataset.busy = '1';
+    const cwId = btn.dataset.cwId;
+    const wasFav = btn.dataset.favorited === 'true';
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
+    const url    = wasFav ? `/client/favorites/${cwId}` : '/client/favorites';
+    const method = wasFav ? 'DELETE' : 'POST';
+    const body   = wasFav ? null : JSON.stringify({ car_wash_id: cwId });
+
+    // Optimistic
+    btn.classList.toggle('fav-active', !wasFav);
+    btn.dataset.favorited = (!wasFav).toString();
+    const icon = btn.querySelector('i');
+    if (icon) icon.className = (wasFav ? 'far' : 'fas') + ' fa-heart';
+
+    fetch(url, {
+      method,
+      headers: { 'X-CSRF-Token': csrf, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body
+    }).catch(() => {
+      // revert
+      btn.classList.toggle('fav-active', wasFav);
+      btn.dataset.favorited = wasFav.toString();
+      if (icon) icon.className = (wasFav ? 'fas' : 'far') + ' fa-heart';
+    }).finally(() => { btn.dataset.busy = '0'; });
+  };
+
+  // ── Booking flow (preservado do original) ────────────
+  let selectedService = null, selectedDate = null, selectedTime = null;
+  let fpInstance = null, submitLocked = false;
+  const openDays     = window.operatingDays || [];
+  const closureDates = window.closureDates  || [];
 
   function dateToStr(d){var y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return y+'-'+m+'-'+day;}
 
-  function updateConfirmBtn(){const btn=document.getElementById('btn-confirm');if(btn)btn.disabled=!(selectedService&&selectedDate&&selectedTime);}
-
-  function updateSummary(){
-    if(!selectedService||!selectedDate||!selectedTime){document.getElementById('bk-summary').style.display='none';return;}
-    const[y,m,d]=selectedDate.split('-');
-    document.getElementById('bk-sum-svc').textContent=selectedService.title;
-    document.getElementById('bk-sum-date').textContent=`${d}/${m}/${y}`;
-    document.getElementById('bk-sum-time').textContent=selectedTime;
-    document.getElementById('bk-sum-price').textContent='R$ '+selectedService.price.toFixed(0);
-    document.getElementById('bk-summary').style.display='flex';
+  function updateConfirmBtn(){
+    const btn = document.getElementById('btn-confirm');
+    if (btn) btn.disabled = !(selectedService && selectedDate && selectedTime);
   }
 
-  const bookingForm=document.getElementById('booking-form');
-  if(bookingForm){bookingForm.addEventListener('submit',function(e){if(submitLocked){e.preventDefault();return false;}submitLocked=true;const btn=document.getElementById('btn-confirm');if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-circle-notch fa-spin"></i> Confirmando...';}});}
+  function updateSummary(){
+    if (!selectedService || !selectedDate || !selectedTime) {
+      const s = document.getElementById('bk-summary'); if (s) s.style.display = 'none'; return;
+    }
+    const [y,m,d] = selectedDate.split('-');
+    document.getElementById('bk-sum-svc').textContent  = selectedService.title;
+    document.getElementById('bk-sum-date').textContent = `${d}/${m}/${y}`;
+    document.getElementById('bk-sum-time').textContent = selectedTime;
+    document.getElementById('bk-sum-price').textContent = 'R$ ' + selectedService.price.toFixed(0);
+    document.getElementById('bk-summary').style.display = 'flex';
+  }
 
-  window.selectService=function(card){
-    document.querySelectorAll('.svc-card').forEach(c=>{c.classList.remove('selected');const ico=c.querySelector('.svc-card-select i');if(ico)ico.className='fas fa-plus';});
+  const bookingForm = document.getElementById('booking-form');
+  if (bookingForm) {
+    bookingForm.addEventListener('submit', e => {
+      if (submitLocked) { e.preventDefault(); return false; }
+      submitLocked = true;
+      const btn = document.getElementById('btn-confirm');
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Confirmando...'; }
+    });
+  }
+
+  window.selectService = function(card) {
+    document.querySelectorAll('.svc-card').forEach(c => c.classList.remove('selected'));
     card.classList.add('selected');
-    const ico=card.querySelector('.svc-card-select i');
-    if(ico)ico.className='fas fa-check';
-    selectedService={id:card.dataset.id,title:card.dataset.title,price:parseFloat(card.dataset.price),duration:parseInt(card.dataset.duration)};
-    selectedTime=null; submitLocked=false;
-    document.getElementById('booking-empty').style.display='none';
-    document.getElementById('booking-selected').style.display='block';
-    document.getElementById('bk-svc-name').textContent=selectedService.title;
-    document.getElementById('bk-svc-dur').textContent=selectedService.duration+' min';
-    document.getElementById('bk-svc-price').textContent='R$ '+selectedService.price.toFixed(0);
-    document.getElementById('bk-service-id').value=selectedService.id;
-    document.getElementById('time-grid').innerHTML='';
-    document.getElementById('time-loading').style.display='none';
-    document.getElementById('time-empty').style.display='none';
-    document.getElementById('bk-summary').style.display='none';
-    document.getElementById('bk-time-val').value='';
-    document.getElementById('disp-lock-banner').style.display='none';
-    const pill=document.getElementById('cart-pill');
-    if(pill){document.getElementById('cart-pill-label').textContent=selectedService.title+' · R$ '+selectedService.price.toFixed(0);pill.classList.add('visible');}
-    if(!fpInstance){
-      fpInstance=flatpickr('#bk-date-alt',{
-        locale:{weekdays:{shorthand:['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'],longhand:['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado']},months:{shorthand:['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'],longhand:['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']},firstDayOfWeek:0,ordinal:()=>''},
-        minDate:'today',dateFormat:'Y-m-d',altInput:true,altFormat:'d/m/Y',disableMobile:true,
-        disable:[function(date){var dow=date.getDay();if(openDays.indexOf(dow)===-1)return true;var ds=dateToStr(date);if(closureDates.indexOf(ds)!==-1)return true;return false;}],
-        onDayCreate:function(dObj,dStr,fp,dayElem){var date=dayElem.dateObj;if(!date)return;var dow=date.getDay(),ds=dateToStr(date);if(closureDates.indexOf(ds)!==-1){dayElem.classList.add('day-closed');}else if(openDays.indexOf(dow)===-1){dayElem.classList.add('day-no-hours');}},
-        onChange:function(selectedDates,dateStr){selectedDate=dateStr;selectedTime=null;submitLocked=false;document.getElementById('bk-date-val').value=dateStr;document.getElementById('bk-time-val').value='';document.getElementById('bk-summary').style.display='none';document.getElementById('disp-lock-banner').style.display='none';fetchTimes(dateStr);updateConfirmBtn();}
+    selectedService = {
+      id: card.dataset.id,
+      title: card.dataset.title,
+      price: parseFloat(card.dataset.price),
+      duration: parseInt(card.dataset.duration)
+    };
+    selectedTime = null; submitLocked = false;
+
+    const empty = document.getElementById('booking-empty');
+    const sel   = document.getElementById('booking-selected');
+    if (empty) empty.style.display = 'none';
+    if (sel)   sel.style.display = 'block';
+
+    const nameEl  = document.getElementById('bk-svc-name');
+    const durEl   = document.getElementById('bk-svc-dur');
+    const priceEl = document.getElementById('bk-svc-price');
+    const idEl    = document.getElementById('bk-service-id');
+    if (nameEl)  nameEl.textContent  = selectedService.title;
+    if (durEl)   durEl.textContent   = selectedService.duration + ' min';
+    if (priceEl) priceEl.textContent = 'R$ ' + selectedService.price.toFixed(0);
+    if (idEl)    idEl.value          = selectedService.id;
+
+    const grid = document.getElementById('time-grid');
+    if (grid) grid.innerHTML = '';
+    const tl = document.getElementById('time-loading'); if (tl) tl.style.display = 'none';
+    const te = document.getElementById('time-empty');   if (te) te.style.display = 'none';
+    const su = document.getElementById('bk-summary');   if (su) su.style.display = 'none';
+    const tv = document.getElementById('bk-time-val');  if (tv) tv.value = '';
+    const lb = document.getElementById('disp-lock-banner'); if (lb) lb.style.display = 'none';
+
+    if (!fpInstance && typeof flatpickr === 'function') {
+      fpInstance = flatpickr('#bk-date-alt', {
+        locale: { weekdays: { shorthand: ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'], longhand: ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'] }, months: { shorthand: ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'], longhand: ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'] }, firstDayOfWeek: 0, ordinal: () => '' },
+        minDate: 'today', dateFormat: 'Y-m-d', altInput: true, altFormat: 'd/m/Y', disableMobile: true,
+        disable: [function(date) {
+          var dow = date.getDay();
+          if (openDays.indexOf(dow) === -1) return true;
+          var ds = dateToStr(date);
+          if (closureDates.indexOf(ds) !== -1) return true;
+          return false;
+        }],
+        onDayCreate: function(dObj, dStr, fp, dayElem) {
+          var date = dayElem.dateObj; if (!date) return;
+          var dow = date.getDay(), ds = dateToStr(date);
+          if (closureDates.indexOf(ds) !== -1) dayElem.classList.add('day-closed');
+          else if (openDays.indexOf(dow) === -1) dayElem.classList.add('day-no-hours');
+        },
+        onChange: function(selDates, dateStr) {
+          selectedDate = dateStr; selectedTime = null; submitLocked = false;
+          document.getElementById('bk-date-val').value = dateStr;
+          document.getElementById('bk-time-val').value = '';
+          document.getElementById('bk-summary').style.display = 'none';
+          document.getElementById('disp-lock-banner').style.display = 'none';
+          fetchTimes(dateStr);
+          updateConfirmBtn();
+        }
       });
-      const altEl=document.querySelector('#bk-date-alt+input.flatpickr-input');
-      if(altEl){altEl.style.cssText='width:100%;background:#fefefd;border:1px solid #e0dbd0;border-radius:12px;padding:12px 16px;font-family:\'Inter\',sans-serif;font-size:14px;color:#28231c;outline:none;cursor:pointer;transition:border-color .15s;';altEl.addEventListener('focus',()=>altEl.style.borderColor='#dd7852');altEl.addEventListener('blur',()=>altEl.style.borderColor='#e0dbd0');}
-    } else if(selectedDate){fetchTimes(selectedDate);}
+      const altEl = document.querySelector('#bk-date-alt+input.flatpickr-input');
+      if (altEl) {
+        altEl.style.cssText = 'width:100%;background:#fafaf6;border:1px solid #e0dbd0;border-radius:12px;padding:12px 16px;font-family:Inter,sans-serif;font-size:14px;color:#28231c;outline:none;cursor:pointer;transition:border-color .15s;';
+        altEl.addEventListener('focus', () => altEl.style.borderColor = '#dd7852');
+        altEl.addEventListener('blur',  () => altEl.style.borderColor = '#e0dbd0');
+      }
+    } else if (selectedDate) {
+      fetchTimes(selectedDate);
+    }
     updateConfirmBtn();
     scrollToBooking();
   };
 
-  function fetchTimes(dateStr){
-    if(!selectedService||!dateStr)return;
-    const grid=document.getElementById('time-grid');
-    const loading=document.getElementById('time-loading');
-    const empty=document.getElementById('time-empty');
-    const banner=document.getElementById('disp-lock-banner');
-    grid.innerHTML=''; loading.style.display='block';
-    empty.style.display='none'; banner.style.display='none';
+  function fetchTimes(dateStr) {
+    if (!selectedService || !dateStr) return;
+    const grid    = document.getElementById('time-grid');
+    const loading = document.getElementById('time-loading');
+    const empty   = document.getElementById('time-empty');
+    const banner  = document.getElementById('disp-lock-banner');
+    grid.innerHTML = ''; loading.style.display = 'block';
+    empty.style.display = 'none'; banner.style.display = 'none';
 
-    const url=`/car_washes/${window.carWashId}/available_times?date=${dateStr}&service_id=${selectedService.id}&duration=${selectedService.duration}`;
-    fetch(url)
-    .then(r=>r.json())
-    .then(slots=>{
-      loading.style.display='none';
-      if(!slots.length){empty.style.display='block';return;}
-
-      let hasLocked=false;
-      slots.forEach(slot=>{
-        const btn=document.createElement('button');
-        btn.type='button';
-        const time   = typeof slot==='string' ? slot : slot.time;
-        const locked = typeof slot==='object' && slot.disponivel_only;
-
-        if(locked){
-          hasLocked=true;
-          btn.className='time-slot disponivel-only';
-          btn.disabled=true;
-          btn.innerHTML=`${time}<span class="disp-tag-mini"><i class="fas fa-bolt" style="font-size:.5rem;"></i>Disp.</span>`;
-          btn.title='Reserve pelo Disponível — pagamento antecipado';
+    const url = `/car_washes/${window.carWashId}/available_times?date=${dateStr}&service_id=${selectedService.id}&duration=${selectedService.duration}`;
+    fetch(url).then(r => r.json()).then(slots => {
+      loading.style.display = 'none';
+      if (!slots.length) { empty.style.display = 'block'; return; }
+      let hasLocked = false;
+      slots.forEach(slot => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        const time   = typeof slot === 'string' ? slot : slot.time;
+        const locked = typeof slot === 'object' && slot.disponivel_only;
+        if (locked) {
+          hasLocked = true;
+          btn.className = 'time-slot disponivel-only';
+          btn.disabled = true;
+          btn.innerHTML = `${time}<span class="disp-tag-mini"><i class="fas fa-bolt" style="font-size:.5rem;"></i>Disp.</span>`;
+          btn.title = 'Reserve pelo Disponível — pagamento antecipado';
         } else {
-          btn.className='time-slot';
-          btn.textContent=time;
-          btn.onclick=()=>selectTime(time,btn);
+          btn.className = 'time-slot';
+          btn.textContent = time;
+          btn.onclick = () => selectTime(time, btn);
         }
         grid.appendChild(btn);
       });
-
-      if(hasLocked) banner.style.display='flex';
-    })
-    .catch(()=>{loading.style.display='none';empty.style.display='block';});
+      if (hasLocked) banner.style.display = 'flex';
+    }).catch(() => { loading.style.display = 'none'; empty.style.display = 'block'; });
   }
 
-  function selectTime(time,btn){
-    document.querySelectorAll('.time-slot').forEach(b=>b.classList.remove('selected'));
+  function selectTime(time, btn) {
+    document.querySelectorAll('.time-slot').forEach(b => b.classList.remove('selected'));
     btn.classList.add('selected');
-    selectedTime=time; submitLocked=false;
-    document.getElementById('bk-time-val').value=time;
+    selectedTime = time; submitLocked = false;
+    document.getElementById('bk-time-val').value = time;
     updateSummary();
     updateConfirmBtn();
   }
 
-  window.scrollToBooking=function(){const panel=document.getElementById('booking-panel');if(panel)panel.scrollIntoView({behavior:'smooth',block:'start'});};
+  window.scrollToBooking = function() {
+    const panel = document.getElementById('booking-panel');
+    if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 })();
 </script>
 <% Rails.logger.info("Template car_washes/show.html.erb renderizado com sucesso") %>
