@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html data-theme="dark">
+<html data-theme="loov">
 <head>
   <title>Loov</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -7,7 +7,7 @@
   <%= csp_meta_tag %>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&family=Montserrat:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&family=Montserrat:wght@400;500;700&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
   <link rel="stylesheet" href="/assets/tailwind.css">
   <link rel="stylesheet" href="/assets/application.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -28,6 +28,211 @@
       width: 100vw !important;
       height: 100vh !important;
     }
+  </style>
+
+  <%# ─── LOOV THEME — global override ─────────────────────────────────
+       Mantém estrutura/layout das páginas existentes; só remapeia as
+       variáveis CSS legacy (lime/black/surface/etc) pra paleta Loov
+       (cream/coral/sand) e força fontes Inter + Space Grotesk +
+       JetBrains Mono. Páginas que usam var(--lime), var(--surface),
+       etc auto-adotam o novo design sem alterações no markup. %>
+  <style>
+    :root {
+      /* Tokens Loov canônicos */
+      --cream:    #fafaf6;
+      --paper:    #fefefd;
+      --sand:     #f1eee6;
+      --stone:    #e0dbd0;
+      --ash:      #ada699;
+      --graphite: #575148;
+      --ink:      #28231c;
+      --obsidian: #1a1612;
+
+      --coral-50:  #fbeae3;
+      --coral-100: #f5d3c3;
+      --coral-300: #e8a48a;
+      --coral-500: #dd7852;
+      --coral-700: #9c4930;
+
+      --pool-50:   #eaf1f7;
+      --pool-100:  #d1e1ed;
+      --pool-500:  #4b8ec0;
+      --pool-700:  #2a5f8a;
+
+      --mint-500:  #5dc39f;
+      --amber-500: #d6b14a;
+      --rose-500:  #c85050;
+
+      /* ── Remapeamento dos tokens legacy ───────────────────────── */
+      --black:        var(--cream);     /* backgrounds principais */
+      --surface:      var(--paper);
+      --surface-2:    var(--paper);
+      --surface-3:    var(--sand);
+
+      --border:       var(--stone);
+      --border-soft:  var(--stone);
+
+      --white:        var(--ink);       /* textos primários sobre cream */
+      --text-muted:   var(--ash);
+      --text-secondary: var(--graphite);
+
+      --lime:         var(--coral-500); /* destaques/accents */
+      --lime-dim:     var(--coral-700);
+
+      --orange:       var(--coral-500);
+      --yellow:       var(--amber-500);
+      --red:          var(--rose-500);
+      --blue:         var(--pool-500);
+    }
+
+    /* ── Body global e tipografia ─────────────────────────────────── */
+    html, body {
+      background: var(--cream) !important;
+      color: var(--ink) !important;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif !important;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Títulos: Space Grotesk (substitui Bebas Neue) */
+    h1, h2, h3, h4, h5, h6,
+    .home-tagline, .sidebar-cw-name {
+      font-family: 'Space Grotesk', 'Inter', sans-serif !important;
+      letter-spacing: -0.3px;
+      color: var(--ink);
+    }
+
+    /* Eyebrow / labels mono coral — qualquer .eyebrow ou role/label */
+    .eyebrow, .sidebar-cw-role, .label-mono,
+    [class*="eyebrow"], [class*="label-uppercase"] {
+      font-family: 'JetBrains Mono', monospace !important;
+      letter-spacing: 1.5px;
+      color: var(--coral-500);
+      text-transform: uppercase;
+    }
+
+    /* Inputs e textareas — paper/stone */
+    input[type="text"], input[type="email"], input[type="password"],
+    input[type="number"], input[type="date"], input[type="time"],
+    input[type="tel"], input[type="search"], input[type="url"],
+    select, textarea {
+      background: var(--paper) !important;
+      border: 1px solid var(--stone) !important;
+      color: var(--ink) !important;
+      border-radius: 12px;
+      transition: border-color .15s;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--coral-500) !important;
+      outline: none;
+    }
+    input::placeholder, textarea::placeholder {
+      color: var(--ash) !important;
+    }
+
+    /* Botões primários (coral) — qualquer btn-primary ou similar */
+    .btn-primary, .btn--primary,
+    button[type="submit"]:not(.btn-secondary):not(.btn-ghost) {
+      background: var(--coral-500) !important;
+      color: var(--cream) !important;
+      border: none !important;
+      transition: background .15s, transform .15s;
+    }
+    .btn-primary:hover, button[type="submit"]:hover { background: var(--coral-700) !important; }
+
+    /* Botões secundários (paper outlined) */
+    .btn-secondary, .btn--secondary {
+      background: var(--paper) !important;
+      color: var(--ink) !important;
+      border: 1px solid var(--stone) !important;
+    }
+    .btn-secondary:hover { border-color: var(--coral-500) !important; color: var(--coral-700) !important; }
+
+    /* Cards genéricos — qualquer .card sem fundo explícito */
+    .card, .panel, .box {
+      background: var(--paper);
+      border: 1px solid var(--stone);
+      border-radius: 16px;
+      box-shadow: 0 2px 6px rgba(25,20,15,0.04);
+      color: var(--ink);
+    }
+
+    /* Links */
+    a { color: var(--coral-700); }
+    a:hover { color: var(--coral-500); }
+
+    /* Navbar — fundo claro */
+    .navbar, nav.navbar, .top-nav, header.navbar {
+      background: var(--cream) !important;
+      border-bottom: 1px solid var(--stone) !important;
+      color: var(--ink) !important;
+    }
+    .navbar a, .navbar .nav-link {
+      color: var(--graphite) !important;
+    }
+    .navbar a:hover, .navbar .nav-link:hover {
+      color: var(--coral-700) !important;
+    }
+    .navbar .brand, .navbar-brand {
+      color: var(--ink) !important;
+      font-family: 'Space Grotesk', sans-serif !important;
+    }
+
+    /* Sidebar (owner dashboard) */
+    .owner-sidebar, .sidebar {
+      background: var(--paper) !important;
+      border-right: 1px solid var(--stone) !important;
+    }
+    .snav-item {
+      color: var(--graphite) !important;
+    }
+    .snav-item:hover, .snav-item.active {
+      background: var(--sand) !important;
+      color: var(--ink) !important;
+    }
+    .snav-item.active {
+      border: 1px solid var(--coral-100) !important;
+      background: var(--coral-50) !important;
+      color: var(--coral-700) !important;
+    }
+
+    /* Footer */
+    footer, .footer {
+      background: var(--cream) !important;
+      color: var(--ash) !important;
+      border-top: 1px solid var(--stone) !important;
+    }
+
+    /* Tabelas */
+    table { color: var(--ink); }
+    table th { color: var(--graphite); border-bottom: 1px solid var(--stone); }
+    table td { border-bottom: 1px solid var(--stone); }
+    table tr:hover td { background: var(--sand); }
+
+    /* Pills/badges padrão */
+    .badge, .pill {
+      background: var(--coral-50);
+      color: var(--coral-700);
+      border: 1px solid var(--coral-100);
+      border-radius: 100px;
+    }
+
+    /* Status badges semânticos */
+    .status-success, .badge-success { background: #d6ecde !important; color: #2d6b42 !important; border-color: #b5d8c1 !important; }
+    .status-error, .badge-error     { background: #fdecec !important; color: var(--rose-500) !important; border-color: #f5cccc !important; }
+    .status-warning, .badge-warning { background: #fbe2c0 !important; color: #7a4814 !important; border-color: #f0d0a0 !important; }
+
+    /* Scrollbar discreta */
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: var(--sand); }
+    ::-webkit-scrollbar-thumb { background: var(--stone); border-radius: 100px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--ash); }
+
+    /* Modal/overlay backdrop mais suave */
+    .modal-backdrop, .overlay { background: rgba(40,35,28,0.45) !important; }
+
+    /* Selection */
+    ::selection { background: var(--coral-100); color: var(--ink); }
   </style>
 </head>
 <body>
