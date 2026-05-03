@@ -1,11 +1,40 @@
 module Owner
   class ClosuresController < ApplicationController
+    skip_before_action :verify_authenticity_token
     before_action :authenticate_user!
-    before_action :ensure_owner
+    before_action :ensure_owner_or_attendant, only: [:index]
+    before_action :ensure_owner,              only: [:create, :destroy]
+
+    # GET /owner/closures — lista fechamentos do car_wash do user (owner ou
+    # atendente vinculado).
+    def index
+      car_wash = current_user.linked_car_wash
+      return render json: [] unless car_wash
+
+      closures = car_wash.car_wash_closures.upcoming_or_active.map do |c|
+        {
+          id:         c.id,
+          start_date: c.start_date.iso8601,
+          end_date:   c.end_date.iso8601,
+          reason:     c.reason.to_s,
+          period:     c.display_period,
+          single_day: c.single_day?,
+        }
+      end
+      render json: closures
+    end
 
     def create
-      car_wash = current_user.car_washes.find(params[:closure][:car_wash_id])
-      closure  = car_wash.car_wash_closures.build(closure_params)
+      cw_id    = params.dig(:closure, :car_wash_id)
+      car_wash = if cw_id.present?
+        current_user.car_washes.find(cw_id)
+      else
+        # Mobile app não manda car_wash_id — usa o linked.
+        current_user.linked_car_wash
+      end
+      return render json: { ok: false, error: "Lava-rápido não encontrado." }, status: :not_found unless car_wash
+
+      closure = car_wash.car_wash_closures.build(closure_params)
 
       if closure.save
         # Cancela agendamentos que caem dentro do fechamento
@@ -38,6 +67,11 @@ module Owner
 
     def ensure_owner
       render json: { error: "Acesso negado." }, status: :forbidden unless current_user&.owner?
+    end
+
+    def ensure_owner_or_attendant
+      return if current_user&.owner? || current_user&.attendant?
+      render json: { error: "Acesso negado." }, status: :forbidden
     end
 
     def closure_params

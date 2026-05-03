@@ -106,7 +106,7 @@ Rails.application.routes.draw do
       end
     end
 
-    resources :closures, only: [:create, :destroy]
+    resources :closures, only: [:index, :create, :destroy]
     resources :car_wash_appointments, only: [:index, :show]
 
     get  'financial_tracking', to: 'financial_tracking#index'
