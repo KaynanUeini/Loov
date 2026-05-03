@@ -1,375 +1,252 @@
 <% Rails.logger.info("Renderizando owner/car_wash_appointments/index.html.erb") %>
 
-<div id="loov-cursor"></div>
-<div id="loov-cursor-trail"></div>
-<div id="page-transition"></div>
-
 <style>
-  :root {
-    --lime: #dd7852;
-    --lime-dim: #9c4930;
-    --black: #fafaf6;
-    --surface: #fafaf6;
-    --surface-2: #fafaf6;
-    --surface-3: #fefefd;
-    --border: #e0dbd0;
-    --border-soft: #e0dbd0;
-    --text-muted: #ada699;
-    --text-secondary: #ada699;
-    --white: #28231c;
-  }
-
-  /* ── CURSOR ─────────────────────────────────────────── */
-  #loov-cursor { position:fixed;width:8px;height:8px;background:var(--lime);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .18s ease,height .18s ease;mix-blend-mode:difference; }
-  #loov-cursor-trail { position:fixed;width:38px;height:38px;border:1px solid rgba(221, 120, 82,0.25);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:width .25s ease,height .25s ease,border-color .25s ease; }
-  body.cursor-hover #loov-cursor { width:14px;height:14px; }
-  body.cursor-hover #loov-cursor-trail { width:58px;height:58px;border-color:rgba(221, 120, 82,0.45); }
-  @media(hover:none){#loov-cursor,#loov-cursor-trail{display:none;}}
-
-  /* ── PAGE TRANSITION ─────────────────────────────────── */
-  #page-transition { position:fixed;inset:0;z-index:10000;background:#fafaf6;transform:translateY(100%);pointer-events:none; }
-  #page-transition.enter { animation:pgEnter .42s cubic-bezier(.76,0,.24,1) forwards; }
-  #page-transition.exit  { animation:pgExit  .42s cubic-bezier(.76,0,.24,1) forwards; }
-  @keyframes pgEnter { from{transform:translateY(100%)}to{transform:translateY(0)} }
-  @keyframes pgExit  { from{transform:translateY(0)}to{transform:translateY(-100%)} }
-
-  /* ── BASE ────────────────────────────────────────────── */
-  * { box-sizing: border-box; }
-  body { cursor: none; }
-
-  .appts-wrap {
-    min-height: 100vh; background: var(--black);
-    font-family: 'Inter', sans-serif;
-    padding-top: 60px; padding-bottom: 5rem;
-  }
-
-  /* ── HEADER ──────────────────────────────────────────── */
-  .appts-header {
-    max-width: 900px; margin: 0 auto;
-    padding: 3.5rem 1.5rem 2rem;
-    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards .1s;
-  }
-
-  .appts-eyebrow {
-    display: inline-flex; align-items: center; gap: .6rem;
-    font-size: .68rem; font-weight: 500; letter-spacing: .25em;
-    text-transform: uppercase; color: var(--lime); margin-bottom: .875rem;
-  }
-  .appts-eyebrow::before { content:''; display:block; width:28px; height:1px; background:var(--lime); }
-
-  .appts-title {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: clamp(2.5rem, 8vw, 5rem);
-    line-height: .92; color: var(--white); margin: 0;
-  }
-  .appts-title span { color: var(--lime); }
-
-  .appts-divider { max-width: 900px; margin: 0 auto; padding: 0 1.5rem; }
-  .appts-divider-line { height: 1px; background: var(--border); }
-
-  .appts-body { max-width: 900px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
-
-  /* ── FILTER CARD ─────────────────────────────────────── */
-  .filter-card {
-    background: var(--surface-2); border: 1px solid var(--border);
-    border-radius: 20px; padding: 1.5rem; margin-bottom: 2.5rem;
-    position: relative; overflow: hidden;
-    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards .25s;
-  }
-  .filter-card::before {
-    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
-    width: 2px; background: linear-gradient(to bottom, transparent, rgba(221, 120, 82,0.3), transparent);
-  }
-
   .filter-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-    gap: 1rem; padding-left: .75rem;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 14px; align-items: end;
   }
-
-  .filter-field { display: flex; flex-direction: column; gap: .4rem; }
-
-  .filter-label {
-    font-size: .72rem; font-weight: 500; color: var(--text-muted);
-    letter-spacing: .08em; text-transform: uppercase;
-  }
-
-  .filter-input, .filter-select {
-    background: var(--surface-3); border: 1px solid var(--border);
-    border-radius: 10px; padding: .875rem 1rem;
-    font-family: 'Inter', sans-serif; font-size: .875rem;
-    color: var(--white); outline: none; transition: all .2s ease; width: 100%;
-    cursor: none;
-  }
-  .filter-input::placeholder { color: var(--text-muted); }
-  .filter-input:focus, .filter-select:focus { border-color: var(--lime); box-shadow: 0 0 0 3px rgba(221, 120, 82,.07); }
-  .filter-select {
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23444' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: right 1rem center; cursor: none;
-  }
-  .filter-select option { background: var(--surface-3); }
+  .filter-actions { display: flex; gap: 8px; align-items: end; flex-wrap: wrap; }
 
   .custom-dates {
     display: none; grid-template-columns: 1fr 1fr;
-    gap: 1rem; margin-top: 1rem; padding-top: 1rem;
-    border-top: 1px solid var(--border); padding-left: .75rem;
+    gap: 14px; margin-top: 14px; padding-top: 14px;
+    border-top: 1px solid var(--stone);
   }
   .custom-dates.visible { display: grid; }
 
-  .filter-actions { display: flex; align-items: flex-end; gap: .625rem; }
-
-  .btn-filter {
-    background: var(--lime); color: var(--black); border: none;
-    border-radius: 100px; padding: .875rem 1.5rem;
-    font-family: 'Inter', sans-serif; font-size: .875rem; font-weight: 600;
-    cursor: none; transition: all .22s ease; white-space: nowrap;
-  }
-  .btn-filter:hover { background: var(--lime-dim); transform: translateY(-2px); }
-
-  .btn-clear {
-    background: transparent; color: var(--text-muted);
-    border: 1px solid var(--border-soft); border-radius: 100px;
-    padding: .875rem 1.25rem; font-family: 'Inter', sans-serif;
-    font-size: .875rem; cursor: none; transition: all .2s ease;
-    text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap;
-  }
-  .btn-clear:hover { border-color: var(--lime); color: var(--lime); }
-
-  /* ── DATE GROUPS ─────────────────────────────────────── */
-  .date-group {
-    margin-bottom: 1rem;
-    opacity: 0; animation: revealUp .6s cubic-bezier(.16,1,.3,1) forwards;
-  }
+  .date-group { margin-bottom: 14px; }
 
   .date-header {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 1rem 1.5rem;
-    background: var(--surface-2); border: 1px solid var(--border);
-    border-radius: 14px; cursor: none; transition: background .15s ease; user-select: none;
-    position: relative; overflow: hidden;
+    padding: 14px 20px;
+    background: var(--paper); border: 1px solid var(--stone);
+    border-radius: 14px; cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+    user-select: none;
   }
-  .date-header::before {
-    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
-    width: 2px; background: var(--lime); opacity: 0; transition: opacity .2s ease;
+  .date-header:hover { background: var(--sand); }
+  .date-header.open {
+    border-radius: 14px 14px 0 0;
+    border-bottom-color: transparent;
+    background: var(--paper);
   }
-  .date-header:hover { background: var(--surface-3); }
-  .date-header.open { border-radius: 14px 14px 0 0; border-bottom-color: transparent; }
-  .date-header.open::before { opacity: 1; }
 
-  .date-header-left { display: flex; align-items: center; gap: .75rem; }
+  .date-header-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 
   .date-label {
     font-family: 'Space Grotesk', sans-serif;
-    font-size: 1.15rem; letter-spacing: .04em; color: var(--white);
+    font-size: 18px; font-weight: 700;
+    color: var(--ink); letter-spacing: -0.3px;
   }
-  .date-today { color: var(--lime); }
+  .date-today { color: var(--coral-500); }
+  .date-weekday {
+    font-family: 'Inter', sans-serif;
+    color: var(--ash); font-size: 13.5px;
+    font-weight: 400; letter-spacing: 0;
+    margin-left: 6px;
+  }
 
   .date-count {
-    font-size: .72rem; color: var(--text-muted);
-    background: var(--surface-3); border: 1px solid var(--border);
-    border-radius: 100px; padding: .2rem .6rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; font-weight: 600; letter-spacing: 1.2px;
+    color: var(--graphite); text-transform: uppercase;
+    background: var(--sand); border: 1px solid var(--stone);
+    border-radius: 100px; padding: 4px 10px;
   }
 
-  .date-chevron { color: var(--text-muted); font-size: .75rem; transition: transform .25s ease; }
+  .date-chevron {
+    color: var(--ash); font-size: 12px;
+    transition: transform 0.25s ease;
+  }
   .date-chevron.open { transform: rotate(180deg); }
 
   .date-body {
-    max-height: 0; overflow: hidden; transition: max-height .35s ease;
-    background: var(--surface-2); border: 1px solid var(--border);
+    max-height: 0; overflow: hidden;
+    transition: max-height 0.35s ease;
+    background: var(--paper); border: 1px solid var(--stone);
     border-top: none; border-radius: 0 0 14px 14px;
   }
-  .date-body.open { max-height: 2000px; }
+  .date-body.open { max-height: 2400px; }
 
-  /* ── APPOINTMENT ROWS ────────────────────────────────── */
-  .appt-list { display: flex; flex-direction: column; gap: 1px; background: var(--border); }
+  .appt-list { display: flex; flex-direction: column; }
 
   .appt-row {
-    background: var(--surface-2); padding: 1rem 1.5rem;
-    display: flex; align-items: center; gap: 1rem;
-    transition: background .15s ease;
+    padding: 14px 20px;
+    display: flex; align-items: center; gap: 14px;
+    transition: background 0.15s ease;
+    border-bottom: 1px solid var(--stone);
   }
-  .appt-row:hover { background: var(--surface-3); }
-  .appt-row:last-child { border-radius: 0 0 14px 14px; }
+  .appt-row:last-child { border-bottom: none; border-radius: 0 0 14px 14px; }
+  .appt-row:hover { background: var(--sand); }
 
   .appt-time {
     font-family: 'Space Grotesk', sans-serif;
-    font-size: 1.25rem; color: var(--lime); letter-spacing: .04em; min-width: 52px;
+    font-size: 18px; font-weight: 700;
+    color: var(--coral-500); letter-spacing: -0.3px;
+    min-width: 56px;
   }
 
-  .appt-sep { width: 1px; height: 36px; background: var(--border); flex-shrink: 0; }
+  .appt-sep { width: 1px; height: 36px; background: var(--stone); flex-shrink: 0; }
 
-  .appt-info { flex: 1; }
-  .appt-client { font-size: .9375rem; font-weight: 500; color: var(--white); margin-bottom: .15rem; }
-  .appt-service { font-size: .78rem; color: var(--text-muted); }
-
-  .appt-status {
-    display: inline-flex; align-items: center; gap: .3rem;
-    font-size: .66rem; font-weight: 600; letter-spacing: .05em;
-    padding: .25rem .65rem; border-radius: 100px; flex-shrink: 0;
-    text-transform: uppercase;
+  .appt-info { flex: 1; min-width: 0; }
+  .appt-client {
+    font-size: 14.5px; font-weight: 600;
+    color: var(--ink); margin-bottom: 2px;
   }
-  .appt-status.agendado   { background: rgba(221, 120, 82,.07); color: var(--lime); border: 1px solid rgba(221, 120, 82,.18); }
-  .appt-status.concluido  { background: rgba(99,102,241,.07); color: #a5b4fc; border: 1px solid rgba(99,102,241,.18); }
-  .appt-status.cancelado  { background: rgba(248,113,113,.07); color: #fca5a5; border: 1px solid rgba(248,113,113,.18); }
+  .appt-service { font-size: 12.5px; color: var(--graphite); }
 
   .btn-detail {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 32px; height: 32px; border-radius: 8px;
-    background: transparent; border: 1px solid var(--border);
-    color: var(--text-muted); text-decoration: none;
-    transition: all .2s ease; font-size: .75rem; flex-shrink: 0; cursor: none;
+    width: 34px; height: 34px; border-radius: 8px;
+    background: transparent; border: 1px solid var(--stone);
+    color: var(--graphite); text-decoration: none;
+    transition: all 0.2s ease; font-size: 12px;
+    flex-shrink: 0;
   }
-  .btn-detail:hover { border-color: var(--lime); color: var(--lime); }
-
-  /* ── EMPTY ───────────────────────────────────────────── */
-  .empty-state {
-    text-align: center; padding: 5rem 1.5rem;
-    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards .3s;
+  .btn-detail:hover {
+    border-color: var(--coral-500);
+    color: var(--coral-700);
+    background: var(--coral-50);
   }
-  .empty-icon { font-size: 2.5rem; color: #e0dbd0; margin-bottom: 1rem; }
-  .empty-title { font-family: 'Space Grotesk', sans-serif; font-size: 1.75rem; color: var(--white); margin-bottom: .5rem; }
-  .empty-text { font-size: .875rem; color: var(--text-muted); margin-bottom: 1.75rem; }
 
-  /* ── ANIMAÇÕES ───────────────────────────────────────── */
-  @keyframes revealUp { from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)} }
+  .empty-state-card {
+    text-align: center; padding: 60px 24px;
+  }
+  .empty-icon-lg {
+    font-size: 38px; color: var(--stone);
+    margin-bottom: 14px;
+  }
+  .empty-title-lg {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 22px; font-weight: 700;
+    color: var(--ink); margin-bottom: 6px;
+    letter-spacing: -0.3px;
+  }
+  .empty-text-lg {
+    font-size: 14px; color: var(--graphite);
+    margin-bottom: 22px;
+  }
 
-  /* ── RESPONSIVE ──────────────────────────────────────── */
-  @media(max-width:540px) {
+  @media (max-width: 540px) {
     .filter-grid { grid-template-columns: 1fr; }
     .custom-dates { grid-template-columns: 1fr; }
     .appt-sep { display: none; }
-    .appts-header, .appts-divider, .appts-body { padding-left: 1.25rem; padding-right: 1.25rem; }
   }
 </style>
 
-<div class="appts-wrap">
+<div class="loov-page">
 
-  <div class="appts-header">
-    <div class="appts-eyebrow"><%= current_user.car_washes.first&.name %></div>
-    <h1 class="appts-title">Agenda<span>.</span></h1>
+  <div class="loov-hero">
+    <div class="loov-eyebrow"><span class="dot"></span><%= current_user.car_washes.first&.name || "Lava-rápido" %></div>
+    <h1 class="loov-h1">Sua <span class="accent">agenda</span>.</h1>
+    <p class="loov-lead">Filtre, acompanhe e gerencie todos os agendamentos do lava-rápido.</p>
   </div>
 
-  <div class="appts-divider"><div class="appts-divider-line"></div></div>
-
-  <div class="appts-body">
-
-    <%= form_with url: owner_car_wash_appointments_path, method: :get, local: true do %>
-    <div class="filter-card">
-      <div class="filter-grid">
-        <div class="filter-field">
-          <label class="filter-label">Período</label>
-          <%= select_tag :period, options_for_select([
-            ["Últimos 7 dias", "last_7_days"],
-            ["Próximos 7 dias", "next_7_days"],
-            ["Personalizado", "custom"]
-          ], params[:period]), include_blank: "Todos os períodos", class: "filter-select", id: "period-select" %>
-        </div>
-        <div class="filter-field">
-          <label class="filter-label">Status</label>
-          <%= select_tag :status, options_for_select([
-            ["Todos", "Todos"], ["Agendado", "Agendado"],
-            ["Concluído", "Concluído"], ["Cancelado", "Cancelado"]
-          ], params[:status]), class: "filter-select" %>
-        </div>
-        <div class="filter-field">
-          <label class="filter-label">Buscar</label>
-          <%= text_field_tag :search, params[:search], placeholder: "Cliente ou serviço...", class: "filter-input" %>
-        </div>
-        <div class="filter-actions">
-          <%= submit_tag "Filtrar", class: "btn-filter" %>
-          <%= link_to "Limpar", owner_car_wash_appointments_path, class: "btn-clear" %>
-        </div>
+  <%= form_with url: owner_car_wash_appointments_path, method: :get, local: true do %>
+  <div class="loov-card" style="margin-bottom: 28px;">
+    <div class="filter-grid">
+      <div class="loov-field" style="margin-bottom: 0;">
+        <label class="loov-label">Período</label>
+        <%= select_tag :period, options_for_select([
+          ["Últimos 7 dias", "last_7_days"],
+          ["Próximos 7 dias", "next_7_days"],
+          ["Personalizado", "custom"]
+        ], params[:period]), include_blank: "Todos os períodos", class: "loov-input", id: "period-select" %>
       </div>
-      <div class="custom-dates <%= params[:period] == 'custom' ? 'visible' : '' %>" id="custom-dates">
-        <div class="filter-field">
-          <label class="filter-label">Data Inicial</label>
-          <%= date_field_tag :start_date, params[:start_date], class: "filter-input" %>
-        </div>
-        <div class="filter-field">
-          <label class="filter-label">Data Final</label>
-          <%= date_field_tag :end_date, params[:end_date], class: "filter-input" %>
-        </div>
+      <div class="loov-field" style="margin-bottom: 0;">
+        <label class="loov-label">Status</label>
+        <%= select_tag :status, options_for_select([
+          ["Todos", "Todos"], ["Agendado", "Agendado"],
+          ["Concluído", "Concluído"], ["Cancelado", "Cancelado"]
+        ], params[:status]), class: "loov-input" %>
+      </div>
+      <div class="loov-field" style="margin-bottom: 0;">
+        <label class="loov-label">Buscar</label>
+        <%= text_field_tag :search, params[:search], placeholder: "Cliente ou serviço...", class: "loov-input" %>
+      </div>
+      <div class="filter-actions">
+        <%= submit_tag "Filtrar", class: "loov-btn-primary" %>
+        <%= link_to "Limpar", owner_car_wash_appointments_path, class: "loov-btn-ghost" %>
       </div>
     </div>
-    <% end %>
-
-    <% if @appointments_by_date.empty? %>
-    <div class="empty-state">
-      <div class="empty-icon"><i class="fas fa-calendar-xmark"></i></div>
-      <div class="empty-title">Nenhum agendamento</div>
-      <p class="empty-text">Nenhum resultado para os filtros selecionados.</p>
-      <%= link_to "Limpar filtros", owner_car_wash_appointments_path, class: "btn-clear" %>
+    <div class="custom-dates <%= params[:period] == 'custom' ? 'visible' : '' %>" id="custom-dates">
+      <div class="loov-field" style="margin-bottom: 0;">
+        <label class="loov-label">Data inicial</label>
+        <%= date_field_tag :start_date, params[:start_date], class: "loov-input" %>
+      </div>
+      <div class="loov-field" style="margin-bottom: 0;">
+        <label class="loov-label">Data final</label>
+        <%= date_field_tag :end_date, params[:end_date], class: "loov-input" %>
+      </div>
     </div>
-    <% else %>
-    <div>
-      <% @appointments_by_date.each_with_index do |(date, appointments), index| %>
-      <% is_today = date == Date.today %>
-      <div class="date-group" style="animation-delay:<%= 0.3 + (index * 0.05) %>s">
-        <div class="date-header <%= is_today ? 'open' : '' %>" onclick="toggleDate(this)">
-          <div class="date-header-left">
-            <span class="date-label <%= is_today ? 'date-today' : '' %>">
-              <%= is_today ? 'Hoje' : date.strftime("%d/%m/%Y") %>
-              <% unless is_today %>
-                <span style="color:var(--text-muted);font-size:.85rem;font-family:'Inter',sans-serif;font-weight:400;letter-spacing:0;">
-                  <%= I18n.l(date, format: "%A") rescue date.strftime("%A") %>
-                </span>
-              <% end %>
-            </span>
-            <span class="date-count"><%= appointments.count %> agendamento<%= appointments.count == 1 ? '' : 's' %></span>
-          </div>
-          <i class="fas fa-chevron-down date-chevron <%= is_today ? 'open' : '' %>"></i>
-        </div>
-        <div class="date-body <%= is_today ? 'open' : '' %>">
-          <div class="appt-list">
-            <% appointments.each do |appointment| %>
-            <div class="appt-row">
-              <div class="appt-time"><%= appointment.scheduled_at.strftime("%H:%M") %></div>
-              <div class="appt-sep"></div>
-              <div class="appt-info">
-                <div class="appt-client"><%= appointment.user.display_name.presence || appointment.user.email.split('@').first.capitalize %></div>
-                <div class="appt-service"><%= appointment.service.title %></div>
-              </div>
-              <% status_class = appointment.status.downcase.gsub('í','i').gsub('ú','u') %>
-              <span class="appt-status <%= status_class %>">
-                <i class="fas fa-circle" style="font-size:.35rem;"></i>
-                <%= appointment.status %>
+  </div>
+  <% end %>
+
+  <% if @appointments_by_date.empty? %>
+  <div class="loov-card empty-state-card">
+    <div class="empty-icon-lg"><i class="fas fa-calendar-xmark"></i></div>
+    <div class="empty-title-lg">Nenhum agendamento</div>
+    <p class="empty-text-lg">Nenhum resultado para os filtros selecionados.</p>
+    <%= link_to "Limpar filtros", owner_car_wash_appointments_path, class: "loov-btn-secondary" %>
+  </div>
+  <% else %>
+  <div>
+    <% @appointments_by_date.each_with_index do |(date, appointments), index| %>
+    <% is_today = date == Date.today %>
+    <div class="date-group">
+      <div class="date-header <%= is_today ? 'open' : '' %>" onclick="toggleDate(this)">
+        <div class="date-header-left">
+          <span class="date-label <%= is_today ? 'date-today' : '' %>">
+            <%= is_today ? 'Hoje' : date.strftime("%d/%m/%Y") %>
+            <% unless is_today %>
+              <span class="date-weekday">
+                <%= I18n.l(date, format: "%A") rescue date.strftime("%A") %>
               </span>
-              <%= link_to owner_car_wash_appointment_path(appointment), class: "btn-detail", title: "Ver detalhes" do %>
-                <i class="fas fa-arrow-up-right"></i>
-              <% end %>
+            <% end %>
+          </span>
+          <span class="date-count"><%= appointments.count %> agendamento<%= appointments.count == 1 ? '' : 's' %></span>
+        </div>
+        <i class="fas fa-chevron-down date-chevron <%= is_today ? 'open' : '' %>"></i>
+      </div>
+      <div class="date-body <%= is_today ? 'open' : '' %>">
+        <div class="appt-list">
+          <% appointments.each do |appointment| %>
+          <div class="appt-row">
+            <div class="appt-time"><%= appointment.scheduled_at.strftime("%H:%M") %></div>
+            <div class="appt-sep"></div>
+            <div class="appt-info">
+              <div class="appt-client"><%= appointment.user.display_name.presence || appointment.user.email.split('@').first.capitalize %></div>
+              <div class="appt-service"><%= appointment.service.title %></div>
             </div>
+            <%
+              status_class = appointment.status.downcase.gsub('í','i').gsub('ú','u')
+              pill_mod = case status_class
+                         when 'agendado' then 'loov-pill--coral'
+                         when 'concluido' then 'loov-pill--success'
+                         when 'cancelado' then 'loov-pill--danger'
+                         else 'loov-pill--neutral'
+                         end
+            %>
+            <span class="loov-pill <%= pill_mod %>">
+              <i class="fas fa-circle" style="font-size: 5px;"></i>
+              <%= appointment.status %>
+            </span>
+            <%= link_to owner_car_wash_appointment_path(appointment), class: "btn-detail", title: "Ver detalhes" do %>
+              <i class="fas fa-arrow-up-right"></i>
             <% end %>
           </div>
+          <% end %>
         </div>
       </div>
-      <% end %>
     </div>
     <% end %>
-
   </div>
+  <% end %>
+
 </div>
 
 <script>
-(function() {
-  const cursor = document.getElementById('loov-cursor');
-  const trail  = document.getElementById('loov-cursor-trail');
-  if (cursor && trail) {
-    let mx=-100,my=-100,tx=-100,ty=-100;
-    document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cursor.style.left=mx+'px';cursor.style.top=my+'px';});
-    (function anim(){tx+=(mx-tx)*0.12;ty+=(my-ty)*0.12;trail.style.left=tx+'px';trail.style.top=ty+'px';requestAnimationFrame(anim);})();
-    document.addEventListener('mouseover',e=>{if(e.target.closest('a,button,input,select,textarea'))document.body.classList.add('cursor-hover');});
-    document.addEventListener('mouseout', e=>{if(e.target.closest('a,button,input,select,textarea'))document.body.classList.remove('cursor-hover');});
-    document.addEventListener('mouseleave',()=>{cursor.style.opacity='0';trail.style.opacity='0';});
-    document.addEventListener('mouseenter',()=>{cursor.style.opacity='1';trail.style.opacity='1';});
-  }
-  const pt = document.getElementById('page-transition');
-  if (pt) {
-    document.addEventListener('click',e=>{const link=e.target.closest('a[href]');if(!link)return;const href=link.getAttribute('href');if(!href||href.startsWith('#')||href.startsWith('mailto')||link.target==='_blank')return;if(href.startsWith('http')&&!href.includes(window.location.hostname))return;e.preventDefault();pt.classList.add('enter');setTimeout(()=>window.location.href=href,400);});
-    window.addEventListener('pageshow',()=>{pt.classList.remove('enter');pt.classList.add('exit');setTimeout(()=>pt.classList.remove('exit'),440);});
-  }
-})();
-
 function toggleDate(header) {
   var body    = header.nextElementSibling;
   var chevron = header.querySelector('.date-chevron');

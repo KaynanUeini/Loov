@@ -1,357 +1,247 @@
-<div id="loov-cursor"></div>
-<div id="loov-cursor-trail"></div>
-<div id="page-transition"></div>
-
 <style>
-  :root {
-    --lime: #dd7852;
-    --lime-dim: #9c4930;
-    --black: #fafaf6;
-    --surface: #fafaf6;
-    --surface-2: #fafaf6;
-    --surface-3: #fefefd;
-    --border: #e0dbd0;
-    --border-soft: #e0dbd0;
-    --text-muted: #ada699;
-    --text-secondary: #ada699;
-    --white: #28231c;
-  }
-
-  #loov-cursor { position:fixed;width:8px;height:8px;background:var(--lime);border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:width .18s ease,height .18s ease;mix-blend-mode:difference; }
-  #loov-cursor-trail { position:fixed;width:38px;height:38px;border:1px solid rgba(221, 120, 82,0.25);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);transition:width .25s ease,height .25s ease,border-color .25s ease; }
-  body.cursor-hover #loov-cursor { width:14px;height:14px; }
-  body.cursor-hover #loov-cursor-trail { width:58px;height:58px;border-color:rgba(221, 120, 82,0.45); }
-  @media(hover:none){#loov-cursor,#loov-cursor-trail{display:none;}}
-  #page-transition { position:fixed;inset:0;z-index:10000;background:#fafaf6;transform:translateY(100%);pointer-events:none; }
-  #page-transition.enter { animation:pgEnter .42s cubic-bezier(.76,0,.24,1) forwards; }
-  #page-transition.exit  { animation:pgExit  .42s cubic-bezier(.76,0,.24,1) forwards; }
-  @keyframes pgEnter{from{transform:translateY(100%)}to{transform:translateY(0)}}
-  @keyframes pgExit{from{transform:translateY(0)}to{transform:translateY(-100%)}}
-
-  * { box-sizing: border-box; }
-  body { cursor: none; }
-
-  .costs-wrap {
-    min-height: 100vh; background: var(--black);
-    font-family: 'Inter', sans-serif;
-    padding-top: 60px; padding-bottom: 5rem;
-  }
-
-  .costs-header {
-    max-width: 660px; margin: 0 auto;
-    padding: 3.5rem 1.5rem 2rem;
-    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards .1s;
-  }
-
-  .costs-eyebrow {
-    display: inline-flex; align-items: center; gap: .6rem;
-    font-size: .68rem; font-weight: 500; letter-spacing: .25em;
-    text-transform: uppercase; color: var(--lime); margin-bottom: .875rem;
-  }
-  .costs-eyebrow::before { content:''; display:block; width:28px; height:1px; background:var(--lime); }
-
-  .costs-title {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: clamp(2rem, 7vw, 4rem);
-    line-height: .92; color: var(--white); margin: 0;
-  }
-  .costs-title span { color: var(--lime); }
-
-  .costs-sub {
-    font-size: .875rem; color: var(--text-muted); margin-top: .5rem;
-  }
-
-  .costs-divider { max-width: 660px; margin: 0 auto; padding: 0 1.5rem; }
-  .costs-divider-line { height: 1px; background: var(--border); }
-
-  .costs-body { max-width: 660px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
-
-  /* ── PENDING BANNER ──────────────────────────────────── */
   .pending-banner {
-    display: flex; align-items: flex-start; gap: .75rem;
-    background: rgba(251,191,36,.05); border: 1px solid rgba(251,191,36,.18);
-    border-radius: 16px; padding: 1rem 1.25rem; margin-bottom: 1.75rem;
-    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards .25s;
-    position: relative; overflow: hidden;
+    display: flex; align-items: flex-start; gap: 12px;
+    background: #fbe2c0; border: 1px solid #f0d0a0;
+    border-radius: 16px; padding: 14px 18px;
+    margin-bottom: 22px;
+    color: #7a4814;
   }
-  .pending-banner::before {
-    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
-    width: 2px; background: #fbbf24; opacity: .6;
-  }
-  .pending-banner i { color: #fbbf24; font-size: 1rem; margin-top: 2px; flex-shrink: 0; }
-  .pending-banner-text { font-size: .82rem; color: #ada699; line-height: 1.55; }
-  .pending-banner-text strong { color: #fbbf24; }
+  .pending-banner i { font-size: 16px; flex-shrink: 0; margin-top: 2px; color: #7a4814; }
+  .pending-banner-text { font-size: 13.5px; line-height: 1.55; }
+  .pending-banner-text strong { color: #7a4814; }
 
-  /* ── FORM SECTIONS ───────────────────────────────────── */
-  .form-section {
-    background: var(--surface-2); border: 1px solid var(--border);
-    border-radius: 20px; margin-bottom: 1rem; overflow: hidden;
-    position: relative;
-    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards;
-  }
-  .form-section:nth-child(1) { animation-delay: .35s; }
-  .form-section:nth-child(2) { animation-delay: .42s; }
-  .form-section:nth-child(3) { animation-delay: .49s; }
-
-  .form-section::before {
-    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
-    width: 2px; background: linear-gradient(to bottom, transparent, rgba(221, 120, 82,0.25), transparent);
+  .cost-section {
+    background: var(--paper); border: 1px solid var(--stone);
+    border-radius: 20px; margin-bottom: 14px; overflow: hidden;
+    box-shadow: 0 2px 6px rgba(25,20,15,0.04);
   }
 
-  .section-header {
+  .cost-section-header {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 1.125rem 1.5rem 1.125rem 1.75rem;
-    cursor: none; user-select: none; transition: background .15s ease;
+    padding: 16px 22px;
+    cursor: pointer; user-select: none;
+    transition: background 0.15s ease;
   }
-  .section-header:hover { background: rgba(40, 35, 28,.02); }
+  .cost-section-header:hover { background: var(--sand); }
 
-  .section-title {
-    font-family: 'Space Grotesk', sans-serif; font-size: 1.1rem;
-    color: var(--lime); letter-spacing: .05em;
-    display: flex; align-items: center; gap: .5rem;
+  .cost-section-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 17px; font-weight: 700;
+    color: var(--ink); letter-spacing: -0.2px;
+    display: flex; align-items: center; gap: 10px;
   }
+  .cost-section-title i { color: var(--coral-500); font-size: 14px; }
 
-  .section-right { display: flex; align-items: center; gap: .75rem; }
+  .cost-section-right { display: flex; align-items: center; gap: 12px; }
 
-  .section-total {
-    font-family: 'Space Grotesk', sans-serif; font-size: 1rem;
-    color: var(--text-muted); letter-spacing: .03em;
-  }
-
-  .section-chevron { color: var(--text-muted); font-size: .75rem; transition: transform .25s ease; }
-  .section-chevron.open { transform: rotate(180deg); }
-
-  .section-body { max-height: 0; overflow: hidden; transition: max-height .35s ease; }
-  .section-body.open { max-height: 1000px; }
-  .section-body-inner { padding: 0 1.5rem 1.5rem 1.75rem; }
-
-  /* ── FORM FIELDS ─────────────────────────────────────── */
-  .form-field { display: flex; flex-direction: column; gap: .4rem; margin-bottom: 1rem; position: relative; }
-  .form-field:last-child { margin-bottom: 0; }
-
-  .form-field-header { display: flex; align-items: center; justify-content: space-between; }
-
-  .form-label {
-    font-size: .72rem; font-weight: 500; color: var(--text-muted);
-    letter-spacing: .08em; text-transform: uppercase;
-  }
-  .form-label-note { font-size: .62rem; color: var(--text-muted); font-weight: 400; text-transform: none; letter-spacing: 0; margin-left: .3rem; }
-
-  .pending-tag {
-    font-size: .6rem; font-weight: 700; letter-spacing: .06em;
-    color: #fbbf24; text-transform: uppercase;
-    display: flex; align-items: center; gap: 4px;
-  }
-  .pending-tag i { font-size: .55rem; }
-
-  .input-wrap { position: relative; }
-
-  .input-prefix {
-    position: absolute; left: 1rem; top: 50%; transform: translateY(-50%);
-    font-size: .82rem; color: var(--text-muted); pointer-events: none;
+  .cost-section-total {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 15px; font-weight: 600;
+    color: var(--graphite); letter-spacing: -0.2px;
   }
 
-  .form-input {
-    background: var(--surface-3); border: 1px solid var(--border);
-    border-radius: 10px; padding: .875rem 1rem .875rem 2.5rem;
-    font-family: 'Inter', sans-serif; font-size: .9375rem; color: var(--white);
-    outline: none; transition: all .2s ease; width: 100%; text-align: right;
-    cursor: none;
+  .cost-chevron {
+    color: var(--ash); font-size: 12px;
+    transition: transform 0.25s ease;
   }
-  .form-input:focus { border-color: var(--lime); box-shadow: 0 0 0 3px rgba(221, 120, 82,.07); }
-  .form-input::placeholder { color: var(--text-muted); }
-  .form-input:disabled { opacity: .35; cursor: not-allowed; border-color: rgba(251,191,36,.15); }
+  .cost-chevron.open { transform: rotate(180deg); }
 
-  .form-textarea {
-    background: var(--surface-3); border: 1px solid var(--border);
-    border-radius: 10px; padding: .875rem 1rem;
-    font-family: 'Inter', sans-serif; font-size: .9375rem; color: var(--white);
-    outline: none; transition: all .2s ease; width: 100%;
-    resize: vertical; min-height: 80px; cursor: none;
+  .cost-section-body {
+    max-height: 0; overflow: hidden;
+    transition: max-height 0.35s ease;
   }
-  .form-textarea:focus { border-color: var(--lime); box-shadow: 0 0 0 3px rgba(221, 120, 82,.07); }
-  .form-textarea:disabled { opacity: .35; cursor: not-allowed; }
-
-  /* ── ACTIONS ─────────────────────────────────────────── */
-  .form-actions {
-    display: flex; gap: .75rem;
-    opacity: 0; animation: revealUp .8s cubic-bezier(.16,1,.3,1) forwards .56s;
+  .cost-section-body.open { max-height: 1400px; }
+  .cost-section-body-inner {
+    padding: 4px 22px 22px;
+    border-top: 1px solid var(--stone);
   }
 
-  .btn-lime {
-    display: inline-flex; align-items: center; gap: .4rem;
-    background: var(--lime); color: var(--black); border: none;
-    border-radius: 100px; padding: .9rem 2rem;
-    font-family: 'Inter', sans-serif; font-size: .9375rem; font-weight: 600;
-    cursor: none; transition: all .22s ease;
+  .cost-field-header {
+    display: flex; align-items: center; justify-content: space-between;
   }
-  .btn-lime:hover { background: var(--lime-dim); transform: translateY(-2px); box-shadow: 0 10px 28px rgba(221, 120, 82,.18); }
 
-  .btn-ghost {
-    display: inline-flex; align-items: center; gap: .4rem;
-    background: transparent; color: var(--text-muted);
-    border: 1px solid var(--border-soft); border-radius: 100px;
-    padding: .9rem 1.5rem; font-family: 'Inter', sans-serif;
-    font-size: .875rem; cursor: none; transition: all .2s ease; text-decoration: none;
+  .cost-label-note {
+    font-family: 'Inter', sans-serif;
+    font-size: 11.5px; color: var(--ash);
+    font-weight: 400; text-transform: none; letter-spacing: 0;
+    margin-left: 6px;
   }
-  .btn-ghost:hover { border-color: var(--lime); color: var(--lime); }
 
-  @keyframes revealUp { from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)} }
+  .cost-pending-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px;
+    color: #7a4814; text-transform: uppercase;
+    background: #fbe2c0; border: 1px solid #f0d0a0;
+    border-radius: 100px; padding: 3px 8px;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .cost-pending-tag i { font-size: 9px; }
 
-  @media(max-width:640px) {
-    .costs-header, .costs-divider, .costs-body { padding-left: 1.25rem; padding-right: 1.25rem; }
+  .cost-input-wrap { position: relative; }
+  .cost-input-prefix {
+    position: absolute; left: 14px; top: 50%;
+    transform: translateY(-50%);
+    font-size: 13px; color: var(--ash);
+    font-family: 'JetBrains Mono', monospace; font-weight: 600;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .cost-input-wrap .loov-input {
+    padding-left: 40px !important;
+    text-align: right;
+  }
+  .cost-input-wrap .loov-input:disabled {
+    opacity: 0.4; cursor: not-allowed;
+    border-color: #f0d0a0 !important;
+  }
+  .cost-input-wrap .loov-textarea:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .cost-actions {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    margin-top: 22px;
   }
 </style>
 
-<div class="costs-wrap">
+<div class="loov-page loov-page--narrow">
 
-  <div class="costs-header">
-    <div class="costs-eyebrow">Lançamento de Custos</div>
-    <h1 class="costs-title">
-      <%= MonthlyCost::MONTH_NAMES[@cost.month - 1] %><span>/</span><%= @cost.year %>
+  <div class="loov-hero">
+    <div class="loov-eyebrow"><span class="dot"></span>Lançamento de Custos</div>
+    <h1 class="loov-h1">
+      <%= MonthlyCost::MONTH_NAMES[@cost.month - 1] %><span class="accent">/<%= @cost.year %></span>
     </h1>
-    <p class="costs-sub">Registre os custos fixos e variáveis do mês.</p>
+    <p class="loov-lead">Registre os custos fixos e variáveis do mês.</p>
   </div>
 
-  <div class="costs-divider"><div class="costs-divider-line"></div></div>
+  <% if @has_pending %>
+  <div class="pending-banner">
+    <i class="fas fa-clock"></i>
+    <div class="pending-banner-text">
+      <strong>Alteração pendente de aprovação.</strong><br>
+      Os campos marcados com <strong>⏳</strong> aguardam aprovação e não podem ser alterados até lá.
+    </div>
+  </div>
+  <% end %>
 
-  <div class="costs-body">
+  <%= form_with model: @cost, url: upsert_owner_monthly_costs_path, method: :post, local: true do |f| %>
+    <%= hidden_field_tag :year,  @cost.year  %>
+    <%= hidden_field_tag :month, @cost.month %>
 
-    <% if @has_pending %>
-    <div class="pending-banner">
-      <i class="fas fa-clock"></i>
-      <div class="pending-banner-text">
-        <strong>Alteração pendente de aprovação.</strong><br>
-        Os campos marcados com <strong style="color:#fbbf24;">⏳</strong> aguardam aprovação e não podem ser alterados até lá.
+    <!-- FIXOS -->
+    <div class="cost-section">
+      <div class="cost-section-header" onclick="toggleSection(this)">
+        <div class="cost-section-title"><i class="fas fa-lock"></i> Custos fixos</div>
+        <div class="cost-section-right">
+          <span class="cost-section-total" id="total-fixed">R$ 0,00</span>
+          <i class="fas fa-chevron-down cost-chevron open"></i>
+        </div>
+      </div>
+      <div class="cost-section-body open">
+        <div class="cost-section-body-inner">
+          <% [
+            [:rent,          "Aluguel",                     nil],
+            [:salaries,      "Salários e Encargos",         nil],
+            [:utilities,     "Água, Luz e Internet",        nil],
+            [:other_fixed,   "Outros Fixos",                "contador, seguros, etc"],
+          ].each do |field, label, note| %>
+          <div class="loov-field" style="margin-top: 14px;">
+            <div class="cost-field-header">
+              <label class="loov-label">
+                <%= label %>
+                <% if note %><span class="cost-label-note">(<%= note %>)</span><% end %>
+              </label>
+              <% if @pending_fields.include?(field.to_s) %>
+                <span class="cost-pending-tag"><i class="fas fa-clock"></i> Aguard. aprovação</span>
+              <% end %>
+            </div>
+            <div class="cost-input-wrap">
+              <span class="cost-input-prefix">R$</span>
+              <%= f.text_field field, class: "loov-input cost-input",
+                  placeholder: "0,00",
+                  data: { group: "fixed", field: field },
+                  disabled: @pending_fields.include?(field.to_s),
+                  value: number_with_precision(@cost.send(field), precision: 2, delimiter: '.', separator: ',') %>
+            </div>
+          </div>
+          <% end %>
+        </div>
       </div>
     </div>
-    <% end %>
 
-    <%= form_with model: @cost, url: upsert_owner_monthly_costs_path, method: :post, local: true do |f| %>
-      <%= hidden_field_tag :year,  @cost.year  %>
-      <%= hidden_field_tag :month, @cost.month %>
-
-      <!-- FIXOS -->
-      <div class="form-section">
-        <div class="section-header" onclick="toggleSection(this)">
-          <div class="section-title"><i class="fas fa-lock"></i> Custos Fixos</div>
-          <div class="section-right">
-            <span class="section-total" id="total-fixed">R$ 0,00</span>
-            <i class="fas fa-chevron-down section-chevron open"></i>
-          </div>
-        </div>
-        <div class="section-body open">
-          <div class="section-body-inner">
-            <% [
-              [:rent,          "Aluguel",                     nil],
-              [:salaries,      "Salários e Encargos",         nil],
-              [:utilities,     "Água, Luz e Internet",        nil],
-              [:other_fixed,   "Outros Fixos",                "contador, seguros, etc"],
-            ].each do |field, label, note| %>
-            <div class="form-field">
-              <div class="form-field-header">
-                <label class="form-label">
-                  <%= label %>
-                  <% if note %><span class="form-label-note">(<%= note %>)</span><% end %>
-                </label>
-                <% if @pending_fields.include?(field.to_s) %>
-                  <span class="pending-tag"><i class="fas fa-clock"></i> Aguard. aprovação</span>
-                <% end %>
-              </div>
-              <div class="input-wrap">
-                <span class="input-prefix">R$</span>
-                <%= f.text_field field, class: "form-input cost-input",
-                    placeholder: "0,00",
-                    data: { group: "fixed", field: field },
-                    disabled: @pending_fields.include?(field.to_s),
-                    value: number_with_precision(@cost.send(field), precision: 2, delimiter: '.', separator: ',') %>
-              </div>
-            </div>
-            <% end %>
-          </div>
+    <!-- VARIÁVEIS -->
+    <div class="cost-section">
+      <div class="cost-section-header" onclick="toggleSection(this)">
+        <div class="cost-section-title"><i class="fas fa-arrows-spin"></i> Custos variáveis</div>
+        <div class="cost-section-right">
+          <span class="cost-section-total" id="total-variable">R$ 0,00</span>
+          <i class="fas fa-chevron-down cost-chevron open"></i>
         </div>
       </div>
-
-      <!-- VARIÁVEIS -->
-      <div class="form-section">
-        <div class="section-header" onclick="toggleSection(this)">
-          <div class="section-title"><i class="fas fa-arrows-spin"></i> Custos Variáveis</div>
-          <div class="section-right">
-            <span class="section-total" id="total-variable">R$ 0,00</span>
-            <i class="fas fa-chevron-down section-chevron open"></i>
-          </div>
-        </div>
-        <div class="section-body open">
-          <div class="section-body-inner">
-            <% [
-              [:products,       "Produtos",       "shampoo, cera, detergente, etc"],
-              [:maintenance,    "Manutenção",     "equipamentos, reparos"],
-              [:other_variable, "Outros Variáveis", nil],
-            ].each do |field, label, note| %>
-            <div class="form-field">
-              <div class="form-field-header">
-                <label class="form-label">
-                  <%= label %>
-                  <% if note %><span class="form-label-note">(<%= note %>)</span><% end %>
-                </label>
-                <% if @pending_fields.include?(field.to_s) %>
-                  <span class="pending-tag"><i class="fas fa-clock"></i> Aguard. aprovação</span>
-                <% end %>
-              </div>
-              <div class="input-wrap">
-                <span class="input-prefix">R$</span>
-                <%= f.text_field field, class: "form-input cost-input",
-                    placeholder: "0,00",
-                    data: { group: "variable", field: field },
-                    disabled: @pending_fields.include?(field.to_s),
-                    value: number_with_precision(@cost.send(field), precision: 2, delimiter: '.', separator: ',') %>
-              </div>
-            </div>
-            <% end %>
-          </div>
-        </div>
-      </div>
-
-      <!-- OBSERVAÇÕES -->
-      <div class="form-section">
-        <div class="section-header" onclick="toggleSection(this)">
-          <div class="section-title"><i class="fas fa-note-sticky"></i> Observações</div>
-          <i class="fas fa-chevron-down section-chevron" style="margin-right:0;"></i>
-        </div>
-        <div class="section-body">
-          <div class="section-body-inner">
-            <div class="form-field">
-              <% if @pending_fields.include?("notes") %>
-                <span class="pending-tag" style="margin-bottom:6px;"><i class="fas fa-clock"></i> Aguard. aprovação</span>
+      <div class="cost-section-body open">
+        <div class="cost-section-body-inner">
+          <% [
+            [:products,       "Produtos",       "shampoo, cera, detergente, etc"],
+            [:maintenance,    "Manutenção",     "equipamentos, reparos"],
+            [:other_variable, "Outros Variáveis", nil],
+          ].each do |field, label, note| %>
+          <div class="loov-field" style="margin-top: 14px;">
+            <div class="cost-field-header">
+              <label class="loov-label">
+                <%= label %>
+                <% if note %><span class="cost-label-note">(<%= note %>)</span><% end %>
+              </label>
+              <% if @pending_fields.include?(field.to_s) %>
+                <span class="cost-pending-tag"><i class="fas fa-clock"></i> Aguard. aprovação</span>
               <% end %>
-              <%= f.text_area :notes, class: "form-textarea",
-                  placeholder: "Ex: aluguel reajustado, comprei equipamento novo...",
-                  disabled: @pending_fields.include?("notes") %>
             </div>
+            <div class="cost-input-wrap">
+              <span class="cost-input-prefix">R$</span>
+              <%= f.text_field field, class: "loov-input cost-input",
+                  placeholder: "0,00",
+                  data: { group: "variable", field: field },
+                  disabled: @pending_fields.include?(field.to_s),
+                  value: number_with_precision(@cost.send(field), precision: 2, delimiter: '.', separator: ',') %>
+            </div>
+          </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- OBSERVAÇÕES -->
+    <div class="cost-section">
+      <div class="cost-section-header" onclick="toggleSection(this)">
+        <div class="cost-section-title"><i class="fas fa-note-sticky"></i> Observações</div>
+        <i class="fas fa-chevron-down cost-chevron"></i>
+      </div>
+      <div class="cost-section-body">
+        <div class="cost-section-body-inner">
+          <div class="loov-field" style="margin-top: 14px;">
+            <% if @pending_fields.include?("notes") %>
+              <span class="cost-pending-tag" style="margin-bottom: 6px; align-self: flex-start;"><i class="fas fa-clock"></i> Aguard. aprovação</span>
+            <% end %>
+            <%= f.text_area :notes, class: "loov-textarea",
+                placeholder: "Ex: aluguel reajustado, comprei equipamento novo...",
+                disabled: @pending_fields.include?("notes") %>
           </div>
         </div>
       </div>
+    </div>
 
-      <div class="form-actions">
-        <%= f.submit "Salvar Custos", class: "btn-lime" %>
-        <%= link_to "Cancelar", owner_monthly_costs_path, class: "btn-ghost" %>
-      </div>
-    <% end %>
+    <div class="cost-actions">
+      <%= f.submit "Salvar custos", class: "loov-btn-primary" %>
+      <%= link_to "Cancelar", owner_monthly_costs_path, class: "loov-btn-ghost" %>
+    </div>
+  <% end %>
 
-  </div>
 </div>
 
 <script>
-(function(){
-  const cursor=document.getElementById('loov-cursor'),trail=document.getElementById('loov-cursor-trail');
-  if(cursor&&trail){let mx=-100,my=-100,tx=-100,ty=-100;document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;cursor.style.left=mx+'px';cursor.style.top=my+'px';});(function anim(){tx+=(mx-tx)*0.12;ty+=(my-ty)*0.12;trail.style.left=tx+'px';trail.style.top=ty+'px';requestAnimationFrame(anim);})();document.addEventListener('mouseover',e=>{if(e.target.closest('a,button,input,select,textarea'))document.body.classList.add('cursor-hover');});document.addEventListener('mouseout',e=>{if(e.target.closest('a,button,input,select,textarea'))document.body.classList.remove('cursor-hover');});document.addEventListener('mouseleave',()=>{cursor.style.opacity='0';trail.style.opacity='0';});document.addEventListener('mouseenter',()=>{cursor.style.opacity='1';trail.style.opacity='1';});}
-  const pt=document.getElementById('page-transition');
-  if(pt){document.addEventListener('click',e=>{const link=e.target.closest('a[href]');if(!link)return;const href=link.getAttribute('href');if(!href||href.startsWith('#')||href.startsWith('mailto')||link.target==='_blank')return;if(href.startsWith('http')&&!href.includes(window.location.hostname))return;e.preventDefault();pt.classList.add('enter');setTimeout(()=>window.location.href=href,400);});window.addEventListener('pageshow',()=>{pt.classList.remove('enter');pt.classList.add('exit');setTimeout(()=>pt.classList.remove('exit'),440);});}
-})();
-
 function toggleSection(header) {
-  var body=header.nextElementSibling,chevron=header.querySelector('.section-chevron'),isOpen=body.classList.contains('open');
-  body.classList.toggle('open');chevron.classList.toggle('open',!isOpen);
+  var body = header.nextElementSibling;
+  var chevron = header.querySelector('.cost-chevron');
+  var isOpen = body.classList.contains('open');
+  body.classList.toggle('open');
+  chevron.classList.toggle('open', !isOpen);
 }
 
 function applyMask(input){var d=input.value.replace(/\D/g,'');if(!d.length)d='0';var c=parseInt(d,10),r=(c/100).toFixed(2),p=r.split('.');input.value=p[0].replace(/\B(?=(\d{3})+(?!\d))/g,'.')+','+p[1];}

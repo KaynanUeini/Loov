@@ -1,246 +1,300 @@
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
-  :root {
-    --lime: #dd7852; --lime-dim: #9c4930; --black: #fafaf6;
-    --surface-2: #fafaf6; --surface-3: #e0dbd0; --border: #e0dbd0;
-    --text-muted: #ada699; --white: #28231c;
+  .wiz-progress { display: flex; align-items: center; margin-bottom: 40px; }
+  .wiz-step { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; }
+  .wiz-step-circle {
+    width: 40px; height: 40px; border-radius: 50%;
+    border: 1.5px solid var(--stone); background: var(--paper);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px; font-weight: 700; color: var(--ash);
+    transition: all 0.3s ease; z-index: 1;
   }
-  * { box-sizing: border-box; }
-  .wiz-wrap { min-height: 100vh; background: var(--black); font-family: 'Inter', sans-serif; padding-top: 64px; padding-bottom: 4rem; }
-  .wiz-inner { max-width: 640px; margin: 0 auto; padding: 3rem 1.5rem; }
+  .wiz-step.active .wiz-step-circle {
+    border-color: var(--coral-500);
+    background: var(--coral-50);
+    color: var(--coral-700);
+  }
+  .wiz-step.done .wiz-step-circle {
+    border-color: var(--coral-500);
+    background: var(--coral-500);
+    color: var(--cream);
+  }
+  .wiz-step-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; text-transform: uppercase; letter-spacing: 1.4px;
+    color: var(--ash); white-space: nowrap;
+  }
+  .wiz-step.active .wiz-step-label { color: var(--coral-500); }
+  .wiz-step.done .wiz-step-label { color: var(--ink); }
+  .wiz-connector { flex: 1; height: 1px; background: var(--stone); margin-top: -22px; transition: background 0.3s ease; }
+  .wiz-connector.done { background: var(--coral-500); }
 
-  .wiz-progress { display: flex; align-items: center; margin-bottom: 3rem; }
-  .wiz-step { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; flex: 1; }
-  .wiz-step-circle { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--border); background: var(--surface-2); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 600; color: var(--text-muted); transition: all 0.3s ease; z-index: 1; }
-  .wiz-step.active .wiz-step-circle { border-color: var(--lime); background: rgba(221, 120, 82,0.1); color: var(--lime); }
-  .wiz-step.done .wiz-step-circle { border-color: var(--lime); background: var(--lime); color: var(--black); }
-  .wiz-step-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); white-space: nowrap; }
-  .wiz-step.active .wiz-step-label { color: var(--lime); }
-  .wiz-step.done .wiz-step-label { color: var(--white); }
-  .wiz-connector { flex: 1; height: 1px; background: var(--border); margin-top: -1.5rem; transition: background 0.3s ease; }
-  .wiz-connector.done { background: var(--lime); }
+  .wiz-form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .wiz-form-row-cep { display: grid; grid-template-columns: 140px 1fr 100px; gap: 14px; }
+  .wiz-form-row-uf { display: grid; grid-template-columns: 80px 1fr 1fr; gap: 14px; }
 
-  .wiz-eyebrow { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.7rem; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; color: var(--lime); margin-bottom: 0.75rem; }
-  .wiz-eyebrow::before { content: ''; display: block; width: 24px; height: 1px; background: var(--lime); }
-  .wiz-title { font-family: 'Space Grotesk', sans-serif; font-size: clamp(2rem, 7vw, 3.5rem); line-height: 1; color: var(--white); margin: 0 0 0.5rem 0; }
-  .wiz-title span { color: var(--lime); }
-  .wiz-subtitle { font-size: 0.9rem; color: var(--text-muted); margin: 0 0 2rem 0; }
+  .wiz-day-buttons {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    gap: 8px; margin-bottom: 20px;
+  }
+  .wiz-day-btn {
+    background: var(--paper); border: 1px solid var(--stone);
+    border-radius: 10px; padding: 10px 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 600; letter-spacing: 1.2px;
+    color: var(--graphite); cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center; text-transform: uppercase; user-select: none;
+  }
+  .wiz-day-btn:hover { border-color: var(--coral-300); color: var(--ink); }
+  .wiz-day-btn.active {
+    background: var(--coral-50); border-color: var(--coral-500); color: var(--coral-700);
+  }
 
-  .wiz-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; padding: 2rem; animation: fadeUp 0.4s ease forwards; }
-  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .wiz-day-time-rows { display: flex; flex-direction: column; gap: 10px; }
+  .wiz-day-time-row {
+    display: none; align-items: center; gap: 14px;
+    background: var(--sand); border: 1px solid var(--stone);
+    border-radius: 12px; padding: 14px 16px;
+  }
+  .wiz-day-time-row.visible { display: flex; }
+  .wiz-day-time-label {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 16px; font-weight: 700;
+    color: var(--coral-500); min-width: 36px;
+  }
+  .wiz-time-select-wrap { display: flex; align-items: center; gap: 8px; flex: 1; }
+  .wiz-time-label-small {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: var(--ash);
+    text-transform: uppercase; letter-spacing: 1.2px;
+    white-space: nowrap;
+  }
+  .wiz-time-select {
+    background: var(--paper); border: 1px solid var(--stone);
+    border-radius: 8px; padding: 6px 10px;
+    font-family: 'Inter', sans-serif; font-size: 13px;
+    color: var(--ink); outline: none; cursor: pointer;
+    appearance: none; text-align: center;
+    transition: border-color 0.2s;
+  }
+  .wiz-time-select:focus { border-color: var(--coral-500); }
+  .wiz-time-sep {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 16px; color: var(--ash);
+  }
 
-  .form-field { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem; }
-  .form-field:last-child { margin-bottom: 0; }
-  .form-label { font-size: 0.78rem; font-weight: 500; color: var(--text-muted); letter-spacing: 0.05em; text-transform: uppercase; }
-  .form-input { background: var(--surface-3); border: 1px solid var(--border); border-radius: 10px; padding: 0.875rem 1rem; font-family: 'Inter', sans-serif; font-size: 0.9375rem; color: var(--white); outline: none; transition: all 0.2s ease; width: 100%; }
-  .form-input::placeholder { color: var(--text-muted); }
-  .form-input:focus { border-color: var(--lime); box-shadow: 0 0 0 3px rgba(221, 120, 82,0.08); }
-  .form-select { background: var(--surface-3); border: 1px solid var(--border); border-radius: 10px; padding: 0.875rem 1rem; font-family: 'Inter', sans-serif; font-size: 0.9375rem; color: var(--white); outline: none; transition: all 0.2s ease; width: 100%; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 1rem center; cursor: pointer; }
-  .form-select:focus { border-color: var(--lime); box-shadow: 0 0 0 3px rgba(221, 120, 82,0.08); }
-  .form-select option { background: var(--surface-3); }
-  .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
-  .form-row-cep { display: grid; grid-template-columns: 140px 1fr 100px; gap: 1rem; margin-bottom: 1rem; }
-  .form-row-uf { display: grid; grid-template-columns: 80px 1fr 1fr; gap: 1rem; }
-  .hint { font-size: 0.72rem; color: var(--text-muted); }
+  .wiz-service-card {
+    background: var(--sand); border: 1px solid var(--stone);
+    border-radius: 14px; padding: 18px;
+    margin-bottom: 12px; position: relative;
+  }
+  .wiz-service-remove {
+    position: absolute; top: 14px; right: 14px;
+    background: none; border: none;
+    color: var(--ash); cursor: pointer;
+    font-size: 14px; transition: color 0.2s;
+    padding: 0;
+  }
+  .wiz-service-remove:hover { color: var(--rose-500); }
 
-  .day-buttons { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; margin-bottom: 1.25rem; }
-  .day-btn { background: var(--surface-3); border: 1px solid var(--border); border-radius: 10px; padding: 0.6rem 0.25rem; font-size: 0.7rem; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: all 0.2s ease; text-align: center; text-transform: uppercase; user-select: none; }
-  .day-btn:hover { border-color: rgba(221, 120, 82,0.3); color: var(--white); }
-  .day-btn.active { background: rgba(221, 120, 82,0.1); border-color: var(--lime); color: var(--lime); }
-  .day-time-rows { display: flex; flex-direction: column; gap: 0.75rem; }
-  .day-time-row { display: none; align-items: center; gap: 1rem; background: var(--surface-3); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem; }
-  .day-time-row.visible { display: flex; }
-  .day-time-label { font-family: 'Space Grotesk', sans-serif; font-size: 1rem; color: var(--lime); min-width: 36px; }
-  .time-select-wrap { display: flex; align-items: center; gap: 0.5rem; flex: 1; }
-  .time-label-small { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; white-space: nowrap; }
-  .time-select { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.75rem; font-family: 'Inter', sans-serif; font-size: 0.875rem; color: var(--white); outline: none; cursor: pointer; appearance: none; text-align: center; transition: border-color 0.2s; }
-  .time-select:focus { border-color: var(--lime); }
-  .time-sep { font-family: 'Space Grotesk', sans-serif; font-size: 1.1rem; color: var(--text-muted); }
+  .wiz-btn-add {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    background: transparent; color: var(--coral-700);
+    border: 1.5px dashed var(--coral-300); border-radius: 12px;
+    padding: 12px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 600; letter-spacing: 1.4px;
+    cursor: pointer; transition: all 0.2s;
+    width: 100%; margin-top: 12px;
+    text-transform: uppercase;
+  }
+  .wiz-btn-add:hover { border-color: var(--coral-500); background: var(--coral-50); }
 
-  .service-card { background: var(--surface-3); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem; margin-bottom: 0.75rem; position: relative; }
-  .service-remove { position: absolute; top: 1rem; right: 1rem; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.875rem; transition: color 0.2s; padding: 0; }
-  .service-remove:hover { color: #ef4444; }
-  .btn-add { display: inline-flex; align-items: center; gap: 0.5rem; background: transparent; color: var(--lime); border: 1px dashed rgba(221, 120, 82,0.3); border-radius: 10px; padding: 0.75rem 1rem; font-family: 'Inter', sans-serif; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.2s; width: 100%; justify-content: center; margin-top: 0.75rem; }
-  .btn-add:hover { border-color: var(--lime); background: rgba(221, 120, 82,0.04); }
+  .wiz-actions { display: flex; gap: 12px; margin-top: 22px; }
+  .wiz-actions .loov-btn-primary { flex: 1; justify-content: center; }
 
-  .wiz-actions { display: flex; gap: 1rem; margin-top: 1.5rem; }
-  .btn-next { background: var(--lime); color: var(--black); border: none; border-radius: 100px; padding: 0.875rem 2rem; font-family: 'Inter', sans-serif; font-size: 0.9375rem; font-weight: 600; cursor: pointer; transition: all 0.2s; flex: 1; }
-  .btn-next:hover { background: var(--lime-dim); transform: translateY(-2px); }
-  .btn-next:disabled { opacity: 0.5; pointer-events: none; }
-  .btn-back { background: transparent; color: var(--text-muted); border: 1px solid var(--border); border-radius: 100px; padding: 0.875rem 1.5rem; font-family: 'Inter', sans-serif; font-size: 0.9375rem; cursor: pointer; transition: all 0.2s; }
-  .btn-back:hover { border-color: var(--white); color: var(--white); }
+  .wiz-cep-error { font-size: 12.5px; color: var(--rose-500); display: none; margin-top: 4px; font-weight: 500; }
+  .wiz-days-hint { font-size: 13px; color: var(--ash); margin: 12px 0 0; }
 
-  .wiz-success { text-align: center; padding: 3rem 1.5rem; }
-  .wiz-success-icon { width: 80px; height: 80px; border-radius: 50%; background: rgba(221, 120, 82,0.1); border: 2px solid var(--lime); display: flex; align-items: center; justify-content: center; font-size: 2rem; color: var(--lime); margin: 0 auto 1.5rem; }
-  .wiz-success-title { font-family: 'Space Grotesk', sans-serif; font-size: 2.5rem; color: var(--white); margin: 0 0 0.5rem; }
-  .wiz-success-title span { color: var(--lime); }
-  .wiz-success-desc { font-size: 0.9375rem; color: var(--text-muted); margin: 0 0 2rem; }
-  .btn-dashboard { display: inline-flex; align-items: center; gap: 0.5rem; background: var(--lime); color: var(--black); border: none; border-radius: 100px; padding: 0.875rem 2rem; font-family: 'Inter', sans-serif; font-size: 0.9375rem; font-weight: 600; cursor: pointer; text-decoration: none; transition: all 0.2s; }
-  .btn-dashboard:hover { background: var(--lime-dim); transform: translateY(-2px); }
+  .wiz-success-icon {
+    width: 80px; height: 80px; border-radius: 50%;
+    background: var(--coral-50); border: 2px solid var(--coral-500);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; color: var(--coral-700);
+    margin: 0 auto 22px;
+  }
 
-  .cep-error { font-size: 0.775rem; color: #fca5a5; display: none; }
-  .days-hint { font-size: 0.8rem; color: var(--text-muted); margin: 0.75rem 0 0; }
+  .wiz-input-with-icon { position: relative; }
+  .wiz-input-spinner {
+    display: none; position: absolute; right: 14px;
+    top: 50%; transform: translateY(-50%);
+    color: var(--coral-500);
+  }
 
   @media (max-width: 580px) {
-    .day-buttons { grid-template-columns: repeat(4, 1fr); }
-    .form-row-2, .form-row-cep, .form-row-uf { grid-template-columns: 1fr; }
-    .day-time-row { flex-direction: column; align-items: flex-start; }
-    .time-select-wrap { width: 100%; }
-    .wiz-inner { padding: 2rem 1rem; }
+    .wiz-day-buttons { grid-template-columns: repeat(4, 1fr); }
+    .wiz-form-row-2, .wiz-form-row-cep, .wiz-form-row-uf { grid-template-columns: 1fr; }
+    .wiz-day-time-row { flex-direction: column; align-items: flex-start; }
+    .wiz-time-select-wrap { width: 100%; }
   }
 </style>
 
-<div class="wiz-wrap">
-  <div class="wiz-inner">
+<div class="loov-page loov-page--narrow">
 
-    <div class="wiz-progress">
-      <div class="wiz-step active" id="step-ind-1">
-        <div class="wiz-step-circle" id="circle-1">1</div>
-        <span class="wiz-step-label">Lava-rápido</span>
-      </div>
-      <div class="wiz-connector" id="conn-1"></div>
-      <div class="wiz-step" id="step-ind-2">
-        <div class="wiz-step-circle" id="circle-2">2</div>
-        <span class="wiz-step-label">Horários</span>
-      </div>
-      <div class="wiz-connector" id="conn-2"></div>
-      <div class="wiz-step" id="step-ind-3">
-        <div class="wiz-step-circle" id="circle-3">3</div>
-        <span class="wiz-step-label">Serviços</span>
-      </div>
-      <div class="wiz-connector" id="conn-3"></div>
-      <div class="wiz-step" id="step-ind-4">
-        <div class="wiz-step-circle" id="circle-4"><i class="fas fa-check" style="font-size:0.7rem;"></i></div>
-        <span class="wiz-step-label">Pronto!</span>
-      </div>
+  <div class="wiz-progress">
+    <div class="wiz-step active" id="step-ind-1">
+      <div class="wiz-step-circle" id="circle-1">1</div>
+      <span class="wiz-step-label">Lava-rápido</span>
     </div>
-
-    <!-- PASSO 1 -->
-    <div id="step-1">
-      <div class="wiz-eyebrow">Passo 1 de 3</div>
-      <h1 class="wiz-title">Seu <span>Lava-Rápido</span></h1>
-      <p class="wiz-subtitle">Comece com as informações básicas do seu estabelecimento.</p>
-
-      <div class="wiz-card">
-        <div class="form-field">
-          <label class="form-label">Nome do Lava-Rápido</label>
-          <input type="text" class="form-input" id="s1-name" placeholder="Ex.: Lava Car Premium">
-        </div>
-
-        <div class="form-row-cep">
-          <div class="form-field" style="margin-bottom:0;">
-            <label class="form-label">CEP</label>
-            <div style="position:relative;">
-              <input type="text" class="form-input" id="s1-cep" placeholder="00000-000" maxlength="9" style="padding-right:2.5rem;">
-              <div id="cep-spinner" style="display:none;position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);color:var(--lime);">
-                <i class="fas fa-circle-notch fa-spin"></i>
-              </div>
-            </div>
-            <span class="cep-error" id="cep-error">CEP não encontrado.</span>
-          </div>
-          <div class="form-field" style="margin-bottom:0;">
-            <label class="form-label">Logradouro</label>
-            <input type="text" class="form-input" id="s1-logradouro" placeholder="Rua / Avenida">
-          </div>
-          <div class="form-field" style="margin-bottom:0;">
-            <label class="form-label">Número</label>
-            <input type="text" class="form-input" id="s1-numero" placeholder="123">
-          </div>
-        </div>
-
-        <div class="form-row-2">
-          <div class="form-field" style="margin-bottom:0;">
-            <label class="form-label">Bairro</label>
-            <input type="text" class="form-input" id="s1-bairro" placeholder="Bairro">
-          </div>
-          <div class="form-field" style="margin-bottom:0;">
-            <label class="form-label">Cidade</label>
-            <input type="text" class="form-input" id="s1-cidade" placeholder="Cidade">
-          </div>
-        </div>
-
-        <div class="form-row-uf" style="margin-top:1rem;">
-          <div class="form-field" style="margin-bottom:0;">
-            <label class="form-label">UF</label>
-            <input type="text" class="form-input" id="s1-uf" placeholder="SP" maxlength="2">
-          </div>
-          <div class="form-field" style="margin-bottom:0;">
-            <label class="form-label">Capacidade simultânea</label>
-            <input type="number" class="form-input" id="s1-capacity" placeholder="2" min="1" value="1">
-            <span class="hint">Atendimentos ao mesmo tempo</span>
-          </div>
-          <div class="form-field" style="margin-bottom:0;">
-            <label class="form-label">Nº de funcionários</label>
-            <input type="number" class="form-input" id="s1-employees" placeholder="3" min="1" value="1">
-          </div>
-        </div>
-      </div>
-
-      <div class="wiz-actions">
-        <button class="btn-next" id="btn-next-1" onclick="saveStep1()">
-          Continuar <i class="fas fa-arrow-right" style="margin-left:0.4rem;"></i>
-        </button>
-      </div>
+    <div class="wiz-connector" id="conn-1"></div>
+    <div class="wiz-step" id="step-ind-2">
+      <div class="wiz-step-circle" id="circle-2">2</div>
+      <span class="wiz-step-label">Horários</span>
     </div>
-
-    <!-- PASSO 2 -->
-    <div id="step-2" style="display:none;">
-      <div class="wiz-eyebrow">Passo 2 de 3</div>
-      <h1 class="wiz-title">Horários de <span>Funcionamento</span></h1>
-      <p class="wiz-subtitle">Selecione os dias e configure o horário de cada um.</p>
-
-      <div class="wiz-card">
-        <div class="day-buttons">
-          <% [["Dom",0],["Seg",1],["Ter",2],["Qua",3],["Qui",4],["Sex",5],["Sáb",6]].each do |label, val| %>
-          <div class="day-btn" data-day="<%= val %>" onclick="toggleDay(<%= val %>, '<%= label %>')"><%= label %></div>
-          <% end %>
-        </div>
-        <div class="day-time-rows" id="day-time-rows"></div>
-        <p class="days-hint" id="days-hint">Selecione pelo menos um dia.</p>
-      </div>
-
-      <div class="wiz-actions">
-        <button class="btn-back" onclick="goToStep(1)"><i class="fas fa-arrow-left"></i></button>
-        <button class="btn-next" onclick="saveStep2()">
-          Continuar <i class="fas fa-arrow-right" style="margin-left:0.4rem;"></i>
-        </button>
-      </div>
+    <div class="wiz-connector" id="conn-2"></div>
+    <div class="wiz-step" id="step-ind-3">
+      <div class="wiz-step-circle" id="circle-3">3</div>
+      <span class="wiz-step-label">Serviços</span>
     </div>
-
-    <!-- PASSO 3 -->
-    <div id="step-3" style="display:none;">
-      <div class="wiz-eyebrow">Passo 3 de 3</div>
-      <h1 class="wiz-title">Seus <span>Serviços</span></h1>
-      <p class="wiz-subtitle">Adicione pelo menos um serviço com preço e duração.</p>
-
-      <div class="wiz-card">
-        <div id="services-list"></div>
-        <button class="btn-add" onclick="addService()">
-          <i class="fas fa-plus"></i> Adicionar Serviço
-        </button>
-      </div>
-
-      <div class="wiz-actions">
-        <button class="btn-back" onclick="goToStep(2)"><i class="fas fa-arrow-left"></i></button>
-        <button class="btn-next" id="btn-finish" onclick="saveStep3()">
-          Finalizar <i class="fas fa-check" style="margin-left:0.4rem;"></i>
-        </button>
-      </div>
+    <div class="wiz-connector" id="conn-3"></div>
+    <div class="wiz-step" id="step-ind-4">
+      <div class="wiz-step-circle" id="circle-4"><i class="fas fa-check" style="font-size:11px;"></i></div>
+      <span class="wiz-step-label">Pronto!</span>
     </div>
-
-    <!-- PASSO 4 -->
-    <div id="step-4" style="display:none;">
-      <div class="wiz-card wiz-success">
-        <div class="wiz-success-icon"><i class="fas fa-check"></i></div>
-        <h2 class="wiz-success-title">Tudo <span>pronto!</span></h2>
-        <p class="wiz-success-desc">Seu lava-rápido está cadastrado e pronto para receber agendamentos.</p>
-        <a href="/" class="btn-dashboard">
-          <i class="fas fa-gauge-high"></i> Ir para o painel
-        </a>
-      </div>
-    </div>
-
   </div>
+
+  <!-- PASSO 1 -->
+  <div id="step-1">
+    <div class="loov-hero">
+      <div class="loov-eyebrow"><span class="dot"></span>Passo 1 de 3</div>
+      <h1 class="loov-h1">Seu <span class="accent">lava-rápido</span>.</h1>
+      <p class="loov-lead">Comece com as informações básicas do seu estabelecimento.</p>
+    </div>
+
+    <div class="loov-card">
+      <div class="loov-field">
+        <label class="loov-label">Nome do lava-rápido</label>
+        <input type="text" class="loov-input" id="s1-name" placeholder="Ex.: Lava Car Premium">
+      </div>
+
+      <div class="wiz-form-row-cep">
+        <div class="loov-field">
+          <label class="loov-label">CEP</label>
+          <div class="wiz-input-with-icon">
+            <input type="text" class="loov-input" id="s1-cep" placeholder="00000-000" maxlength="9" style="padding-right: 40px;">
+            <div id="cep-spinner" class="wiz-input-spinner">
+              <i class="fas fa-circle-notch fa-spin"></i>
+            </div>
+          </div>
+          <span class="wiz-cep-error" id="cep-error">CEP não encontrado.</span>
+        </div>
+        <div class="loov-field">
+          <label class="loov-label">Logradouro</label>
+          <input type="text" class="loov-input" id="s1-logradouro" placeholder="Rua / Avenida">
+        </div>
+        <div class="loov-field">
+          <label class="loov-label">Número</label>
+          <input type="text" class="loov-input" id="s1-numero" placeholder="123">
+        </div>
+      </div>
+
+      <div class="wiz-form-row-2">
+        <div class="loov-field">
+          <label class="loov-label">Bairro</label>
+          <input type="text" class="loov-input" id="s1-bairro" placeholder="Bairro">
+        </div>
+        <div class="loov-field">
+          <label class="loov-label">Cidade</label>
+          <input type="text" class="loov-input" id="s1-cidade" placeholder="Cidade">
+        </div>
+      </div>
+
+      <div class="wiz-form-row-uf">
+        <div class="loov-field">
+          <label class="loov-label">UF</label>
+          <input type="text" class="loov-input" id="s1-uf" placeholder="SP" maxlength="2">
+        </div>
+        <div class="loov-field">
+          <label class="loov-label">Capacidade simultânea</label>
+          <input type="number" class="loov-input" id="s1-capacity" placeholder="2" min="1" value="1">
+          <span class="loov-help">Atendimentos ao mesmo tempo</span>
+        </div>
+        <div class="loov-field">
+          <label class="loov-label">Nº de funcionários</label>
+          <input type="number" class="loov-input" id="s1-employees" placeholder="3" min="1" value="1">
+        </div>
+      </div>
+    </div>
+
+    <div class="wiz-actions">
+      <button class="loov-btn-primary" id="btn-next-1" onclick="saveStep1()">
+        Continuar <i class="fas fa-arrow-right"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- PASSO 2 -->
+  <div id="step-2" style="display:none;">
+    <div class="loov-hero">
+      <div class="loov-eyebrow"><span class="dot"></span>Passo 2 de 3</div>
+      <h1 class="loov-h1">Horários de <span class="accent">funcionamento</span>.</h1>
+      <p class="loov-lead">Selecione os dias e configure o horário de cada um.</p>
+    </div>
+
+    <div class="loov-card">
+      <div class="wiz-day-buttons">
+        <% [["Dom",0],["Seg",1],["Ter",2],["Qua",3],["Qui",4],["Sex",5],["Sáb",6]].each do |label, val| %>
+        <div class="wiz-day-btn" data-day="<%= val %>" onclick="toggleDay(<%= val %>, '<%= label %>')"><%= label %></div>
+        <% end %>
+      </div>
+      <div class="wiz-day-time-rows" id="day-time-rows"></div>
+      <p class="wiz-days-hint" id="days-hint">Selecione pelo menos um dia.</p>
+    </div>
+
+    <div class="wiz-actions">
+      <button class="loov-btn-secondary" onclick="goToStep(1)"><i class="fas fa-arrow-left"></i></button>
+      <button class="loov-btn-primary" onclick="saveStep2()">
+        Continuar <i class="fas fa-arrow-right"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- PASSO 3 -->
+  <div id="step-3" style="display:none;">
+    <div class="loov-hero">
+      <div class="loov-eyebrow"><span class="dot"></span>Passo 3 de 3</div>
+      <h1 class="loov-h1">Seus <span class="accent">serviços</span>.</h1>
+      <p class="loov-lead">Adicione pelo menos um serviço com preço e duração.</p>
+    </div>
+
+    <div class="loov-card">
+      <div id="services-list"></div>
+      <button class="wiz-btn-add" onclick="addService()">
+        <i class="fas fa-plus"></i> Adicionar serviço
+      </button>
+    </div>
+
+    <div class="wiz-actions">
+      <button class="loov-btn-secondary" onclick="goToStep(2)"><i class="fas fa-arrow-left"></i></button>
+      <button class="loov-btn-primary" id="btn-finish" onclick="saveStep3()">
+        Finalizar <i class="fas fa-check"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- PASSO 4 -->
+  <div id="step-4" style="display:none;">
+    <div class="loov-card loov-card--lg" style="text-align: center;">
+      <div class="wiz-success-icon"><i class="fas fa-check"></i></div>
+      <h2 class="loov-h2" style="margin-bottom: 10px;">Tudo <span style="color: var(--coral-500);">pronto!</span></h2>
+      <p class="loov-lead" style="margin-bottom: 24px;">Seu lava-rápido está cadastrado e pronto para receber agendamentos.</p>
+      <a href="/" class="loov-btn-primary">
+        <i class="fas fa-gauge-high"></i> Ir para o painel
+      </a>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -282,7 +336,7 @@
       ind.className = 'wiz-step';
       if (i < current) {
         ind.classList.add('done');
-        circle.innerHTML = '<i class="fas fa-check" style="font-size:0.7rem;"></i>';
+        circle.innerHTML = '<i class="fas fa-check" style="font-size:11px;"></i>';
       } else if (i === current) {
         ind.classList.add('active');
         if (i < 4) circle.innerHTML = i;
@@ -356,13 +410,13 @@
     .then(function(r) { return r.json(); })
     .then(function(data) {
       btn.disabled = false;
-      btn.innerHTML = 'Continuar <i class="fas fa-arrow-right" style="margin-left:0.4rem;"></i>';
+      btn.innerHTML = 'Continuar <i class="fas fa-arrow-right"></i>';
       if (data.success) { carWashId = data.car_wash_id; goToStep(2); }
       else { alert('Erro: ' + (data.errors || []).join(', ')); }
     })
     .catch(function() {
       btn.disabled = false;
-      btn.innerHTML = 'Continuar <i class="fas fa-arrow-right" style="margin-left:0.4rem;"></i>';
+      btn.innerHTML = 'Continuar <i class="fas fa-arrow-right"></i>';
       alert('Erro ao salvar. Tente novamente.');
     });
   }
@@ -379,7 +433,7 @@
   }
 
   function toggleDay(day, label) {
-    var btn = document.querySelector('.day-btn[data-day="'+day+'"]');
+    var btn = document.querySelector('.wiz-day-btn[data-day="'+day+'"]');
     if (activeDays[day]) {
       delete activeDays[day];
       btn.classList.remove('active');
@@ -388,19 +442,19 @@
     } else {
       activeDays[day] = { oh: '08', om: '00', ch: '18', cm: '00' };
       btn.classList.add('active');
-      var html = '<div class="day-time-row visible" id="day-row-'+day+'">'+
-        '<div class="day-time-label">'+label+'</div>'+
-        '<div class="time-select-wrap"><span class="time-label-small">Abre</span>'+
-        '<select class="time-select" onchange="updateTime('+day+',\'oh\',this.value)">'+buildHourOptions('08')+'</select>'+
-        '<span class="time-sep">:</span>'+
-        '<select class="time-select" onchange="updateTime('+day+',\'om\',this.value)">'+buildMinOptions('00')+'</select></div>'+
-        '<div class="time-select-wrap"><span class="time-label-small">Fecha</span>'+
-        '<select class="time-select" onchange="updateTime('+day+',\'ch\',this.value)">'+buildHourOptions('18')+'</select>'+
-        '<span class="time-sep">:</span>'+
-        '<select class="time-select" onchange="updateTime('+day+',\'cm\',this.value)">'+buildMinOptions('00')+'</select></div>'+
+      var html = '<div class="wiz-day-time-row visible" id="day-row-'+day+'">'+
+        '<div class="wiz-day-time-label">'+label+'</div>'+
+        '<div class="wiz-time-select-wrap"><span class="wiz-time-label-small">Abre</span>'+
+        '<select class="wiz-time-select" onchange="updateTime('+day+',\'oh\',this.value)">'+buildHourOptions('08')+'</select>'+
+        '<span class="wiz-time-sep">:</span>'+
+        '<select class="wiz-time-select" onchange="updateTime('+day+',\'om\',this.value)">'+buildMinOptions('00')+'</select></div>'+
+        '<div class="wiz-time-select-wrap"><span class="wiz-time-label-small">Fecha</span>'+
+        '<select class="wiz-time-select" onchange="updateTime('+day+',\'ch\',this.value)">'+buildHourOptions('18')+'</select>'+
+        '<span class="wiz-time-sep">:</span>'+
+        '<select class="wiz-time-select" onchange="updateTime('+day+',\'cm\',this.value)">'+buildMinOptions('00')+'</select></div>'+
         '</div>';
       var rows = document.getElementById('day-time-rows');
-      var existing = rows.querySelectorAll('.day-time-row');
+      var existing = rows.querySelectorAll('.wiz-day-time-row');
       var inserted = false;
       for (var i = 0; i < existing.length; i++) {
         if (day < parseInt(existing[i].id.replace('day-row-',''))) {
@@ -446,28 +500,28 @@
       return '<option value="'+c+'">'+c+'</option>';
     }).join('');
 
-    var html = '<div class="service-card" id="service-'+idx+'">'+
-      '<button class="service-remove" onclick="removeService('+idx+')" title="Remover"><i class="fas fa-times"></i></button>'+
-      '<div class="form-row-2" style="margin-bottom:1rem;">'+
-        '<div class="form-field" style="margin-bottom:0;">'+
-          '<label class="form-label">Categoria</label>'+
-          '<select class="form-select service-category" data-idx="'+idx+'">'+
+    var html = '<div class="wiz-service-card" id="service-'+idx+'">'+
+      '<button class="wiz-service-remove" onclick="removeService('+idx+')" title="Remover"><i class="fas fa-times"></i></button>'+
+      '<div class="wiz-form-row-2" style="margin-bottom: 12px;">'+
+        '<div class="loov-field" style="margin-bottom: 0;">'+
+          '<label class="loov-label">Categoria</label>'+
+          '<select class="loov-input service-category" data-idx="'+idx+'">'+
             '<option value="">Selecione</option>'+categoryOptions+
           '</select>'+
         '</div>'+
-        '<div class="form-field" style="margin-bottom:0;">'+
-          '<label class="form-label">Serviço</label>'+
-          '<input type="text" class="form-input service-title" placeholder="Ex.: Lavagem Simples" data-idx="'+idx+'">'+
+        '<div class="loov-field" style="margin-bottom: 0;">'+
+          '<label class="loov-label">Serviço</label>'+
+          '<input type="text" class="loov-input service-title" placeholder="Ex.: Lavagem Simples" data-idx="'+idx+'">'+
         '</div>'+
       '</div>'+
-      '<div class="form-row-2">'+
-        '<div class="form-field" style="margin-bottom:0;">'+
-          '<label class="form-label">Preço (R$)</label>'+
-          '<input type="number" step="0.01" min="0" class="form-input service-price" placeholder="0,00" data-idx="'+idx+'">'+
+      '<div class="wiz-form-row-2">'+
+        '<div class="loov-field" style="margin-bottom: 0;">'+
+          '<label class="loov-label">Preço (R$)</label>'+
+          '<input type="number" step="0.01" min="0" class="loov-input service-price" placeholder="0,00" data-idx="'+idx+'">'+
         '</div>'+
-        '<div class="form-field" style="margin-bottom:0;">'+
-          '<label class="form-label">Duração (min)</label>'+
-          '<input type="number" min="1" class="form-input service-duration" placeholder="60" data-idx="'+idx+'">'+
+        '<div class="loov-field" style="margin-bottom: 0;">'+
+          '<label class="loov-label">Duração (min)</label>'+
+          '<input type="number" min="1" class="loov-input service-duration" placeholder="60" data-idx="'+idx+'">'+
         '</div>'+
       '</div>'+
       '</div>';
@@ -484,7 +538,7 @@
   }
 
   function saveStep3() {
-    var cards = document.querySelectorAll('.service-card');
+    var cards = document.querySelectorAll('.wiz-service-card');
     var services = {};
     var valid = true;
 
@@ -515,7 +569,7 @@
     .then(function(r) { return r.json(); })
     .then(function(data) {
       btn.disabled = false;
-      btn.innerHTML = 'Finalizar <i class="fas fa-check" style="margin-left:0.4rem;"></i>';
+      btn.innerHTML = 'Finalizar <i class="fas fa-check"></i>';
       if (data.success) { goToStep(4); }
       else { alert('Erro: ' + (data.errors || []).join(', ')); }
     });
