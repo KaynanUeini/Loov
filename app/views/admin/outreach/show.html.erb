@@ -1,0 +1,415 @@
+<style>
+  .od-page { max-width: 1100px; margin: 0 auto; padding: 24px 20px 80px; }
+
+  .od-back {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    letter-spacing: 1.4px; color: var(--coral-700);
+    text-decoration: none; margin-bottom: 16px;
+  }
+  .od-back:hover { color: var(--coral-500); }
+
+  .od-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
+  .od-name {
+    font-family: 'Space Grotesk', sans-serif; font-size: 32px; font-weight: 700;
+    color: var(--ink); letter-spacing: -0.5px; margin: 0;
+  }
+  .od-sub { font-size: 13.5px; color: var(--graphite); margin-top: 4px; }
+  .od-status-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: 100px;
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+    letter-spacing: 1.4px; font-weight: 700; text-transform: uppercase;
+    border: 1px solid;
+  }
+  .od-status-pill.novo       { background: var(--sand); color: var(--graphite); border-color: var(--stone); }
+  .od-status-pill.enviado    { background: #dceaf3; color: #2a5f8a; border-color: #b5cee0; }
+  .od-status-pill.respondeu  { background: var(--coral-50); color: var(--coral-700); border-color: var(--coral-100); }
+  .od-status-pill.agendado   { background: #d6ecde; color: #2d6b42; border-color: #b5d8c1; }
+  .od-status-pill.convertido { background: var(--coral-500); color: var(--cream); border-color: var(--coral-500); }
+  .od-status-pill.recusado   { background: #fdecec; color: var(--rose-500); border-color: #f5cccc; }
+
+  .od-grid { display: grid; grid-template-columns: 360px 1fr; gap: 22px; align-items: start; }
+  @media (max-width: 900px) { .od-grid { grid-template-columns: 1fr; } }
+
+  .od-card {
+    background: var(--paper); border: 1px solid var(--stone);
+    border-radius: 18px; padding: 22px; margin-bottom: 16px;
+  }
+  .od-card-title {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    letter-spacing: 1.4px; font-weight: 700;
+    color: var(--coral-500); text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .od-row { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--stone); }
+  .od-row:last-child { border-bottom: none; }
+  .od-row-label { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 1.2px; color: var(--ash); text-transform: uppercase; min-width: 90px; padding-top: 2px; }
+  .od-row-val   { font-size: 13.5px; color: var(--ink); flex: 1; word-break: break-word; }
+
+  .od-status-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .od-status-btn {
+    background: transparent; border: 1px solid var(--stone);
+    color: var(--graphite);
+    padding: 6px 10px; border-radius: 100px;
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    letter-spacing: 1.2px; font-weight: 700; text-transform: uppercase;
+    cursor: pointer; transition: all .15s;
+  }
+  .od-status-btn:hover { border-color: var(--coral-500); color: var(--coral-700); }
+  .od-status-btn.active { background: var(--ink); color: var(--cream); border-color: var(--ink); }
+
+  /* ── Composer ─────────────────────────────────── */
+  .od-composer-channel {
+    display: flex; gap: 6px; margin-bottom: 14px;
+  }
+  .od-channel-pill {
+    padding: 7px 14px; border-radius: 100px;
+    background: transparent; border: 1px solid var(--stone);
+    color: var(--graphite);
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+    letter-spacing: 1.4px; font-weight: 700; text-transform: uppercase;
+    cursor: pointer; transition: all .15s;
+  }
+  .od-channel-pill.active {
+    background: var(--coral-500); color: var(--cream);
+    border-color: var(--coral-500);
+  }
+
+  .od-message-area {
+    width: 100%; min-height: 200px;
+    background: var(--cream); border: 1px solid var(--stone);
+    border-radius: 12px; padding: 14px;
+    font-family: 'Inter', sans-serif; font-size: 14px;
+    color: var(--ink); outline: none; resize: vertical;
+    line-height: 1.55;
+  }
+  .od-message-area:focus { border-color: var(--coral-500); box-shadow: 0 0 0 3px rgba(220,120,82,0.08); }
+
+  .od-message-actions {
+    display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap;
+  }
+  .od-loading {
+    display: none; align-items: center; gap: 8px;
+    font-size: 12.5px; color: var(--coral-700);
+    margin-top: 10px;
+  }
+  .od-loading.active { display: inline-flex; }
+  .od-spin { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--coral-100); border-top-color: var(--coral-500); border-radius: 50%; animation: od-spin 0.7s linear infinite; }
+  @keyframes od-spin { to { transform: rotate(360deg); } }
+
+  /* ── History ─────────────────────────────────── */
+  .od-msg-row {
+    background: var(--cream); border: 1px solid var(--stone);
+    border-radius: 12px; padding: 12px 14px; margin-bottom: 8px;
+  }
+  .od-msg-meta {
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    letter-spacing: 1px; color: var(--ash);
+    margin-bottom: 6px; text-transform: uppercase;
+  }
+  .od-msg-body { font-size: 13px; color: var(--ink); white-space: pre-wrap; line-height: 1.5; }
+
+  /* ── Schedule modal ──────────────────────────── */
+  .od-modal-overlay {
+    position: fixed; inset: 0; z-index: 300;
+    background: rgba(40,35,28,0.55); backdrop-filter: blur(8px);
+    display: none; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .od-modal-overlay.open { display: flex; }
+  .od-modal {
+    width: 100%; max-width: 480px;
+    background: var(--paper); border: 1px solid var(--stone);
+    border-radius: 22px; padding: 28px;
+    box-shadow: 0 24px 60px rgba(40,35,28,0.18);
+  }
+  .od-modal h3 { font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; margin-bottom: 14px; color: var(--ink); }
+  .od-modal label { display: block; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 1.2px; color: var(--graphite); text-transform: uppercase; margin-bottom: 4px; margin-top: 12px; font-weight: 700; }
+  .od-modal input, .od-modal select, .od-modal textarea {
+    width: 100%; padding: 10px 12px; border-radius: 10px;
+    background: var(--cream); border: 1px solid var(--stone);
+    color: var(--ink); font-family: 'Inter', sans-serif; font-size: 14px;
+    outline: none;
+  }
+  .od-modal input:focus, .od-modal select:focus, .od-modal textarea:focus {
+    border-color: var(--coral-500);
+  }
+  .od-modal-actions { display: flex; gap: 8px; margin-top: 18px; }
+</style>
+
+<div class="od-page">
+
+  <a href="<%= admin_outreach_index_path %>" class="od-back">
+    <i class="fas fa-arrow-left"></i> VOLTAR
+  </a>
+
+  <div class="od-header">
+    <div>
+      <h1 class="od-name"><%= @lead.name %></h1>
+      <div class="od-sub">
+        <% if @lead.bairro.present? %><%= @lead.bairro %><% end %>
+        <% if @lead.cidade.present? %><% if @lead.bairro.present? %> · <% end %><%= @lead.cidade %><% end %>
+        <% if @lead.rating %> · ★ <%= sprintf('%.1f', @lead.rating) %><% end %>
+      </div>
+    </div>
+    <span class="od-status-pill <%= @lead.status %>" id="od-status-pill"><%= @lead.status %></span>
+  </div>
+
+  <% if flash[:notice] %>
+    <div style="background:#d6ecde;border:1px solid #b5d8c1;color:#2d6b42;padding:12px 16px;border-radius:14px;margin-bottom:14px;font-size:13.5px;">
+      <i class="fas fa-circle-check" style="margin-right:6px;"></i><%= flash[:notice] %>
+    </div>
+  <% end %>
+
+  <div class="od-grid">
+
+    <%# ── Coluna esquerda: dados do lead ──────────────── %>
+    <div>
+      <div class="od-card">
+        <div class="od-card-title">Dados do lead</div>
+        <div class="od-row">
+          <span class="od-row-label">Nome</span>
+          <span class="od-row-val"><%= @lead.name %></span>
+        </div>
+        <div class="od-row">
+          <span class="od-row-label">Telefone</span>
+          <span class="od-row-val"><%= @lead.display_phone || '—' %></span>
+        </div>
+        <div class="od-row">
+          <span class="od-row-label">Email</span>
+          <span class="od-row-val"><%= @lead.email.presence || '—' %></span>
+        </div>
+        <div class="od-row">
+          <span class="od-row-label">Endereço</span>
+          <span class="od-row-val"><%= @lead.address.presence || '—' %></span>
+        </div>
+        <div class="od-row">
+          <span class="od-row-label">Rating</span>
+          <span class="od-row-val">
+            <% if @lead.rating %>★ <%= sprintf('%.1f', @lead.rating) %><% else %>—<% end %>
+          </span>
+        </div>
+        <div class="od-row">
+          <span class="od-row-label">Reviews</span>
+          <span class="od-row-val" style="font-size:12.5px;color:var(--graphite);"><%= @lead.reviews_sample.presence || 'Nenhum review fornecido. Cole abaixo.' %></span>
+        </div>
+
+        <%= form_with url: admin_outreach_lead_path(@lead), method: :patch, local: true, html: { style: 'margin-top:14px;' } do %>
+          <input type="hidden" name="lead[name]" value="<%= @lead.name %>">
+          <label class="od-row-label" style="display:block;margin-bottom:6px;">Editar reviews/notas</label>
+          <textarea name="lead[reviews_sample]" placeholder="Cole 1-3 reviews recentes do shop..." style="width:100%;min-height:80px;background:var(--cream);border:1px solid var(--stone);border-radius:10px;padding:10px;font-family:'Inter',sans-serif;font-size:13px;outline:none;margin-bottom:8px;"><%= @lead.reviews_sample %></textarea>
+          <textarea name="lead[notes]" placeholder="Notas internas..." style="width:100%;min-height:60px;background:var(--cream);border:1px solid var(--stone);border-radius:10px;padding:10px;font-family:'Inter',sans-serif;font-size:13px;outline:none;"><%= @lead.notes %></textarea>
+          <button type="submit" class="loov-btn-secondary loov-btn-sm" style="margin-top:8px;">SALVAR</button>
+        <% end %>
+      </div>
+
+      <div class="od-card">
+        <div class="od-card-title">Status</div>
+        <div class="od-status-actions">
+          <% Outreach::Lead::STATUSES.each do |s| %>
+            <button type="button" class="od-status-btn <%= 'active' if @lead.status == s %>"
+                    data-status="<%= s %>" onclick="changeStatus('<%= s %>')">
+              <%= s %>
+            </button>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <%# ── Coluna direita: composer + histórico ────────── %>
+    <div>
+      <div class="od-card">
+        <div class="od-card-title">Composer da IA</div>
+
+        <div class="od-composer-channel">
+          <button type="button" class="od-channel-pill active" data-channel="whatsapp" onclick="setChannel('whatsapp')">
+            <i class="fab fa-whatsapp" style="margin-right:4px;"></i>WHATSAPP
+          </button>
+          <button type="button" class="od-channel-pill" data-channel="email" onclick="setChannel('email')">
+            <i class="fas fa-envelope" style="margin-right:4px;"></i>EMAIL
+          </button>
+        </div>
+
+        <textarea id="od-message" class="od-message-area" placeholder="Clique 'Gerar' pra IA escrever uma mensagem personalizada baseada nos reviews/dados deste lead..."></textarea>
+
+        <div class="od-loading" id="od-loading">
+          <span class="od-spin"></span> Claude está pensando...
+        </div>
+
+        <div class="od-message-actions">
+          <button type="button" class="loov-btn-primary" onclick="generateMessage()">
+            <i class="fas fa-wand-magic-sparkles" style="margin-right:6px;"></i>GERAR
+          </button>
+          <button type="button" class="loov-btn-secondary" id="od-wa-btn" onclick="openWhatsApp()" disabled style="opacity:0.4;">
+            <i class="fab fa-whatsapp" style="margin-right:6px;"></i>ABRIR WHATSAPP
+          </button>
+          <button type="button" class="loov-btn-secondary" onclick="copyMessage()">
+            <i class="fas fa-copy" style="margin-right:6px;"></i>COPIAR
+          </button>
+          <%= form_with url: admin_outreach_mark_sent_path(@lead), method: :post, local: true, style: 'display:inline;' do %>
+            <input type="hidden" name="body" id="od-mark-body">
+            <input type="hidden" name="channel" id="od-mark-channel" value="whatsapp">
+            <button type="submit" class="loov-btn-secondary" onclick="document.getElementById('od-mark-body').value=document.getElementById('od-message').value">
+              <i class="fas fa-check" style="margin-right:6px;"></i>MARCAR COMO ENVIADO
+            </button>
+          <% end %>
+          <button type="button" class="loov-btn-secondary" onclick="openMeetingModal()">
+            <i class="fas fa-calendar" style="margin-right:6px;"></i>AGENDAR REUNIÃO
+          </button>
+        </div>
+      </div>
+
+      <%# Histórico de mensagens %>
+      <% if @messages.any? %>
+        <div class="od-card">
+          <div class="od-card-title">Histórico (<%= @messages.count %>)</div>
+          <% @messages.each do |m| %>
+            <div class="od-msg-row">
+              <div class="od-msg-meta">
+                <span><%= m.channel.upcase %></span>
+                <span><%= l m.created_at, format: :short rescue m.created_at.strftime("%d/%m %H:%M") %></span>
+              </div>
+              <div class="od-msg-body"><%= m.body %></div>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+
+      <%# Reuniões agendadas %>
+      <% if @meetings.any? %>
+        <div class="od-card">
+          <div class="od-card-title">Reuniões (<%= @meetings.count %>)</div>
+          <% @meetings.each do |m| %>
+            <div class="od-msg-row">
+              <div class="od-msg-meta">
+                <span><%= m.kind.upcase %> · <%= m.status.upcase %></span>
+                <span><%= m.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%d/%m/%Y %H:%M") %></span>
+              </div>
+              <% if m.notes.present? %>
+                <div class="od-msg-body"><%= m.notes %></div>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<%# ── Modal agendar reunião ──────────────────────── %>
+<div class="od-modal-overlay" id="od-meeting-overlay">
+  <div class="od-modal">
+    <h3>Agendar reunião</h3>
+    <%= form_with url: admin_outreach_meeting_path(@lead), method: :post, local: true do %>
+      <label>Data e horário</label>
+      <input type="datetime-local" name="scheduled_at" required>
+
+      <label>Tipo</label>
+      <select name="kind">
+        <option value="video">Vídeo</option>
+        <option value="presencial">Presencial</option>
+        <option value="telefone">Telefone</option>
+      </select>
+
+      <label>Notas</label>
+      <textarea name="notes" placeholder="Ex: Pediu pra ligar antes pra confirmar..." style="min-height:70px;"></textarea>
+
+      <div class="od-modal-actions">
+        <button type="button" class="loov-btn-secondary" onclick="closeMeetingModal()" style="flex:1;">CANCELAR</button>
+        <button type="submit" class="loov-btn-primary" style="flex:2;">AGENDAR</button>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<script>
+let currentChannel = 'whatsapp';
+const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
+function setChannel(ch) {
+  currentChannel = ch;
+  document.querySelectorAll('.od-channel-pill').forEach(p => p.classList.toggle('active', p.dataset.channel === ch));
+  document.getElementById('od-mark-channel').value = ch;
+}
+
+async function generateMessage() {
+  const loading  = document.getElementById('od-loading');
+  const textarea = document.getElementById('od-message');
+  loading.classList.add('active');
+
+  try {
+    const res = await fetch('<%= admin_outreach_generate_path(@lead) %>', {
+      method: 'POST',
+      headers: {
+        'X-CSRF-Token': csrfToken,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ channel: currentChannel })
+    });
+    const data = await res.json();
+    if (data.message) {
+      textarea.value = data.message;
+      updateWaButton();
+    }
+  } catch (e) {
+    alert('Erro ao gerar mensagem.');
+  } finally {
+    loading.classList.remove('active');
+  }
+}
+
+function updateWaButton() {
+  const btn      = document.getElementById('od-wa-btn');
+  const textarea = document.getElementById('od-message');
+  const hasText  = textarea.value.trim().length > 0;
+  const hasPhone = <%= @lead.phone.present? ? 'true' : 'false' %>;
+  const enabled  = hasText && hasPhone && currentChannel === 'whatsapp';
+  btn.disabled = !enabled;
+  btn.style.opacity = enabled ? '1' : '0.4';
+}
+
+document.getElementById('od-message').addEventListener('input', updateWaButton);
+
+function openWhatsApp() {
+  const text = encodeURIComponent(document.getElementById('od-message').value);
+  const phone = '<%= @lead.phone.to_s.gsub(/\D/, '').then { |d| d.start_with?('55') ? d : "55#{d}" } %>';
+  if (!phone) { alert('Lead sem telefone.'); return; }
+  window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
+}
+
+function copyMessage() {
+  const text = document.getElementById('od-message').value;
+  navigator.clipboard.writeText(text).then(() => {
+    alert('Copiado!');
+  });
+}
+
+async function changeStatus(status) {
+  try {
+    await fetch('<%= admin_outreach_status_path(@lead) %>', {
+      method: 'PATCH',
+      headers: {
+        'X-CSRF-Token': csrfToken,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ status })
+    });
+    document.querySelectorAll('.od-status-btn').forEach(b => b.classList.toggle('active', b.dataset.status === status));
+    const pill = document.getElementById('od-status-pill');
+    pill.className = 'od-status-pill ' + status;
+    pill.textContent = status;
+  } catch (e) {
+    alert('Erro ao mudar status.');
+  }
+}
+
+function openMeetingModal()  { document.getElementById('od-meeting-overlay').classList.add('open'); }
+function closeMeetingModal() { document.getElementById('od-meeting-overlay').classList.remove('open'); }
+document.getElementById('od-meeting-overlay').addEventListener('click', e => {
+  if (e.target.id === 'od-meeting-overlay') closeMeetingModal();
+});
+</script>

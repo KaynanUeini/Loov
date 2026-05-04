@@ -162,6 +162,17 @@ Rails.application.routes.draw do
     get 'dashboard/activity', to: 'dashboard#activity', as: :dashboard_activity
     post 'ceo_assistant/analyze', to: 'ceo_assistant#analyze', as: :ceo_assistant_analyze
 
+    # ── Outreach (prospecção semiautomatizada) ─────────────────────
+    get    'outreach',              to: 'outreach#index',  as: :outreach_index
+    post   'outreach/import',       to: 'outreach#import', as: :outreach_import
+    get    'outreach/:id',          to: 'outreach#show',   as: :outreach_lead
+    patch  'outreach/:id',          to: 'outreach#update'
+    delete 'outreach/:id',          to: 'outreach#destroy'
+    post   'outreach/:id/generate_message', to: 'outreach#generate_message', as: :outreach_generate
+    post   'outreach/:id/mark_sent',        to: 'outreach#mark_sent',        as: :outreach_mark_sent
+    patch  'outreach/:id/status',           to: 'outreach#update_status',    as: :outreach_status
+    post   'outreach/:id/meeting',          to: 'outreach#schedule_meeting', as: :outreach_meeting
+
     resources :users, only: [:index, :show] do
       member do
         patch :block

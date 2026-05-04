@@ -1,0 +1,300 @@
+<style>
+  .or-page { max-width: 1280px; margin: 0 auto; padding: 24px 20px 80px; }
+
+  .or-header { padding: 8px 0 20px; }
+  .or-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 1.4px;
+    color: var(--ash); text-transform: uppercase;
+  }
+  .or-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(28px, 5vw, 40px); font-weight: 700;
+    color: var(--ink); letter-spacing: -0.8px;
+    margin-top: 4px;
+  }
+
+  /* ── Stats funnel ─────────────────────────────── */
+  .or-funnel {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px; margin-bottom: 28px;
+  }
+  .or-funnel-tile {
+    background: var(--paper); border: 1px solid var(--stone);
+    border-radius: 16px; padding: 16px;
+  }
+  .or-funnel-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; letter-spacing: 1.4px;
+    color: var(--ash); text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .or-funnel-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 26px; font-weight: 700;
+    color: var(--ink); letter-spacing: -0.5px;
+    line-height: 1;
+  }
+  .or-funnel-pct {
+    margin-top: 4px; font-size: 11.5px;
+    color: var(--coral-700); font-weight: 600;
+  }
+
+  /* ── Import card ───────────────────────────── */
+  .or-import {
+    background: var(--paper); border: 1px solid var(--stone);
+    border-radius: 18px; padding: 22px;
+    margin-bottom: 28px;
+  }
+  .or-import-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700; font-size: 18px;
+    color: var(--ink); margin-bottom: 8px;
+  }
+  .or-import-help {
+    font-size: 13px; color: var(--graphite);
+    margin-bottom: 14px; line-height: 1.55;
+  }
+  .or-import textarea {
+    width: 100%; min-height: 130px;
+    background: var(--cream); border: 1px solid var(--stone);
+    border-radius: 12px; padding: 12px 14px;
+    font-family: 'JetBrains Mono', monospace; font-size: 12.5px;
+    color: var(--ink); outline: none; resize: vertical;
+  }
+  .or-import textarea:focus { border-color: var(--coral-500); box-shadow: 0 0 0 3px rgba(220,120,82,0.08); }
+  .or-import-actions {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 10px; margin-top: 12px; flex-wrap: wrap;
+  }
+
+  /* ── Kanban ─────────────────────────────────── */
+  .or-kanban {
+    display: grid; grid-template-columns: repeat(6, 1fr);
+    gap: 12px; margin-bottom: 28px;
+  }
+  @media (max-width: 1100px) { .or-kanban { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 600px)  { .or-kanban { grid-template-columns: 1fr; } }
+
+  .or-col {
+    background: var(--sand);
+    border: 1px solid var(--stone);
+    border-radius: 14px; padding: 12px;
+    min-height: 200px;
+  }
+  .or-col-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px; padding: 0 4px;
+  }
+  .or-col-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 1.4px; font-weight: 700;
+    color: var(--graphite); text-transform: uppercase;
+  }
+  .or-col-count {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+    color: var(--ink); font-size: 14px;
+  }
+
+  .or-col[data-status="novo"]       .or-col-name { color: var(--graphite); }
+  .or-col[data-status="enviado"]    .or-col-name { color: #2a5f8a; }
+  .or-col[data-status="respondeu"]  .or-col-name { color: var(--coral-700); }
+  .or-col[data-status="agendado"]   .or-col-name { color: #2d6b42; }
+  .or-col[data-status="convertido"] .or-col-name { color: var(--coral-500); }
+  .or-col[data-status="recusado"]   .or-col-name { color: var(--rose-500); }
+
+  .or-card {
+    display: block;
+    background: var(--paper); border: 1px solid var(--stone);
+    border-radius: 12px; padding: 12px;
+    margin-bottom: 8px;
+    text-decoration: none; color: inherit;
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s;
+  }
+  .or-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(40,35,28,0.06);
+    border-color: var(--coral-100);
+  }
+  .or-card-name {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+    font-size: 13.5px; color: var(--ink);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    margin-bottom: 4px;
+  }
+  .or-card-meta {
+    font-size: 11px; color: var(--graphite);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .or-card-foot {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px; letter-spacing: 0.8px;
+    color: var(--ash);
+  }
+  .or-card-rating { color: var(--coral-700); font-weight: 600; }
+
+  .or-empty-col {
+    text-align: center; padding: 30px 8px;
+    color: var(--ash); font-size: 12px;
+    font-family: 'JetBrains Mono', monospace; letter-spacing: 0.5px;
+  }
+
+  /* ── Upcoming meetings ─────────────────── */
+  .or-meetings {
+    background: var(--paper); border: 1px solid var(--stone);
+    border-radius: 18px; padding: 22px;
+  }
+  .or-meeting-row {
+    display: flex; gap: 14px; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid var(--stone);
+  }
+  .or-meeting-row:last-child { border-bottom: none; }
+  .or-meeting-when {
+    background: var(--coral-50); border: 1px solid var(--coral-100);
+    color: var(--coral-700); padding: 6px 10px; border-radius: 10px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    font-weight: 700; letter-spacing: 0.5px;
+    flex-shrink: 0;
+  }
+  .or-meeting-info { flex: 1; min-width: 0; }
+  .or-meeting-name {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+    font-size: 14px; color: var(--ink);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .or-meeting-kind {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    letter-spacing: 1px; color: var(--ash); text-transform: uppercase;
+    margin-top: 2px;
+  }
+</style>
+
+<div class="or-page">
+
+  <div class="or-header">
+    <div class="or-eyebrow">PROSPECÇÃO</div>
+    <h1 class="or-title">Outreach Loov</h1>
+  </div>
+
+  <% if flash[:notice] %>
+    <div style="background:#d6ecde;border:1px solid #b5d8c1;color:#2d6b42;padding:12px 16px;border-radius:14px;margin-bottom:14px;font-size:13.5px;">
+      <i class="fas fa-circle-check" style="margin-right:6px;"></i><%= flash[:notice] %>
+    </div>
+  <% end %>
+
+  <%# ── Funil ─────────────────────────────────────── %>
+  <div class="or-funnel">
+    <div class="or-funnel-tile">
+      <div class="or-funnel-label">TOTAL DE LEADS</div>
+      <div class="or-funnel-value"><%= @stats[:total] %></div>
+    </div>
+    <div class="or-funnel-tile">
+      <div class="or-funnel-label">ENVIADOS</div>
+      <div class="or-funnel-value"><%= @stats[:sent] %></div>
+      <div class="or-funnel-pct"><%= @stats[:sent_pct] %>% do total</div>
+    </div>
+    <div class="or-funnel-tile">
+      <div class="or-funnel-label">RESPONDERAM</div>
+      <div class="or-funnel-value"><%= @stats[:replied] %></div>
+      <div class="or-funnel-pct"><%= @stats[:reply_pct] %>% dos enviados</div>
+    </div>
+    <div class="or-funnel-tile">
+      <div class="or-funnel-label">REUNIÕES</div>
+      <div class="or-funnel-value"><%= @stats[:scheduled] %></div>
+      <div class="or-funnel-pct"><%= @stats[:meeting_pct] %>% dos respondedores</div>
+    </div>
+    <div class="or-funnel-tile">
+      <div class="or-funnel-label">CONVERTIDOS</div>
+      <div class="or-funnel-value"><%= @stats[:converted] %></div>
+      <div class="or-funnel-pct"><%= @stats[:convert_pct] %>% das reuniões</div>
+    </div>
+  </div>
+
+  <%# ── Importar ─────────────────────────────────── %>
+  <div class="or-import">
+    <h2 class="or-import-title">Importar leads</h2>
+    <p class="or-import-help">
+      Cole texto bruto copiado do Google Maps (1 lava-rápido por bloco, separado por linha em branco).
+      O parser tenta extrair nome, telefone, endereço, bairro e rating automaticamente.
+    </p>
+    <%= form_with url: admin_outreach_import_path, method: :post, local: true do %>
+      <%= text_area_tag :raw_text, '', placeholder: "Lava Car Premium\n4,3 (87) · Lava-rápido\nAv dos Autonomistas, 4500 - Centro, Osasco\n(11) 4444-5555\n\nLavajato Express\n3,8 (45) · ..." %>
+      <div class="or-import-actions">
+        <span style="font-size:11.5px;color:var(--ash);">
+          <i class="fas fa-circle-info" style="color:var(--coral-500);margin-right:4px;"></i>
+          Duplicados (mesmo telefone) são ignorados
+        </span>
+        <button type="submit" class="loov-btn-primary">
+          <i class="fas fa-cloud-arrow-up" style="margin-right:6px;"></i>IMPORTAR
+        </button>
+      </div>
+    <% end %>
+  </div>
+
+  <%# ── Kanban ───────────────────────────────────── %>
+  <div class="or-kanban">
+    <% Outreach::Lead::STATUSES.each do |status| %>
+      <% leads = @leads_by_status[status] || [] %>
+      <% label = case status
+          when 'novo'        then 'Novo'
+          when 'enviado'     then 'Enviado'
+          when 'respondeu'   then 'Respondeu'
+          when 'agendado'    then 'Agendado'
+          when 'convertido'  then 'Convertido'
+          when 'recusado'    then 'Recusado'
+          end %>
+      <div class="or-col" data-status="<%= status %>">
+        <div class="or-col-head">
+          <span class="or-col-name"><%= label %></span>
+          <span class="or-col-count"><%= leads.count %></span>
+        </div>
+        <% if leads.any? %>
+          <% leads.each do |lead| %>
+            <a href="<%= admin_outreach_lead_path(lead) %>" class="or-card">
+              <div class="or-card-name"><%= lead.name %></div>
+              <div class="or-card-meta">
+                <% if lead.bairro.present? %><%= lead.bairro %><% end %>
+                <% if lead.display_phone %> · <%= lead.display_phone %><% end %>
+              </div>
+              <div class="or-card-foot">
+                <% if lead.rating %>
+                  <span class="or-card-rating">★ <%= sprintf('%.1f', lead.rating) %></span>
+                <% else %>
+                  <span></span>
+                <% end %>
+                <% if lead.last_contact_at %>
+                  <span><%= time_ago_in_words(lead.last_contact_at) %></span>
+                <% end %>
+              </div>
+            </a>
+          <% end %>
+        <% else %>
+          <div class="or-empty-col">vazio</div>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+  <%# ── Próximas reuniões ─────────────────────────── %>
+  <% if @upcoming_meetings.any? %>
+    <div class="or-meetings">
+      <div class="or-import-title" style="margin-bottom:14px;">Próximas reuniões</div>
+      <% @upcoming_meetings.each do |m| %>
+        <div class="or-meeting-row">
+          <div class="or-meeting-when">
+            <%= m.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%d/%m %H:%M") %>
+          </div>
+          <div class="or-meeting-info">
+            <div class="or-meeting-name">
+              <a href="<%= admin_outreach_lead_path(m.lead) %>" style="color:inherit;text-decoration:none;"><%= m.lead.name %></a>
+            </div>
+            <div class="or-meeting-kind"><%= m.kind.upcase %></div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
+</div>
