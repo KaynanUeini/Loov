@@ -268,7 +268,7 @@
           <button type="button" class="loov-btn-primary" onclick="generateMessage()">
             <i class="fas fa-wand-magic-sparkles" style="margin-right:6px;"></i>GERAR
           </button>
-          <button type="button" class="loov-btn-secondary" id="od-wa-btn" onclick="openWhatsApp()" disabled style="opacity:0.4;">
+          <button type="button" class="loov-btn-secondary" id="od-wa-btn" onclick="openWhatsApp()" <%= 'disabled style="opacity:0.4;"' if @lead.phone.blank? %>>
             <i class="fab fa-whatsapp" style="margin-right:6px;"></i>ABRIR WHATSAPP
           </button>
           <button type="button" class="loov-btn-secondary" onclick="copyMessage()">
@@ -387,12 +387,13 @@ async function generateMessage() {
   }
 }
 
+// Botão WhatsApp fica habilitado sempre que houver telefone — mensagem
+// é opcional. Se textarea estiver vazia, abre o WhatsApp sem pré-preencher
+// e o usuário escreve direto lá.
 function updateWaButton() {
   const btn      = document.getElementById('od-wa-btn');
-  const textarea = document.getElementById('od-message');
-  const hasText  = textarea.value.trim().length > 0;
   const hasPhone = <%= @lead.phone.present? ? 'true' : 'false' %>;
-  const enabled  = hasText && hasPhone && currentChannel === 'whatsapp';
+  const enabled  = hasPhone && currentChannel === 'whatsapp';
   btn.disabled = !enabled;
   btn.style.opacity = enabled ? '1' : '0.4';
 }
@@ -400,10 +401,11 @@ function updateWaButton() {
 document.getElementById('od-message').addEventListener('input', updateWaButton);
 
 function openWhatsApp() {
-  const text = encodeURIComponent(document.getElementById('od-message').value);
   const phone = '<%= @lead.phone.to_s.gsub(/\D/, '').then { |d| d.start_with?('55') ? d : "55#{d}" } %>';
   if (!phone) { alert('Lead sem telefone.'); return; }
-  window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
+  const msg  = document.getElementById('od-message').value.trim();
+  const text = msg ? `?text=${encodeURIComponent(msg)}` : '';
+  window.open(`https://wa.me/${phone}${text}`, '_blank');
 }
 
 function copyMessage() {
