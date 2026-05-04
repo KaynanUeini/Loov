@@ -61,21 +61,26 @@ class OutreachAgentService
         elogiam e o que reclamam, com tags
       - Suporte com agente IA 24/7 pra dúvidas operacionais
 
-      LAST MINUTE (funcionalidade-chave do cliente, traz volume novo):
-      - Cliente abre o app procurando lavar agora — vê todos os
-        lava-rápidos abertos perto dele com vaga nos próximos 30 min
-      - Sem precisar ligar pra cada um perguntando "tem horário?"
+      LAST MINUTE (funcionalidade que traz volume novo, FACILITADOR DO CLIENTE):
+      - Quando o cliente quer lavar o carro agora mas não tem agendamento,
+        normalmente ele teria que abrir o app e procurar lava-rápido por
+        lava-rápido tentando achar algum com horário disponível nos
+        próximos 30 minutos
+      - O Last Minute resolve isso: mostra numa única tela TODOS os
+        lava-rápidos próximos com vaga aberta nos próximos 30 min
       - Cliente paga 35% antecipado pra garantir a vaga (anti no-show)
       - O lava-rápido recebe esses agendamentos automaticamente
 
-      MODELO DE COBRANÇA:
-      - No futuro: mensalidade (valor ainda em definição)
-      - DURANTE A FASE DE TESTES: 100% gratuito, sem cobrança nenhuma,
-        suporte direto do fundador. Período da fase ainda não definido.
+      ESTÁGIO DO PRODUTO:
+      - A Loov está em fase de implementação e testes
+      - Estamos selecionando lava-rápidos da região pra participar dessa
+        fase, conhecer o produto e dar feedback
+      - Durante a fase de testes não há cobrança
+      - NÃO mencionar mensalidade futura — não precisa antecipar isso agora
 
       OBJETIVO DA MENSAGEM: convidar pra conversa de 15 min sobre o
       produto — não pra fechar nada, só apresentar e ver se faz sentido
-      participar dos testes.
+      participar dessa fase.
 
       INSTRUÇÕES:
       #{style_note}
@@ -87,9 +92,13 @@ class OutreachAgentService
         e fato observável (bairro, há quanto tempo no Maps, etc)
       - Apresente brevemente o que é a Loov + 2-3 funcionalidades
         concretas pro dono (dashboard, financeiro, IA insights, etc)
-      - Mencione que está em fase de captação de lava-rápidos pra testar
-        (não diga "revolucionando" nem "transformando o mercado")
-      - Mencione que durante a fase de testes é gratuito, sem prazo fixo
+      - Mencione que a Loov está em fase de implementação/testes e que
+        está selecionando lava-rápidos da região pra participar
+      - Mencione que durante essa fase não há cobrança
+      - NÃO fale sobre mensalidade futura, valores futuros, ou prazo da
+        fase de testes
+      - NÃO use "revolucionando", "transformando o mercado", clichês de
+        startup
       - CTA pedindo 15 min de conversa essa semana
       - Máximo 1 emoji
       - Assine apenas: "Kaynan, Loov"
@@ -124,33 +133,34 @@ class OutreachAgentService
   end
 
   def fallback_message(lead, channel)
-    nome = lead.name.to_s.strip.split.first&.capitalize || 'pessoal'
     if channel == 'email'
       <<~MSG
         Assunto: Loov — convite para a fase de testes em Osasco
 
         Olá!
 
-        Aqui é o Kaynan, fundador da Loov. Estou em fase de captação
-        de lava-rápidos para testar a plataforma e gostaria de convidar
+        Aqui é o Kaynan, fundador da Loov. A Loov está em fase de
+        implementação e estamos selecionando lava-rápidos da região
+        para participar dessa fase de testes — gostaria de convidar
         o #{lead.name} para conhecer o produto.
 
-        A Loov é um app que tira o atendimento manual do dia a dia do
-        lava-rápido: o cliente agenda horário direto pelo app (sem
-        ligação, sem caderno), o senhor acompanha tudo num dashboard
-        com agenda, faturamento e KPIs em tempo real, e ainda tem
-        gestão financeira completa (DRE mensal, custos, lucro) e
-        análise mensal de IA com sugestões para o negócio.
+        A Loov é um app que tira o atendimento manual do dia a dia
+        do lava-rápido: o cliente agenda horário direto pelo app
+        (sem ligação, sem caderno), o senhor acompanha tudo num
+        dashboard com agenda, faturamento e KPIs em tempo real, e
+        ainda tem gestão financeira completa (DRE mensal, custos,
+        lucro) e análise mensal de IA com sugestões para o negócio.
 
-        Tem também o "Last Minute" — funcionalidade onde o cliente
-        encontra lavagens disponíveis perto dele nos próximos 30 min,
-        sem precisar ligar para cada lava-rápido perguntando se tem
-        horário. O cliente paga 35% antecipado para garantir a vaga,
-        evitando ausências.
+        Tem também o "Last Minute", uma funcionalidade que ajuda o
+        cliente quando ele quer lavar o carro agora mas não agendou
+        antes. Em vez de procurar lava-rápido por lava-rápido no
+        app tentando achar um com vaga, ele vê numa única tela
+        todos os lava-rápidos próximos com horário disponível nos
+        próximos 30 minutos. Ele paga 35% antecipado para garantir
+        a vaga, evitando ausências.
 
-        No futuro a Loov terá mensalidade, mas durante a fase de
-        testes é totalmente gratuita, com suporte direto do fundador.
-        O período ainda não está definido.
+        Durante a fase de testes não há cobrança e o suporte é
+        direto comigo.
 
         O senhor teria 15 min essa semana para uma conversa rápida
         sobre o produto?
@@ -162,13 +172,13 @@ class OutreachAgentService
       <<~MSG.strip
         Olá! Aqui é o Kaynan, fundador da Loov.
 
-        Estou em fase de captação de lava-rápidos em Osasco para testar nossa plataforma e gostaria de convidar o #{lead.name} para conhecer.
+        A Loov está em fase de implementação e estamos selecionando lava-rápidos da região para participar dessa fase de testes. Gostaria de convidar o #{lead.name} para conhecer o produto.
 
         A Loov é um app que tira o atendimento manual do dia a dia: o cliente agenda horário direto pelo app (sem ligação, sem caderno), o senhor acompanha tudo num dashboard com agenda, faturamento e KPIs em tempo real, e ainda tem gestão financeira completa e análise mensal de IA com sugestões para o negócio.
 
-        Tem também o "Last Minute", onde o cliente encontra lavagens disponíveis perto dele nos próximos 30 min — ele paga 35% antecipado para garantir a vaga, evitando ausências.
+        Tem também o "Last Minute": quando o cliente quer lavar o carro agora mas não agendou antes, em vez de procurar lava-rápido por lava-rápido no app tentando achar um com vaga, ele vê numa única tela todos os lava-rápidos próximos com horário disponível nos próximos 30 min. Ele paga 35% antecipado para garantir a vaga, evitando ausências.
 
-        No futuro a Loov terá mensalidade, mas durante a fase de testes é totalmente gratuita, com suporte direto. O período ainda não está definido.
+        Durante a fase de testes não há cobrança e o suporte é direto comigo.
 
         Teria 15 min essa semana para conversarmos?
 
