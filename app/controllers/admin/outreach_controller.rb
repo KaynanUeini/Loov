@@ -46,10 +46,19 @@ module Admin
     end
 
     # POST /admin/outreach/:id/mark_sent
+    # GET cai aqui também e redireciona pro detalhe (evita 404 se alguém
+    # acessa a URL diretamente sem submeter o form).
     def mark_sent
       @lead = Outreach::Lead.find(params[:id])
+      if request.get?
+        redirect_to admin_outreach_lead_path(@lead) and return
+      end
+
+      body = params[:body].to_s.strip
+      body = '[Mensagem enviada manualmente — corpo não capturado]' if body.blank?
+
       @lead.messages.create!(
-        body:    params[:body],
+        body:    body,
         channel: params[:channel].presence || 'whatsapp',
         sent_at: Time.current
       )

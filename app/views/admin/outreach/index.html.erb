@@ -219,7 +219,7 @@
       Cole texto bruto copiado do Google Maps (1 lava-rápido por bloco, separado por linha em branco).
       O parser tenta extrair nome, telefone, endereço, bairro e rating automaticamente.
     </p>
-    <%= form_with url: admin_outreach_import_path, method: :post, local: true do %>
+    <%= form_with url: admin_outreach_import_path, method: :post, local: true, data: { turbo: false } do %>
       <%= text_area_tag :raw_text, '', placeholder: "Lava Car Premium\n4,3 (87) · Lava-rápido\nAv dos Autonomistas, 4500 - Centro, Osasco\n(11) 4444-5555\n\nLavajato Express\n3,8 (45) · ..." %>
       <div class="or-import-actions">
         <span style="font-size:11.5px;color:var(--ash);">

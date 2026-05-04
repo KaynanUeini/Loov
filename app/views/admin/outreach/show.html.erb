@@ -197,7 +197,7 @@
           <span class="od-row-val" style="font-size:12.5px;color:var(--graphite);"><%= @lead.reviews_sample.presence || 'Nenhum review fornecido. Cole abaixo.' %></span>
         </div>
 
-        <%= form_with url: admin_outreach_lead_path(@lead), method: :patch, local: true, html: { style: 'margin-top:14px;' } do %>
+        <%= form_with url: admin_outreach_lead_path(@lead), method: :patch, local: true, data: { turbo: false }, html: { style: 'margin-top:14px;' } do %>
           <input type="hidden" name="lead[name]" value="<%= @lead.name %>">
           <label class="od-row-label" style="display:block;margin-bottom:6px;">Editar reviews/notas</label>
           <textarea name="lead[reviews_sample]" placeholder="Cole 1-3 reviews recentes do shop..." style="width:100%;min-height:80px;background:var(--cream);border:1px solid var(--stone);border-radius:10px;padding:10px;font-family:'Inter',sans-serif;font-size:13px;outline:none;margin-bottom:8px;"><%= @lead.reviews_sample %></textarea>
@@ -249,7 +249,7 @@
           <button type="button" class="loov-btn-secondary" onclick="copyMessage()">
             <i class="fas fa-copy" style="margin-right:6px;"></i>COPIAR
           </button>
-          <%= form_with url: admin_outreach_mark_sent_path(@lead), method: :post, local: true, style: 'display:inline;' do %>
+          <%= form_with url: admin_outreach_mark_sent_path(@lead), method: :post, local: true, data: { turbo: false }, style: 'display:inline;' do %>
             <input type="hidden" name="body" id="od-mark-body">
             <input type="hidden" name="channel" id="od-mark-channel" value="whatsapp">
             <button type="submit" class="loov-btn-secondary" onclick="document.getElementById('od-mark-body').value=document.getElementById('od-message').value">
@@ -303,7 +303,7 @@
 <div class="od-modal-overlay" id="od-meeting-overlay">
   <div class="od-modal">
     <h3>Agendar reunião</h3>
-    <%= form_with url: admin_outreach_meeting_path(@lead), method: :post, local: true do %>
+    <%= form_with url: admin_outreach_meeting_path(@lead), method: :post, local: true, data: { turbo: false } do %>
       <label>Data e horário</label>
       <input type="datetime-local" name="scheduled_at" required>
 

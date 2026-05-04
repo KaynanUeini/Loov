@@ -169,7 +169,8 @@ Rails.application.routes.draw do
     patch  'outreach/:id',          to: 'outreach#update'
     delete 'outreach/:id',          to: 'outreach#destroy'
     post   'outreach/:id/generate_message', to: 'outreach#generate_message', as: :outreach_generate
-    post   'outreach/:id/mark_sent',        to: 'outreach#mark_sent',        as: :outreach_mark_sent
+    # match GET+POST: GET cai no controller que redireciona pro detalhe
+    match  'outreach/:id/mark_sent',        to: 'outreach#mark_sent',        via: [:get, :post], as: :outreach_mark_sent
     patch  'outreach/:id/status',           to: 'outreach#update_status',    as: :outreach_status
     post   'outreach/:id/meeting',          to: 'outreach#schedule_meeting', as: :outreach_meeting
 
