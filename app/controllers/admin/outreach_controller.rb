@@ -1,6 +1,6 @@
 module Admin
   class OutreachController < BaseController
-    skip_before_action :verify_authenticity_token, only: [:generate_message, :update_status]
+    skip_before_action :verify_authenticity_token, only: [:generate_message, :update_status, :destroy]
 
     def index
       @stats          = compute_stats
@@ -99,7 +99,10 @@ module Admin
     # DELETE /admin/outreach/:id
     def destroy
       Outreach::Lead.find(params[:id]).destroy
-      redirect_to admin_outreach_index_path, notice: 'Lead removido.'
+      respond_to do |format|
+        format.html { redirect_to admin_outreach_index_path, notice: 'Lead removido.' }
+        format.json { render json: { ok: true } }
+      end
     end
 
     private

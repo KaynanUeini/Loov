@@ -110,6 +110,25 @@
     margin-bottom: 8px;
     text-decoration: none; color: inherit;
     transition: transform .15s ease, box-shadow .15s ease, border-color .15s;
+    position: relative;
+  }
+  .or-card-delete {
+    position: absolute; top: 6px; right: 6px;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: transparent; border: 1px solid transparent;
+    color: var(--ash);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all .15s ease;
+    opacity: 0;
+    z-index: 2;
+  }
+  .or-card:hover .or-card-delete { opacity: 1; }
+  .or-card-delete:hover {
+    background: #fdecec;
+    border-color: #f5cccc;
+    color: var(--rose-500);
   }
   .or-card:hover {
     transform: translateY(-1px);
@@ -252,7 +271,14 @@
         </div>
         <% if leads.any? %>
           <% leads.each do |lead| %>
-            <a href="<%= admin_outreach_lead_path(lead) %>" class="or-card">
+            <a href="<%= admin_outreach_lead_path(lead) %>" class="or-card" data-lead-id="<%= lead.id %>">
+              <button type="button" class="or-card-delete"
+                      data-lead-id="<%= lead.id %>"
+                      data-lead-name="<%= j lead.name %>"
+                      onclick="event.preventDefault(); event.stopPropagation(); deleteLead(this);"
+                      aria-label="Excluir lead">
+                <i class="fas fa-xmark"></i>
+              </button>
               <div class="or-card-name"><%= lead.name %></div>
               <div class="or-card-meta">
                 <% if lead.bairro.present? %><%= lead.bairro %><% end %>
@@ -298,3 +324,31 @@
   <% end %>
 
 </div>
+
+<script>
+function deleteLead(btn) {
+  const id   = btn.dataset.leadId;
+  const name = btn.dataset.leadName || 'lead';
+  if (!confirm(`Excluir "${name}"? Esta ação não pode ser desfeita.`)) return;
+
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
+  fetch(`/admin/outreach/${id}`, {
+    method: 'DELETE',
+    headers: { 'X-CSRF-Token': csrf, 'Accept': 'application/json' }
+  })
+  .then(res => {
+    if (res.ok || res.redirected) {
+      const card = btn.closest('.or-card');
+      if (card) {
+        card.style.transition = 'opacity .25s, transform .25s';
+        card.style.opacity = '0';
+        card.style.transform = 'scale(.92)';
+        setTimeout(() => card.remove(), 280);
+      }
+    } else {
+      alert('Não foi possível excluir o lead.');
+    }
+  })
+  .catch(() => alert('Erro de conexão.'));
+}
+</script>
