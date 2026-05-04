@@ -26,8 +26,8 @@ class OutreachAgentService
     reviews_block = lead.reviews_sample.presence || 'Nenhum review fornecido.'
     rating_line   = lead.rating.present? ? "- Rating Google: #{lead.rating}/5\n" : ''
     style_note    = case channel
-                    when 'email' then 'Formato: assunto curto + corpo de email com saudação e despedida.'
-                    else              'Formato: WhatsApp profissional mas humano, 100–160 palavras, parágrafos curtos.'
+                    when 'email' then 'Formato: assunto curto + corpo de email com saudação e despedida. 180–250 palavras.'
+                    else              'Formato: WhatsApp profissional mas humano, 140–200 palavras, parágrafos curtos.'
                     end
 
     <<~PROMPT
@@ -52,14 +52,29 @@ class OutreachAgentService
         atendidos/pendentes/ausentes, ticket médio, KPIs
       - Gestão financeira completa: DRE mensal, custos fixos e variáveis,
         lucro do mês, comparativo histórico
-      - IA Insights: análise mensal automática do negócio com sugestões
-        de onde mexer (preço, mix de serviços, horários ociosos, etc)
       - Programa de fidelidade configurável (a cada N visitas, recompensa)
       - Cadastro de atendentes com permissões (atendente pode confirmar
         agendamentos sem ver dados financeiros)
       - Avaliações estruturadas dos clientes — sabe exatamente o que
         elogiam e o que reclamam, com tags
       - Suporte com agente IA 24/7 pra dúvidas operacionais
+
+      ANÁLISE DE IA (DIFERENCIAL PRINCIPAL — ENFATIZAR NA MENSAGEM):
+      A cada ciclo a Loov gera automaticamente uma análise completa do
+      negócio com inteligência artificial, olhando para todos os dados
+      do lava-rápido (faturamento, ticket médio, mix de serviços,
+      horários mais e menos cheios, retenção de clientes, crescimento
+      mês a mês, etc) e devolvendo:
+      - Diagnóstico claro de como o negócio está
+      - Decisão prioritária que vale a pena tomar agora
+      - Sugestões concretas de onde mexer (preço, novos serviços,
+        promoção em horário ocioso, foco em retenção, etc)
+      - Comparativo do mês com o histórico
+      O dono também pode pedir para a IA focar em alguma pergunta
+      específica (ex: "por que caí no faturamento de sábado?") e a
+      próxima análise responde isso. É como ter um consultor de negócio
+      olhando para o lava-rápido todo mês — algo que normalmente custaria
+      milhares de reais por mês com um consultor humano.
 
       LAST MINUTE (funcionalidade que traz volume novo, FACILITADOR DO CLIENTE):
       - Quando o cliente quer lavar o carro agora mas não tem agendamento,
@@ -90,8 +105,13 @@ class OutreachAgentService
       - Hook personalizado: cite UM detalhe específico das reviews
         (problema OU elogio); se reviews vazios, abre pelo nome do shop
         e fato observável (bairro, há quanto tempo no Maps, etc)
-      - Apresente brevemente o que é a Loov + 2-3 funcionalidades
-        concretas pro dono (dashboard, financeiro, IA insights, etc)
+      - Apresente brevemente o que é a Loov, depois cite algumas
+        funcionalidades operacionais (agendamento, dashboard, financeiro)
+      - DEDIQUE UM PARÁGRAFO INTEIRO falando da Análise de IA — esse é
+        o maior diferencial do produto, descreva o que ela entrega
+        (diagnóstico, decisão prioritária, sugestões concretas) e
+        compare com o custo de um consultor humano. Não enterre essa
+        feature no meio da lista.
       - Mencione que a Loov está em fase de implementação/testes e que
         está selecionando lava-rápidos da região pra participar
       - Mencione que durante essa fase não há cobrança
@@ -148,16 +168,25 @@ class OutreachAgentService
         do lava-rápido: o cliente agenda horário direto pelo app
         (sem ligação, sem caderno), o senhor acompanha tudo num
         dashboard com agenda, faturamento e KPIs em tempo real, e
-        ainda tem gestão financeira completa (DRE mensal, custos,
-        lucro) e análise mensal de IA com sugestões para o negócio.
+        ainda tem gestão financeira completa com DRE mensal, custos
+        fixos e variáveis e lucro do mês.
 
-        Tem também o "Last Minute", uma funcionalidade que ajuda o
-        cliente quando ele quer lavar o carro agora mas não agendou
-        antes. Em vez de procurar lava-rápido por lava-rápido no
-        app tentando achar um com vaga, ele vê numa única tela
-        todos os lava-rápidos próximos com horário disponível nos
-        próximos 30 minutos. Ele paga 35% antecipado para garantir
-        a vaga, evitando ausências.
+        O grande diferencial é a Análise de IA: a Loov olha
+        automaticamente para todos os dados do lava-rápido
+        (faturamento, ticket médio, mix de serviços, horários cheios
+        e ociosos, retenção, crescimento) e devolve um diagnóstico
+        completo do negócio, com a decisão prioritária do momento
+        e sugestões concretas de onde mexer. O senhor pode até pedir
+        para a IA focar numa pergunta específica e a próxima análise
+        responde. É como ter um consultor de negócio olhando para o
+        lava-rápido todo mês, sem o custo de um consultor humano.
+
+        Tem também o "Last Minute": quando o cliente quer lavar o
+        carro agora mas não agendou antes, em vez de procurar
+        lava-rápido por lava-rápido no app tentando achar um com
+        vaga, ele vê numa única tela todos os próximos com horário
+        disponível nos próximos 30 min. Ele paga 35% antecipado
+        para garantir a vaga, evitando ausências.
 
         Durante a fase de testes não há cobrança e o suporte é
         direto comigo.
@@ -174,11 +203,13 @@ class OutreachAgentService
 
         A Loov está em fase de implementação e estamos selecionando lava-rápidos da região para participar dessa fase de testes. Gostaria de convidar o #{lead.name} para conhecer o produto.
 
-        A Loov é um app que tira o atendimento manual do dia a dia: o cliente agenda horário direto pelo app (sem ligação, sem caderno), o senhor acompanha tudo num dashboard com agenda, faturamento e KPIs em tempo real, e ainda tem gestão financeira completa e análise mensal de IA com sugestões para o negócio.
+        A Loov é um app que tira o atendimento manual do dia a dia: o cliente agenda horário direto pelo app, o senhor acompanha tudo num dashboard com agenda e faturamento em tempo real, e tem gestão financeira completa com DRE mensal e custos.
 
-        Tem também o "Last Minute": quando o cliente quer lavar o carro agora mas não agendou antes, em vez de procurar lava-rápido por lava-rápido no app tentando achar um com vaga, ele vê numa única tela todos os lava-rápidos próximos com horário disponível nos próximos 30 min. Ele paga 35% antecipado para garantir a vaga, evitando ausências.
+        O grande diferencial é a Análise de IA: a Loov olha automaticamente para todos os dados do seu lava-rápido (faturamento, ticket médio, mix de serviços, horários cheios e ociosos, retenção, crescimento) e devolve um diagnóstico completo, com a decisão prioritária do momento e sugestões concretas de onde mexer. O senhor pode até pedir para a IA focar em uma pergunta específica. É como ter um consultor de negócio olhando para o lava-rápido todo mês, sem o custo de um.
 
-        Durante a fase de testes não há cobrança e o suporte é direto comigo.
+        Tem também o "Last Minute": quando o cliente quer lavar agora mas não agendou antes, em vez de procurar lava-rápido por lava-rápido tentando achar um com vaga, ele vê numa única tela todos com horário disponível nos próximos 30 min. Ele paga 35% antecipado para garantir a vaga.
+
+        Durante a fase de testes não há cobrança.
 
         Teria 15 min essa semana para conversarmos?
 
