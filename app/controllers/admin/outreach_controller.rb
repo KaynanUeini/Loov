@@ -138,13 +138,17 @@ module Admin
       list.each do |raw|
         attrs = raw.respond_to?(:permit) ? raw.permit(:name, :phone, :address, :bairro, :cidade, :rating, :reviews_sample, :website).to_h : raw.to_h.symbolize_keys
         next if attrs[:name].blank?
-        if attrs[:phone].present? && Outreach::Lead.exists?(phone: attrs[:phone])
+        # Phone vazio ("" ou nil) vira nil — assim o índice único parcial
+        # (WHERE phone IS NOT NULL) não conflita entre múltiplos leads
+        # sem telefone (caso comum em lava-rápidos pequenos).
+        phone = attrs[:phone].to_s.gsub(/\D/, '').presence
+        if phone.present? && Outreach::Lead.exists?(phone: phone)
           skipped += 1
           next
         end
         Outreach::Lead.create!(
           name:           attrs[:name],
-          phone:          attrs[:phone],
+          phone:          phone,
           address:        attrs[:address],
           bairro:         attrs[:bairro],
           cidade:         attrs[:cidade].presence || 'Osasco',

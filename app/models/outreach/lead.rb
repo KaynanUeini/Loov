@@ -10,7 +10,19 @@ module Outreach
     validates :name,   presence: true
     validates :status, inclusion: { in: STATUSES }
 
+    # Normaliza phone — string em branco vira NULL pra o índice único
+    # parcial (WHERE phone IS NOT NULL) não tropeçar em "".
+    before_validation :nullify_blank_phone
+
     scope :by_status, ->(s) { where(status: s) }
+
+    private
+
+    def nullify_blank_phone
+      self.phone = nil if phone.blank?
+    end
+
+    public
 
     def whatsapp_link(message_body = nil)
       return nil if phone.blank?

@@ -100,7 +100,7 @@ class GooglePlacesService
     }&.dig('longText')
 
     phone_raw = place['nationalPhoneNumber'].presence || place['internationalPhoneNumber'].to_s
-    phone     = phone_raw.gsub(/\D/, '')
+    phone     = phone_raw.gsub(/\D/, '').presence  # nil se ficou vazio
 
     reviews_sample = (place['reviews'] || []).first(3).map { |r|
       txt = r.dig('text', 'text').to_s.gsub(/\s+/, ' ').strip
