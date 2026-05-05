@@ -1,13 +1,16 @@
 module Admin
   class UsersController < Admin::BaseController
     def index
+      # Coluna `blocked_at` existe no schema.rb mas pode não ter sido
+      # aplicada em produção (migration pendente). Evita NoMethodError
+      # checando dinamicamente o que a tabela tem.
+      has_blocked = User.column_names.include?('blocked_at')
+
       users = User.all.order(created_at: :desc)
       users = users.where("email ILIKE ? OR full_name ILIKE ?", "%#{params[:q]}%", "%#{params[:q]}%") if params[:q].present?
-      users = users.where(role: params[:role])      if params[:role].present?
-      users = users.where.not(blocked_at: nil)      if params[:blocked] == "1"
+      users = users.where(role: params[:role]) if params[:role].present?
+      users = users.where.not(blocked_at: nil) if params[:blocked] == "1" && has_blocked
 
-      # Materializa em array uma vez só pra evitar N+1 e dupla execução
-      # da query (relation.pluck + relation.map executariam SELECT 2x).
       users_list = users.to_a
       ids        = users_list.map(&:id)
 
@@ -18,6 +21,7 @@ module Admin
       end
 
       payload = users_list.map do |u|
+        blocked_at = has_blocked ? u.blocked_at : nil
         {
           id:                 u.id,
           name:               (u.display_name rescue (u.email.to_s.split("@").first || "—")),
@@ -25,8 +29,8 @@ module Admin
           role:               u.role.to_s,
           phone:              u.phone,
           vehicle:            u.vehicle_model,
-          blocked:            u.blocked_at.present?,
-          blocked_at:         u.blocked_at&.strftime("%d/%m/%Y"),
+          blocked:            blocked_at.present?,
+          blocked_at:         blocked_at&.strftime("%d/%m/%Y"),
           appointments_count: appt_counts[u.id] || 0,
           created_at:         u.created_at&.strftime("%d/%m/%Y")
         }
@@ -36,6 +40,30 @@ module Admin
     rescue => e
       Rails.logger.error("[Admin::Users#index] #{e.class}: #{e.message}\n#{e.backtrace.first(8).join("\n")}")
       render json: { error: e.message, klass: e.class.name }, status: :internal_server_error
+    end
+
+    def block
+      user = User.find(params[:id])
+      if User.column_names.include?('blocked_at')
+        user.update!(blocked_at: Time.current)
+        render json: { ok: true, message: "Usuário bloqueado." }
+      else
+        render json: { error: "Coluna blocked_at ainda não aplicada no banco de produção. Rode db:migrate." }, status: :unprocessable_entity
+      end
+    rescue => e
+      render json: { error: e.message }, status: :unprocessable_entity
+    end
+
+    def unblock
+      user = User.find(params[:id])
+      if User.column_names.include?('blocked_at')
+        user.update!(blocked_at: nil)
+        render json: { ok: true, message: "Usuário desbloqueado." }
+      else
+        render json: { error: "Coluna blocked_at ainda não aplicada no banco de produção." }, status: :unprocessable_entity
+      end
+    rescue => e
+      render json: { error: e.message }, status: :unprocessable_entity
     end
 
     def show
@@ -61,22 +89,6 @@ module Admin
           }
         }
       }
-    end
-
-    def block
-      user = User.find(params[:id])
-      user.update!(blocked_at: Time.current)
-      render json: { ok: true, message: "Usuário bloqueado." }
-    rescue => e
-      render json: { error: e.message }, status: :unprocessable_entity
-    end
-
-    def unblock
-      user = User.find(params[:id])
-      user.update!(blocked_at: nil)
-      render json: { ok: true, message: "Usuário desbloqueado." }
-    rescue => e
-      render json: { error: e.message }, status: :unprocessable_entity
     end
 
     def change_role
