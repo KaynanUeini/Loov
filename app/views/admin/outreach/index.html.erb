@@ -231,12 +231,43 @@
     </div>
   </div>
 
-  <%# ── Importar ─────────────────────────────────── %>
-  <div class="or-import">
-    <h2 class="or-import-title">Importar leads</h2>
-    <p class="or-import-help">
-      Cole texto bruto copiado do Google Maps (1 lava-rápido por bloco, separado por linha em branco).
-      O parser tenta extrair nome, telefone, endereço, bairro e rating automaticamente.
+  <%# ── Importar via Google Maps API ─────────────── %>
+  <div class="or-import" style="background:linear-gradient(135deg, var(--ink) 0%, var(--obsidian) 100%);color:var(--cream);position:relative;overflow:hidden;border-color:var(--ink);">
+    <div style="position:absolute;top:-30%;right:-15%;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,var(--coral-500) 0%, transparent 60%);opacity:.22;pointer-events:none;"></div>
+    <h2 class="or-import-title" style="color:var(--cream);position:relative;display:flex;align-items:center;gap:10px;">
+      <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;background:var(--coral-500);border-radius:10px;color:var(--cream);">
+        <i class="fas fa-magnifying-glass"></i>
+      </span>
+      Buscar no Google Maps
+    </h2>
+    <p class="or-import-help" style="color:#c9c4ba;position:relative;">
+      Digite o que procura (ex: "lava rápido osasco" ou "lava-rápido bela vista").
+      A busca pega até 20 resultados com nome, telefone, endereço, rating e reviews — você
+      escolhe quais importar.
+    </p>
+
+    <div style="display:flex;gap:8px;position:relative;flex-wrap:wrap;">
+      <input type="text" id="g-query" placeholder="lava rápido osasco" style="flex:1;min-width:220px;padding:12px 14px;border-radius:12px;background:rgba(254,254,253,0.08);border:1px solid rgba(254,254,253,0.14);color:var(--cream);font-family:'Inter',sans-serif;font-size:14px;outline:none;">
+      <button type="button" id="g-search-btn" class="loov-btn-primary" onclick="googleSearch()">
+        <i class="fas fa-magnifying-glass" style="margin-right:6px;"></i>BUSCAR
+      </button>
+    </div>
+
+    <div id="g-status" style="margin-top:12px;font-size:12.5px;color:#c9c4ba;position:relative;display:none;"></div>
+    <div id="g-results" style="margin-top:14px;position:relative;"></div>
+  </div>
+
+  <%# ── Importar manual (fallback) ───────────────── %>
+  <details class="or-import" style="background:var(--paper);">
+    <summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:15px;color:var(--graphite);">
+      <i class="fas fa-keyboard" style="color:var(--coral-500);"></i>
+      Importar manualmente (cole texto bruto)
+      <span style="margin-left:auto;font-size:11px;color:var(--ash);font-family:'JetBrains Mono',monospace;letter-spacing:1px;">FALLBACK</span>
+    </summary>
+    <p class="or-import-help" style="margin-top:14px;">
+      Use isso quando a busca do Google não trouxer o que você quer.
+      Cole texto bruto (1 lava-rápido por bloco separado por linha em branco).
+      Parser extrai nome, telefone, endereço, bairro e rating.
     </p>
     <%= form_with url: admin_outreach_import_path, method: :post, local: true, data: { turbo: false } do %>
       <%= text_area_tag :raw_text, '', placeholder: "Lava Car Premium\n4,3 (87) · Lava-rápido\nAv dos Autonomistas, 4500 - Centro, Osasco\n(11) 4444-5555\n\nLavajato Express\n3,8 (45) · ..." %>
@@ -245,12 +276,75 @@
           <i class="fas fa-circle-info" style="color:var(--coral-500);margin-right:4px;"></i>
           Duplicados (mesmo telefone) são ignorados
         </span>
-        <button type="submit" class="loov-btn-primary">
+        <button type="submit" class="loov-btn-secondary">
           <i class="fas fa-cloud-arrow-up" style="margin-right:6px;"></i>IMPORTAR
         </button>
       </div>
     <% end %>
-  </div>
+  </details>
+
+  <style>
+    #g-query::placeholder { color: rgba(254,254,253,0.4); }
+    #g-query:focus { border-color: var(--coral-500); box-shadow: 0 0 0 3px rgba(220,120,82,0.18); }
+
+    .g-result-card {
+      background: var(--paper);
+      border: 1px solid var(--stone);
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-bottom: 8px;
+      display: flex; gap: 12px;
+      transition: border-color .15s ease;
+    }
+    .g-result-card.selected { border-color: var(--coral-500); background: var(--coral-50); }
+    .g-result-card.imported { opacity: .6; background: var(--sand); }
+
+    .g-result-checkbox {
+      width: 22px; height: 22px;
+      flex-shrink: 0;
+      cursor: pointer;
+      accent-color: var(--coral-500);
+      margin-top: 2px;
+    }
+    .g-result-name {
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600; font-size: 14.5px;
+      color: var(--ink); margin-bottom: 4px;
+    }
+    .g-result-addr { font-size: 12.5px; color: var(--graphite); margin-bottom: 4px; }
+    .g-result-meta {
+      display: flex; gap: 12px; flex-wrap: wrap;
+      font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+      color: var(--ash); letter-spacing: 0.5px;
+    }
+    .g-result-meta .star { color: var(--coral-700); font-weight: 700; }
+    .g-result-meta .imported-tag { color: var(--rose-500); font-weight: 700; }
+    .g-result-reviews {
+      margin-top: 8px;
+      padding: 8px 10px;
+      background: var(--cream);
+      border: 1px solid var(--stone);
+      border-radius: 8px;
+      font-size: 11.5px; color: var(--graphite);
+      line-height: 1.5;
+      max-height: 100px; overflow-y: auto;
+      white-space: pre-line;
+    }
+    .g-import-actions {
+      display: flex; gap: 8px; align-items: center;
+      margin-top: 12px; padding: 12px;
+      background: var(--coral-50); border: 1px solid var(--coral-100);
+      border-radius: 12px;
+    }
+    .g-setup-banner {
+      background: #fbe2c0; border: 1px solid #f0d0a0;
+      color: #7a4814;
+      padding: 14px 16px; border-radius: 12px;
+      font-size: 13px; line-height: 1.55;
+      margin-top: 12px; position: relative;
+    }
+    .g-setup-banner code { background: rgba(0,0,0,0.06); padding: 1px 6px; border-radius: 4px; font-size: 11.5px; }
+  </style>
 
   <%# ── Kanban ───────────────────────────────────── %>
   <div class="or-kanban">
@@ -326,6 +420,152 @@
 </div>
 
 <script>
+let googleResults = [];
+
+async function googleSearch() {
+  const query = document.getElementById('g-query').value.trim();
+  if (!query) return;
+  const btn      = document.getElementById('g-search-btn');
+  const status   = document.getElementById('g-status');
+  const wrap     = document.getElementById('g-results');
+  const csrf     = document.querySelector('meta[name="csrf-token"]')?.content;
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-circle-notch fa-spin" style="margin-right:6px;"></i>BUSCANDO…';
+  status.style.display = 'block';
+  status.textContent = 'Consultando Google Maps…';
+  wrap.innerHTML = '';
+
+  try {
+    const res = await fetch('<%= admin_outreach_search_google_path %>', {
+      method: 'POST',
+      headers: { 'X-CSRF-Token': csrf, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ query })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      if (data.setup_needed) {
+        wrap.innerHTML = `<div class="g-setup-banner">
+          <strong><i class="fas fa-circle-info" style="margin-right:6px;"></i>Configurar Google Places API</strong><br><br>
+          ${data.setup}<br><br>
+          <strong>Passo a passo:</strong>
+          <ol style="margin:6px 0 0 18px;padding:0;">
+            <li>Acesse <a href="https://console.cloud.google.com" target="_blank" style="color:#7a4814;text-decoration:underline;">console.cloud.google.com</a> e faça login</li>
+            <li>Crie um projeto novo (gratuito)</li>
+            <li>Vá em <em>APIs &amp; Services → Library</em>, busque "Places API" e clique em <em>Enable</em></li>
+            <li>Em <em>Credentials → Create credentials → API key</em>, copie a key</li>
+            <li>No Render: Settings → Environment → adicione <code>GOOGLE_PLACES_API_KEY</code> com o valor copiado</li>
+            <li>Após o redeploy, esta busca passa a funcionar (gratuito até $200/mês ≈ centenas de buscas)</li>
+          </ol>
+        </div>`;
+      } else {
+        wrap.innerHTML = `<div style="color:var(--rose-500);padding:14px;background:#fdecec;border:1px solid #f5cccc;border-radius:12px;font-size:13px;"><i class="fas fa-circle-exclamation" style="margin-right:6px;"></i>${data.error || 'Erro na busca.'}</div>`;
+      }
+      return;
+    }
+
+    googleResults = data.results || [];
+    if (googleResults.length === 0) {
+      wrap.innerHTML = `<div style="color:var(--ash);padding:14px;font-size:13px;text-align:center;">Nenhum resultado.</div>`;
+      return;
+    }
+
+    status.textContent = `${googleResults.length} resultado(s) encontrado(s). Marque os que quiser importar.`;
+    renderGoogleResults();
+
+  } catch (err) {
+    console.error('googleSearch error', err);
+    wrap.innerHTML = `<div style="color:var(--rose-500);padding:14px;background:#fdecec;border:1px solid #f5cccc;border-radius:12px;font-size:13px;">Erro de conexão: ${err.message}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-magnifying-glass" style="margin-right:6px;"></i>BUSCAR';
+  }
+}
+
+function renderGoogleResults() {
+  const wrap = document.getElementById('g-results');
+  const cards = googleResults.map((r, idx) => {
+    const importedTag = r.already_imported ? '<span class="imported-tag">JÁ IMPORTADO</span>' : '';
+    const ratingTag   = r.rating ? `<span class="star">★ ${r.rating}</span>` : '<span>sem rating</span>';
+    const phoneTag    = r.phone ? `<span><i class="fas fa-phone" style="font-size:9px;margin-right:3px;"></i>${r.phone}</span>` : '<span style="color:var(--rose-500);">sem telefone</span>';
+    const reviewsBlock = r.reviews_sample ? `<div class="g-result-reviews">${escapeHtml(r.reviews_sample)}</div>` : '';
+
+    return `<div class="g-result-card ${r.already_imported ? 'imported' : ''}" data-idx="${idx}">
+      <input type="checkbox" class="g-result-checkbox" data-idx="${idx}" ${r.already_imported ? '' : 'checked'} ${r.already_imported ? 'disabled' : ''} onchange="toggleResultCard(this)">
+      <div style="flex:1;min-width:0;">
+        <div class="g-result-name">${escapeHtml(r.name)}</div>
+        <div class="g-result-addr">${escapeHtml(r.address || '')}</div>
+        <div class="g-result-meta">
+          ${ratingTag}
+          ${phoneTag}
+          ${r.bairro ? `<span>${escapeHtml(r.bairro)}</span>` : ''}
+          ${importedTag}
+        </div>
+        ${reviewsBlock}
+      </div>
+    </div>`;
+  }).join('');
+
+  const importable = googleResults.filter(r => !r.already_imported).length;
+  const actions = importable > 0 ? `<div class="g-import-actions">
+    <span style="flex:1;font-size:13px;color:var(--coral-700);font-weight:600;">${importable} novo(s) selecionável(eis)</span>
+    <button type="button" class="loov-btn-primary" onclick="importGoogleSelected()">
+      <i class="fas fa-cloud-arrow-up" style="margin-right:6px;"></i>IMPORTAR SELECIONADOS
+    </button>
+  </div>` : '';
+
+  wrap.innerHTML = cards + actions;
+
+  // Marca cards iniciais
+  document.querySelectorAll('.g-result-checkbox').forEach(cb => toggleResultCard(cb));
+}
+
+function toggleResultCard(cb) {
+  const card = cb.closest('.g-result-card');
+  if (!card) return;
+  if (cb.checked) card.classList.add('selected');
+  else card.classList.remove('selected');
+}
+
+async function importGoogleSelected() {
+  const selected = Array.from(document.querySelectorAll('.g-result-checkbox:checked'))
+    .map(cb => googleResults[parseInt(cb.dataset.idx, 10)])
+    .filter(Boolean);
+
+  if (selected.length === 0) {
+    alert('Selecione pelo menos um lead.');
+    return;
+  }
+
+  const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
+  try {
+    const res = await fetch('<%= admin_outreach_import_google_path %>', {
+      method: 'POST',
+      headers: { 'X-CSRF-Token': csrf, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ leads: selected })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      alert(`${data.created} lead(s) importado(s)${data.skipped ? `, ${data.skipped} duplicado(s) pulado(s)` : ''}.`);
+      window.location.reload();
+    } else {
+      alert('Erro ao importar: ' + (data.error || 'desconhecido'));
+    }
+  } catch (e) {
+    alert('Erro de conexão: ' + e.message);
+  }
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Enter no input dispara busca
+document.getElementById('g-query').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); googleSearch(); }
+});
+
 function deleteLead(btn) {
   const id   = btn.dataset.leadId;
   const name = btn.dataset.leadName || 'lead';

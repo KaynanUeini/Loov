@@ -163,8 +163,10 @@ Rails.application.routes.draw do
     post 'ceo_assistant/analyze', to: 'ceo_assistant#analyze', as: :ceo_assistant_analyze
 
     # ── Outreach (prospecção semiautomatizada) ─────────────────────
-    get    'outreach',              to: 'outreach#index',  as: :outreach_index
-    post   'outreach/import',       to: 'outreach#import', as: :outreach_import
+    get    'outreach',                to: 'outreach#index',         as: :outreach_index
+    post   'outreach/import',         to: 'outreach#import',        as: :outreach_import
+    post   'outreach/search_google',  to: 'outreach#search_google', as: :outreach_search_google
+    post   'outreach/import_google',  to: 'outreach#import_google', as: :outreach_import_google
     get    'outreach/:id',          to: 'outreach#show',   as: :outreach_lead
     patch  'outreach/:id',          to: 'outreach#update'
     delete 'outreach/:id',          to: 'outreach#destroy'
