@@ -505,10 +505,16 @@
   function loadUsers(role='') {
     const url = role ? `/admin/users?role=${role}` : '/admin/users';
     document.getElementById('users-table-wrap').innerHTML = '<div style="padding:32px; text-align:center; color:var(--ash); font-size:13px;">Carregando…</div>';
-    fetch(url,{headers:{Accept:'application/json'}})
-      .then(r => {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.json();
+    fetch(url, { headers: { Accept: 'application/json' } })
+      .then(async r => {
+        const text = await r.text();
+        let data;
+        try { data = JSON.parse(text); } catch { data = null; }
+        if (!r.ok) {
+          const detail = data && data.error ? `${data.klass || 'Erro'}: ${data.error}` : `HTTP ${r.status}`;
+          throw new Error(detail);
+        }
+        return data;
       })
       .then(data => {
         if (!Array.isArray(data)) throw new Error('Resposta inválida');
@@ -518,9 +524,10 @@
       .catch(err => {
         console.error('[admin/users] erro ao carregar:', err);
         document.getElementById('users-table-wrap').innerHTML =
-          '<div style="padding:32px; text-align:center; color:var(--rose-500); font-size:13px;">' +
+          '<div style="padding:32px; text-align:left; color:var(--rose-500); font-size:13px; background:#fdecec; border:1px solid #f5cccc; border-radius:12px;">' +
           '<i class="fas fa-circle-exclamation" style="margin-right:6px;"></i>' +
-          'Não foi possível carregar usuários: ' + err.message +
+          '<strong>Não foi possível carregar usuários:</strong><br>' +
+          '<code style="background:rgba(0,0,0,0.05); padding:2px 6px; border-radius:4px; font-size:11.5px;">' + err.message + '</code>' +
           '<br><button onclick="loadUsers()" class="tbl-btn" style="margin-top:12px;">Tentar de novo</button>' +
           '</div>';
       });

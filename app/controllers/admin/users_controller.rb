@@ -6,25 +6,36 @@ module Admin
       users = users.where(role: params[:role])      if params[:role].present?
       users = users.where.not(blocked_at: nil)      if params[:blocked] == "1"
 
-      # Pré-conta agendamentos em uma única query — evita N+1 que era
-      # gargalo em Render free com 100+ usuários (timeout de 30s do
-      # rack-timeout matava a request silenciosamente).
-      appt_counts = Appointment.where(user_id: users.pluck(:id)).group(:user_id).count
+      # Materializa em array uma vez só pra evitar N+1 e dupla execução
+      # da query (relation.pluck + relation.map executariam SELECT 2x).
+      users_list = users.to_a
+      ids        = users_list.map(&:id)
 
-      render json: users.map { |u|
+      appt_counts = if ids.any?
+        Appointment.where(user_id: ids).group(:user_id).count
+      else
+        {}
+      end
+
+      payload = users_list.map do |u|
         {
           id:                 u.id,
-          name:               u.display_name,
-          email:              u.email,
-          role:               u.role,
+          name:               (u.display_name rescue (u.email.to_s.split("@").first || "—")),
+          email:              u.email.to_s,
+          role:               u.role.to_s,
           phone:              u.phone,
           vehicle:            u.vehicle_model,
           blocked:            u.blocked_at.present?,
           blocked_at:         u.blocked_at&.strftime("%d/%m/%Y"),
           appointments_count: appt_counts[u.id] || 0,
-          created_at:         u.created_at.strftime("%d/%m/%Y")
+          created_at:         u.created_at&.strftime("%d/%m/%Y")
         }
-      }
+      end
+
+      render json: payload
+    rescue => e
+      Rails.logger.error("[Admin::Users#index] #{e.class}: #{e.message}\n#{e.backtrace.first(8).join("\n")}")
+      render json: { error: e.message, klass: e.class.name }, status: :internal_server_error
     end
 
     def show
