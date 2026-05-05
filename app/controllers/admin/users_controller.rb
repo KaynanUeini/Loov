@@ -2,9 +2,14 @@ module Admin
   class UsersController < Admin::BaseController
     def index
       users = User.all.order(created_at: :desc)
-      users = users.where("email ILIKE ? OR name ILIKE ?", "%#{params[:q]}%", "%#{params[:q]}%") if params[:q].present?
-      users = users.where(role: params[:role]) if params[:role].present?
-      users = users.where.not(blocked_at: nil) if params[:blocked] == "1"
+      users = users.where("email ILIKE ? OR full_name ILIKE ?", "%#{params[:q]}%", "%#{params[:q]}%") if params[:q].present?
+      users = users.where(role: params[:role])      if params[:role].present?
+      users = users.where.not(blocked_at: nil)      if params[:blocked] == "1"
+
+      # Pré-conta agendamentos em uma única query — evita N+1 que era
+      # gargalo em Render free com 100+ usuários (timeout de 30s do
+      # rack-timeout matava a request silenciosamente).
+      appt_counts = Appointment.where(user_id: users.pluck(:id)).group(:user_id).count
 
       render json: users.map { |u|
         {
@@ -16,7 +21,7 @@ module Admin
           vehicle:            u.vehicle_model,
           blocked:            u.blocked_at.present?,
           blocked_at:         u.blocked_at&.strftime("%d/%m/%Y"),
-          appointments_count: u.appointments.count,
+          appointments_count: appt_counts[u.id] || 0,
           created_at:         u.created_at.strftime("%d/%m/%Y")
         }
       }

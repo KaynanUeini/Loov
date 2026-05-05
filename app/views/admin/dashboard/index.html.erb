@@ -504,9 +504,26 @@
 
   function loadUsers(role='') {
     const url = role ? `/admin/users?role=${role}` : '/admin/users';
-    fetch(url,{headers:{Accept:'application/json'}}).then(r=>r.json()).then(data=>{
-      allUsers=data; renderUsers(data);
-    }).catch(()=>{});
+    document.getElementById('users-table-wrap').innerHTML = '<div style="padding:32px; text-align:center; color:var(--ash); font-size:13px;">Carregando…</div>';
+    fetch(url,{headers:{Accept:'application/json'}})
+      .then(r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(data => {
+        if (!Array.isArray(data)) throw new Error('Resposta inválida');
+        allUsers = data;
+        renderUsers(data);
+      })
+      .catch(err => {
+        console.error('[admin/users] erro ao carregar:', err);
+        document.getElementById('users-table-wrap').innerHTML =
+          '<div style="padding:32px; text-align:center; color:var(--rose-500); font-size:13px;">' +
+          '<i class="fas fa-circle-exclamation" style="margin-right:6px;"></i>' +
+          'Não foi possível carregar usuários: ' + err.message +
+          '<br><button onclick="loadUsers()" class="tbl-btn" style="margin-top:12px;">Tentar de novo</button>' +
+          '</div>';
+      });
   }
   function renderUsers(data) {
     document.getElementById('users-panel-title').textContent=`Usuários — ${data.length} registros`;
