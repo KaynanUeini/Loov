@@ -5,6 +5,11 @@
 # (find_or_create_by) — re-executar não duplica nada.
 class SeedSpDemoCarWashes < ActiveRecord::Migration[7.1]
   def up
+    # Força reload do schema em memória — migrations anteriores nesta mesma
+    # rodada de `db:migrate` adicionaram colunas (full_name/phone em users,
+    # cep/logradouro/bairro em car_washes, etc.) que os models ainda não
+    # enxergam sem isso, e o seed chama setters dessas colunas.
+    [User, CarWash, OperatingHour, Service].each(&:reset_column_information)
     load Rails.root.join('db/seeds/sp_demo.rb').to_s
   end
 
