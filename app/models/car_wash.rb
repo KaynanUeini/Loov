@@ -18,7 +18,14 @@ class CarWash < ApplicationRecord
   validates :capacity_per_slot, presence: true, numericality: { greater_than: 0 }
 
   geocoded_by :geocoding_address
-  after_validation :geocode, if: :address_changed?
+  after_validation :geocode, if: :should_geocode?
+
+  # Só chama a API do Geocoder quando o endereço mudou E ainda não temos
+  # coordenadas válidas. Evita bater no rate limit do Nominatim durante
+  # seeds/imports que já trazem lat/lng prontos.
+  def should_geocode?
+    address_changed? && !has_valid_coordinates?
+  end
 
   def geocoding_address
     parts = []
