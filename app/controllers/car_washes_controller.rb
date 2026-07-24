@@ -81,6 +81,15 @@ class CarWashesController < ApplicationController
                              h[id] = { avg: avg.to_f.round(1), count: count.to_i }
                            }
 
+        # Pré-carrega ids favoritados em UMA query (batch) — evita N+1
+        # e permite o mobile mostrar heart preenchido no card sem
+        # precisar chamar /client/favorites separadamente.
+        favorited_ids = if user_signed_in? && current_user.client?
+          current_user.favorite_car_washes.where(car_wash_id: cw_ids).pluck(:car_wash_id).to_set
+        else
+          Set.new
+        end
+
         render json: collection.map { |cw|
           # Hora de hoje do lava-rápido (pode não existir se fechado no dia)
           today_oh = cw.operating_hours.find { |oh| oh.day_of_week.to_i == today_dow }
@@ -100,6 +109,7 @@ class CarWashesController < ApplicationController
             id:            cw.id,
             name:          cw.name,
             address:       cw.address,
+            favorited:     favorited_ids.include?(cw.id),
             logradouro:    cw.logradouro,
             numero:        cw.numero,
             bairro:        cw.bairro,
