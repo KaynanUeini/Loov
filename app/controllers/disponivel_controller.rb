@@ -107,11 +107,12 @@ class DisponivelController < ApplicationController
             },
             services:  s[:services].map { |svc|
               {
-                id:       svc.id,
-                title:    svc.title,
-                price:    svc.price.to_f,
-                duration: svc.duration,
-                category: svc.category
+                id:          svc.id,
+                title:       svc.title,
+                price:       svc.price.to_f,
+                duration:    svc.duration,
+                category:    svc.category,
+                description: svc.description
               }
             },
             slots:     s[:slots].map(&:iso8601),
