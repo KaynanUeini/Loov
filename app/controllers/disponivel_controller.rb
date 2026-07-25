@@ -76,21 +76,34 @@ class DisponivelController < ApplicationController
     respond_to do |format|
       format.html
       format.json do
+        # Batch de rating pra evitar N+1 quando renderizar cards do
+        # Last Minute no mobile (que agora mostra ⭐ no canto superior).
+        slot_cw_ids = @available_slots.map { |s| s[:car_wash].id }
+        rating_map = Review.where(car_wash_id: slot_cw_ids)
+                           .group(:car_wash_id)
+                           .pluck(:car_wash_id, Arel.sql("AVG(rating)"), Arel.sql("COUNT(*)"))
+                           .each_with_object({}) { |(id, avg, count), h|
+                             h[id] = { avg: avg.to_f.round(1), count: count.to_i }
+                           }
+
         render json: @available_slots.map { |s|
           cw = s[:car_wash]
+          r  = rating_map[cw.id] || { avg: 0.0, count: 0 }
           {
             car_wash: {
-              id:          cw.id,
-              name:        cw.name,
-              address:     cw.address,
-              logradouro:  cw.logradouro,
-              numero:      cw.numero,
-              bairro:      cw.bairro,
-              cidade:      cw.cidade,
-              uf:          cw.uf,
-              latitude:    cw.latitude,
-              longitude:   cw.longitude,
-              distance_km: s[:distance_km]
+              id:            cw.id,
+              name:          cw.name,
+              address:       cw.address,
+              logradouro:    cw.logradouro,
+              numero:        cw.numero,
+              bairro:        cw.bairro,
+              cidade:        cw.cidade,
+              uf:            cw.uf,
+              latitude:      cw.latitude,
+              longitude:     cw.longitude,
+              distance_km:   s[:distance_km],
+              rating_avg:    r[:avg],
+              reviews_count: r[:count]
             },
             services:  s[:services].map { |svc|
               {
