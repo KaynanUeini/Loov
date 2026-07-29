@@ -10,9 +10,35 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_04_21_120000) do
+ActiveRecord::Schema[7.1].define(version: 2026_05_04_220000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
+
+  create_table "ai_insight_runs", force: :cascade do |t|
+    t.bigint "ai_insight_id"
+    t.bigint "car_wash_id", null: false
+    t.string "status", null: false
+    t.string "model"
+    t.string "cycle_type"
+    t.boolean "is_crisis_mode", default: false, null: false
+    t.text "owner_input"
+    t.text "prompt"
+    t.text "raw_response"
+    t.jsonb "parsed_content"
+    t.boolean "parse_ok", default: false, null: false
+    t.text "parse_error"
+    t.integer "input_tokens"
+    t.integer "output_tokens"
+    t.integer "latency_ms"
+    t.text "error_message"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ai_insight_id"], name: "index_ai_insight_runs_on_ai_insight_id"
+    t.index ["car_wash_id", "created_at"], name: "index_ai_insight_runs_on_car_wash_id_and_created_at"
+    t.index ["car_wash_id"], name: "index_ai_insight_runs_on_car_wash_id"
+    t.index ["created_at"], name: "index_ai_insight_runs_on_created_at"
+    t.index ["status"], name: "index_ai_insight_runs_on_status"
+  end
 
   create_table "ai_insights", force: :cascade do |t|
     t.bigint "car_wash_id", null: false
@@ -50,14 +76,30 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_21_120000) do
     t.integer "cancelled_by_id"
     t.string "cancellation_reason"
     t.string "cancelled_by_role"
+    t.datetime "attended_at"
     t.index ["acceptance_expires_at"], name: "index_appointments_on_acceptance_expires_at"
     t.index ["appointment_type"], name: "index_appointments_on_appointment_type"
+    t.index ["attended_at"], name: "index_appointments_on_attended_at"
     t.index ["cancelled_by_id"], name: "index_appointments_on_cancelled_by_id"
     t.index ["car_wash_id", "scheduled_at", "status"], name: "idx_appointments_overlap_check"
     t.index ["car_wash_id"], name: "index_appointments_on_car_wash_id"
     t.index ["service_id"], name: "index_appointments_on_service_id"
     t.index ["stripe_payment_intent_id"], name: "index_appointments_on_stripe_payment_intent_id", unique: true, where: "(stripe_payment_intent_id IS NOT NULL)"
     t.index ["user_id"], name: "index_appointments_on_user_id"
+  end
+
+  create_table "attendant_activities", force: :cascade do |t|
+    t.bigint "car_wash_id", null: false
+    t.bigint "attendant_id", null: false
+    t.string "action", null: false
+    t.string "title"
+    t.text "body"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.text "items"
+    t.index ["attendant_id"], name: "index_attendant_activities_on_attendant_id"
+    t.index ["car_wash_id", "created_at"], name: "index_attendant_activities_on_car_wash_id_and_created_at"
+    t.index ["car_wash_id"], name: "index_attendant_activities_on_car_wash_id"
   end
 
   create_table "attendant_invitations", force: :cascade do |t|
@@ -102,6 +144,18 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_21_120000) do
     t.index ["user_id"], name: "index_car_washes_on_user_id"
   end
 
+  create_table "custom_cost_lines", force: :cascade do |t|
+    t.bigint "monthly_cost_id", null: false
+    t.string "name", null: false
+    t.decimal "amount", precision: 12, scale: 2, default: "0.0", null: false
+    t.string "cost_type", null: false
+    t.integer "position", default: 0
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["monthly_cost_id", "cost_type"], name: "index_custom_cost_lines_on_monthly_cost_id_and_cost_type"
+    t.index ["monthly_cost_id"], name: "index_custom_cost_lines_on_monthly_cost_id"
+  end
+
   create_table "favorite_car_washes", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.bigint "car_wash_id", null: false
@@ -136,6 +190,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_21_120000) do
     t.text "notes"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.decimal "water", precision: 12, scale: 2, default: "0.0"
+    t.decimal "electricity", precision: 12, scale: 2, default: "0.0"
     t.index ["car_wash_id"], name: "index_monthly_costs_on_car_wash_id"
   end
 
@@ -157,6 +213,45 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_21_120000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["car_wash_id"], name: "index_operating_hours_on_car_wash_id"
+  end
+
+  create_table "outreach_leads", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "phone"
+    t.string "email"
+    t.text "address"
+    t.string "bairro"
+    t.string "cidade", default: "Osasco"
+    t.decimal "rating", precision: 3, scale: 1
+    t.text "reviews_sample"
+    t.text "notes"
+    t.string "status", default: "novo", null: false
+    t.datetime "last_contact_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["phone"], name: "index_outreach_leads_on_phone", unique: true, where: "(phone IS NOT NULL)"
+    t.index ["status"], name: "index_outreach_leads_on_status"
+  end
+
+  create_table "outreach_meetings", force: :cascade do |t|
+    t.bigint "lead_id", null: false
+    t.datetime "scheduled_at", null: false
+    t.string "kind", default: "video"
+    t.string "status", default: "agendado"
+    t.text "notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["lead_id"], name: "index_outreach_meetings_on_lead_id"
+  end
+
+  create_table "outreach_messages", force: :cascade do |t|
+    t.bigint "lead_id", null: false
+    t.text "body", null: false
+    t.string "channel", default: "whatsapp", null: false
+    t.datetime "sent_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["lead_id"], name: "index_outreach_messages_on_lead_id"
   end
 
   create_table "owner_messages", force: :cascade do |t|
@@ -287,18 +382,25 @@ ActiveRecord::Schema[7.1].define(version: 2026_04_21_120000) do
     t.index ["stripe_customer_id"], name: "index_users_on_stripe_customer_id", unique: true, where: "(stripe_customer_id IS NOT NULL)"
   end
 
+  add_foreign_key "ai_insight_runs", "ai_insights"
+  add_foreign_key "ai_insight_runs", "car_washes"
   add_foreign_key "ai_insights", "car_washes"
   add_foreign_key "appointments", "car_washes"
   add_foreign_key "appointments", "services"
   add_foreign_key "appointments", "users"
+  add_foreign_key "attendant_activities", "car_washes"
+  add_foreign_key "attendant_activities", "users", column: "attendant_id"
   add_foreign_key "car_wash_closures", "car_washes"
   add_foreign_key "car_washes", "users"
+  add_foreign_key "custom_cost_lines", "monthly_costs"
   add_foreign_key "favorite_car_washes", "car_washes"
   add_foreign_key "favorite_car_washes", "users"
   add_foreign_key "loyalty_programs", "car_washes"
   add_foreign_key "monthly_costs", "car_washes"
   add_foreign_key "notification_reads", "users"
   add_foreign_key "operating_hours", "car_washes"
+  add_foreign_key "outreach_meetings", "outreach_leads", column: "lead_id"
+  add_foreign_key "outreach_messages", "outreach_leads", column: "lead_id"
   add_foreign_key "owner_messages", "car_washes"
   add_foreign_key "owner_messages", "users", column: "recipient_id"
   add_foreign_key "owner_messages", "users", column: "sender_id"

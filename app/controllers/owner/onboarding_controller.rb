@@ -1,9 +1,30 @@
 class Owner::OnboardingController < ApplicationController
+  # As três actions de save já respondem JSON e agora também servem o wizard
+  # do app (auth por Bearer/JWT, sem sessão e sem CSRF token).
+  skip_before_action :verify_authenticity_token
   before_action :authenticate_user!
   before_action :ensure_owner!
 
   def show
     redirect_to root_path if current_user.car_washes.any?
+  end
+
+  # GET /owner/onboarding/status — o app usa pra decidir se abre o wizard e em
+  # qual passo entrar. No web isso não é preciso: o redirect do
+  # ApplicationController já leva o dono sem lava-rápido pra cá.
+  def status
+    car_wash = current_user.car_washes.order(:created_at).first
+    has_hours    = car_wash.present? && car_wash.operating_hours.any?
+    has_services = car_wash.present? && car_wash.services.any?
+
+    render json: {
+      needs_onboarding: !(car_wash.present? && has_hours && has_services),
+      car_wash_id:      car_wash&.id,
+      car_wash_name:    car_wash&.name,
+      has_car_wash:     car_wash.present?,
+      has_hours:        has_hours,
+      has_services:     has_services
+    }
   end
 
   def save_car_wash
@@ -67,7 +88,13 @@ class Owner::OnboardingController < ApplicationController
   private
 
   def ensure_owner!
-    redirect_to root_path unless current_user.owner?
+    return if current_user.owner?
+
+    if api_request?
+      render json: { success: false, errors: ["Acesso restrito ao dono"] }, status: :forbidden
+    else
+      redirect_to root_path
+    end
   end
 
   def car_wash_params

@@ -16,10 +16,18 @@ class ApplicationController < ActionController::Base
     devise_parameter_sanitizer.permit(:sign_up, keys: [:role, :full_name, :phone, :cpf, :vehicle_model])
   end
 
+  # Cliente de API (app) não pode receber redirect pra tela HTML: o wizard de
+  # onboarding mora dentro do próprio app, e um 302 aqui chegaria no fetch como
+  # HTML no lugar do JSON esperado.
+  def api_request?
+    request.format.json? || request.headers['Authorization'].present?
+  end
+
   def redirect_owner_without_car_wash
     return unless user_signed_in?
     return unless current_user.owner?
     return if current_user.car_washes.any?
+    return if api_request?
     return if controller_name == 'onboarding'
     return if controller_name == 'sessions'
     return if controller_name == 'registrations'
