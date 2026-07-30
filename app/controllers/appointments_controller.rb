@@ -111,7 +111,13 @@ class AppointmentsController < ApplicationController
             show_code:         show_code,
             car_wash: {
               id:   a.car_wash.id,
-              name: a.car_wash.name
+              name: a.car_wash.name,
+              # Coordenada e endereço pro botão "Ver rota" do card abrir o app de
+              # mapas direto. Sem isso o app só conseguia levar pra tela do
+              # lava-rápido, que não é rota.
+              latitude:  a.car_wash.latitude,
+              longitude: a.car_wash.longitude,
+              address:   a.car_wash.address
             },
             service: {
               id:       a.service.id,
