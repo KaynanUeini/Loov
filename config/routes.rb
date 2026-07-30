@@ -1,5 +1,9 @@
 Rails.application.routes.draw do
   root "home#index"
+
+  # Qual commit está em produção. Público e sem auth de propósito: o objetivo é
+  # confirmar deploy sem depender de login.
+  get 'version', to: 'version#show'
   devise_for :users, controllers: {
     sessions:      'sessions',
     registrations: 'users/registrations'
