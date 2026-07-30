@@ -40,6 +40,24 @@ class CarWash < ApplicationRecord
     latitude.present? && longitude.present? && latitude != 0.0 && longitude != 0.0
   end
 
+  # Capacidade de atendimento simultâneo no dia da data/hora informada.
+  #
+  # A equipe varia ao longo da semana (menor no meio, maior no fim de semana),
+  # então cada operating_hour pode ter a sua capacidade; sem valor definido,
+  # vale o default do lava-rápido. Sempre >= 1 — capacidade zero deixaria a
+  # agenda inteira indisponível sem o dono entender o porquê.
+  #
+  # Recebe Date, Time ou DateTime. Sem argumento com wday (nil), devolve o
+  # default. Usa `detect` em vez de `find_by` de propósito: carrega a
+  # associação uma vez e as chamadas seguintes do mesmo request batem em
+  # memória, o que importa em available_times (dezenas de slots por dia).
+  def capacity_for(date_or_time)
+    wday = date_or_time.try(:wday)
+    hour = wday && operating_hours.detect { |oh| oh.day_of_week == wday }
+    return hour.effective_capacity if hour
+    [capacity_per_slot.to_i, 1].max
+  end
+
   # Verifica se há um CarWashClosure ativo cobrindo a data informada
   # (default: hoje). Usado pelos endpoints client-facing pra filtrar/marcar
   # como fechado lavas-rápidos com fechamento programado.

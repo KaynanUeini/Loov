@@ -1,7 +1,7 @@
 <% Rails.logger.info("Renderizando appointments/new.html.erb: @car_wash=#{@car_wash.inspect}") %>
 <script>
   window.carWashId = <%= @car_wash.id %>;
-  window.operatingHours = <%= @car_wash.operating_hours.map { |oh| { day_of_week: oh.day_of_week, opens_at: (oh.opens_at.hour * 60 + oh.opens_at.min), closes_at: (oh.closes_at.hour * 60 + oh.closes_at.min) } }.to_json.html_safe %>;
+  window.operatingHours = <%= @car_wash.operating_hours.map { |oh| { day_of_week: oh.day_of_week, opens_at: (oh.opens_at.hour * 60 + oh.opens_at.min), closes_at: (oh.closes_at.hour * 60 + oh.closes_at.min), capacity: oh.effective_capacity } }.to_json.html_safe %>;
   window.capacityPerSlot = <%= @car_wash.capacity_per_slot %>;
   window.carWashName = "<%= @car_wash.name %>";
   window.carWashAddress = "<%= @car_wash.address %>";
@@ -404,7 +404,7 @@
           var m = parseInt(t[1]) * 60 + parseInt(t[2]);
           return m < cur + selectedDuration && m + selectedDuration > cur;
         }).length;
-        if ((window.capacityPerSlot || 1) - used > 0) {
+        if ((oh.capacity || window.capacityPerSlot || 1) - used > 0) {
           var h = String(Math.floor(cur/60)).padStart(2,'0');
           var m = String(cur%60).padStart(2,'0');
           slots.push({ time: h + ':' + m });

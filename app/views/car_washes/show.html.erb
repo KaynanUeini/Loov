@@ -829,7 +829,7 @@ end
 
 <script>
   window.carWashId       = <%= @car_wash.id %>;
-  window.operatingHours  = <%= @car_wash.operating_hours.map { |oh| { day_of_week: oh.day_of_week, opens_at: oh.opens_at.hour * 60 + oh.opens_at.min, closes_at: oh.closes_at.hour * 60 + oh.closes_at.min } }.to_json.html_safe %>;
+  window.operatingHours  = <%= @car_wash.operating_hours.map { |oh| { day_of_week: oh.day_of_week, opens_at: oh.opens_at.hour * 60 + oh.opens_at.min, closes_at: oh.closes_at.hour * 60 + oh.closes_at.min, capacity: oh.effective_capacity } }.to_json.html_safe %>;
   window.capacityPerSlot = <%= @car_wash.capacity_per_slot %>;
   window.operatingDays   = <%= @car_wash.operating_hours.pluck(:day_of_week).to_json.html_safe %>;
   window.closureDates    = <%= @closures.flat_map { |c| (c.start_date..c.end_date).map { |d| d.strftime("%Y-%m-%d") } }.to_json.html_safe %>;

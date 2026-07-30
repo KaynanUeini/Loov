@@ -4,7 +4,16 @@ class OperatingHour < ApplicationRecord
   validates :day_of_week, presence: true, inclusion: { in: 0..6 }, uniqueness: { scope: :car_wash_id }
   validates :opens_at, presence: true
   validates :closes_at, presence: true
+  # Capacidade do dia. Nil = usa o default do lava-rápido (capacity_per_slot).
+  validates :capacity, numericality: { only_integer: true, greater_than: 0 }, allow_nil: true
   validate :closes_after_opens
+
+  # Capacidade que a agenda aplica neste dia: a própria, ou o default do
+  # lava-rápido quando não configurada. Sempre >= 1 — capacidade zero deixaria
+  # a agenda do dia indisponível sem o dono entender o porquê.
+  def effective_capacity
+    [(capacity.presence || car_wash&.capacity_per_slot).to_i, 1].max
+  end
 
   # Método para converter o day_of_week (0-6) em um nome legível
   def day_of_week_name

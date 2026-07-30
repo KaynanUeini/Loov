@@ -144,7 +144,10 @@ window.app = {
             startMinutes = currentTimeMinutes < opensAtMinutes ? opensAtMinutes : Math.ceil(currentTimeMinutes / 15) * 15;
           }
 
-          const availableSlots = getAvailableSlots(startMinutes, closesAtMinutes, appointments, window.capacityPerSlot, 15, isSameDay(date, new Date()), startMinutes);
+          // Capacidade do dia (equipe varia na semana); cai no default do
+          // lava-rápido quando o dia não tem valor próprio.
+          const dayCapacity = operatingHour.capacity || window.capacityPerSlot;
+          const availableSlots = getAvailableSlots(startMinutes, closesAtMinutes, appointments, dayCapacity, 15, isSameDay(date, new Date()), startMinutes);
           return { availableSlots };
         }
 
@@ -289,7 +292,10 @@ window.app = {
               startMinutes = currentTimeMinutes < opensAtMinutes ? opensAtMinutes : Math.ceil(currentTimeMinutes / 15) * 15;
             }
 
-            const availableSlots = getAvailableSlots(startMinutes, closesAtMinutes, appointments, window.capacityPerSlot, 15, isSameDay(date, new Date()), startMinutes);
+            // Capacidade do dia (equipe varia na semana); cai no default do
+          // lava-rápido quando o dia não tem valor próprio.
+          const dayCapacity = operatingHour.capacity || window.capacityPerSlot;
+          const availableSlots = getAvailableSlots(startMinutes, closesAtMinutes, appointments, dayCapacity, 15, isSameDay(date, new Date()), startMinutes);
             return { availableSlots };
           }
 

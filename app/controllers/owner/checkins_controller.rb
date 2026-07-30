@@ -173,7 +173,7 @@ module Owner
       # direta de overlap conta atendimentos sequenciais que rodam back-to-back
       # como simultâneos, gerando falso "cheio".
       unless force
-        cap          = [car_wash.capacity_per_slot.to_i, 1].max
+        cap          = car_wash.capacity_for(scheduled_at)
         duration_min = service.duration.to_i
         if duration_min > 0
           end_at = scheduled_at + duration_min.minutes
@@ -306,7 +306,8 @@ module Owner
       if a.user.present?
         phone       = a.user.phone.to_s.gsub(/\D/, '')
         phone_last4 = phone.length >= 4 ? phone.last(4) : nil
-        vehicle     = a.user.vehicle_model.presence
+        # Placa primeiro: é o que o dono usa pra achar o carro no pátio.
+        vehicle     = a.user.vehicle_label
         # Sobrescreve display_client com primeiro nome real
         first_name  = (a.user.full_name.presence || a.user.email.split("@").first).split.first.capitalize
 

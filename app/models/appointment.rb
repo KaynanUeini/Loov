@@ -290,7 +290,7 @@ class Appointment < ApplicationRecord
   def fits_in_capacity
     return unless car_wash && service && scheduled_at
 
-    cap = [car_wash.capacity_per_slot.to_i, 1].max
+    cap = car_wash.capacity_for(scheduled_at)
     duration_min = service.duration.to_i
     return if duration_min <= 0
 

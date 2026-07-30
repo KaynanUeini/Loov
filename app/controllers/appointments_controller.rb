@@ -234,7 +234,7 @@ class AppointmentsController < ApplicationController
         )
         .count
 
-      if overlapping >= @car_wash.capacity_per_slot
+      if overlapping >= @car_wash.capacity_for(start_time)
         conflict = true
         raise ActiveRecord::Rollback
       end

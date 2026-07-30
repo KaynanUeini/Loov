@@ -344,7 +344,7 @@ class CarWashesController < ApplicationController
       end
 
       duration          = params[:duration].to_i
-      capacity_per_slot = [@car_wash.capacity_per_slot.to_i, 1].max
+      capacity_per_slot = @car_wash.capacity_for(date)
 
       if duration <= 0
         render json: [] and return
@@ -431,13 +431,15 @@ class CarWashesController < ApplicationController
     # existentes — espelha a lógica de available_times.
     def next_available_slot_minutes(car_wash, now)
       duration = 30
-      capacity = [car_wash.capacity_per_slot.to_i, 1].max
 
       # Itera dia a dia (hoje, amanhã...) até 7 dias.
       (0..7).each do |days_ahead|
         date = (now + days_ahead.days).to_date
         oh   = car_wash.operating_hours.find_by(day_of_week: date.wday)
         next unless oh&.opens_at && oh&.closes_at
+
+        # Dentro do loop: a varredura cruza dias e cada um tem a sua capacidade.
+        capacity = car_wash.capacity_for(date)
 
         opens_min  = oh.opens_at.hour  * 60 + oh.opens_at.min
         closes_min = oh.closes_at.hour * 60 + oh.closes_at.min

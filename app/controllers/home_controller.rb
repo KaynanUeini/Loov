@@ -140,7 +140,6 @@ class HomeController < ApplicationController
         wash_services = cw.services.where("duration IS NULL OR duration <= 60").order(:price)
         next if wash_services.empty?
 
-        capacity       = [cw.capacity_per_slot.to_i, 1].max
         available_slot = nil
         slot_candidate = next_slot
 
@@ -150,7 +149,8 @@ class HomeController < ApplicationController
             .where(car_wash: cw, scheduled_at: slot_candidate)
             .count
 
-          if booked < capacity
+          # Capacidade por candidato: a janela pode atravessar a meia-noite.
+          if booked < cw.capacity_for(slot_candidate)
             available_slot = slot_candidate
             break
           end

@@ -86,6 +86,13 @@ class DisponivelController < ApplicationController
                              h[id] = { avg: avg.to_f.round(1), count: count.to_i }
                            }
 
+        # Batch dos favoritos do cliente logado — index é opcional-auth
+        # (skip authenticate_user!), então current_user pode ser nil.
+        # O card do Last Minute mostra um marcador cinza pros favoritados.
+        favorite_ids = current_user ?
+          current_user.favorite_car_washes.where(car_wash_id: slot_cw_ids).pluck(:car_wash_id).to_set :
+          Set.new
+
         render json: @available_slots.map { |s|
           cw = s[:car_wash]
           r  = rating_map[cw.id] || { avg: 0.0, count: 0 }
@@ -103,7 +110,8 @@ class DisponivelController < ApplicationController
               longitude:     cw.longitude,
               distance_km:   s[:distance_km],
               rating_avg:    r[:avg],
-              reviews_count: r[:count]
+              reviews_count: r[:count],
+              favorited:     favorite_ids.include?(cw.id)
             },
             services:  s[:services].map { |svc|
               {
@@ -320,21 +328,21 @@ class DisponivelController < ApplicationController
   end
 
   def build_available_slots(car_wash, from, to)
-    capacity      = [car_wash.capacity_per_slot.to_i, 1].max
     now_minutes   = from.hour * 60 + from.min
     next_slot_min = (now_minutes / 30.0).ceil * 30
     current       = from.beginning_of_day + next_slot_min.minutes
 
     while current <= to
-      # Granularidade do slot é 30min.
-      return [current] if peak_at(car_wash, current, 30) < capacity
+      # Capacidade dentro do loop: a janela pode virar o dia, e cada dia da
+      # semana tem a sua.
+      return [current] if peak_at(car_wash, current, 30) < car_wash.capacity_for(current)
       current += 30.minutes
     end
     []
   end
 
   def slot_available?(car_wash, slot, service = nil)
-    capacity = [car_wash.capacity_per_slot.to_i, 1].max
+    capacity = car_wash.capacity_for(slot)
     duration = service&.duration.to_i
     duration = 30 if duration <= 0
     peak_at(car_wash, slot, duration) < capacity

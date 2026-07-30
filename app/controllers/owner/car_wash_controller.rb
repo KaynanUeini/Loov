@@ -29,6 +29,10 @@ module Owner
             day_of_week: oh.day_of_week,
             opens_at:    oh.opens_at&.strftime('%H:%M'),
             closes_at:   oh.closes_at&.strftime('%H:%M'),
+            # capacity nil = herda o default do lava-rápido; effective_capacity
+            # é o número que a agenda realmente aplica naquele dia.
+            capacity:           oh.capacity,
+            effective_capacity: oh.effective_capacity,
           }
         },
         services: @car_wash.services.order(:title).map { |s|
@@ -48,7 +52,7 @@ module Owner
       update_params = params.require(:car_wash).permit(
         :name, :cep, :logradouro, :numero, :bairro, :cidade, :uf, :address,
         :capacity_per_slot, :latitude, :longitude,
-        operating_hours_attributes: [:id, :day_of_week, :opens_at, :closes_at, :_destroy],
+        operating_hours_attributes: [:id, :day_of_week, :opens_at, :closes_at, :capacity, :_destroy],
         services_attributes:        [:id, :title, :category, :description, :price, :duration, :_destroy]
       )
 
@@ -85,7 +89,7 @@ module Owner
       duration = params[:duration].to_i
       duration = 30 if duration <= 0
 
-      capacity = [@car_wash.capacity_per_slot.to_i, 1].max
+      capacity = @car_wash.capacity_for(date)
       operating_hour = @car_wash.operating_hours.find_by(day_of_week: date.wday)
 
       unless operating_hour
@@ -253,7 +257,8 @@ module Owner
         hours: car_wash.operating_hours.order(:day_of_week).map { |h|
           { id: h.id, day_of_week: h.day_of_week,
             opens_at: h.opens_at&.strftime("%H:%M"),
-            closes_at: h.closes_at&.strftime("%H:%M") }
+            closes_at: h.closes_at&.strftime("%H:%M"),
+            capacity: h.capacity }
         },
         services: car_wash.services.order(:id).map { |s|
           { id: s.id, title: s.title.to_s, category: s.category.to_s,
@@ -313,10 +318,16 @@ module Owner
       end
       common.each do |h|
         old_h = before_by_id[h[:id]]
-        next if old_h[:opens_at] == h[:opens_at] && old_h[:closes_at] == h[:closes_at]
-        changes << { kind: :hour_changed, day: DAY_NAMES[h[:day_of_week]],
-                     old: "#{old_h[:opens_at]}–#{old_h[:closes_at]}",
-                     new: "#{h[:opens_at]}–#{h[:closes_at]}" }
+        if old_h[:opens_at] != h[:opens_at] || old_h[:closes_at] != h[:closes_at]
+          changes << { kind: :hour_changed, day: DAY_NAMES[h[:day_of_week]],
+                       old: "#{old_h[:opens_at]}–#{old_h[:closes_at]}",
+                       new: "#{h[:opens_at]}–#{h[:closes_at]}" }
+        end
+        if old_h[:capacity] != h[:capacity]
+          changes << { kind: :hour_capacity_changed, day: DAY_NAMES[h[:day_of_week]],
+                       old: capacity_text(old_h[:capacity]),
+                       new: capacity_text(h[:capacity]) }
+        end
       end
       changes
     end
@@ -354,6 +365,12 @@ module Owner
       end
     end
 
+    # nil de capacidade não é "vazio", é "herda o default do lava-rápido" —
+    # dizer isso evita o dono ler "3 → " e achar que zerou.
+    def capacity_text(value)
+      value.present? ? value.to_s : "padrão do lava-rápido"
+    end
+
     def format_money(v)
       "R$ #{format('%.2f', v).tr('.', ',')}"
     end
@@ -372,6 +389,8 @@ module Owner
         "Horário de #{c[:day]} removido"
       when :hour_changed
         "Horário de #{c[:day]}: #{c[:old]} → #{c[:new]}"
+      when :hour_capacity_changed
+        "Capacidade de #{c[:day]}: #{c[:old]} → #{c[:new]}"
       when :service_added
         "Serviço \"#{c[:title]}\" adicionado"
       when :service_removed
@@ -394,6 +413,8 @@ module Owner
           "horário de #{c[:day]} removido"
         when :hour_changed
           "horário de #{c[:day]} de #{c[:old]} para #{c[:new]}"
+        when :hour_capacity_changed
+          "capacidade de #{c[:day]} de #{c[:old]} para #{c[:new]}"
         when :service_added
           "serviço \"#{c[:title]}\" adicionado"
         when :service_removed
