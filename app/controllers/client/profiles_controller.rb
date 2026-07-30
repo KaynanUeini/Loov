@@ -111,7 +111,7 @@ module Client
     end
 
     def profile_params
-      params.require(:user).permit(:full_name, :phone, :cpf, :vehicle_model)
+      params.require(:user).permit(:full_name, :phone, :cpf, :vehicle_model, :vehicle_plate)
     end
 
     def profile_payload
@@ -122,6 +122,7 @@ module Client
         phone:         current_user.phone,
         cpf:           current_user.cpf,
         vehicle_model: current_user.vehicle_model,
+        vehicle_plate: current_user.vehicle_plate,
         has_card:      current_user.stripe_payment_method_id.present?,
         card_display:  current_user.card_display,
         card_brand:    current_user.stripe_card_brand,

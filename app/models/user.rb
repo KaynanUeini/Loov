@@ -17,6 +17,13 @@ class User < ApplicationRecord
   validates :full_name, presence: { message: "é obrigatório" }, if: :client?
   validates :phone,     presence: { message: "é obrigatório" }, if: :client?
   validates :cpf, format: { with: /\A\d{3}\.\d{3}\.\d{3}-\d{2}\z/, message: "formato inválido (ex: 000.000.000-00)" }, allow_blank: true
+  # Um regex cobre os dois padrões brasileiros: antigo ABC1234 e Mercosul
+  # ABC1D23 (a 5ª posição aceita letra ou dígito).
+  validates :vehicle_plate, format: { with: /\A[A-Z]{3}[0-9][A-Z0-9][0-9]{2}\z/, message: "placa inválida (ex: ABC1D23 ou ABC1234)" }, allow_blank: true
+
+  # before_validation, não before_save: a normalização precisa acontecer ANTES
+  # do regex acima, senão "abc-1234" seria rejeitado sem nunca ser normalizado.
+  before_validation :normalize_vehicle_plate
 
   def client?;    role == "client";    end
   def owner?;     role == "owner";     end
@@ -25,6 +32,11 @@ class User < ApplicationRecord
 
   def display_name
     full_name.presence || email.split("@").first.capitalize
+  end
+
+  def normalize_vehicle_plate
+    return if vehicle_plate.nil?
+    self.vehicle_plate = vehicle_plate.to_s.upcase.gsub(/[^A-Z0-9]/, "").presence
   end
 
   def initials
@@ -37,6 +49,19 @@ class User < ApplicationRecord
 
   def profile_complete?
     full_name.present? && phone.present?
+  end
+
+  # "ABC1234" → "ABC-1234". Mercosul (ABC1D23) não usa hífen, sai como está.
+  def vehicle_plate_display
+    plate = vehicle_plate.to_s
+    return nil if plate.blank?
+    plate.match?(/\A[A-Z]{3}[0-9]{4}\z/) ? "#{plate[0, 3]}-#{plate[3, 4]}" : plate
+  end
+
+  # Como o carro aparece pro dono: placa primeiro, que é o que identifica no
+  # pátio; modelo como complemento.
+  def vehicle_label
+    [vehicle_plate_display, vehicle_model.presence].compact.join(" · ").presence
   end
 
   def linked_car_wash
