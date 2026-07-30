@@ -76,6 +76,10 @@ class Owner::OnboardingController < ApplicationController
       @car_wash.services.create(
         title: service[:title].to_s.split.map(&:capitalize).join(" "),
         category: service[:category],
+        # O que está incluído: "lavagem simples" com aspiração num lava-rápido e
+        # sem no outro é o mesmo título com serviço diferente. Aparece no card
+        # que o cliente vê, então vale já no cadastro.
+        description: service[:description].to_s.strip.presence,
         price: service[:price].to_f,
         duration: service[:duration].to_i
       )
