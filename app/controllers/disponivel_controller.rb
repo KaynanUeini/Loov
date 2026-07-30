@@ -51,20 +51,32 @@ class DisponivelController < ApplicationController
     @available_slots = []
 
     dedup_car_washes.each do |cw|
-      entry_services = cw.services.where("duration IS NULL OR duration <= 60").order(:price)
+      entry_services = cw.services.where("duration IS NULL OR duration <= 60").order(:price).to_a
       next if entry_services.empty?
 
-      slots = build_available_slots(cw, window_start, window_end)
+      # Não basta estar aberto e ter vaga: o serviço precisa CABER antes do
+      # fechamento. Fecha 23:30, agora são 23:18 e o serviço mais curto é de
+      # 60 min? Não há o que oferecer. O modelo já rejeita esse agendamento
+      # (Appointment#within_operating_hours conta a duração), então sem este
+      # filtro a lista promete um horário que o backend nega no fim do fluxo.
+      closes_at = closing_at(cw, window_start)
+      next if closes_at.nil?
+
+      slots = build_available_slots(cw, window_start, [window_end, closes_at].min)
       next if slots.empty?
+
+      slot     = slots.first
+      fitting  = entry_services.select { |s| slot + service_minutes(s).minutes <= closes_at }
+      next if fitting.empty?
 
       distance_km = (@lat && @lon && cw.has_valid_coordinates?) ?
         cw.distance_to([@lat, @lon], :km).round(2) : nil
 
       @available_slots << {
         car_wash:    cw,
-        services:    entry_services,
+        services:    fitting,
         slots:       slots,
-        min_price:   entry_services.minimum(:price),
+        min_price:   fitting.map { |s| s.price.to_f }.min,
         distance_km: distance_km
       }
     end
@@ -341,10 +353,30 @@ class DisponivelController < ApplicationController
     []
   end
 
+  # Duração efetiva: serviço sem duração cai no passo padrão de 30 min, que é a
+  # granularidade do slot.
+  def service_minutes(service)
+    d = service&.duration.to_i
+    d > 0 ? d : 30
+  end
+
+  # Horário de fechamento do dia em que o slot cai, como Time no fuso local.
+  # nil quando o lava-rápido não abre nesse dia da semana.
+  def closing_at(car_wash, slot)
+    oh = car_wash.operating_hours.detect { |h| h.day_of_week == slot.wday }
+    return nil unless oh&.closes_at
+    slot.beginning_of_day + oh.closes_at.seconds_since_midnight.seconds
+  end
+
   def slot_available?(car_wash, slot, service = nil)
-    capacity = car_wash.capacity_for(slot)
-    duration = service&.duration.to_i
-    duration = 30 if duration <= 0
-    peak_at(car_wash, slot, duration) < capacity
+    duration = service_minutes(service)
+
+    # Mesmo teste do fechamento aqui, não só na listagem: checkout e create
+    # passam por este método, e falhar aqui dá erro claro em vez de deixar a
+    # validação do modelo recusar no fim.
+    closes_at = closing_at(car_wash, slot)
+    return false if closes_at && slot + duration.minutes > closes_at
+
+    peak_at(car_wash, slot, duration) < car_wash.capacity_for(slot)
   end
 end
