@@ -47,6 +47,22 @@ module Owner
         },
         car_washes: current_user.car_washes.map { |cw| { id: cw.id, name: cw.name } },
         visible_car_wash_ids: ids,
+        # Homônimos de outro dono. O cliente vê "Italy Wash" na lista e reserva;
+        # o dono abre o painel do SEU "Italy Wash" e não encontra nada — os dois
+        # estão certos, são registros diferentes. Sem isto, o sintoma é
+        # indistinguível de pedido perdido.
+        homonimos_de_outro_dono: CarWash
+          .where(name: current_user.car_washes.pluck(:name))
+          .where.not(user_id: current_user.id)
+          .map { |cw|
+            {
+              id:            cw.id,
+              name:          cw.name,
+              owner_user_id: cw.user_id,
+              pedidos_1h:    cw.appointments.disponivel
+                               .where("appointments.created_at > ?", 1.hour.ago).count
+            }
+          },
         pending_now: Appointment.where(car_wash_id: ids).disponivel.pending_acceptance
                                 .where("acceptance_expires_at > ?", Time.current).count,
         recent_disponivel: recent.map { |a|
