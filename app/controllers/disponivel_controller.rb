@@ -1,4 +1,15 @@
 class DisponivelController < ApplicationController
+  # Categoria única que o Last Minute comercializa.
+  LAST_MINUTE_CATEGORY = "Lavagem".freeze
+
+  # `category` entrou depois em services, então cadastro antigo ficou com NULL
+  # ou "". Filtrar só pela categoria tiraria do Last Minute lava-rápidos que
+  # SÓ vendem lavagem (Ligeirinho, Brilho Certo) — o mesmo bug que esta
+  # mudança veio consertar, de cabeça pra baixo. Quando a categoria está em
+  # branco, cai no título; quando está preenchida, ela manda (um "Polimento"
+  # de um lava-rápido organizado não entra por acidente).
+  LAST_MINUTE_TITLE_FALLBACK = "%lavagem%".freeze
+
   skip_before_action :verify_authenticity_token
   before_action :authenticate_user!, except: [:index]
   before_action :expire_stale_acceptances!
@@ -51,7 +62,18 @@ class DisponivelController < ApplicationController
     @available_slots = []
 
     dedup_car_washes.each do |cw|
-      entry_services = cw.services.where("duration IS NULL OR duration <= 60").order(:price).to_a
+      # Last Minute é um produto de LAVAGEM: oferece todas as lavagens do
+      # estabelecimento e nenhum outro tipo de serviço (polimento, higienização
+      # etc.). Antes o corte era por duração (<= 60 min), o que escondia a
+      # "Lavagem Completa" e fazia o cliente ver uma opção só, sem entender por
+      # quê — enquanto deixava passar serviços de outras categorias curtos.
+      entry_services = cw.services
+        .where(
+          "services.category = :cat OR " \
+          "(COALESCE(TRIM(services.category), '') = '' AND LOWER(services.title) LIKE :fallback)",
+          cat: LAST_MINUTE_CATEGORY, fallback: LAST_MINUTE_TITLE_FALLBACK
+        )
+        .order(:price).to_a
       next if entry_services.empty?
 
       # Não basta estar aberto e ter vaga: o serviço precisa CABER antes do
