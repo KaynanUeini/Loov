@@ -10,11 +10,12 @@ module Owner
     # GET /owner/disponivel_acceptance
     # Lista agendamentos disponíveis aguardando aceite (para polling do painel)
     def index
-      @pending = @car_wash.appointments
+      @pending = Appointment
+        .where(car_wash_id: visible_car_wash_ids)
         .disponivel
         .pending_acceptance
         .where("acceptance_expires_at > ?", Time.current)
-        .includes(:user, :service)
+        .includes(:user, :service, :car_wash)
         .order(:acceptance_expires_at)
 
       render json: @pending.map { |a| serialize(a) }
@@ -66,8 +67,18 @@ module Owner
       @car_wash = current_car_wash
     end
 
+    # Todos os lava-rápidos que este usuário opera. O dono pode ter mais de um
+    # (o cadastro nunca impediu), mas current_car_wash resolve pra
+    # car_washes.first — então uma reserva feita no segundo ficava invisível no
+    # painel, sem erro nenhum, como se o cliente nunca tivesse pedido.
+    def visible_car_wash_ids
+      return current_user.car_washes.pluck(:id) if current_user.owner?
+      [current_car_wash&.id].compact
+    end
+
     def set_appointment
-      @appointment = @car_wash.appointments
+      @appointment = Appointment
+        .where(car_wash_id: visible_car_wash_ids)
         .disponivel
         .find(params[:id])
     rescue ActiveRecord::RecordNotFound
@@ -92,6 +103,10 @@ module Owner
         seconds_left:   appointment.seconds_until_expiry,
         expires_at:     appointment.acceptance_expires_at&.iso8601,
         client_name:    appointment.display_client,
+        # Qual unidade recebeu o pedido: sem isso, o dono com mais de um
+        # lava-rápido não sabe pra onde o cliente está indo.
+        car_wash_id:    appointment.car_wash_id,
+        car_wash_name:  appointment.car_wash&.name,
         service_id:     appointment.service_id,
         service_name:   appointment.service.title,
         service_price:  appointment.effective_price,
