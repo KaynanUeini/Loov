@@ -21,6 +21,50 @@ module Owner
       render json: @pending.map { |a| serialize(a) }
     end
 
+    # GET /owner/disponivel_acceptance/diagnostic
+    #
+    # Responde "por que não aparece nada pra mim?" com dado em vez de palpite.
+    # O index legítimo esconde tudo que expirou ou mudou de status, então um
+    # pedido que existiu e morreu é indistinguível de um pedido que nunca
+    # chegou — e é justamente essa diferença que precisa ser vista.
+    def diagnostic
+      ids = visible_car_wash_ids
+
+      recent = Appointment
+        .where(car_wash_id: ids)
+        .disponivel
+        .includes(:user, :service, :car_wash)
+        .order(created_at: :desc)
+        .limit(10)
+
+      render json: {
+        server_time:      Time.current.iso8601,
+        acceptance_ttl_s: Appointment::ACCEPTANCE_TTL.to_i,
+        user: {
+          id:    current_user.id,
+          email: current_user.email,
+          role:  current_user.role
+        },
+        car_washes: current_user.car_washes.map { |cw| { id: cw.id, name: cw.name } },
+        visible_car_wash_ids: ids,
+        pending_now: Appointment.where(car_wash_id: ids).disponivel.pending_acceptance
+                                .where("acceptance_expires_at > ?", Time.current).count,
+        recent_disponivel: recent.map { |a|
+          {
+            id:           a.id,
+            car_wash:     a.car_wash&.name,
+            client:       a.display_client,
+            service:      a.service&.title,
+            status:       a.status,
+            created_at:   a.created_at.iso8601,
+            scheduled_at: a.scheduled_at&.iso8601,
+            expires_at:   a.acceptance_expires_at&.iso8601,
+            seconds_left: a.acceptance_expires_at ? (a.acceptance_expires_at - Time.current).to_i : nil
+          }
+        }
+      }
+    end
+
     # GET /owner/disponivel_acceptance/:id (JSON)
     # Detalhes de um pedido específico — para o countdown individual
     def show

@@ -138,6 +138,9 @@ Rails.application.routes.draw do
     patch 'checkins/:id/update_service', to: 'checkins#update_service', as: :checkin_update_service
 
     resources :disponivel_acceptance, only: [:index, :show] do
+      collection do
+        get :diagnostic
+      end
       member do
         patch :accept
         patch :reject
