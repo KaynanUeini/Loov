@@ -1,23 +1,4 @@
 class DisponivelController < ApplicationController
-  # Categoria única que o Last Minute comercializa.
-  LAST_MINUTE_CATEGORY = "Lavagem".freeze
-
-  # `category` entrou depois em services, então cadastro antigo ficou com NULL
-  # ou "". Filtrar só pela categoria tiraria do Last Minute lava-rápidos que
-  # SÓ vendem lavagem (Ligeirinho, Brilho Certo) — o mesmo bug que esta
-  # mudança veio consertar, de cabeça pra baixo. Quando a categoria está em
-  # branco, cai no título; quando está preenchida, ela manda (um "Polimento"
-  # de um lava-rápido organizado não entra por acidente).
-  LAST_MINUTE_TITLE_FALLBACK = "%lavagem%".freeze
-
-  # Teto de duração do Last Minute. NÃO é preferência de exibição: é a regra
-  # que Appointment#service_duration_allows_disponivel aplica na hora de salvar.
-  # A lista precisa obedecer ao mesmo teto, senão oferece o que o backend
-  # recusa — foi exatamente o que aconteceu quando o corte por duração saiu
-  # daqui e a "Lavagem Completa" (70 min) passou a aparecer: o cliente
-  # escolhia, o checkout web devolvia pra lista e o app levava 422.
-  LAST_MINUTE_MAX_DURATION = 60
-
   skip_before_action :verify_authenticity_token
   before_action :authenticate_user!, except: [:index]
   before_action :expire_stale_acceptances!
@@ -350,21 +331,11 @@ class DisponivelController < ApplicationController
 
   private
 
-  # A definição de "o que o Last Minute vende", em um lugar só. Antes a regra
-  # estava escrita à mão em cada ponto (lista, checkout, validação do model) e
-  # elas divergiram: a lista oferecia o que o checkout recusava.
-  #
-  # É lavagem (por categoria, ou pelo título quando a categoria está em branco)
-  # E cabe no teto de duração que o model exige.
+  # A regra de "o que o Last Minute vende" mora em Service.last_minute — o
+  # mesmo scope que a validação do agendamento consulta, pra lista e backend
+  # nunca mais discordarem.
   def last_minute_services(car_wash)
-    car_wash.services
-      .where(
-        "services.category = :cat OR " \
-        "(COALESCE(TRIM(services.category), '') = '' AND LOWER(services.title) LIKE :fallback)",
-        cat: LAST_MINUTE_CATEGORY, fallback: LAST_MINUTE_TITLE_FALLBACK
-      )
-      .where("services.duration IS NULL OR services.duration <= ?", LAST_MINUTE_MAX_DURATION)
-      .order(:price)
+    car_wash.services.last_minute.order(:price)
   end
 
   # Avisa o dono que caiu um pedido de Last Minute.

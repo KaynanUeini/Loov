@@ -137,7 +137,7 @@ class HomeController < ApplicationController
         .first(6)
 
       nearby_open.each do |cw|
-        wash_services = cw.services.where("duration IS NULL OR duration <= 60").order(:price)
+        wash_services = cw.services.last_minute.order(:price)
         next if wash_services.empty?
 
         available_slot = nil

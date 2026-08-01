@@ -37,7 +37,7 @@ class Appointment < ApplicationRecord
            if: -> { new_record? || will_save_change_to_scheduled_at? || will_save_change_to_service_id? }
   validate :not_during_closure, unless: :walk_in?,
            if: -> { new_record? || will_save_change_to_scheduled_at? }
-  validate :service_duration_allows_disponivel, if: :disponivel?
+  validate :service_allows_disponivel, if: :disponivel?
   validate :fits_in_capacity, unless: :skip_capacity_check,
            if: -> { new_record? || will_save_change_to_scheduled_at? || will_save_change_to_service_id? }
 
@@ -350,13 +350,19 @@ class Appointment < ApplicationRecord
     peak
   end
 
-  # Aba Disponíveis só aceita serviços de curta duração (≤ 60 min)
-  # Serviços longos (polimento, vitrificação, etc.) não cabem no modelo de "agora"
-  def service_duration_allows_disponivel
+  # O Last Minute vende lavagem — de qualquer duração. O corte aqui era por
+  # tempo (≤ 60 min), o que recusava a "Lavagem Completa" mesmo quando ela
+  # cabia folgada antes do fechamento, e ao mesmo tempo deixava passar
+  # polimento e higienização curtos, que não são o produto.
+  #
+  # Caber no horário não é problema desta validação: within_operating_hours já
+  # exige que o atendimento TERMINE dentro do expediente, e a listagem só
+  # oferece slot em que o serviço cabe.
+  def service_allows_disponivel
     return unless service.present?
-    if service.duration.to_i > 60
-      errors.add(:service, "não disponível na aba Disponíveis — duração acima de 60 minutos. Use o agendamento normal.")
-    end
+    return if service.last_minute?
+
+    errors.add(:service, "não disponível no Last Minute — só serviços de lavagem. Use o agendamento normal.")
   end
 
   # Bloqueia agendamentos em dias que o owner marcou como fechado (ex: férias,

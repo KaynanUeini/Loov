@@ -204,13 +204,11 @@ class CarWashesController < ApplicationController
           reviews_count:      reviews_count,
           open_now:           open_now,
           next_slot_minutes:  next_slot_minutes,
-          # Elegível pro Last Minute: aberto agora + tem serviço com
-          # duração curta (≤ 60min). Frontend usa pra liberar slots
-          # disponivel_only como link pro fluxo Disponível.
-          disponivel_eligible: open_now && cw.services.any? { |s|
-            d = s.duration.to_i
-            d > 0 && d <= 60
-          },
+          # Elegível pro Last Minute: aberto agora + vende lavagem. Frontend usa
+          # pra liberar slots disponivel_only como link pro fluxo Disponível.
+          # Mesma regra da listagem (Service.last_minute) — antes era duração
+          # curta, e um lava-rápido só de polimento entrava por engano.
+          disponivel_eligible: open_now && cw.services.any?(&:last_minute?),
           reviews:           Review.where(car_wash_id: cw.id)
                                    .order(created_at: :desc)
                                    .limit(20)
