@@ -329,9 +329,21 @@ module Owner
         end
       end
 
-      show_code = a.scheduled_at <= Time.current + 5.minutes &&
-                  a.scheduled_at >= Time.current - 30.minutes &&
-                  a.status == "confirmed"
+      # Janela em que o código de conferência aparece pro dono.
+      #
+      # Era de 5 min antes do horário até 30 min depois, o que errava nas duas
+      # pontas: cliente que chega 20 min adiantado — rotina — não tinha código
+      # nenhum pra conferir, e em serviço de 60 ou 90 min o código sumia no
+      # meio do atendimento, enquanto o painel continuava mostrando o card como
+      # em andamento. Justamente quando o dono duplica a conferência.
+      #
+      # Agora acompanha o atendimento de verdade: meia hora antes até meia hora
+      # depois do fim previsto.
+      duracao_min = a.service&.duration.to_i
+      duracao_min = 30 if duracao_min <= 0
+      show_code = a.status == "confirmed" &&
+                  Time.current >= a.scheduled_at - 30.minutes &&
+                  Time.current <= a.scheduled_at + duracao_min.minutes + 30.minutes
 
       is_disponivel    = a.disponivel? rescue false
       prepayment       = is_disponivel ? a.prepayment_amount.to_f : 0
