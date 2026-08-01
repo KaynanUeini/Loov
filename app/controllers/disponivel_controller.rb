@@ -261,6 +261,8 @@ class DisponivelController < ApplicationController
 
     Rails.logger.info("#{log_tag} OK appointment_id=#{appointment.id}")
 
+    notify_owner_of_request(appointment, log_tag)
+
     # Job é enfileirado fora da transação — se falhar, a lazy expiration
     # (expire_stale_acceptances!) ainda cobre o caso.
     begin
@@ -343,6 +345,44 @@ class DisponivelController < ApplicationController
   end
 
   private
+
+  # Avisa o dono que caiu um pedido de Last Minute.
+  #
+  # Sem isto o pedido só existia pra quem já estivesse com o painel aberto: o
+  # app do dono descobre solicitação por polling de 10s, e o aceite morre em
+  # ACCEPTANCE_TTL (3 min). Dono com o celular no bolso — que é o normal
+  # durante o expediente — nunca ficava sabendo, e o cliente recebia uma recusa
+  # por tempo esgotado que ninguém decidiu. É o pedido mais urgente do produto
+  # e era o único evento do app que não notificava.
+  #
+  # Nunca deixa a criação falhar: o pedido já está salvo e válido: push é aviso,
+  # não parte da transação.
+  def notify_owner_of_request(appointment, log_tag)
+    owner = appointment.car_wash&.user
+    if owner.blank?
+      Rails.logger.warn("#{log_tag} sem dono pra notificar car_wash_id=#{appointment.car_wash_id}")
+      return
+    end
+    return if owner == appointment.user # dono testando no próprio lava-rápido
+
+    horario = appointment.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%H:%M")
+    minutos = (Appointment::ACCEPTANCE_TTL / 60).to_i
+
+    ExpoPushNotifier.new.notify_user(
+      owner,
+      title: "Novo pedido Last Minute · #{horario}",
+      body:  "#{appointment.display_client} quer #{appointment.service&.title}. " \
+             "Você tem #{minutos} min pra aceitar.",
+      data: {
+        type:           "disponivel_request",
+        appointment_id: appointment.id,
+        car_wash_id:    appointment.car_wash_id,
+        expires_at:     appointment.acceptance_expires_at&.iso8601
+      }
+    )
+  rescue => e
+    Rails.logger.error("#{log_tag} push pro dono falhou: #{e.class}: #{e.message}")
+  end
 
   # Delega para Appointment.expire_stale_disponivel_acceptances! — método
   # throttled e centralizado (Render free tier pode não rodar o job async).
