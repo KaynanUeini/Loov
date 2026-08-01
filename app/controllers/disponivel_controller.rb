@@ -10,6 +10,14 @@ class DisponivelController < ApplicationController
   # de um lava-rápido organizado não entra por acidente).
   LAST_MINUTE_TITLE_FALLBACK = "%lavagem%".freeze
 
+  # Teto de duração do Last Minute. NÃO é preferência de exibição: é a regra
+  # que Appointment#service_duration_allows_disponivel aplica na hora de salvar.
+  # A lista precisa obedecer ao mesmo teto, senão oferece o que o backend
+  # recusa — foi exatamente o que aconteceu quando o corte por duração saiu
+  # daqui e a "Lavagem Completa" (70 min) passou a aparecer: o cliente
+  # escolhia, o checkout web devolvia pra lista e o app levava 422.
+  LAST_MINUTE_MAX_DURATION = 60
+
   skip_before_action :verify_authenticity_token
   before_action :authenticate_user!, except: [:index]
   before_action :expire_stale_acceptances!
@@ -67,13 +75,7 @@ class DisponivelController < ApplicationController
       # etc.). Antes o corte era por duração (<= 60 min), o que escondia a
       # "Lavagem Completa" e fazia o cliente ver uma opção só, sem entender por
       # quê — enquanto deixava passar serviços de outras categorias curtos.
-      entry_services = cw.services
-        .where(
-          "services.category = :cat OR " \
-          "(COALESCE(TRIM(services.category), '') = '' AND LOWER(services.title) LIKE :fallback)",
-          cat: LAST_MINUTE_CATEGORY, fallback: LAST_MINUTE_TITLE_FALLBACK
-        )
-        .order(:price).to_a
+      entry_services = last_minute_services(cw).to_a
       next if entry_services.empty?
 
       # Não basta estar aberto e ter vaga: o serviço precisa CABER antes do
@@ -173,7 +175,9 @@ class DisponivelController < ApplicationController
     @service  = @car_wash.services.find(params[:service_id])
     @slot     = Time.zone.parse(params[:slot])
 
-    if @service.duration.to_i > 60
+    # Mesma definição que monta a lista — se divergir, o cliente escolhe algo
+    # que aparecia e aqui leva um "indisponível" que não faz sentido pra ele.
+    unless last_minute_services(@car_wash).exists?(id: @service.id)
       redirect_to disponivel_index_path, alert: "Serviço indisponível na aba Disponíveis."
       return
     end
@@ -345,6 +349,23 @@ class DisponivelController < ApplicationController
   end
 
   private
+
+  # A definição de "o que o Last Minute vende", em um lugar só. Antes a regra
+  # estava escrita à mão em cada ponto (lista, checkout, validação do model) e
+  # elas divergiram: a lista oferecia o que o checkout recusava.
+  #
+  # É lavagem (por categoria, ou pelo título quando a categoria está em branco)
+  # E cabe no teto de duração que o model exige.
+  def last_minute_services(car_wash)
+    car_wash.services
+      .where(
+        "services.category = :cat OR " \
+        "(COALESCE(TRIM(services.category), '') = '' AND LOWER(services.title) LIKE :fallback)",
+        cat: LAST_MINUTE_CATEGORY, fallback: LAST_MINUTE_TITLE_FALLBACK
+      )
+      .where("services.duration IS NULL OR services.duration <= ?", LAST_MINUTE_MAX_DURATION)
+      .order(:price)
+  end
 
   # Avisa o dono que caiu um pedido de Last Minute.
   #
