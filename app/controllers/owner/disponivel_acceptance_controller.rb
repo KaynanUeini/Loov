@@ -163,6 +163,11 @@ module Owner
         seconds_left:   appointment.seconds_until_expiry,
         expires_at:     appointment.acceptance_expires_at&.iso8601,
         client_name:    appointment.display_client,
+        # O dono não recebe um nome, recebe um carro. Modelo e placa são como
+        # ele confere que quem encostou é quem pediu — e a placa é o único
+        # dado do pedido que não depende do cliente se identificar.
+        vehicle_model:  appointment.user&.vehicle_model.presence,
+        vehicle_plate:  appointment.user&.vehicle_plate.presence,
         # Qual unidade recebeu o pedido: sem isso, o dono com mais de um
         # lava-rápido não sabe pra onde o cliente está indo.
         car_wash_id:    appointment.car_wash_id,
