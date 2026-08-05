@@ -159,11 +159,20 @@ class HomeController < ApplicationController
 
         next unless available_slot
 
+        # Ter vaga não basta: o serviço precisa TERMINAR antes de fechar. Sem
+        # este corte a home anunciava horário que o agendamento recusa —
+        # lava-rápido fechando 23:59 aparecia com vaga às 23:00 pra uma lavagem
+        # de 60 min, que estoura o expediente por um minuto. O cliente clicava,
+        # ia até o checkout e levava "horário indisponível" sem entender.
+        # Mesma regra que o DisponivelController aplica, agora vinda do model.
+        cabem = wash_services.select { |s| cw.fits_before_closing?(available_slot, s) }
+        next if cabem.empty?
+
         @disponivel_slots << {
           car_wash:    cw,
           slot:        available_slot,
-          services:    wash_services,
-          min_price:   wash_services.minimum(:price),
+          services:    cabem,
+          min_price:   cabem.map { |s| s.price.to_f }.min,
           distance_km: cw.distance_to([lat, lon], :km).round(1)
         }
       end

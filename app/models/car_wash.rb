@@ -51,6 +51,30 @@ class CarWash < ApplicationRecord
   # default. Usa `detect` em vez de `find_by` de propósito: carrega a
   # associação uma vez e as chamadas seguintes do mesmo request batem em
   # memória, o que importa em available_times (dezenas de slots por dia).
+  # A que horas este lava-rápido fecha, no dia do slot informado. nil quando não
+  # há horário cadastrado pro dia.
+  #
+  # Mora aqui, e não nos controllers, porque a regra "o serviço tem que TERMINAR
+  # dentro do expediente" precisa valer igual em todo caminho que oferece
+  # horário. Estava escrita à mão só no DisponivelController: a home web não
+  # checava e anunciava slot que o agendamento recusaria — Italy Wash fechando
+  # 23:59 aparecia com vaga às 23:00 pra uma lavagem de 60 min, que termina
+  # 00:00 e estoura o expediente por um minuto.
+  def closing_at(slot)
+    oh = operating_hours.detect { |h| h.day_of_week == slot.wday }
+    return nil unless oh&.closes_at
+    slot.beginning_of_day + oh.closes_at.seconds_since_midnight.seconds
+  end
+
+  # O serviço cabe inteiro antes de fechar, começando neste slot?
+  def fits_before_closing?(slot, service)
+    closes = closing_at(slot)
+    return true if closes.nil?
+    minutos = service&.duration.to_i
+    minutos = 30 if minutos <= 0
+    slot + minutos.minutes <= closes
+  end
+
   def capacity_for(date_or_time)
     wday = date_or_time.try(:wday)
     hour = wday && operating_hours.detect { |oh| oh.day_of_week == wday }

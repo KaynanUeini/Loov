@@ -416,10 +416,10 @@ class DisponivelController < ApplicationController
 
   # Horário de fechamento do dia em que o slot cai, como Time no fuso local.
   # nil quando o lava-rápido não abre nesse dia da semana.
+  # Delega pro model: a regra tem que ser a mesma em todo caminho que oferece
+  # horário, e estava escrita à mão só aqui.
   def closing_at(car_wash, slot)
-    oh = car_wash.operating_hours.detect { |h| h.day_of_week == slot.wday }
-    return nil unless oh&.closes_at
-    slot.beginning_of_day + oh.closes_at.seconds_since_midnight.seconds
+    car_wash.closing_at(slot)
   end
 
   def slot_available?(car_wash, slot, service = nil)
