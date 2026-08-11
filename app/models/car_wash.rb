@@ -75,6 +75,51 @@ class CarWash < ApplicationRecord
     slot + minutos.minutes <= closes
   end
 
+  # ── Last Minute: a vaga, no singular ──────────────────────────────────────
+  #
+  # Last Minute vende UMA vaga de última hora: a próxima marca de 30 minutos
+  # com espaço. Às 20:21 o horário é 20:30; às 20:32 é 21:00. Nunca vários.
+  #
+  # Esta regra estava escrita em dois lugares e de formas diferentes. O
+  # /disponivel devolvia um slot só, e o available_times do detalhe do
+  # lava-rápido etiquetava como Last Minute TUDO que caísse dentro da trava de
+  # 45 minutos — então a mesma vaga aparecia como três ou quatro na hora de
+  # escolher horário, enquanto a home mostrava uma. É a terceira vez nesta base
+  # que um caminho oferece o que o outro não reconhece; por isso a regra passa
+  # a morar aqui e os dois controllers perguntam.
+  JANELA_LAST_MINUTE = 30.minutes
+  PASSO_LAST_MINUTE  = 30
+
+  def last_minute_slot(agora = Time.current)
+    fecha = closing_at(agora)
+    return nil if fecha.nil?
+
+    # A janela para no fechamento: não adianta oferecer 23:30 quando fecha
+    # 23:00. Quem checa se o SERVIÇO cabe inteiro é fits_before_closing?, que
+    # depende da duração e por isso fica com quem sabe qual serviço é.
+    limite = [agora + JANELA_LAST_MINUTE, fecha].min
+    # Arredonda pelos SEGUNDOS, não pelos minutos: às 20:30:30, contar só
+    # hora e minuto devolve 1230 e o arredondamento pra cima cai em 20:30 —
+    # meio minuto no passado. O checkout recusa horário que já passou, então
+    # seria mais uma vaga anunciada que o backend nega no fim do fluxo.
+    passo  = PASSO_LAST_MINUTE * 60
+    atual  = agora.beginning_of_day +
+             ((agora.seconds_since_midnight / passo.to_f).ceil * passo).seconds
+
+    while atual <= limite
+      ocupacao = Appointment.peak_concurrency_during(
+        car_wash: self,
+        start_at: atual,
+        end_at:   atual + PASSO_LAST_MINUTE.minutes
+      )
+      # Capacidade dentro do laço: a janela pode virar o dia, e cada dia da
+      # semana tem a sua.
+      return atual if ocupacao < capacity_for(atual)
+      atual += PASSO_LAST_MINUTE.minutes
+    end
+    nil
+  end
+
   def capacity_for(date_or_time)
     wday = date_or_time.try(:wday)
     hour = wday && operating_hours.detect { |oh| oh.day_of_week == wday }

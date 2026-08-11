@@ -361,6 +361,16 @@ class CarWashesController < ApplicationController
       is_today       = date == Date.current
       lock_threshold = now_minutes + lock_minutes
 
+      # Dentro da trava de 45 minutos, o ÚNICO horário comprável é a vaga de
+      # Last Minute — e ela é uma só. Aqui todo slot travado era etiquetado
+      # disponivel_only, e o app transforma cada um deles num atalho pro Last
+      # Minute: o cliente via três ou quatro "últimas vagas" ao escolher
+      # horário enquanto a home mostrava uma. A regra agora vem do model, que
+      # é o mesmo que responde ao /disponivel.
+      lm_slot    = is_today ? @car_wash.last_minute_slot(now) : nil
+      lm_minutes = lm_slot && lm_slot.to_date == date ?
+        (lm_slot.hour * 60 + lm_slot.min) : nil
+
       if is_today && now_minutes >= opens_at_min
         slots_passed = ((now_minutes - opens_at_min).to_f / duration).ceil
         opens_at_min = opens_at_min + (slots_passed * duration)
@@ -389,11 +399,17 @@ class CarWashesController < ApplicationController
           overlapping = occupied.count { |i| current < i[:end] && time_end > i[:begin] }
 
           if overlapping < capacity_per_slot
-            disponivel_only = is_today && current < lock_threshold
-            available << {
-              time:            format("%02d:%02d", current / 60, current % 60),
-              disponivel_only: disponivel_only
-            }
+            travado = is_today && current < lock_threshold
+            # Slot travado que não é o do Last Minute não tem como ser comprado
+            # por caminho nenhum: perto demais pra agenda normal e fora da
+            # única vaga de última hora. Some da lista em vez de virar botão
+            # que não leva a lugar nenhum.
+            if !travado || current == lm_minutes
+              available << {
+                time:            format("%02d:%02d", current / 60, current % 60),
+                disponivel_only: travado
+              }
+            end
           end
 
           current += duration

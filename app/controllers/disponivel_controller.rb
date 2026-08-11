@@ -9,7 +9,6 @@ class DisponivelController < ApplicationController
     @lon = params[:longitude].presence&.to_f
 
     window_start = Time.current
-    window_end = 30.minutes.from_now
     today_dow    = Date.current.wday
     now_seconds  = Time.current.seconds_since_midnight.to_i
 
@@ -67,10 +66,9 @@ class DisponivelController < ApplicationController
       closes_at = closing_at(cw, window_start)
       next if closes_at.nil?
 
-      slots = build_available_slots(cw, window_start, [window_end, closes_at].min)
-      next if slots.empty?
+      slot = cw.last_minute_slot(window_start)
+      next if slot.nil?
 
-      slot     = slots.first
       fitting  = entry_services.select { |s| slot + service_minutes(s).minutes <= closes_at }
       next if fitting.empty?
 
@@ -80,7 +78,7 @@ class DisponivelController < ApplicationController
       @available_slots << {
         car_wash:    cw,
         services:    fitting,
-        slots:       slots,
+        slots:       [slot],
         min_price:   fitting.map { |s| s.price.to_f }.min,
         distance_km: distance_km
       }
@@ -391,20 +389,6 @@ class DisponivelController < ApplicationController
       start_at: slot,
       end_at:   slot + new_duration_min.minutes
     )
-  end
-
-  def build_available_slots(car_wash, from, to)
-    now_minutes   = from.hour * 60 + from.min
-    next_slot_min = (now_minutes / 30.0).ceil * 30
-    current       = from.beginning_of_day + next_slot_min.minutes
-
-    while current <= to
-      # Capacidade dentro do loop: a janela pode virar o dia, e cada dia da
-      # semana tem a sua.
-      return [current] if peak_at(car_wash, current, 30) < car_wash.capacity_for(current)
-      current += 30.minutes
-    end
-    []
   end
 
   # Duração efetiva: serviço sem duração cai no passo padrão de 30 min, que é a
