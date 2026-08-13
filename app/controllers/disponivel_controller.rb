@@ -58,18 +58,16 @@ class DisponivelController < ApplicationController
       entry_services = last_minute_services(cw).to_a
       next if entry_services.empty?
 
-      # Não basta estar aberto e ter vaga: o serviço precisa CABER antes do
-      # fechamento. Fecha 23:30, agora são 23:18 e o serviço mais curto é de
-      # 60 min? Não há o que oferecer. O modelo já rejeita esse agendamento
-      # (Appointment#within_operating_hours conta a duração), então sem este
-      # filtro a lista promete um horário que o backend nega no fim do fluxo.
-      closes_at = closing_at(cw, window_start)
-      next if closes_at.nil?
-
       slot = cw.last_minute_slot(window_start)
       next if slot.nil?
 
-      fitting  = entry_services.select { |s| slot + service_minutes(s).minutes <= closes_at }
+      # Não basta estar aberto e a marca existir: cada serviço precisa CABER
+      # nela. Cabe antes do fechamento — fecha 23:30, são 23:18 e a lavagem
+      # mais curta é de 60 min? não há o que oferecer — e tem capacidade pela
+      # duração INTEIRA, que é o que o checkout cobra. Sem os dois, a lista
+      # promete um horário que o backend nega no fim do fluxo.
+
+      fitting = entry_services.select { |s| cw.last_minute_cabe?(slot, s) }
       next if fitting.empty?
 
       distance_km = (@lat && @lon && cw.has_valid_coordinates?) ?
@@ -380,41 +378,14 @@ class DisponivelController < ApplicationController
     Appointment.expire_stale_disponivel_acceptances!
   end
 
-  # Pico de concorrência durante [slot, slot+new_duration_min). Delega
-  # para Appointment.peak_concurrency_during — sweep de eventos para não
-  # super-contar atendimentos que rodam em sequência (back-to-back).
-  def peak_at(car_wash, slot, new_duration_min)
-    Appointment.peak_concurrency_during(
-      car_wash: car_wash,
-      start_at: slot,
-      end_at:   slot + new_duration_min.minutes
-    )
-  end
-
-  # Duração efetiva: serviço sem duração cai no passo padrão de 30 min, que é a
-  # granularidade do slot.
-  def service_minutes(service)
-    d = service&.duration.to_i
-    d > 0 ? d : 30
-  end
-
-  # Horário de fechamento do dia em que o slot cai, como Time no fuso local.
-  # nil quando o lava-rápido não abre nesse dia da semana.
-  # Delega pro model: a regra tem que ser a mesma em todo caminho que oferece
-  # horário, e estava escrita à mão só aqui.
-  def closing_at(car_wash, slot)
-    car_wash.closing_at(slot)
-  end
-
+  # Esta era a QUARTA cópia da mesma regra: "cabe antes de fechar e tem
+  # capacidade pela duração inteira do serviço". A listagem tinha a sua, o
+  # available_times tinha a sua, o /disponivel tinha a sua, e o checkout tinha
+  # esta. Toda vez que duas divergiam, um caminho oferecia o que o outro
+  # negava — foi assim que a Lavagem Completa nunca aparecia no Last Minute e
+  # que uma lavagem de 90 min podia ser anunciada numa vaga que o checkout
+  # recusava. Agora todas perguntam ao model.
   def slot_available?(car_wash, slot, service = nil)
-    duration = service_minutes(service)
-
-    # Mesmo teste do fechamento aqui, não só na listagem: checkout e create
-    # passam por este método, e falhar aqui dá erro claro em vez de deixar a
-    # validação do modelo recusar no fim.
-    closes_at = closing_at(car_wash, slot)
-    return false if closes_at && slot + duration.minutes > closes_at
-
-    peak_at(car_wash, slot, duration) < car_wash.capacity_for(slot)
+    car_wash.last_minute_cabe?(slot, service)
   end
 end

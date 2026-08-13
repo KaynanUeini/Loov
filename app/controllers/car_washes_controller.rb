@@ -335,7 +335,7 @@ class CarWashesController < ApplicationController
       rescue ArgumentError, TypeError
         render json: [], status: :bad_request and return
       end
-      begin
+      service = begin
         Service.find(params[:service_id])
       rescue ActiveRecord::RecordNotFound
         render json: [], status: :not_found and return
@@ -360,16 +360,6 @@ class CarWashesController < ApplicationController
       now_minutes    = now.hour * 60 + now.min
       is_today       = date == Date.current
       lock_threshold = now_minutes + lock_minutes
-
-      # Dentro da trava de 45 minutos, o ÚNICO horário comprável é a vaga de
-      # Last Minute — e ela é uma só. Aqui todo slot travado era etiquetado
-      # disponivel_only, e o app transforma cada um deles num atalho pro Last
-      # Minute: o cliente via três ou quatro "últimas vagas" ao escolher
-      # horário enquanto a home mostrava uma. A regra agora vem do model, que
-      # é o mesmo que responde ao /disponivel.
-      lm_slot    = is_today ? @car_wash.last_minute_slot(now) : nil
-      lm_minutes = lm_slot && lm_slot.to_date == date ?
-        (lm_slot.hour * 60 + lm_slot.min) : nil
 
       if is_today && now_minutes >= opens_at_min
         slots_passed = ((now_minutes - opens_at_min).to_f / duration).ceil
@@ -398,22 +388,40 @@ class CarWashesController < ApplicationController
           time_end    = current + duration
           overlapping = occupied.count { |i| current < i[:end] && time_end > i[:begin] }
 
-          if overlapping < capacity_per_slot
-            travado = is_today && current < lock_threshold
-            # Slot travado que não é o do Last Minute não tem como ser comprado
-            # por caminho nenhum: perto demais pra agenda normal e fora da
-            # única vaga de última hora. Some da lista em vez de virar botão
-            # que não leva a lugar nenhum.
-            if !travado || current == lm_minutes
-              available << {
-                time:            format("%02d:%02d", current / 60, current % 60),
-                disponivel_only: travado
-              }
-            end
+          # Dentro da trava de 45 minutos não há agendamento normal. O que
+          # existe ali é a vaga de Last Minute, e ela entra depois, por fora
+          # desta grade. Slot travado aqui viraria botão que não leva a lugar
+          # nenhum, o que é pior que ausência.
+          if overlapping < capacity_per_slot && !(is_today && current < lock_threshold)
+            available << {
+              time:            format("%02d:%02d", current / 60, current % 60),
+              disponivel_only: false
+            }
           end
 
           current += duration
         end
+
+        # ── A vaga de Last Minute, por fora da grade ─────────────────────
+        #
+        # Ela não cabe na grade deste serviço e nunca vai caber: a grade anda de
+        # `duration` em `duration` a partir da abertura, e a vaga de última hora
+        # está sempre numa marca de 30 minutos. As duas só coincidem quando a
+        # duração divide 30 — era exatamente por isso que a Lavagem Simples
+        # (30 min) mostrava o horário de última hora e a Completa (60) nunca
+        # mostrava, em todo lava-rápido.
+        #
+        # Só entra se o serviço for de fato vendido no Last Minute (é produto de
+        # lavagem, não de polimento) e se couber na vaga pela duração inteira.
+        if is_today && service.last_minute?
+          lm = @car_wash.last_minute_slot(now, service)
+          if lm && lm.to_date == date
+            hhmm = lm.strftime("%H:%M")
+            available << { time: hhmm, disponivel_only: true } unless available.any? { |a| a[:time] == hhmm }
+          end
+        end
+
+        available.sort_by! { |a| a[:time] }
 
         render json: available
       end

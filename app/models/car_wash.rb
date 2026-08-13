@@ -90,34 +90,57 @@ class CarWash < ApplicationRecord
   JANELA_LAST_MINUTE = 30.minutes
   PASSO_LAST_MINUTE  = 30
 
-  def last_minute_slot(agora = Time.current)
+  # A marca que o Last Minute vende agora, ou nil. Com `service`, só devolve a
+  # marca se AQUELE serviço couber nela — cabe antes de fechar e tem capacidade
+  # pela duração inteira dele.
+  def last_minute_slot(agora = Time.current, service = nil)
     fecha = closing_at(agora)
     return nil if fecha.nil?
 
     # A janela para no fechamento: não adianta oferecer 23:30 quando fecha
-    # 23:00. Quem checa se o SERVIÇO cabe inteiro é fits_before_closing?, que
-    # depende da duração e por isso fica com quem sabe qual serviço é.
+    # 23:00.
     limite = [agora + JANELA_LAST_MINUTE, fecha].min
-    # Arredonda pelos SEGUNDOS, não pelos minutos: às 20:30:30, contar só
-    # hora e minuto devolve 1230 e o arredondamento pra cima cai em 20:30 —
-    # meio minuto no passado. O checkout recusa horário que já passou, então
-    # seria mais uma vaga anunciada que o backend nega no fim do fluxo.
-    passo  = PASSO_LAST_MINUTE * 60
-    atual  = agora.beginning_of_day +
-             ((agora.seconds_since_midnight / passo.to_f).ceil * passo).seconds
+    # Arredonda pelos SEGUNDOS, não pelos minutos: às 20:30:30, contar só hora
+    # e minuto devolve 1230 e o arredondamento pra cima cai em 20:30 — meio
+    # minuto no passado. O checkout recusa horário que já passou, então seria
+    # mais uma vaga anunciada que o backend nega no fim do fluxo.
+    passo = PASSO_LAST_MINUTE * 60
+    atual = agora.beginning_of_day +
+            ((agora.seconds_since_midnight / passo.to_f).ceil * passo).seconds
 
     while atual <= limite
-      ocupacao = Appointment.peak_concurrency_during(
-        car_wash: self,
-        start_at: atual,
-        end_at:   atual + PASSO_LAST_MINUTE.minutes
-      )
-      # Capacidade dentro do laço: a janela pode virar o dia, e cada dia da
-      # semana tem a sua.
-      return atual if ocupacao < capacity_for(atual)
+      return atual if service ? last_minute_cabe?(atual, service) : vaga_por?(atual, PASSO_LAST_MINUTE)
       atual += PASSO_LAST_MINUTE.minutes
     end
     nil
+  end
+
+  # Este serviço pode ser vendido nesta vaga?
+  #
+  # A capacidade é medida pela duração INTEIRA do serviço, não pelos 30 minutos
+  # do passo. O checkout sempre cobrou a duração inteira, então conferir só o
+  # primeiro meia-hora fazia a lista prometer uma lavagem de 90 minutos numa
+  # vaga que o checkout recusaria — o mesmo defeito de um caminho oferecer o
+  # que o outro nega, agora pela duração.
+  def last_minute_cabe?(slot, service)
+    fits_before_closing?(slot, service) && vaga_por?(slot, duracao_efetiva(service))
+  end
+
+  # Serviço sem duração cai no passo padrão, que é a granularidade do slot.
+  def duracao_efetiva(service)
+    d = service&.duration.to_i
+    d > 0 ? d : PASSO_LAST_MINUTE
+  end
+
+  def vaga_por?(slot, minutos)
+    ocupacao = Appointment.peak_concurrency_during(
+      car_wash: self,
+      start_at: slot,
+      end_at:   slot + minutos.minutes
+    )
+    # Capacidade consultada por slot: a janela pode virar o dia, e cada dia da
+    # semana tem a sua.
+    ocupacao < capacity_for(slot)
   end
 
   def capacity_for(date_or_time)
