@@ -361,10 +361,26 @@ class CarWashesController < ApplicationController
       is_today       = date == Date.current
       lock_threshold = now_minutes + lock_minutes
 
-      if is_today && now_minutes >= opens_at_min
-        slots_passed = ((now_minutes - opens_at_min).to_f / duration).ceil
-        opens_at_min = opens_at_min + (slots_passed * duration)
-      end
+      # ── Grade fixa de 30 em 30, ancorada no RELÓGIO ────────────────────
+      #
+      # Antes ela andava de `duration` em `duration` a partir da abertura, e o
+      # resultado era uma lista diferente por serviço: 20:30/21:00 na Lavagem
+      # Simples e 20:45/21:30 na Completa, no mesmo lava-rápido. O cliente não
+      # consegue comparar, e a irregularidade lê como erro.
+      #
+      # A grade não é o mecanismo de capacidade — quem confere se o serviço
+      # cabe é a checagem de ocupação abaixo, que usa a duração INTEIRA e não
+      # se importa com o passo. A grade só decide quais horários oferecer, e
+      # isso é apresentação: gente pensa e fala em 20:30, não em 20:45.
+      #
+      # Ancorada no relógio e não na abertura porque a vaga de Last Minute é
+      # sempre uma marca de 30 do relógio. Grades com âncoras diferentes foi
+      # exatamente o que fez a Lavagem Completa nunca mostrar o horário de
+      # última hora. Custa zero aqui: todo opens_at/closes_at do banco cai em
+      # minuto 0 ou 59.
+      passo  = CarWash::PASSO_LAST_MINUTE
+      inicio = (opens_at_min / passo.to_f).ceil * passo
+      inicio = [inicio, (now_minutes / passo.to_f).ceil * passo].max if is_today
 
       appointments = @car_wash.appointments
       .occupying_capacity
@@ -382,7 +398,7 @@ class CarWashesController < ApplicationController
         end.compact
 
         available = []
-        current   = opens_at_min
+        current   = inicio
 
         while current + duration <= closes_at_min
           time_end    = current + duration
@@ -399,17 +415,18 @@ class CarWashesController < ApplicationController
             }
           end
 
-          current += duration
+          current += passo
         end
 
-        # ── A vaga de Last Minute, por fora da grade ─────────────────────
+        # ── A vaga de Last Minute ────────────────────────────────────────
         #
-        # Ela não cabe na grade deste serviço e nunca vai caber: a grade anda de
-        # `duration` em `duration` a partir da abertura, e a vaga de última hora
-        # está sempre numa marca de 30 minutos. As duas só coincidem quando a
-        # duração divide 30 — era exatamente por isso que a Lavagem Simples
-        # (30 min) mostrava o horário de última hora e a Completa (60) nunca
-        # mostrava, em todo lava-rápido.
+        # Com a grade ancorada no relógio ela quase sempre já está na lista
+        # acima. Quase: a varredura conta SOBREPOSIÇÃO de agendamentos, e a
+        # vaga é decidida por PICO DE CONCORRÊNCIA — a contagem trata como
+        # simultâneos dois serviços que só se encostam, então é mais dura e pode
+        # derrubar um horário que a outra aprova. Enquanto as duas semânticas
+        # convivem na base, esta inserção é a rede que impede a divergência de
+        # esconder de novo a vaga de última hora.
         #
         # Só entra se o serviço for de fato vendido no Last Minute (é produto de
         # lavagem, não de polimento) e se couber na vaga pela duração inteira.
