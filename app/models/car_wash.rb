@@ -177,12 +177,14 @@ class CarWash < ApplicationRecord
     fecha = closing_at(agora)
     fim   = minutos.to_i > 0 ? agora + minutos.to_i.minutes : (fecha || agora.end_of_day)
     fim   = [fim, fecha].min if fecha
-    update!(paused_until: fim)
+    # paused_at existe pra barra de tempo ter denominador. Sem ele dá pra
+    # desenhar uma barra, mas ela não mede nada.
+    update!(paused_until: fim, paused_at: agora)
     fim
   end
 
   def retomar!
-    update!(paused_until: nil)
+    update!(paused_until: nil, paused_at: nil)
   end
 
   def capacity_for(date_or_time)

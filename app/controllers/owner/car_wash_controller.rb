@@ -20,13 +20,17 @@ module Owner
     # agora. Fechar o dia inteiro já existe e se chama CarWashClosure.
     def pause
       fim = @car_wash.pausar!(params[:minutes])
-      render json: { paused: @car_wash.pausado?, paused_until: fim&.iso8601 }
+      render json: {
+        paused:       @car_wash.pausado?,
+        paused_until: fim&.iso8601,
+        paused_at:    @car_wash.paused_at&.iso8601,
+      }
     end
 
     # DELETE /owner/car_wash/pause
     def resume
       @car_wash.retomar!
-      render json: { paused: false, paused_until: nil }
+      render json: { paused: false, paused_until: nil, paused_at: nil }
     end
 
     def show
@@ -43,6 +47,7 @@ module Owner
         capacity_per_slot: @car_wash.capacity_per_slot,
         paused:            @car_wash.pausado?,
         paused_until:      @car_wash.pausado? ? @car_wash.paused_until.iso8601 : nil,
+        paused_at:         @car_wash.pausado? ? @car_wash.paused_at&.iso8601 : nil,
         # Fora do horário não há Last Minute chegando, então não há o que
         # pausar — e o app precisa saber pra não oferecer um botão inerte.
         open_now:          @car_wash.aberto_em?,
