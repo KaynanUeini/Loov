@@ -94,6 +94,12 @@ class CarWash < ApplicationRecord
   # marca se AQUELE serviço couber nela — cabe antes de fechar e tem capacidade
   # pela duração inteira dele.
   def last_minute_slot(agora = Time.current, service = nil)
+    # A pausa é honrada AQUI e não em cada listagem de propósito. Todo caminho
+    # que oferece Last Minute passa por este método, então a regra não tem como
+    # ser esquecida em um deles — que é exatamente o que aconteceu cinco vezes
+    # nesta base com a regra de capacidade.
+    return nil if pausado?(agora)
+
     fecha = closing_at(agora)
     return nil if fecha.nil?
 
@@ -141,6 +147,42 @@ class CarWash < ApplicationRecord
     # Capacidade consultada por slot: a janela pode virar o dia, e cada dia da
     # semana tem a sua.
     ocupacao < capacity_for(slot)
+  end
+
+  # ── Pausa: o dono dizendo "não me mande nada agora" ───────────────────────
+  #
+  # Não é fechar. O que já está marcado continua valendo; a pausa só tira o
+  # lava-rápido do Last Minute, que é o canal que chega sem aviso e exige
+  # capacidade imediata.
+  #
+  # Nunca passa do fim do expediente: pausa que atravessa a noite viraria loja
+  # fechada no dia seguinte sem ninguém lembrar de religar, e um controle que
+  # trai assim é pior que controle nenhum — o dono para de confiar nele.
+  # Aberto NESTE instante — não "abre neste dia da semana", que é o que
+  # closing_at responde. A pausa só faz sentido com a loja aberta: fora do
+  # horário não chega Last Minute nenhum, e um botão que não muda nada lê como
+  # quebrado.
+  def aberto_em?(agora = Time.current)
+    oh = operating_hours.detect { |h| h.day_of_week == agora.wday }
+    return false unless oh&.opens_at && oh&.closes_at
+    seg = agora.seconds_since_midnight
+    seg >= oh.opens_at.seconds_since_midnight && seg <= oh.closes_at.seconds_since_midnight
+  end
+
+  def pausado?(agora = Time.current)
+    paused_until.present? && paused_until > agora
+  end
+
+  def pausar!(minutos = nil, agora = Time.current)
+    fecha = closing_at(agora)
+    fim   = minutos.to_i > 0 ? agora + minutos.to_i.minutes : (fecha || agora.end_of_day)
+    fim   = [fim, fecha].min if fecha
+    update!(paused_until: fim)
+    fim
+  end
+
+  def retomar!
+    update!(paused_until: nil)
   end
 
   def capacity_for(date_or_time)

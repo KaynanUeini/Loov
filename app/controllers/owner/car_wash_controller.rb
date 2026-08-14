@@ -9,6 +9,26 @@ module Owner
     before_action :ensure_owner,               except: [:show, :update]
     before_action :set_car_wash
 
+    # PATCH /owner/car_wash/pause
+    #
+    # O dono dizendo "não me mande nada agora". `minutes` ausente ou zero pausa
+    # até o fim do expediente; qualquer valor maior pausa por aquele tempo, sem
+    # nunca passar do fechamento.
+    #
+    # Não é fechar: agendamento já marcado continua valendo. O que a pausa tira
+    # é o Last Minute, que é o canal que chega sem aviso e exige capacidade
+    # agora. Fechar o dia inteiro já existe e se chama CarWashClosure.
+    def pause
+      fim = @car_wash.pausar!(params[:minutes])
+      render json: { paused: @car_wash.pausado?, paused_until: fim&.iso8601 }
+    end
+
+    # DELETE /owner/car_wash/pause
+    def resume
+      @car_wash.retomar!
+      render json: { paused: false, paused_until: nil }
+    end
+
     def show
       render json: {
         id:                @car_wash.id,
@@ -21,6 +41,11 @@ module Owner
         uf:                @car_wash.uf,
         address:           @car_wash.address,
         capacity_per_slot: @car_wash.capacity_per_slot,
+        paused:            @car_wash.pausado?,
+        paused_until:      @car_wash.pausado? ? @car_wash.paused_until.iso8601 : nil,
+        # Fora do horário não há Last Minute chegando, então não há o que
+        # pausar — e o app precisa saber pra não oferecer um botão inerte.
+        open_now:          @car_wash.aberto_em?,
         latitude:          @car_wash.latitude,
         longitude:         @car_wash.longitude,
         operating_hours: @car_wash.operating_hours.order(:day_of_week).map { |oh|

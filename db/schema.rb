@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_08_01_010000) do
+ActiveRecord::Schema[7.1].define(version: 2026_08_13_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -140,6 +140,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_08_01_010000) do
     t.string "numero"
     t.integer "num_employees"
     t.boolean "active", default: true, null: false
+    t.datetime "paused_until"
     t.index ["active"], name: "index_car_washes_on_active"
     t.index ["user_id"], name: "index_car_washes_on_user_id"
   end

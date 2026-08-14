@@ -123,12 +123,6 @@ class HomeController < ApplicationController
     if user_signed_in? && current_user.client? && @disponivel_has_location
       lat        = params[:latitude].to_f
       lon        = params[:longitude].to_f
-      window_end = now + 30.minutes
-
-      now_minutes   = now.hour * 60 + now.min
-      next_slot_min = (now_minutes / 30.0).ceil * 30
-      next_slot     = now.beginning_of_day + next_slot_min.minutes
-
       nearby_open = CarWash
         .where(id: @open_car_wash_ids.to_a)
         .select(&:has_valid_coordinates?)
@@ -140,32 +134,18 @@ class HomeController < ApplicationController
         wash_services = cw.services.last_minute.order(:price)
         next if wash_services.empty?
 
-        available_slot = nil
-        slot_candidate = next_slot
-
-        while slot_candidate <= window_end
-          booked = Appointment
-            .occupying_capacity
-            .where(car_wash: cw, scheduled_at: slot_candidate)
-            .count
-
-          # Capacidade por candidato: a janela pode atravessar a meia-noite.
-          if booked < cw.capacity_for(slot_candidate)
-            available_slot = slot_candidate
-            break
-          end
-          slot_candidate += 30.minutes
-        end
-
+        # Este bloco tinha a QUINTA cópia da regra de vaga, e a mais divergente
+        # das cinco: contava agendamentos com scheduled_at IGUAL ao candidato,
+        # não sobrepostos. Uma lavagem de 90 min começando 10:00 não bloqueava
+        # 10:30 aqui, então a home web anunciava vaga que o app e o checkout
+        # recusavam. Agora pergunta ao model, como os outros.
+        available_slot = cw.last_minute_slot(now)
         next unless available_slot
 
-        # Ter vaga não basta: o serviço precisa TERMINAR antes de fechar. Sem
-        # este corte a home anunciava horário que o agendamento recusa —
-        # lava-rápido fechando 23:59 aparecia com vaga às 23:00 pra uma lavagem
-        # de 60 min, que estoura o expediente por um minuto. O cliente clicava,
-        # ia até o checkout e levava "horário indisponível" sem entender.
-        # Mesma regra que o DisponivelController aplica, agora vinda do model.
-        cabem = wash_services.select { |s| cw.fits_before_closing?(available_slot, s) }
+        # Ter vaga não basta: o serviço precisa CABER — terminar antes de
+        # fechar e ter capacidade pela duração inteira, que é o que o checkout
+        # cobra.
+        cabem = wash_services.select { |s| cw.last_minute_cabe?(available_slot, s) }
         next if cabem.empty?
 
         @disponivel_slots << {

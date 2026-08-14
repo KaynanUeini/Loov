@@ -75,6 +75,10 @@ Rails.application.routes.draw do
     patch 'car_wash',                  to: 'car_wash#update'
     get   'car_wash/slot_diagnostics', to: 'car_wash#slot_diagnostics'
 
+    # Pausa do Last Minute — um toque no dashboard do dono.
+    patch  'car_wash/pause', to: 'car_wash#pause'
+    delete 'car_wash/pause', to: 'car_wash#resume'
+
     get  'onboarding',          to: 'onboarding#show',          as: :onboarding
     get  'onboarding/status',   to: 'onboarding#status',        as: :onboarding_status
     post 'onboarding/car_wash', to: 'onboarding#save_car_wash', as: :onboarding_car_wash
