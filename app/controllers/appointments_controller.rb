@@ -221,6 +221,20 @@ class AppointmentsController < ApplicationController
       return
     end
 
+    # Pausa do dono. Vale aqui e não só na listagem: listar e criar sempre
+    # precisam concordar, e nesta base já custou cinco correções descobrir isso
+    # do jeito difícil. A mensagem diz até quando, senão o cliente só sabe que
+    # não pode e não sabe quando poderá.
+    if @car_wash.pausado_para?(start_time)
+      volta = @car_wash.paused_until.in_time_zone("America/Sao_Paulo").strftime("%H:%M")
+      msg   = "O lava-rápido pausou os agendamentos até #{volta}. Escolha um horário depois disso."
+      respond_to do |format|
+        format.html { redirect_to car_wash_path(@car_wash, anchor: 'booking'), alert: msg }
+        format.json { render json: { error: msg }, status: :unprocessable_entity }
+      end
+      return
+    end
+
     saved    = false
     conflict = false
 

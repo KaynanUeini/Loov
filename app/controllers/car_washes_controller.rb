@@ -404,11 +404,17 @@ class CarWashesController < ApplicationController
           time_end    = current + duration
           overlapping = occupied.count { |i| current < i[:end] && time_end > i[:begin] }
 
+          # Horário dentro da janela de pausa não é oferecido: o create vai
+          # recusar, e listar o que o checkout nega é o defeito que esta base
+          # já corrigiu cinco vezes.
+          inicio_slot = Time.zone.local(date.year, date.month, date.day, current / 60, current % 60)
+          pausado     = @car_wash.pausado_para?(inicio_slot)
+
           # Dentro da trava de 45 minutos não há agendamento normal. O que
           # existe ali é a vaga de Last Minute, e ela entra depois, por fora
           # desta grade. Slot travado aqui viraria botão que não leva a lugar
           # nenhum, o que é pior que ausência.
-          if overlapping < capacity_per_slot && !(is_today && current < lock_threshold)
+          if overlapping < capacity_per_slot && !pausado && !(is_today && current < lock_threshold)
             available << {
               time:            format("%02d:%02d", current / 60, current % 60),
               disponivel_only: false

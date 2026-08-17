@@ -173,6 +173,23 @@ class CarWash < ApplicationRecord
     paused_until.present? && paused_until > agora
   end
 
+  # Este HORÁRIO está dentro da janela pausada?
+  #
+  # A pausa nasceu bloqueando só o Last Minute, e isso estava errado ao
+  # contrário: no Last Minute o dono ainda é a autoridade final — oferta ruim
+  # ele recusa. No agendamento comum NÃO HÁ aceite, então o cliente marca e
+  # pronto. Sem isto, um lava-rápido sem condição de atender continuava
+  # recebendo agendamento pra daqui uma ou duas horas e o dono não tinha como
+  # impedir. CarWashClosure não resolve: é por data inteira.
+  #
+  # O alcance é a própria janela da pausa, não "o resto do dia": pausar 30
+  # minutos fecha 30 minutos de agenda; "até fechar" fecha o resto do dia. O
+  # controle de duração que o dono já usa passa a ser também o de alcance, sem
+  # inventar outro.
+  def pausado_para?(slot, agora = Time.current)
+    pausado?(agora) && slot < paused_until
+  end
+
   def pausar!(minutos = nil, agora = Time.current)
     fecha = closing_at(agora)
     fim   = minutos.to_i > 0 ? agora + minutos.to_i.minutes : (fecha || agora.end_of_day)
