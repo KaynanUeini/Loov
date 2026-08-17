@@ -18,7 +18,27 @@ module Owner
         .includes(:user, :service, :car_wash)
         .order(:acceptance_expires_at)
 
-      render json: @pending.map { |a| serialize(a) }
+      lista = @pending.map { |a| serialize(a) }
+
+      # `include_state` de propósito, em vez de trocar a forma da resposta:
+      # esta é a tela onde o dono aceita solicitações, e um app antigo lendo um
+      # objeto onde esperava array mostraria a fila VAZIA. Perder um pedido de
+      # verdade por causa de uma janela de deploy é inaceitável aqui, então a
+      # forma antiga continua valendo pra quem não pede o estado.
+      if params[:include_state].present?
+        cws = CarWash.where(id: visible_car_wash_ids)
+        render json: {
+          requests: lista,
+          # Pausado = TODOS os visíveis estão pausados. Com um só lava-rápido,
+          # que é o caso comum, dá no mesmo; com vários, dizer "pausado" com um
+          # deles ainda recebendo seria mentira.
+          paused:       cws.any? && cws.all?(&:pausado?),
+          paused_until: cws.filter_map(&:paused_until).max&.iso8601,
+          open_now:     cws.any?(&:aberto_em?),
+        }
+      else
+        render json: lista
+      end
     end
 
     # GET /owner/disponivel_acceptance/diagnostic
