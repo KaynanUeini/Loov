@@ -9,6 +9,9 @@ class AiInsightsService
   end
 
   MODEL = "claude-sonnet-4-6".freeze
+  # Abaixo disso, taxa de conversão do funil vem marcada como amostra pequena
+  # — ver fetch_conversion_funnel.
+  AMOSTRA_MINIMA_FUNIL = 10
 
   # Ponto de entrada. Retorna um trace completo — não só as seções — pra que o
   # caller possa persistir observabilidade de cada execução (prompt, resposta
@@ -267,10 +270,23 @@ class AiInsightsService
     avg_margin        = (three_month_slice.map { |m| m[:margem] }.sum / three_month_slice.size).round(1)
     current_month     = margins.first
 
-    ticket_medio = car_wash.appointments
+    # Média APARADA (exclui 5% de cada ponta) em vez de média simples: um
+    # único atendimento fora da curva (ex.: pacote premium raro) distorce a
+    # média simples desproporcionalmente mais num negócio de baixo volume, e
+    # essa distorção se propaga pro break-even inteiro (custo ÷ ticket).
+    valores_ticket_90d = car_wash.appointments
       .where(status: "attended").joins(:service)
       .where(scheduled_at: 90.days.ago..Time.current)
-      .average("services.price - COALESCE(appointments.commission_amount, 0)").to_f.round(2)
+      .pluck(Arel.sql("services.price - COALESCE(appointments.commission_amount, 0)"))
+      .map(&:to_f).sort
+
+    ticket_medio = if valores_ticket_90d.empty?
+      0.0
+    else
+      corte   = (valores_ticket_90d.size * 0.05).floor
+      aparado = (corte > 0 && valores_ticket_90d.size - 2 * corte > 0) ? valores_ticket_90d[corte...-corte] : valores_ticket_90d
+      (aparado.sum / aparado.size).round(2)
+    end
 
     custos_fixos_mes = current_month.dig(:detalhamento_custos, :aluguel).to_f  +
                        current_month.dig(:detalhamento_custos, :salarios).to_f +
@@ -309,7 +325,16 @@ class AiInsightsService
     historico_suficiente   = meses_de_historico >= 3               # mínimo pra média confiável
     mes_corrente_completo  = Date.current.day >= 28                # evita distorção por receita parcial
     alertas_disponiveis    = historico_suficiente && mes_corrente_completo
-    threshold_pp           = 3.0                                   # desvio de +3pp vs média = alerta
+    threshold_pp           = 3.0                                   # desvio de +3pp vs média = alerta (linhas estáveis)
+    # Manutenção e "outros" são naturalmente voláteis — um conserto grande ou
+    # compra avulsa pontual é esperado e não indica erro de lançamento como um
+    # desvio em aluguel indicaria. Threshold mais alto pra não alertar sobre
+    # ruído normal do negócio.
+    thresholds_por_linha = {
+      aluguel: threshold_pp, salarios: threshold_pp, produtos: threshold_pp,
+      agua_luz: threshold_pp, outros_fixos: threshold_pp,
+      manutencao: 8.0, outros_var: 8.0,
+    }
 
     pct_media_historica = if historico_suficiente
       {
@@ -327,12 +352,12 @@ class AiInsightsService
     pct = current_month[:percentual_custos]
 
     if alertas_disponiveis && pct_media_historica
-      %i[aluguel salarios produtos].each do |linha|
+      thresholds_por_linha.each do |linha, threshold_da_linha|
         atual = pct[linha].to_f
         media = pct_media_historica[linha].to_f
         next if media.zero?
         delta_pp = (atual - media).round(1)
-        next if delta_pp < threshold_pp
+        next if delta_pp < threshold_da_linha
 
         impacto = (delta_pp / 100.0 * current_month[:faturamento]).round(2)
         alertas_custo << {
@@ -369,6 +394,11 @@ class AiInsightsService
       detalhamento_custos:             current_month[:detalhamento_custos],
       percentual_custos:               current_month[:percentual_custos],
       media_margem_3m:                 avg_margin,
+      # Quantos meses realmente entraram nessa média — alertas_custo já tinha
+      # esse gate (historico_suficiente >= 3), mas perfil_financeiro/
+      # media_margem_3m eram apresentados com a mesma aparência de certeza
+      # mesmo com só 1 mês de dado.
+      margem_3m_amostra_meses:         three_month_slice.size,
       media_faturamento_3m:            media_fat_3m.round(2),
       perfil_financeiro:               margin_profile(avg_margin),
       is_critical_state:               is_critical,
@@ -418,11 +448,26 @@ class AiInsightsService
 
     return nil if daily_counts.empty?
 
-    sorted_counts = daily_counts.values.sort
-    p75_index     = [(sorted_counts.size * 0.75).ceil - 1, 0].max
-    teto_realista = sorted_counts[p75_index].to_i
     # Atendimentos/dia é evento discreto — inteiro, arredondado pra cima.
-    media_diaria  = (daily_counts.values.sum.to_f / daily_counts.size).ceil
+    media_diaria = (daily_counts.values.sum.to_f / daily_counts.size).ceil
+
+    # Teto POR DIA DA SEMANA, não um teto global aplicado a todo mundo. Um p75
+    # calculado sobre TODOS os dias é dominado pelo dia de pico (normalmente
+    # sábado) — aplicado igual a uma segunda-feira, infla o "gap" de um dia
+    # que estruturalmente nunca teria o movimento de sábado. Isso não é
+    # ociosidade real, é natureza do negócio sendo lida como problema.
+    counts_by_dow = Hash.new { |h, k| h[k] = [] }
+    daily_counts.each do |date, count|
+      dow = date.respond_to?(:wday) ? date.wday : Date.parse(date.to_s).wday
+      counts_by_dow[dow] << count
+    end
+
+    # Teto global fica só como reserva pra quando um dia da semana específico
+    # não tem amostra suficiente pra um percentil próprio confiável.
+    todos_os_valores   = daily_counts.values.sort
+    teto_global_index  = [(todos_os_valores.size * 0.75).ceil - 1, 0].max
+    teto_global        = todos_os_valores[teto_global_index].to_i
+    amostra_minima_dow = 3
 
     day_names   = %w[Domingo Segunda Terça Quarta Quinta Sexta Sábado]
     real_by_dow = base
@@ -434,6 +479,15 @@ class AiInsightsService
       semanas          = 90.0 / 7
       media_dow_float  = total.to_f / semanas
       media_dow        = media_dow_float.ceil
+
+      valores_dow   = counts_by_dow[dow].sort
+      teto_realista = if valores_dow.size >= amostra_minima_dow
+        idx = [(valores_dow.size * 0.75).ceil - 1, 0].max
+        valores_dow[idx].to_i
+      else
+        teto_global
+      end
+
       gap              = [teto_realista - media_dow, 0].max
       # Receita usa o delta fracionário real — quem perde 2,4 atendimentos perde o
       # valor proporcional, mesmo que a contagem seja exibida como inteiro.
@@ -454,11 +508,13 @@ class AiInsightsService
     {
       analise_por_dia:        idle_analysis,
       media_diaria_real:      media_diaria,
-      teto_realista_dia:      teto_realista,
+      # Resumo geral pra instrução do prompt — o teto que importa por dia já
+      # está em analise_por_dia[*].teto_realista, calculado por DOW.
+      teto_realista_dia:      teto_global,
       receita_perdida_mensal: total_lost_mensal,
       dia_mais_ocioso:        worst_day&.dig(:dia),
       dia_mais_cheio:         best_day&.dig(:dia),
-      nota_metodologia:       "Estimativa baseada no percentil 75 dos dias reais do negócio nos últimos 90 dias.",
+      nota_metodologia:       "Estimativa baseada no percentil 75 dos dias reais de CADA dia da semana nos últimos 90 dias (dias com menos de #{amostra_minima_dow} observações usam o percentil geral como referência).",
       ticket_base:            ticket_medio
     }
   end
@@ -496,6 +552,15 @@ class AiInsightsService
     horas_pico = hourly.select { |_, c| c > avg_hourly * 1.50 }.sort_by { |_, c| -c }
       .map { |h, c| { hora: "#{h}h", atendimentos_90d: c } }
 
+    # As taxas de elasticidade abaixo (0.35, 0.80, 0.08) são premissa de
+    # mercado, não dado deste negócio — e o app não tem como saber a
+    # elasticidade real: Service#price é uma coluna só, sem histórico de
+    # preço por atendimento, então não existe forma de cruzar "preço mudou →
+    # volume mudou" nos dados que já temos. Isso é DIFERENTE de custo, onde a
+    # regra do prompt proíbe citar benchmark externo porque o histórico
+    # PRÓPRIO já existe e basta usar; aqui não existe alternativa ancorada em
+    # dado próprio ainda — o honesto é rotular como estimativa de mercado, não
+    # apresentar como se fosse medição.
     impacto_desconto = if dias_ociosos.any?
       semanas                  = (90.0 / 7).round(1)
       volume_semanal_ociosos   = dias_ociosos.sum { |d| d[:atendimentos_90d].to_f / semanas }
@@ -503,7 +568,9 @@ class AiInsightsService
       receita_adicional_mensal = (aumento_estimado * ticket_medio * 0.80 * 4.3).round(2)
       { dias: dias_ociosos.map { |d| d[:dia] }, desconto_sugerido: "15–20%",
         aumento_volume_estimado: "30–40%", receita_adicional_mensal: receita_adicional_mensal,
-        nota: "Estimativa baseada em elasticidade típica do setor." }
+        baseado_em_dado_proprio: false,
+        nota: "Estimativa de elasticidade de MERCADO, não medida neste negócio — não há " \
+              "histórico de preço por atendimento pra calcular elasticidade real ainda." }
     end
 
     impacto_aumento = if dias_pico.any?
@@ -512,7 +579,9 @@ class AiInsightsService
       receita_adicional_mensal = (volume_semanal_pico * ticket_medio * 0.08 * 4.3).round(2)
       { dias: dias_pico.map { |d| d[:dia] }, aumento_sugerido: "7–10%",
         queda_volume_estimada: "< 5%", receita_adicional_mensal: receita_adicional_mensal,
-        nota: "Em dias de alta demanda, cliente com carro parado tem baixa elasticidade a preço." }
+        baseado_em_dado_proprio: false,
+        nota: "Estimativa de elasticidade de MERCADO, não medida neste negócio — em dias de " \
+              "alta demanda a suposição é baixa sensibilidade a preço, mas não é dado próprio." }
     end
 
     {
@@ -540,13 +609,23 @@ class AiInsightsService
 
     return nil if entry_titles.empty? || premium_titles.empty?
 
+    # Janela de 12 meses: sem corte, um cliente que começou anos atrás — sob
+    # outro menu, outro preço — pesa igual a um que começou semana passada, e
+    # a taxa de conversão "de todos os tempos" fica pouco representativa do
+    # negócio hoje. Também alinha com calc_pipeline_loss, que mede queda de
+    # volume em 30 dias: multiplicar uma queda recente pela taxa de conversão
+    # de todos os tempos misturava dois horizontes de tempo incompatíveis.
+    janela_funil = 12.months.ago
+
     first_visit_subquery = car_wash.appointments
       .where(status: "attended")
+      .where(scheduled_at: janela_funil..Time.current)
       .select("user_id, MIN(scheduled_at) AS first_at")
       .group(:user_id)
 
     first_visits = car_wash.appointments
       .where(status: "attended")
+      .where(scheduled_at: janela_funil..Time.current)
       .joins(:service)
       .joins(
         "INNER JOIN (#{first_visit_subquery.to_sql}) fv
@@ -571,6 +650,7 @@ class AiInsightsService
 
     premium_appts = car_wash.appointments
       .where(status: "attended", user_id: all_starter_ids)
+      .where(scheduled_at: janela_funil..Time.current)
       .joins(:service)
       .where(services: { title: premium_titles })
       .pluck(:user_id, "services.title", "services.price", "appointments.scheduled_at")
@@ -609,6 +689,10 @@ class AiInsightsService
       funnel[entry_service] = {
         preco_entrada:                    all_services[entry_service].to_f,
         clientes_iniciaram_aqui:          total_starters,
+        # Uma taxa de "33%" com 3 clientes não tem a mesma confiança que uma
+        # com 300 — sem essa flag, as duas chegam ao prompt com a mesma
+        # aparência de certeza.
+        amostra_pequena:                  total_starters < AMOSTRA_MINIMA_FUNIL,
         converteram_para_premium:         converted_count,
         taxa_conversao_pct:               conversion_rate,
         dias_medio_ate_conversao:         avg_days_to_convert,
@@ -623,6 +707,7 @@ class AiInsightsService
       servicos_premium:     premium_titles,
       limiar_entrada_preco: entry_threshold.round(2),
       limiar_premium_preco: premium_threshold.round(2),
+      janela_meses:         12,
       funil:                funnel
     }
   rescue => e
@@ -1033,6 +1118,40 @@ class AiInsightsService
       ""
     end
 
+    # A hierarquia estrutural > operacional > tático (mais abaixo) e a regra
+    # "maior alavanca financeira" competiam sem nenhum árbitro: nada impedia o
+    # modelo de escolher a alavanca operacional/tática de maior R$ mesmo com
+    # um alerta estrutural pequeno em aberto. Só o modo de crise tinha esse
+    # reforço; fora dele a hierarquia era decorativa. Este gate lista os
+    # sinais estruturais pendentes de verdade e diz explicitamente que eles
+    # vencem qualquer comparação de R$/mês com um nível abaixo.
+    # Só entra aqui problema CONFIRMADO, não ausência de informação:
+    # referencia_suficiente=false (histórico curto demais pra comparar) fica
+    # de fora de propósito — não ter 3 meses de dado ainda não é evidência de
+    # problema estrutural, é só não saber. Tratar os dois igual bloquearia
+    # decisões operacionais bem fundamentadas indefinidamente num negócio
+    # novo, só por falta de histórico.
+    sinais_estruturais = []
+    if !is_critical && sf
+      sinais_estruturais << "custo fora da própria média histórica (#{sf[:alertas_custo].map { |a| a[:linha] }.join(', ')})" if sf[:alertas_custo]&.any?
+      sinais_estruturais << "dados de custo deste mês parecem incompletos (custos_suspeitos)" if sf[:custos_suspeitos]
+    end
+
+    hierarquia_gate = if is_critical
+      ""
+    elsif sinais_estruturais.any?
+      "GATE ESTRUTURAL ATIVO: #{sinais_estruturais.join('; ')}. Isso tem prioridade sobre " \
+      "qualquer alavanca operacional ou tática — MESMO que o R$/mês de uma alavanca de nível " \
+      "2 ou 3 pareça maior. 'Maior alavanca financeira' (regra 1 de REGRAS DA " \
+      "DECISAO_PRIORITARIA) só decide ENTRE alavancas do MESMO nível, nunca compara nível 1 " \
+      "com nível 2/3. A regra de variar o tipo de decisão a cada ciclo (regra 11) fica em " \
+      "pausa enquanto este gate está ativo: o sinal estrutural continua sendo a decisão até " \
+      "ser resolvido, não é a vez dele passar pra dar lugar a outra alavanca."
+    else
+      "GATE ESTRUTURAL: nenhum sinal estrutural pendente neste ciclo — decisao_prioritaria " \
+      "pode vir do nível operacional ou tático, seguindo normalmente a regra de variar a cada ciclo."
+    end
+
     custos_suspeitos_instrucao = if sf&.dig(:custos_suspeitos)
       media_hist = sf[:media_custos_fixos_historica]
       atual      = sf[:custos_fixos_estimados]
@@ -1127,15 +1246,23 @@ class AiInsightsService
         ""
       end
 
+      # perfil_financeiro (saudável/apertado/crítico/negativo) já sai calculado
+      # mesmo com 1 mês só de custo — sem esse aviso, o rótulo categórico soa
+      # tão firme quanto um calculado sobre 3 meses fechados.
+      amostra_curta = sf[:margem_3m_amostra_meses].to_i < 3
+      aviso_amostra = amostra_curta ?
+        " (baseado em apenas #{sf[:margem_3m_amostra_meses]} mês(es) de dado — ainda não é média " \
+        "confiável; evite tom categórico como 'saudável' ou 'crítico' sem essa ressalva)" : ""
+
       case sf[:perfil_financeiro]
       when "saudável"
-        "SAÚDE FINANCEIRA — SAUDÁVEL: margem #{sf[:margem_atual]}%, lucro R$ #{sf[:lucro_atual]}. #{break_even_str} #{custo_ok_str}#{alertas_str}"
+        "SAÚDE FINANCEIRA — SAUDÁVEL#{aviso_amostra}: margem #{sf[:margem_atual]}%, lucro R$ #{sf[:lucro_atual]}. #{break_even_str} #{custo_ok_str}#{alertas_str}"
       when "apertado"
-        "SAÚDE FINANCEIRA — APERTADA: margem #{sf[:margem_atual]}%, lucro R$ #{sf[:lucro_atual]}. #{break_even_str} #{alertas_str || custo_ok_str}"
+        "SAÚDE FINANCEIRA — APERTADA#{aviso_amostra}: margem #{sf[:margem_atual]}%, lucro R$ #{sf[:lucro_atual]}. #{break_even_str} #{alertas_str || custo_ok_str}"
       when "crítico"
-        "SAÚDE FINANCEIRA — CRÍTICA: margem #{sf[:margem_atual]}%, lucro R$ #{sf[:lucro_atual]}. #{break_even_str} #{alertas_str || custo_ok_str}"
+        "SAÚDE FINANCEIRA — CRÍTICA#{aviso_amostra}: margem #{sf[:margem_atual]}%, lucro R$ #{sf[:lucro_atual]}. #{break_even_str} #{alertas_str || custo_ok_str}"
       when "negativo"
-        "SAÚDE FINANCEIRA — NEGATIVA: prejuízo de R$ #{sf[:lucro_atual].abs}. #{break_even_str} #{alertas_str || custo_ok_str}"
+        "SAÚDE FINANCEIRA — NEGATIVA#{aviso_amostra}: prejuízo de R$ #{sf[:lucro_atual].abs}. #{break_even_str} #{alertas_str || custo_ok_str}"
       else
         "SAÚDE FINANCEIRA: margem #{sf[:margem_atual]}%, lucro R$ #{sf[:lucro_atual]}. #{break_even_str}"
       end
@@ -1152,7 +1279,14 @@ class AiInsightsService
       if pd[:impacto_aumento]&.dig(:receita_adicional_mensal).to_f > 0
         parts << "AUMENTO em dias de pico (#{pd[:impacto_aumento][:dias]&.join(', ')}): projeta +R$ #{pd[:impacto_aumento][:receita_adicional_mensal]}/mês."
       end
-      parts.any? ? "PRECIFICAÇÃO DINÂMICA: #{parts.join(' | ')}" : ""
+      if parts.any?
+        "PRECIFICAÇÃO DINÂMICA: #{parts.join(' | ')} ATENÇÃO: essas projeções usam elasticidade " \
+        "de MERCADO (baseado_em_dado_proprio=false no contexto), não medida neste negócio — " \
+        "cite o valor mas deixe claro que é uma estimativa, não uma medição própria (diferente " \
+        "de alertas_custo, que É medição do próprio histórico)."
+      else
+        ""
+      end
     else; ""; end
 
     idle_instruction = if !is_critical && ctx[:ociosidade]&.dig(:receita_perdida_mensal).to_f > 0
@@ -1168,10 +1302,13 @@ class AiInsightsService
     funnel_instruction = if ctx[:funil_conversao] && !is_critical
       fc     = ctx[:funil_conversao]
       linhas = fc[:funil].map do |svc, d|
-        "#{svc}: #{d[:clientes_iniciaram_aqui]} iniciaram, #{d[:taxa_conversao_pct]}% converteram para premium, " \
+        aviso = d[:amostra_pequena] ? " [AMOSTRA PEQUENA — não trate como preciso]" : ""
+        "#{svc}: #{d[:clientes_iniciaram_aqui]} iniciaram#{aviso}, #{d[:taxa_conversao_pct]}% converteram para premium, " \
         "perda/cliente perdido: R$ #{d[:perda_futura_por_cliente_perdido]}, tempo médio: #{d[:dias_medio_ate_conversao] || 'n/d'} dias"
       end.join(" | ")
-      "FUNIL DE CONVERSÃO: #{linhas}."
+      "FUNIL DE CONVERSÃO (últimos #{fc[:janela_meses]} meses): #{linhas}. Se algum serviço estiver " \
+      "marcado AMOSTRA PEQUENA, hedge a linguagem ao citar a taxa (ex.: \"em uma amostra ainda " \
+      "pequena\") — não apresente com a mesma confiança de um funil com volume maior."
     elsif ctx[:funil_conversao] && is_critical
       "FUNIL: dados disponíveis mas secundários no modo de crise."
     else; ""; end
@@ -1212,15 +1349,29 @@ class AiInsightsService
       "MESMO PERÍODO ANO ANTERIOR (#{ly[:mes_referencia]}): faturamento R$ #{ly[:faturamento]}, #{ly[:agendamentos]} agendamentos, ticket médio R$ #{ly[:ticket_medio]}. Use na seção \"sales\" pra comparar com o mesmo mês do ano passado, não só com o mês imediatamente anterior — conforme já pede a regra de escrita 4."
     else; ""; end
 
-    perfil_bairro = case ctx[:bairro].to_s.downcase
-    when /paulista|jardins|itaim|moema|pinheiros|vila nova conceição|brooklin/
-      "área nobre — cliente valoriza qualidade. Upselling e premiumização têm alta aceitação."
-    when /centro|brás|bom retiro|pari|cambuci/
-      "área comercial densa — agilidade, volume e preço competitivo."
-    when /zona sul|campo limpo|capão redondo|m'boi mirim|grajaú/
-      "área popular — preço acessível, volume e fidelização simples."
+    # Perfil do público a partir de COMPORTAMENTO DE COMPRA real (mix
+    # entrada/premium do próprio funil), não estereótipo de nome de bairro.
+    # "Jardins = área nobre" é suposição de CEP sem base no que a base de
+    # clientes realmente compra — o tipo de afirmação sem âncora em dado que a
+    # regra de custo já proíbe fazer sobre benchmark de setor. O funil já
+    # calcula exatamente o dado que substitui o estereótipo.
+    perfil_publico_instruction = if ctx[:funil_conversao]&.dig(:funil)&.any?
+      fc                 = ctx[:funil_conversao]
+      total_iniciantes   = fc[:funil].values.sum { |d| d[:clientes_iniciaram_aqui].to_i }
+      total_convertidos  = fc[:funil].values.sum { |d| d[:converteram_para_premium].to_i }
+      taxa_premium_geral = total_iniciantes > 0 ? (total_convertidos.to_f / total_iniciantes * 100).round(1) : nil
+
+      if taxa_premium_geral.nil?
+        "sem base suficiente no funil pra inferir perfil do público a partir de dado próprio."
+      elsif taxa_premium_geral >= 40
+        "#{taxa_premium_geral}% dos clientes que começam num serviço de entrada migram pra premium — base já aceita upsell bem, premiumização tem histórico de funcionar aqui."
+      elsif taxa_premium_geral <= 15
+        "só #{taxa_premium_geral}% migram de entrada pra premium — base historicamente sensível a preço; volume e agilidade tendem a converter melhor que upsell aqui."
+      else
+        "#{taxa_premium_geral}% migram de entrada pra premium — perfil misto, sem inclinação forte pra nenhum lado."
+      end
     else
-      "analise o perfil da região e adapte ao poder aquisitivo local."
+      "sem funil suficiente pra inferir perfil do público a partir de dado próprio. NÃO presuma poder aquisitivo pelo nome do bairro — se algum contexto regional for mencionado, trate como hipótese fraca, nunca como fato."
     end
 
     <<~PROMPT
@@ -1264,8 +1415,9 @@ class AiInsightsService
       #{abandonment_instruction}
       #{yoy_instruction}
 
-      ═══ PERFIL DO MERCADO ═══════════════════════════════════════════════
-      REGIÃO (#{ctx[:bairro]}, #{ctx[:cidade]}): #{perfil_bairro}
+      ═══ PERFIL DO PÚBLICO ═══════════════════════════════════════════════
+      LOCALIZAÇÃO: #{ctx[:bairro]}, #{ctx[:cidade]} (contexto geográfico, não a base do perfil abaixo).
+      PERFIL (a partir de comportamento de compra real): #{perfil_publico_instruction}
 
       ═══ HIERARQUIA DE ANÁLISE ═══════════════════════════════════════════
       1. ESTRUTURAL: custos acima da própria média histórica (ver alertas_custo) | precificação abaixo do histórico de preço praticado | dados incompletos
@@ -1273,6 +1425,7 @@ class AiInsightsService
       3. TÁTICO: clientes em risco | feriado próximo | serviço premium sem exposição
 
       REGRA: decisao_prioritaria ataca o nível mais alto disponível.
+      #{hierarquia_gate}
       Em modo de crise: foco total em 1. Nunca pule para 3 ignorando 1 e 2.
 
       ═══ REGRAS DE ANÁLISE ═══════════════════════════════════════════════
@@ -1286,7 +1439,9 @@ class AiInsightsService
       VISITAS/ATENDIMENTOS — SEMPRE INTEIROS: visitas e atendimentos são eventos discretos. "3,6 visitas" não existe — é 4. Arredonde pra cima ao reportar qualquer contagem de visitas, atendimentos ou clientes.
 
       ═══ REGRAS DA DECISAO_PRIORITARIA ══════════════════════════════════
-      1. Maior alavanca financeira disponível nos dados.
+      1. Maior alavanca financeira DENTRO DO MESMO NÍVEL HIERÁRQUICO disponível nos dados —
+         nunca use "maior R$" pra pular um sinal estrutural pendente (ver GATE ESTRUTURAL
+         acima) em favor de uma alavanca operacional/tática maior.
       2. Impacto em R$/mês usando dados reais.
       3. Custo: use delta vs média histórica do próprio negócio (alertas_custo[*].delta_pp e impacto_mensal_se_voltar_a_media). NUNCA cite benchmark externo que não está no contexto.
       4. Precificação: cite serviço pelo nome e valor atual.
@@ -1304,7 +1459,9 @@ class AiInsightsService
           "alerta_pipeline_aplicavel": true no JSON — não escreva o alerta como texto dentro
           de decisao_prioritaria. O app monta a frase final a partir dos números reais do
           próprio pipeline_loss_60d.
-      11. Varie a cada ciclo: custo → precificação → mix/funil → retenção → operacional.
+      11. Varie a cada ciclo: custo → precificação → mix/funil → retenção → operacional. Essa
+          variação só vale DENTRO do nível liberado pelo GATE ESTRUTURAL — não varia saindo
+          do nível 1 enquanto ele estiver pendente.
 
       ═══ REGRAS DE ESCRITA ═══════════════════════════════════════════════
       1. Linguagem de conversa, sem termos técnicos.
@@ -1349,14 +1506,49 @@ class AiInsightsService
     parsed = JSON.parse(clean)
     { ok: true, sections: parsed, error: nil }
   rescue => e
+    # Antes de desistir, tenta extrair o maior bloco {...} balanceado do
+    # texto — a maioria das quebras é vírgula sobrando ou uma saudação
+    # colada antes/depois do JSON, não JSON genuinamente destruído.
+    extraido = extract_balanced_json(clean)
+    if extraido
+      begin
+        return { ok: true, sections: JSON.parse(extraido), error: nil }
+      rescue
+        # cai pro fallback abaixo
+      end
+    end
+
     Rails.logger.error("AiInsights parse error: #{e.message} — raw: #{raw.to_s[0..200]}")
-    fallback = { "text" => raw.to_s, "status" => "stable" }
+    # Sem replicar o texto bruto nas 6 seções: isso fazia o dono ver a mesma
+    # parede de texto repetida em cada acordeão, e decisao_prioritaria vazio
+    # some da tela (DecisionHero retorna null pra texto vazio) — o card que
+    # deveria mostrar o erro simplesmente desaparecia. raw_fallback preserva o
+    # texto bruto pra auditoria (AiInsightRun já grava raw_response inteiro,
+    # então isso é redundante lá, mas fica explícito no conteúdo persistido).
+    indisponivel = { "text" => "Não foi possível estruturar esta análise — gere novamente.", "status" => "stable" }
     sections = {
-      "sales" => fallback, "services" => fallback, "clients" => fallback,
-      "demand" => fallback, "retention" => fallback, "growth" => fallback,
-      "cycle_summary" => "", "decisao_prioritaria" => ""
+      "sales" => indisponivel, "services" => indisponivel, "clients" => indisponivel,
+      "demand" => indisponivel, "retention" => indisponivel, "growth" => indisponivel,
+      "cycle_summary" => "", "decisao_prioritaria" => "", "raw_fallback" => raw.to_s
     }
     { ok: false, sections: sections, error: "#{e.class}: #{e.message}" }
+  end
+
+  # Acha o maior bloco {...} com chaves balanceadas dentro do texto — tolera
+  # prosa colada antes/depois do JSON, a forma mais comum de quebra. Não trata
+  # chaves dentro de strings entre aspas como caso especial (best-effort); se
+  # o resultado ainda não parsear, o caller cai pro fallback normal.
+  def extract_balanced_json(text)
+    start_idx = text.index("{")
+    return nil unless start_idx
+
+    depth = 0
+    text[start_idx..].each_char.with_index do |char, i|
+      depth += 1 if char == "{"
+      depth -= 1 if char == "}"
+      return text[start_idx..(start_idx + i)] if depth.zero?
+    end
+    nil
   end
 
   # Retorna: { raw:, input_tokens:, output_tokens:, latency_ms:, error: }
