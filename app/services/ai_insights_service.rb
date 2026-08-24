@@ -63,7 +63,7 @@ class AiInsightsService
     parsed = parse_sections(api_result[:raw])
     trace.merge(
       status:        parsed[:ok] ? "success" : "parse_fallback",
-      sections:      parsed[:sections],
+      sections:      attach_alerta_pipeline(parsed[:sections], context),
       parse_ok:      parsed[:ok],
       parse_error:   parsed[:error],
       error_message: nil,
@@ -71,6 +71,37 @@ class AiInsightsService
   end
 
   private
+
+  # Troca a flag booleana que o modelo devolveu (alerta_pipeline_aplicavel) por
+  # um objeto pronto, montado em Ruby a partir dos números reais de
+  # pipeline_loss_60d — nunca dos números que o modelo eventualmente escrever.
+  # O modelo só decide SE o alerta se aplica; o texto e os valores vêm sempre
+  # do cálculo determinístico, então não existe como o app receber um "R$ X"
+  # inventado ou mal formatado embutido em texto livre.
+  def attach_alerta_pipeline(sections, ctx)
+    return sections unless sections.is_a?(Hash)
+
+    aplicavel = sections["alerta_pipeline_aplicavel"] == true
+    sections  = sections.except("alerta_pipeline_aplicavel")
+
+    pl = ctx[:pipeline_loss_60d]
+    if aplicavel && pl && pl[:perda_pipeline_total_60d].to_f > 500 && pl[:detalhes]&.any?
+      pior         = pl[:detalhes].max_by { |d| d[:perda_projetada].to_f }
+      mes_estimado = (Date.current + pior[:impacto_em_dias].to_i.days).strftime("%b/%Y")
+      sections["alerta_pipeline"] = {
+        "servico"      => pior[:servico_entrada],
+        "valor"        => pior[:perda_projetada],
+        "dias"         => pior[:impacto_em_dias],
+        "mes_estimado" => mes_estimado,
+        "mensagem"     => "a queda em #{pior[:servico_entrada]} representa R$ #{pior[:perda_projetada]} " \
+                           "em receita premium em risco para #{mes_estimado} — monitore antes do próximo ciclo."
+      }
+    else
+      sections["alerta_pipeline"] = nil
+    end
+
+    sections
+  end
 
   attr_reader :car_wash
 
@@ -663,12 +694,23 @@ class AiInsightsService
   # ── PADRÃO DE ABANDONO ────────────────────────────────────────────────────────
 
   def detect_abandonment_pattern
+    # Só conta como abandono quem já teve TEMPO de voltar. Sem esse corte, um
+    # cliente cuja única visita foi há 2 semanas entrava na conta só por ainda
+    # não ter tido chance de retornar — censura à direita clássica, e o efeito
+    # prático era inflar artificialmente o abandono dos meses mais recentes,
+    # fazendo o negócio parecer piorando quando é só efeito de janela curta.
+    # 90 dias alinha com o mesmo corte já usado em clientes_perdidos_mais_90_dias.
+    janela_minima = 90.days.ago
+
     all_appts       = car_wash.appointments.where(status: "attended").joins(:user)
     visits_per_user = all_appts.group(:user_id).count
     single_users    = visits_per_user.select { |_, c| c == 1 }.keys
     return nil if single_users.empty?
 
     first_dates = all_appts.where(user_id: single_users).group(:user_id).minimum(:scheduled_at)
+    first_dates = first_dates.select { |_, d| d <= janela_minima }
+    return nil if first_dates.empty?
+
     by_month    = first_dates
       .group_by { |_, d| d.strftime("%Y-%m") }
       .map { |m, e| { mes: m, clientes_unica_visita: e.count } }
@@ -678,6 +720,53 @@ class AiInsightsService
     { abandono_por_mes: by_month, mes_maior_abandono: peak&.dig(:mes), pico_abandono: peak&.dig(:clientes_unica_visita) }
   rescue => e
     Rails.logger.warn("Abandonment pattern error: #{e.message}"); nil
+  end
+
+  # ── NO-SHOW POR DIA DA SEMANA ─────────────────────────────────────────────────
+  # taxa_no_show (mais abaixo) é um número único pro histórico inteiro. Sinal
+  # operacional de dia/hora com mais falta fica invisível apesar do dado já
+  # existir e do padrão de agrupamento por DOW já estar pronto em outro lugar
+  # do arquivo (demand_by_dow, hourly_counts).
+  def calc_no_show_breakdown
+    day_names = %w[Domingo Segunda Terça Quarta Quinta Sexta Sábado]
+
+    past_by_dow = car_wash.appointments
+      .where("scheduled_at < ?", Time.current)
+      .where.not(status: "cancelled")
+      .group(Arel.sql("EXTRACT(DOW FROM scheduled_at)::int"))
+      .count
+
+    no_show_by_dow = car_wash.appointments
+      .where(status: "no_show")
+      .group(Arel.sql("EXTRACT(DOW FROM scheduled_at)::int"))
+      .count
+
+    # Amostra mínima pra não apontar "dia problemático" em cima de 1 caso
+    # isolado — com poucos agendamentos, uma falta sozinha já cruza qualquer
+    # limiar percentual sem significar padrão nenhum.
+    amostra_minima = 5
+
+    por_dia = past_by_dow.filter_map do |dow, total|
+      next if total < amostra_minima
+      faltas = no_show_by_dow[dow].to_i
+      { dia: day_names[dow], total_agendado: total, no_shows: faltas,
+        taxa_no_show: ((faltas.to_f / total) * 100).round(1) }
+    end
+    return nil if por_dia.empty?
+
+    media_geral = por_dia.sum { |d| d[:taxa_no_show] } / por_dia.size.to_f
+    pior_dia    = por_dia.max_by { |d| d[:taxa_no_show] }
+
+    {
+      por_dia:              por_dia.sort_by { |d| -d[:taxa_no_show] },
+      # Só aponta um dia como concentrador se ele destoar de verdade da média
+      # dos outros dias — não o simples maior valor entre poucos pontos.
+      dia_com_mais_no_show: (pior_dia && pior_dia[:taxa_no_show] > media_geral * 1.4) ? pior_dia[:dia] : nil,
+      taxa_do_pior_dia:     pior_dia&.dig(:taxa_no_show)
+    }
+  rescue => e
+    Rails.logger.warn("No-show breakdown error: #{e.message}")
+    nil
   end
 
   # ── CONTEXTO PRINCIPAL ────────────────────────────────────────────────────────
@@ -850,6 +939,7 @@ class AiInsightsService
       valor_medio_por_atendimento:      ticket_medio,
       historico_6_meses:                monthly,
       taxa_no_show:                     "#{no_show_rate}%",
+      no_show_por_dia:                  calc_no_show_breakdown,
       agendamentos_confirmados_proximos_30_dias: upcoming_confirmed,
       receita_projetada_proximos_7_dias:         upcoming_7d.round(2),
       variacao_precos_por_servico:      price_changes,
@@ -976,7 +1066,13 @@ class AiInsightsService
     validation_block = previous_action.present? ? <<~VALIDATION
       A DECISÃO SUGERIDA NO CICLO ANTERIOR FOI:
       "#{previous_action}"
-      OBRIGATÓRIO: comece o "cycle_summary" avaliando se essa decisão teve impacto. Use números concretos. Nunca use "os números falam por si".
+      OBRIGATÓRIO: comece o "cycle_summary" avaliando se essa decisão teve impacto. Identifique
+      PRIMEIRO qual métrica essa decisão deveria mover (ex.: decisão sobre aluguel → margem e
+      alertas_custo.aluguel; decisão sobre funil → pipeline_loss_60d e taxa_conversao_pct;
+      decisão sobre ociosidade → receita_perdida_mensal) e cite essa métrica específica
+      antes/depois. Se ela não melhorou mesmo com outras métricas subindo, diga isso
+      explicitamente — não troque de métrica pra fazer parecer que funcionou. Use números
+      concretos. Nunca use "os números falam por si".
     VALIDATION
     : ""
 
@@ -1064,6 +1160,11 @@ class AiInsightsService
       "OCIOSIDADE: média real #{o[:media_diaria_real]} atendimentos/dia. Teto realista #{o[:teto_realista_dia]}/dia. Gap = R$ #{o[:receita_perdida_mensal]}/mês. Dia mais ocioso: #{o[:dia_mais_ocioso]}."
     else; ""; end
 
+    no_show_instruction = if ctx[:no_show_por_dia]&.dig(:dia_com_mais_no_show)
+      ns = ctx[:no_show_por_dia]
+      "NO-SHOW CONCENTRADO: #{ns[:dia_com_mais_no_show]} tem taxa de não comparecimento bem acima da média dos outros dias (#{ns[:taxa_do_pior_dia]}%). Se for relevante para a seção \"demand\", aponte esse padrão por dia — não só a taxa geral."
+    else; ""; end
+
     funnel_instruction = if ctx[:funil_conversao] && !is_critical
       fc     = ctx[:funil_conversao]
       linhas = fc[:funil].map do |svc, d|
@@ -1084,14 +1185,31 @@ class AiInsightsService
         TOTAL EM RISCO: R$ #{pl[:perda_pipeline_total_60d]} nos próximos 60–90 dias.
         Use esse número na seção "services" para mostrar o custo real da queda nos serviços de entrada.
 
-        REGRA DE ALERTA ADJACENTE: se a decisao_prioritaria for outra alavanca, adicione ao final:
-        "Atenção paralela: a queda em [serviço] hoje representa R$ [valor] em receita premium
-        em risco para [mês estimado] — monitore e reverta antes do próximo ciclo."
+        ALERTA_PIPELINE_APLICAVEL: se a decisao_prioritaria atacar OUTRA alavanca (não o
+        funil/pipeline), marque "alerta_pipeline_aplicavel": true no JSON de resposta.
+        NÃO escreva nenhuma frase de alerta dentro de decisao_prioritaria — o texto final é
+        montado automaticamente a partir dos números reais do próprio pipeline_loss_60d, não
+        do que você escrever. Sua única decisão aqui é a flag: aplicável ou não.
         Aplicar quando pipeline_loss_60d > R$ 500.
       PIPELINE
     elsif ctx[:pipeline_loss_60d] && is_critical
       pl = ctx[:pipeline_loss_60d]
-      "PIPELINE LOSS (secundário em crise): R$ #{pl[:perda_pipeline_total_60d]} em risco nos próximos 60 dias. Mencione brevemente."
+      "PIPELINE LOSS (secundário em crise): R$ #{pl[:perda_pipeline_total_60d]} em risco nos próximos 60 dias. Mencione brevemente. Não marque alerta_pipeline_aplicavel em modo de crise — a regra 5 do modo de crise já cobre isso."
+    else; ""; end
+
+    # Calculados mas antes soltos dentro do ctx.to_json bruto, sem nenhuma
+    # frase-modelo — diferente de custo/ociosidade/funil, que já viram
+    # instrução formatada. Seção sem esse scaffolding tende a sair mais
+    # genérica, porque o modelo garimpa o dado sozinho em vez de partir de uma
+    # leitura pronta.
+    abandonment_instruction = if ctx[:padrao_abandono]&.dig(:mes_maior_abandono)
+      pa = ctx[:padrao_abandono]
+      "PADRÃO DE ABANDONO: mês com mais clientes de visita única (sem retorno) foi #{pa[:mes_maior_abandono]} (#{pa[:pico_abandono]} clientes). Use na seção \"clients\" pra dizer se o abandono está concentrado recentemente ou distribuído ao longo do tempo — não liste o array abandono_por_mes como pontos soltos sem indicar a tendência."
+    else; ""; end
+
+    yoy_instruction = if ctx[:mesmo_periodo_ano_anterior]
+      ly = ctx[:mesmo_periodo_ano_anterior]
+      "MESMO PERÍODO ANO ANTERIOR (#{ly[:mes_referencia]}): faturamento R$ #{ly[:faturamento]}, #{ly[:agendamentos]} agendamentos, ticket médio R$ #{ly[:ticket_medio]}. Use na seção \"sales\" pra comparar com o mesmo mês do ano passado, não só com o mês imediatamente anterior — conforme já pede a regra de escrita 4."
     else; ""; end
 
     perfil_bairro = case ctx[:bairro].to_s.downcase
@@ -1130,6 +1248,7 @@ class AiInsightsService
       #{holiday_instruction}
       #{meta_instrucao}
       #{idle_instruction}
+      #{no_show_instruction}
 
       ═══ SAÚDE FINANCEIRA ════════════════════════════════════════════════
       #{margin_instruction}
@@ -1140,6 +1259,10 @@ class AiInsightsService
       ═══ FUNIL E PIPELINE ════════════════════════════════════════════════
       #{funnel_instruction}
       #{pipeline_instruction}
+
+      ═══ HISTÓRICO: ABANDONO E COMPARATIVO ANUAL ═════════════════════════
+      #{abandonment_instruction}
+      #{yoy_instruction}
 
       ═══ PERFIL DO MERCADO ═══════════════════════════════════════════════
       REGIÃO (#{ctx[:bairro]}, #{ctx[:cidade]}): #{perfil_bairro}
@@ -1170,11 +1293,17 @@ class AiInsightsService
       5. Funil: use pipeline_loss_60d do contexto.
       6. Retenção: quantifique em receita histórica em risco (R$) e % de churn agregado. NUNCA cite nomes. A recomendação é estrutural (cadência de pacotes, fidelidade, espaçamento médio entre visitas), nunca "entrar em contato com X".
       7. Nunca repita a decisão do ciclo anterior.
-      8. Nunca use ações genéricas.
+      8. Nunca use ações genéricas. GENÉRICO (proibido): "invista em marketing digital para
+         atrair mais clientes", "melhore o atendimento", "fidelize seus clientes". ESPECÍFICO
+         (correto): "aluguel está 4,2pp acima da média dos últimos 5 meses fechados — negociar
+         a volta pra média representa R$ 380/mês a mais no resultado". A diferença é sempre um
+         número do próprio contexto amarrado a uma ação executável, nunca um conselho que
+         serviria pra qualquer lava-rápido do Brasil.
       9. Tomável hoje ou amanhã, sem investimento externo.
-      10. Se pipeline_loss_60d > R$ 500 e a decisão for outra alavanca, adicione alerta
-          adjacente ao final: "Atenção paralela: a queda em [serviço] representa R$ [X] em
-          receita premium em risco para [mês estimado] — monitore antes do próximo ciclo."
+      10. Se pipeline_loss_60d > R$ 500 e a decisão for outra alavanca, marque
+          "alerta_pipeline_aplicavel": true no JSON — não escreva o alerta como texto dentro
+          de decisao_prioritaria. O app monta a frase final a partir dos números reais do
+          próprio pipeline_loss_60d.
       11. Varie a cada ciclo: custo → precificação → mix/funil → retenção → operacional.
 
       ═══ REGRAS DE ESCRITA ═══════════════════════════════════════════════
@@ -1202,12 +1331,13 @@ class AiInsightsService
       {
         "sales":     { "text": "faturamento real, comparativo, projeção, break-even com ressalva de custos incompletos se aplicável", "status": "up|down|stable" },
         "services":  { "text": "serviços com evolução e pipeline_loss em R$ se disponível", "status": "up|down|stable" },
-        "clients":   { "text": "retenção, visita única e abandono com nomes reais", "status": "up|down|stable" },
-        "demand":    { "text": "distribuição real de demanda, ociosidade com valor real, precificação dinâmica por serviço específico", "status": "up|down|stable" },
+        "clients":   { "text": "retenção, visita única e abandono — sempre agregado, nunca nomes", "status": "up|down|stable" },
+        "demand":    { "text": "distribuição real de demanda, ociosidade com valor real, precificação dinâmica por serviço específico, no-show concentrado por dia se houver", "status": "up|down|stable" },
         "retention": { "text": "retenção agregada: quantidade e % da base em risco, receita histórica representada, média de dias sem visita. NUNCA nomes. Recomendações estruturais (fidelidade, pacote, cadência), nunca contato 1:1.", "status": "up|down|stable" },
         "growth":    { "text": "novos clientes, feriados próximos e perfil do público captado", "status": "up|down|stable" },
-        "cycle_summary": "avalia decisão anterior com dados. Resume o momento financeiro em 2 frases com meta concreta para os dias restantes.",
-        "decisao_prioritaria": "maior alavanca financeira com problema, impacto em R$/mês e como executar. Se pipeline_loss > R$ 500, inclui alerta adjacente ao final. Estrutural > Operacional > Tático."
+        "cycle_summary": "avalia decisão anterior com dados, citando a métrica específica que ela deveria mover. Resume o momento financeiro em 2 frases com meta concreta para os dias restantes.",
+        "decisao_prioritaria": "maior alavanca financeira com problema, impacto em R$/mês e como executar. Estrutural > Operacional > Tático. NÃO escreva texto de alerta adjacente aqui — isso é decidido pelo campo alerta_pipeline_aplicavel, abaixo.",
+        "alerta_pipeline_aplicavel": "true ou false (booleano, não string) — true somente se pipeline_loss_60d > R$ 500 E a decisão prioritária acima for sobre OUTRA alavanca (não o funil/pipeline). O app monta o texto do alerta automaticamente a partir dos números reais do contexto."
       }
     PROMPT
   end
@@ -1244,7 +1374,7 @@ class AiInsightsService
     request.body = {
       model:      MODEL,
       max_tokens: 6000,
-      system:     "Você é um consultor financeiro especialista em lava-rápidos no Brasil. Direto, simples, sem termos técnicos. Nunca sugere nada sobre agendamento. Nunca pede nada ao cliente final NEM sugere que o dono entre em contato com cliente individual (WhatsApp, ligação, mensagem, e-mail, SMS). NUNCA cita nome, e-mail ou identificador de cliente — sempre agregados (quantidade, %, receita representada). Visitas e atendimentos são SEMPRE inteiros, arredondados pra cima — 3,6 visitas não existe. Análise é estrutural (custo, preço, mix, processo), nunca tática 1:1. NUNCA cita benchmark de setor (ex.: 'aluguel ideal 18%', 'salários 25–35%', 'produtos 8–14%') — não temos estudo vetado pra lava-rápido no Brasil. A única referência válida é o histórico do próprio negócio: quando o contexto trouxer alertas_custo, use a mensagem pronta (compara com pct_media_historica do próprio negócio). Se referencia_suficiente=false, diga que ainda não há base comparativa. Faturamento = apenas clientes que compareceram (attended). Hierarquia: estrutural > operacional > tático. Em modo de crise: 80% do foco em custo e caixa imediato. Se custos_suspeitos = true: avise sobre dados incompletos antes de qualquer análise financeira. Pipeline loss > R$ 500: inclui alerta adjacente ao final da decisao_prioritaria. Nunca inventa estimativas sem âncora nos dados. Capacidade ociosa = percentil 75 dos dias reais. Nunca usa 'os números falam por si'. Responde SEMPRE em JSON válido exatamente no formato solicitado.",
+      system:     "Você é um consultor financeiro especialista em lava-rápidos no Brasil. Direto, simples, sem termos técnicos. Nunca sugere nada sobre agendamento. Nunca pede nada ao cliente final NEM sugere que o dono entre em contato com cliente individual (WhatsApp, ligação, mensagem, e-mail, SMS). NUNCA cita nome, e-mail ou identificador de cliente — sempre agregados (quantidade, %, receita representada). Visitas e atendimentos são SEMPRE inteiros, arredondados pra cima — 3,6 visitas não existe. Análise é estrutural (custo, preço, mix, processo), nunca tática 1:1. NUNCA cita benchmark de setor (ex.: 'aluguel ideal 18%', 'salários 25–35%', 'produtos 8–14%') — não temos estudo vetado pra lava-rápido no Brasil. A única referência válida é o histórico do próprio negócio: quando o contexto trouxer alertas_custo, use a mensagem pronta (compara com pct_media_historica do próprio negócio). Se referencia_suficiente=false, diga que ainda não há base comparativa. Faturamento = apenas clientes que compareceram (attended). Hierarquia: estrutural > operacional > tático. Em modo de crise: 80% do foco em custo e caixa imediato. Se custos_suspeitos = true: avise sobre dados incompletos antes de qualquer análise financeira. Pipeline loss > R$ 500 e decisão sobre outra alavanca: marca alerta_pipeline_aplicavel=true no JSON — nunca escreve o alerta como texto dentro de decisao_prioritaria. Nunca inventa estimativas sem âncora nos dados. Capacidade ociosa = percentil 75 dos dias reais. Nunca usa 'os números falam por si'. Responde SEMPRE em JSON válido exatamente no formato solicitado.",
       messages:   [{ role: "user", content: prompt }]
     }.to_json
 

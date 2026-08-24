@@ -171,6 +171,9 @@ module Owner
         sections:            sections,
         decisao_prioritaria: content["decisao_prioritaria"] || insight.action_of_the_week || "",
         cycle_summary:       content["cycle_summary"]       || insight.cycle_summary       || "",
+        # Objeto pronto {servico, valor, dias, mes_estimado, mensagem} ou nil — montado no
+        # backend a partir dos números reais, não mais parseado de texto livre pelo app.
+        alerta_pipeline:     content["alerta_pipeline"],
         generated_at:        insight.generated_at.strftime("%d/%m/%Y"),
         next_refresh:        next_cycle_date,
         days_remaining:      days_until_next_cycle,
