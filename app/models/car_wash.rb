@@ -20,11 +20,18 @@ class CarWash < ApplicationRecord
   geocoded_by :geocoding_address
   after_validation :geocode, if: :should_geocode?
 
-  # Só chama a API do Geocoder quando o endereço mudou E ainda não temos
-  # coordenadas válidas. Evita bater no rate limit do Nominatim durante
-  # seeds/imports que já trazem lat/lng prontos.
+  # Campos que descrevem ONDE o lava-rápido fica. Mudar qualquer um destes
+  # é motivo pra tentar geocodificar de novo -- antes só `address` disparava,
+  # mas a tela de gerenciar edita logradouro/bairro/cidade/uf/cep como campos
+  # soltos sem nunca tocar em `address`, então um dono corrigindo o endereço
+  # por ali não tinha como forçar uma nova tentativa.
+  LOCATION_FIELDS = %w[address logradouro numero bairro cidade uf cep].freeze
+
+  # Só tenta de novo enquanto NÃO temos coordenada válida. Evita bater no
+  # rate limit do Nominatim re-geocodificando a cada save de quem já está
+  # certo (inclusive registros vindos de seed/import com lat/lng prontos).
   def should_geocode?
-    address_changed? && !has_valid_coordinates?
+    !has_valid_coordinates? && LOCATION_FIELDS.any? { |f| attribute_changed?(f) }
   end
 
   def geocoding_address
@@ -34,6 +41,45 @@ class CarWash < ApplicationRecord
     parts << uf         if uf.present?
     parts << "Brasil"
     parts.join(", ")
+  end
+
+  # Mesma ideia, um degrau mais larga: sem o logradouro, só bairro/cidade/UF.
+  # Cidades pequenas ou litorâneas nem sempre têm rua a rua mapeada no OSM,
+  # mas o bairro quase sempre está -- e pra "tem lava-rápido num raio de X km"
+  # a precisão de bairro já resolve.
+  def geocoding_address_bairro
+    parts = []
+    parts << bairro if bairro.present?
+    parts << cidade if cidade.present?
+    parts << uf     if uf.present?
+    return nil if parts.size < 2
+    (parts + ["Brasil"]).join(", ")
+  end
+
+  # Último degrau: só o CEP. Pior precisão das três (o Nominatim devolve o
+  # centroide da faixa de CEP, não o endereço exato), mas ainda assim coloca
+  # o lava-rápido no bairro certo em vez de deixá-lo fora de toda busca por
+  # proximidade.
+  def geocoding_address_cep
+    return nil unless cep.present?
+    "#{cep}, Brasil"
+  end
+
+  # Sobrescreve o `geocode` que `geocoded_by` definiria sozinho (que só tenta
+  # geocoding_address e desiste se vier vazio). Tenta cada degrau da cascata
+  # em ordem de precisão e para no primeiro que o Nominatim reconhecer --
+  # é a diferença entre o lava-rápido nunca aparecer pra ninguém perto e
+  # aparecer com uma coordenada só um pouco menos exata.
+  def geocode
+    [geocoding_address, geocoding_address_bairro, geocoding_address_cep].each do |query|
+      next if query.blank?
+      result = Geocoder.search(query).first
+      next unless result&.latitude && result&.longitude
+      self.latitude  = result.latitude
+      self.longitude = result.longitude
+      return [result.latitude, result.longitude]
+    end
+    nil
   end
 
   def has_valid_coordinates?

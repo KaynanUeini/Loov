@@ -256,6 +256,10 @@
     background: #d6ecde; border: 1px solid #b5d8c1;
     color: #2d6b42;
   }
+  .flash-msg.warning {
+    background: #fbf3dd; border: 1px solid #ecdba3;
+    color: #8a6d1f;
+  }
 
   .form-errors {
     background: #fdecec; border: 1px solid #f5cccc;
@@ -331,6 +335,18 @@
     <h1 class="loov-h1"><%= @car_wash.name.split(' ').first %><span class="accent">.</span></h1>
     <p class="loov-lead">Edite informações, horários, serviços e fechamentos. Suas alterações são aplicadas ao painel público.</p>
   </div>
+
+  <% unless @car_wash.has_valid_coordinates? %>
+  <div class="flash-msg warning" style="margin-bottom: 22px;">
+    <i class="fas fa-location-dot"></i>
+    <span>
+      Não conseguimos localizar este endereço no mapa, então você não
+      aparece em buscas por proximidade nem no Last Minute. Abra
+      "Informações básicas" e edite o campo "Endereço para mapa" --
+      mudar o texto (mesmo que pouco) faz a gente tentar de novo.
+    </span>
+  </div>
+  <% end %>
 
   <div id="flash-messages" class="flash-wrap">
     <% if flash[:alert] %>
