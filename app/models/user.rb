@@ -34,6 +34,15 @@ class User < ApplicationRecord
     full_name.presence || email.split("@").first.capitalize
   end
 
+  # Primeiro nome pra saudação ("Oi, Kaynan."). Nil quando o nome não parece
+  # nome de gente (vazio, ou com _ e dígitos de username): melhor um "Oi!"
+  # do que "Oi, Premium_maria4."
+  def greeting_name
+    first = full_name.to_s.strip.split(/\s+/).first
+    return nil if first.blank? || first.match?(/[_\d@]/)
+    first.capitalize
+  end
+
   def normalize_vehicle_plate
     return if vehicle_plate.nil?
     self.vehicle_plate = vehicle_plate.to_s.upcase.gsub(/[^A-Z0-9]/, "").presence

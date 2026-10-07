@@ -100,9 +100,9 @@ class PasswordsController < ApplicationController
     payload = {
       from:    from_addr,
       to:      [user.email],
-      subject: "Redefinição de senha — Loov",
+      subject: I18n.t("devise.mailer.reset_password_instructions.subject"),
       html:    reset_html(user, reset_url),
-      text:    "Você pediu pra redefinir sua senha no Loov.\n\nAcesse: #{reset_url}\n\nSe não foi você, ignore este email.",
+      text:    "Recebemos um pedido para redefinir a senha da sua conta na Loov.\n\nCrie a nova senha por este link (vale por #{Devise.reset_password_within.in_hours.to_i} horas):\n#{reset_url}\n\nNão foi você? Pode ignorar este e-mail — sua senha atual continua valendo.",
     }
 
     require "net/http"
@@ -126,22 +126,15 @@ class PasswordsController < ApplicationController
   end
 
   def reset_html(user, reset_url)
-    name = user.full_name.presence || user.email.split("@").first.capitalize
-    <<~HTML
-      <div style="font-family:-apple-system,Helvetica,Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#28231c;background:#fafaf6;">
-        <p style="font-family:'Courier New',monospace;font-size:11px;letter-spacing:1.5px;color:#ada699;text-transform:uppercase;margin:0 0 6px;">LOOV · REDEFINIR SENHA</p>
-        <h1 style="font-size:22px;font-weight:700;letter-spacing:-0.3px;margin:0 0 18px;">Olá, #{name}</h1>
-        <p style="font-size:14px;line-height:22px;margin:0 0 12px;">
-          Recebemos um pedido pra redefinir a senha da sua conta no Loov.
-        </p>
-        <p style="font-size:14px;line-height:22px;margin:0 0 24px;color:#575148;">
-          Toque no botão abaixo pra criar uma nova senha. O link expira em 6 horas.
-        </p>
-        <a href="#{reset_url}" style="display:inline-block;background:#dd7852;color:#fafaf6;text-decoration:none;padding:14px 22px;border-radius:100px;font-weight:600;letter-spacing:1px;font-size:13px;">REDEFINIR SENHA</a>
-        <p style="font-size:12px;line-height:18px;margin:28px 0 0;color:#ada699;">
-          Se não foi você que pediu, é só ignorar este email — sua senha continua a mesma.
-        </p>
-      </div>
-    HTML
+    render_to_string(
+      partial: "emails/reset_password",
+      formats: [:html],
+      locals:  {
+        first_name: user.greeting_name,
+        email:      user.email,
+        url:        reset_url,
+        hours:      Devise.reset_password_within.in_hours.to_i
+      }
+    )
   end
 end

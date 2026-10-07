@@ -20,7 +20,7 @@ pt-BR:
       confirmation_instructions:
         subject: "Confirme sua conta Loov"
       reset_password_instructions:
-        subject: "Redefinir sua senha Loov"
+        subject: "Redefina sua senha da Loov"
       unlock_instructions:
         subject: "Desbloquear sua conta Loov"
       email_changed:
