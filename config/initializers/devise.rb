@@ -30,7 +30,10 @@ Devise.setup do |config|
   # Configure the e-mail address which will be shown in Devise::Mailer,
   # note that it will be overwritten if you use your own mailer class
   # with default "from" parameter.
-  config.mailer_sender = 'please-change-me-at-config-initializers-devise@example.com'
+  # Mesmo remetente dos outros e-mails (ApplicationMailer, reset do app). O
+  # valor de exemplo do Devise (example.com) é recusado pelo Resend, então a
+  # recuperação de senha do site nunca saía.
+  config.mailer_sender = ENV["MAILER_FROM"].presence || "Loov <onboarding@resend.dev>"
 
   # Configure the class responsible to send e-mails.
   # config.mailer = 'Devise::Mailer'
