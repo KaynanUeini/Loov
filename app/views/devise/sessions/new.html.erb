@@ -59,6 +59,8 @@
     </p>
 
     <%= form_for(resource, as: resource_name, url: session_path(resource_name)) do |f| %>
+      <%= render "devise/shared/flash" %>
+
 
       <div class="loov-field">
         <%= f.label :email, "E-mail", class: "loov-label" %>

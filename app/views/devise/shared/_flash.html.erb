@@ -1,0 +1,28 @@
+<%# Aviso do Devise (flash) dentro do formulário de auth, logo acima dos
+    campos — onde o olho já está. Sem isto, "link enviado" e "e-mail ou
+    senha incorretos" eram gerados e descartados: a tela só recarregava. %>
+<% { notice: "ok", alert: "erro" }.each do |key, kind| %>
+  <% next if flash[key].blank? %>
+  <div class="loov-auth-flash loov-auth-flash--<%= kind %>" role="<%= kind == "ok" ? "status" : "alert" %>">
+    <span class="loov-auth-flash-icon" aria-hidden="true"><%= kind == "ok" ? "✓" : "!" %></span>
+    <span><%= flash[key] %></span>
+  </div>
+<% end %>
+
+<style>
+  .loov-auth-flash {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 12px 14px; margin-bottom: 18px;
+    border-radius: 14px; font-size: 14px; line-height: 1.45;
+    text-align: left; color: var(--ink);
+  }
+  .loov-auth-flash--ok   { background: var(--sand); }
+  .loov-auth-flash--erro { background: #f6e3e3; color: var(--rose-500); font-weight: 500; }
+  .loov-auth-flash-icon {
+    flex: 0 0 20px; height: 20px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: #fff; margin-top: 1px;
+  }
+  .loov-auth-flash--ok   .loov-auth-flash-icon { background: var(--mint-500); }
+  .loov-auth-flash--erro .loov-auth-flash-icon { background: var(--rose-500); }
+</style>

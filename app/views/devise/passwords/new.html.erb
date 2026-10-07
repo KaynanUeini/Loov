@@ -9,6 +9,7 @@
     </p>
 
     <%= form_for(resource, as: resource_name, url: password_path(resource_name), html: { method: :post, style: "text-align:left;" }) do |f| %>
+      <%= render "devise/shared/flash" %>
       <%= render "devise/shared/error_messages", resource: resource %>
 
       <div class="loov-field">
