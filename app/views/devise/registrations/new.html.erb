@@ -95,7 +95,14 @@
 
     <%= form_for(resource, as: resource_name, url: registration_path(resource_name), html: { id: "reg-form" }) do |f| %>
 
-      <%= f.hidden_field :role, id: "role-hidden", value: "client" %>
+      <%= render "devise/shared/flash" %>
+      <%= render "devise/shared/error_messages", resource: resource %>
+
+      <%# Depois de um erro o formulário volta com o papel que a pessoa tinha
+          escolhido — antes voltava sempre "client", e um dono que corrigia a
+          senha e reenviava virava cliente sem perceber. %>
+      <%= f.hidden_field :role, id: "role-hidden",
+            value: (resource.role.presence_in(%w[client owner]) || "client") %>
 
       <div class="client-fields visible" id="client-fields">
         <div class="loov-field">
