@@ -18,6 +18,12 @@ class Appointment < ApplicationRecord
   COMMISSION_PCT   = 0.05  # 5% do valor total retido pela Loov
   ACCEPTANCE_TTL   = 3.minutes # timeout para aceite do dono
 
+  # Receita líquida do dono por atendimento, em SQL (exige joins(:service)).
+  # Mesma conta do effective_price menos a comissão: o preço ajustado no
+  # check-in vale mais que o de tabela do serviço.
+  GROSS_PRICE_SQL = "COALESCE(appointments.price_override, services.price)".freeze
+  NET_REVENUE_SQL = "#{GROSS_PRICE_SQL} - COALESCE(appointments.commission_amount, 0)".freeze
+
   # ── VALIDAÇÕES ────────────────────────────────────────────────────────────
   validates :scheduled_at,  presence: true
   validates :appointment_type, inclusion: { in: TYPES }

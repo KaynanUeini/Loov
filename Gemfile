@@ -46,3 +46,5 @@ gem "faker", "~> 3.6"
 gem "resend", "~> 1.0"
 
 gem "devise-jwt", "~> 0.13.0"
+
+gem "caxlsx", "~> 4.5"
