@@ -1,3 +1,7 @@
-Appointment#reminder
+<%= email_greeting(@user) %> Seu agendamento é amanhã.
 
-<%= @greeting %>, find me in app/views/appointment_mailer/reminder.text.erb
+Quando:  <%= email_when(@appointment.scheduled_at) %>
+Serviço: <%= @service.title %>
+Onde:    <%= [@car_wash.name, @car_wash.address.presence].compact.join(" · ") %>
+
+Não vai conseguir ir? Cancele pelo app: <%= appointments_url %>

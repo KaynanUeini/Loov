@@ -1,13 +1,7 @@
-Seu agendamento foi cancelado — Loov
+<%= email_greeting(@user) %> O <%= @car_wash.name %> precisou cancelar seu agendamento.
 
-O estabelecimento <%= @appointment.car_wash.name %> precisou cancelar seu agendamento.
-
-Serviço: <%= @appointment.service.title %>
-Data: <%= @appointment.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%d/%m/%Y às %H:%M") %>
-<% if @appointment.cancellation_reason.present? %>
-Motivo: <%= @appointment.cancellation_reason %>
+Quando:  <%= email_when(@appointment.scheduled_at) %>
+Serviço: <%= @service.title %>
+<% if @appointment.cancellation_reason.present? %>Motivo:  <%= @appointment.cancellation_reason %>
 <% end %>
-
-Reagende pelo app: <%= car_washes_url %>
-
-Loov · Marketplace de lava-rápidos
+Sentimos pelo transtorno. Escolha outro horário: <%= car_wash_url(@car_wash) %>

@@ -1,15 +1,10 @@
-Agendamento confirmado — <%= @car_wash.name %>
+<%= email_greeting(@user) %> Seu agendamento está confirmado.
 
-Olá, <%= @user.display_name.split(' ').first %>!
-
-Seu agendamento está confirmado. Veja os detalhes:
-
-Lava-rápido: <%= @car_wash.name %>
+Quando:  <%= email_when(@appointment.scheduled_at) %>
 Serviço: <%= @service.title %>
-Data: <%= @appointment.scheduled_at.strftime("%d/%m/%Y") %>
-Horário: <%= @appointment.scheduled_at.strftime("%H:%M") %>
-<% if @car_wash.address.present? %>Endereço: <%= @car_wash.address %><% end %>
+Valor:   <%= email_money(@appointment.effective_price) %>
+Onde:    <%= [@car_wash.name, @car_wash.address.presence].compact.join(" · ") %>
 
-Acesse seus agendamentos em: <%= appointments_url %>
+Ver meus agendamentos: <%= appointments_url %>
 
-— Loov
+Precisa remarcar? Cancele ou remarque pelo app com antecedência.

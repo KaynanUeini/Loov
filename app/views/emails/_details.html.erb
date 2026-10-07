@@ -1,0 +1,16 @@
+<%# Quadro de detalhes: rows = [[rótulo, valor, link opcional], ...].
+    Rótulo em cima do valor (não lado a lado): no celular, lado a lado
+    espreme o endereço numa coluna estreita. %>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 8px;border:1px solid #e0dbd0;border-radius:16px;">
+  <% rows.each_with_index do |(label, value, link), i| %>
+    <tr>
+      <td style="padding:14px 18px;<%= i.zero? ? "" : "border-top:1px solid #e0dbd0;" %>">
+        <div style="font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#ada699;margin-bottom:3px;"><%= label %></div>
+        <div style="font-size:15px;line-height:22px;font-weight:600;color:#28231c;"><%= value %></div>
+        <% if link %>
+          <a href="<%= link[:url] %>" target="_blank" style="font-size:13px;font-weight:600;color:#9c4930;text-decoration:none;"><%= link[:label] %> &rarr;</a>
+        <% end %>
+      </td>
+    </tr>
+  <% end %>
+</table>

@@ -1,0 +1,11 @@
+<%# Linhas comuns do quadro de detalhes de um agendamento. %>
+<%
+  where = [@car_wash.name, @car_wash.address.presence].compact.join(" · ")
+  rows  = [
+    ["Quando", email_when(@appointment.scheduled_at)],
+    ["Serviço", @service.title],
+  ]
+  rows << ["Valor", email_money(@appointment.effective_price)] if local_assigns[:price]
+  rows << ["Onde", where, (@car_wash.address.present? ? { url: email_map_url(@car_wash.address), label: "Abrir no mapa" } : nil)]
+%>
+<%= render "emails/details", rows: rows %>

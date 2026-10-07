@@ -190,18 +190,16 @@ module Owner
       return "RESEND_API_KEY ausente no ambiente" if api_key.empty?
 
       from_addr = ENV["MAILER_FROM"].presence || "Loov <onboarding@resend.dev>"
-      app_host  = ENV.fetch("APP_HOST", "loov-api.onrender.com")
-      protocol  = ENV.fetch("APP_PROTOCOL", "https")
-      accept_url = "#{protocol}://#{app_host}/owner/attendant_invitations/#{invitation.token}/accept"
-      car_wash_name = invitation.car_wash.name
-      inviter_name  = invitation.inviter&.full_name.presence || "O dono"
+      # Mesmo template do AttendantMailer — antes este caminho tinha um HTML
+      # próprio, com nome do dono e do lava-rápido interpolados sem escape.
+      message = AttendantMailer.invitation(invitation).message
 
       payload = {
         from:    from_addr,
         to:      [invitation.email],
-        subject: "Convite: você foi adicionado ao #{car_wash_name} no Loov",
-        html:    invitation_html(inviter_name, car_wash_name, accept_url),
-        text:    "#{inviter_name} te convidou pra ser atendente do #{car_wash_name} no Loov.\n\nAceitar: #{accept_url}",
+        subject: message.subject,
+        html:    message.html_part.body.decoded,
+        text:    message.text_part.body.decoded,
       }
 
       Rails.logger.info("[Resend API] POST emails to=#{invitation.email} from=#{from_addr}")
@@ -229,25 +227,6 @@ module Owner
       msg = "#{e.class}: #{e.message}"
       Rails.logger.error("[Resend API] falha — #{msg}")
       msg
-    end
-
-    def invitation_html(inviter_name, car_wash_name, accept_url)
-      <<~HTML
-        <div style="font-family:-apple-system,Helvetica,Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#28231c;background:#fafaf6;">
-          <p style="font-family:'Courier New',monospace;font-size:11px;letter-spacing:1.5px;color:#ada699;text-transform:uppercase;margin:0 0 6px;">LOOV · CONVITE</p>
-          <h1 style="font-size:22px;font-weight:700;letter-spacing:-0.3px;margin:0 0 18px;">Você foi convidado a ser atendente</h1>
-          <p style="font-size:14px;line-height:22px;margin:0 0 12px;">
-            <strong>#{inviter_name}</strong> te adicionou como atendente do <strong>#{car_wash_name}</strong> no Loov.
-          </p>
-          <p style="font-size:14px;line-height:22px;margin:0 0 24px;color:#575148;">
-            Como atendente você gerencia agendamentos, registra avulsos e acompanha atendimentos — sem acesso à parte financeira.
-          </p>
-          <a href="#{accept_url}" style="display:inline-block;background:#dd7852;color:#fafaf6;text-decoration:none;padding:14px 22px;border-radius:100px;font-weight:600;letter-spacing:1px;font-size:13px;">ACEITAR CONVITE</a>
-          <p style="font-size:12px;line-height:18px;margin:28px 0 0;color:#ada699;">
-            Se recebeu por engano, é só ignorar.
-          </p>
-        </div>
-      HTML
     end
   end
 end

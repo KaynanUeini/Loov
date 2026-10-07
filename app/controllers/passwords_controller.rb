@@ -127,8 +127,9 @@ class PasswordsController < ApplicationController
 
   def reset_html(user, reset_url)
     render_to_string(
-      partial: "emails/reset_password",
-      formats: [:html],
+      template: "emails/reset_password",
+      layout:   "mailer",
+      formats:  [:html],
       locals:  {
         first_name: user.greeting_name,
         email:      user.email,

@@ -1,0 +1,16 @@
+<%# Corpo comum dos dois cancelamentos. Locais: reason (texto ou nil). %>
+<% content_for :preheader, "#{@service.title} de #{email_when(@appointment.scheduled_at)}. Escolha outro horário quando quiser." %>
+<% content_for :footer, "Você recebeu este e-mail porque tinha um agendamento pela Loov." %>
+
+<%= render "emails/heading", tone: :rose, eyebrow: "Agendamento cancelado", title: "Seu horário de #{email_day(@appointment.scheduled_at).downcase} foi cancelado." %>
+<%= render "emails/paragraph", text: "#{email_greeting(@user)} #{lead}" %>
+
+<%= render "appointment_mailer/where" %>
+
+<% if reason.present? %>
+  <%= render "emails/callout", title: "Motivo:", text: reason, top: 16 %>
+<% end %>
+
+<div style="height:14px;line-height:14px;">&nbsp;</div>
+<%= render "emails/paragraph", text: "Sentimos pelo transtorno. Se quiser, já dá para escolher outro horário.", muted: true %>
+<%= render "emails/button", url: car_wash_url(@car_wash), label: "Escolher outro horário", top: 8 %>

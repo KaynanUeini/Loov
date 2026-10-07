@@ -1,12 +1,7 @@
-LOOV · CONVITE
+Oi! <%= @inviter_name || "O dono do lava-rápido" %> adicionou você como atendente do <%= @car_wash.name %> na Loov.
 
-Você foi convidado a ser atendente.
+Como atendente, você vai poder ver e organizar os agendamentos do dia, registrar clientes de balcão e marcar atendimentos como concluídos. Sem acesso ao financeiro nem às configurações.
 
-<%= @inviter&.full_name.presence || "O dono" %> te adicionou como atendente do <%= @car_wash.name %> no Loov.
+Aceitar o convite: <%= @accept_url %>
 
-Como atendente você consegue gerenciar agendamentos, registrar avulsos e acompanhar atendimentos — sem acesso à parte financeira ou configurações administrativas.
-
-Aceite o convite:
-<%= @accept_url %>
-
-Se não conhece a pessoa ou recebeu por engano, é só ignorar.
+Não esperava este convite? É só ignorar este e-mail.

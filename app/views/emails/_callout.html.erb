@@ -1,0 +1,8 @@
+<%# Aviso em fundo areia: a dúvida mais provável de quem lê, já respondida. %>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:<%= local_assigns[:top] || 28 %>px;">
+  <tr>
+    <td style="background:#f1eee6;border-radius:16px;padding:16px 18px;font-size:14px;line-height:21px;color:#575148;">
+      <% if local_assigns[:title] %><strong style="color:#28231c;"><%= title %></strong> <% end %><%= text %>
+    </td>
+  </tr>
+</table>

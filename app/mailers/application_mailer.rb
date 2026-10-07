@@ -4,4 +4,5 @@ class ApplicationMailer < ActionMailer::Base
   # entrega pro e-mail dono da conta Resend). presence trata vazio.
   default from: (ENV["MAILER_FROM"].presence || "Loov <onboarding@resend.dev>")
   layout "mailer"
+  helper :email
 end
