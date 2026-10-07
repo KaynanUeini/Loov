@@ -5,6 +5,10 @@ class SessionsController < Devise::SessionsController
 
   def after_sign_in_path_for(resource)
     flash.clear
+    # Admin não tem o que fazer na home de cliente: vai direto pro painel. Se
+    # ele tinha aberto uma página do admin e caiu no login, volta pra ela.
+    return stored_location_for(resource) || admin_dashboard_path if resource.admin?
+
     root_path
   end
 
