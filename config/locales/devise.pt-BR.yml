@@ -1,11 +1,62 @@
 pt-BR:
   devise:
+    confirmations:
+      confirmed: "Sua conta foi confirmada. Bem-vindo!"
+      send_instructions: "Você vai receber um e-mail com instruções para confirmar sua conta em alguns minutos."
+      send_paranoid_instructions: "Se o seu e-mail estiver cadastrado, você vai receber um e-mail com instruções para confirmar sua conta em alguns minutos."
     failure:
       already_authenticated: "Você já está logado. Faça logout para logar com outra conta."
+      inactive: "Sua conta ainda não foi ativada."
+      invalid: "%{authentication_keys} ou senha incorretos."
+      locked: "Sua conta está bloqueada."
+      last_attempt: "Você tem mais uma tentativa antes de sua conta ser bloqueada."
+      not_found_in_database: "%{authentication_keys} ou senha incorretos."
+      timeout: "Sua sessão expirou. Entre de novo para continuar."
+      unauthenticated: "Entre ou cadastre-se para continuar."
+      unconfirmed: "Confirme seu e-mail antes de continuar."
       user:
         already_authenticated: "Você já está logado. Faça logout para logar com outra conta."
+    mailer:
+      confirmation_instructions:
+        subject: "Confirme sua conta Loov"
+      reset_password_instructions:
+        subject: "Redefinir sua senha Loov"
+      unlock_instructions:
+        subject: "Desbloquear sua conta Loov"
+      email_changed:
+        subject: "Seu e-mail na Loov foi alterado"
+      password_change:
+        subject: "Sua senha Loov foi alterada"
+    omniauth_callbacks:
+      failure: "Não foi possível entrar com %{kind} porque \"%{reason}\"."
+      success: "Login com %{kind} realizado com sucesso."
+    passwords:
+      no_token: "Esta página só pode ser acessada pelo link do e-mail de redefinição de senha. Se veio por esse link, confira se usou a URL completa."
+      send_instructions: "Você vai receber um e-mail com instruções para redefinir sua senha em alguns minutos."
+      send_paranoid_instructions: "Se o seu e-mail estiver cadastrado, você vai receber um link para redefinir sua senha em alguns minutos."
+      updated: "Senha alterada com sucesso. Você já está logado."
+      updated_not_active: "Senha alterada com sucesso."
+    registrations:
+      destroyed: "Sua conta foi cancelada. Esperamos ver você de novo em breve."
+      signed_up: "Cadastro realizado com sucesso!"
+      signed_up_but_inactive: "Cadastro realizado, mas sua conta ainda não foi ativada."
+      signed_up_but_locked: "Cadastro realizado, mas sua conta está bloqueada."
+      signed_up_but_unconfirmed: "Enviamos um link de confirmação para o seu e-mail. Abra o link para ativar sua conta."
+      update_needs_confirmation: "Conta atualizada. Confirme o novo e-mail pelo link que enviamos."
+      updated: "Conta atualizada com sucesso."
+      updated_but_not_signed_in: "Conta atualizada. Como a senha mudou, entre de novo."
     sessions:
+      already_signed_out: "Logout realizado com sucesso!"
       signed_in: "Login realizado com sucesso!"
       signed_out: "Logout realizado com sucesso!"
-    registrations:
-      signed_up: "Cadastro realizado com sucesso!"
+    unlocks:
+      send_instructions: "Você vai receber um e-mail com instruções para desbloquear sua conta em alguns minutos."
+      send_paranoid_instructions: "Se sua conta existir, você vai receber um e-mail com instruções para desbloqueá-la em alguns minutos."
+      unlocked: "Sua conta foi desbloqueada. Entre para continuar."
+  errors:
+    messages:
+      already_confirmed: "já foi confirmado, tente entrar"
+      confirmation_period_expired: "precisa ser confirmado em até %{period}, peça um novo link"
+      expired: "expirou, peça um novo link"
+      not_found: "não encontrado"
+      not_locked: "não estava bloqueado"
