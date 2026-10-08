@@ -22,7 +22,10 @@
   phone_shops = shops.first(3)
   services_ticker = ["Lavagem", "Polimento", "Higienização", "Cristalização", "Vitrificação",
                      "Enceramento", "Hidratação de couro", "Limpeza de motor", "Faróis", "Impermeabilização"]
-  active_count = CarWash.where(active: true).count
+  # CarWash.count, sem filtrar por `active`: essa coluna existe no banco de
+  # dev mas não no de produção (a migration nunca rodou lá) — filtrar por
+  # ela derrubou a home com PG::UndefinedColumn.
+  active_count = CarWash.count
 %>
 <style>
   .lh { background: var(--cream); color: var(--ink); overflow-x: clip; }
