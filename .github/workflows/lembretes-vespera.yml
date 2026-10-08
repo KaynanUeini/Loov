@@ -1,3 +1,16 @@
+name: Lembretes da véspera
+
+on:
+  schedule:
+    - cron: "0 21 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  enviar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Disparar lembretes (em lotes até zerar)
         env:
           CRON_SECRET: ${{ secrets.LOOV_CRON_SECRET }}
           URL: https://loov-api.onrender.com/internal/reminders
