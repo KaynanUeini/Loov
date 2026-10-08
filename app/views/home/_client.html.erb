@@ -129,6 +129,72 @@
   .ch-rate { display: inline-flex; align-items: center; gap: 3px; font-size: 13px; font-weight: 600; }
   .ch-rate.is-empty { color: var(--ash); font-weight: 400; }
 
+  /* ── Perto de você em cards (tablet/desktop) ───────────────────────────
+     Wiemer: card de produto com respiro, tipo grande e lista de "specs"
+     (aqui, serviço e preço). Tendências 2026: bento — o aberto mais perto
+     ganha um card grande — e microinterações que dão retorno (o card sobe,
+     "Ver horários" aparece). 12 por vez com "Mostrar mais" em vez de um
+     muro de 90. Sem foto real, o topo é a inicial gigante sobre areia, com
+     variação sutil de tom por loja (mesma paleta) pra cada card ter cara
+     própria em vez de virar papel de parede. */
+  .ch-count { font-size: 14px; color: var(--graphite); font-weight: 500; }
+  .ch-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(272px, 1fr)); gap: 20px; padding: 4px 20px 8px; }
+  .ch-card { position: relative; display: flex; flex-direction: column; border-radius: 24px; background: var(--paper); border: 1px solid var(--stone); overflow: hidden; text-decoration: none; color: var(--ink) !important; transition: transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .25s ease, border-color .2s; }
+  .ch-card:hover { transform: translateY(-4px); box-shadow: 0 24px 48px -28px rgba(40,35,28,.45); border-color: var(--ash); }
+  .ch-card:focus-visible { outline: 2px solid var(--coral-500); outline-offset: 3px; }
+  .ch-card-vis { position: relative; height: 148px; background: radial-gradient(120% 120% at var(--gx, 80%) 0%, var(--tone2, #fbeae3) 0%, var(--tone, #f1eee6) 62%); overflow: hidden; }
+  .ch-card-initial { position: absolute; right: 22px; bottom: -26px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 132px; line-height: 1; letter-spacing: -0.06em; color: var(--coral-500); opacity: .9; transition: transform .4s cubic-bezier(.2,.8,.2,1); user-select: none; }
+  .ch-card:hover .ch-card-initial { transform: translate(-6px, -6px) rotate(-4deg); }
+  .ch-card.is-closed .ch-card-vis { background: var(--sand); }
+  .ch-card.is-closed .ch-card-initial { color: var(--stone); }
+  .ch-card-status { position: absolute; left: 14px; top: 14px; display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 99px; background: rgba(254,254,253,.88); backdrop-filter: blur(6px); font-size: 12px; font-weight: 600; color: var(--ink); }
+  .ch-card-status i { width: 7px; height: 7px; border-radius: 50%; background: #2fa36b; }
+  .ch-card.is-closed .ch-card-status { color: var(--graphite); font-weight: 500; }
+  .ch-card.is-closed .ch-card-status i { background: var(--ash); }
+  .ch-card-fav { position: absolute; right: 10px; top: 10px; width: 40px; height: 40px; border: 0; border-radius: 50%; background: rgba(254,254,253,.88); backdrop-filter: blur(6px); color: var(--graphite); display: flex; align-items: center; justify-content: center; transition: transform .15s; }
+  .ch-card-fav:hover { transform: scale(1.08); background: #fff; }
+  .ch-card-fav[aria-pressed="true"] { color: var(--coral-500); }
+  .ch-card-fav[aria-pressed="true"] svg { fill: var(--coral-500); }
+  .ch-card-fav.pop svg { animation: ch-pop .35s ease; }
+  .ch-card-body { flex: 1; display: flex; flex-direction: column; padding: 18px 20px 18px; }
+  .ch-card-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--coral-700); margin-bottom: 8px; }
+  .ch-card-name { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 20px; line-height: 1.15; letter-spacing: -0.03em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .ch-card-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 6px; font-size: 13.5px; color: var(--graphite); }
+  .ch-card-meta .ch-star { display: inline-flex; align-items: center; gap: 3px; color: var(--ink); font-weight: 600; }
+  .ch-card-meta .ch-new { color: var(--coral-700); font-weight: 600; }
+  .ch-card-svcs { margin-top: 12px; font-size: 13px; color: var(--graphite); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ch-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 16px; }
+  .ch-card-price { font-size: 13px; color: var(--graphite); }
+  .ch-card-price b { font-family: 'Space Grotesk', sans-serif; font-size: 18px; color: var(--ink); letter-spacing: -0.02em; }
+  .ch-card-cta { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: var(--coral-700); opacity: 0; transform: translateX(-6px); transition: opacity .2s, transform .2s; white-space: nowrap; }
+  .ch-card:hover .ch-card-cta, .ch-card:focus-visible .ch-card-cta { opacity: 1; transform: none; }
+  @media (hover: none) { .ch-card-cta { opacity: 1; transform: none; } }
+
+  /* Destaque (bento): o aberto mais perto ocupa 2 colunas, com a lista de
+     serviços e preços como "specs". */
+  .ch-card.is-feature { grid-column: span 2; flex-direction: row; }
+  .ch-card.is-feature .ch-card-vis { flex: 0 0 46%; height: auto; min-height: 300px; }
+  .ch-card.is-feature .ch-card-initial { font-size: 240px; bottom: -48px; right: 36px; }
+  .ch-card.is-feature .ch-card-body { padding: 26px 28px; }
+  .ch-card.is-feature .ch-card-name { font-size: 30px; }
+  .ch-specs { list-style: none; margin: 18px 0 0; padding: 0; border-top: 1px solid var(--stone); }
+  .ch-specs li { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--stone); font-size: 14px; }
+  .ch-specs li span:first-child { color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ch-specs li span:last-child { color: var(--graphite); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .ch-specs-more { padding: 10px 0 0; font-size: 13px; color: var(--graphite); }
+  .ch-more { display: flex; justify-content: center; padding: 24px 20px 48px; }
+  .ch-more button { height: 50px; padding: 0 26px; border-radius: 99px; border: 1px solid var(--ink); background: transparent; color: var(--ink); font-size: 15px; font-weight: 600; transition: background .15s, color .15s; }
+  .ch-more button:hover { background: var(--ink); color: var(--cream); }
+  @media (max-width: 760px) {
+    .ch-card.is-feature { grid-column: auto; flex-direction: column; }
+    .ch-card.is-feature .ch-card-vis { min-height: 0; height: 148px; }
+    .ch-card.is-feature .ch-card-initial { font-size: 132px; bottom: -26px; right: 22px; }
+    .ch-card.is-feature .ch-card-name { font-size: 22px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ch-card, .ch-card-initial, .ch-card-cta { transition: none; }
+  }
+
   /* Busca */
   .ch-recents-title { margin: 0; padding: 22px 20px 6px; font-family: 'Space Grotesk', sans-serif !important; font-weight: 600; font-size: 20px; letter-spacing: -0.3px; }
   .ch-result { display: flex; align-items: center; gap: 12px; padding: 10px 20px; text-decoration: none; color: var(--ink) !important; }
@@ -260,7 +326,7 @@
       <div class="ch-cats" id="ch-cats" role="group" aria-label="Categorias"></div>
       <button type="button" class="ch-cat-clear" id="ch-cat-clear"><i data-feather="x" style="width:12px;height:12px"></i><span>Limpar filtro</span></button>
 
-      <div class="ch-sec-head"><h2 class="ch-sec-title">Perto de você</h2></div>
+      <div class="ch-sec-head"><h2 class="ch-sec-title">Perto de você</h2><span class="ch-count" id="ch-count"></span></div>
       <div class="ch-filters" id="ch-filters"></div>
 
       <div id="ch-error"></div>
@@ -305,6 +371,7 @@
     loading: true, error: null,
     categories: [], filter: null,
     search: '', searchMode: false, searchConfirmed: false,
+    visible: 12,
     recents: readRecents()
   };
 
@@ -504,6 +571,64 @@
     }).join('') + '<button type="button" class="ch-pill-clear" id="ch-filter-clear" style="display:' + (state.filter ? 'inline-flex' : 'none') + '">' + icon('x', 13) + 'Limpar</button>';
   }
 
+  // ── Cards: horário, preço, serviços, tom ──────────────────────────────────
+  var WEEK = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+  function hoursStatus(cw) {
+    var oh = cw.operating_hours || [], now = new Date(), dow = now.getDay();
+    var cur = now.getHours() * 60 + now.getMinutes();
+    var mins = function (t) { var p = String(t || '').split(':'); return p.length < 2 ? null : Number(p[0]) * 60 + Number(p[1]); };
+    var day = function (d) { return oh.find(function (o) { return Number(o.day_of_week) === d && o.opens_at && o.closes_at; }); };
+    if (isOpenNow(cw)) {
+      var t = day(dow);
+      return t ? 'Aberto · fecha às ' + t.closes_at : 'Aberto agora';
+    }
+    var today = day(dow);
+    if (today && mins(today.opens_at) > cur) return 'Fechado · abre às ' + today.opens_at;
+    for (var i = 1; i <= 7; i++) {
+      var d = (dow + i) % 7, h = day(d);
+      if (h) return 'Fechado · abre ' + (i === 1 ? 'amanhã' : WEEK[d]) + ' às ' + h.opens_at;
+    }
+    return 'Fechado';
+  }
+  function money(v) { return 'R$ ' + Number(v).toFixed(2).replace('.', ',').replace(/,00$/, ''); }
+  function pricedServices(cw) {
+    return (cw.services || []).filter(function (s) { return Number(s.price) > 0; })
+      .sort(function (a, b) { return Number(a.price) - Number(b.price); });
+  }
+  var TONES = [['#f1eee6', '#fbeae3'], ['#efe9df', '#f5d3c3'], ['#f3efe8', '#f8e1d6'], ['#ece6dc', '#fbeae3']];
+  function toneOf(id) { var t = TONES[Number(id) % TONES.length]; return '--tone:' + t[0] + ';--tone2:' + t[1] + ';--gx:' + (20 + (Number(id) * 37) % 70) + '%'; }
+
+  function shopCard(cw, feature, eyebrow) {
+    var open = isOpenNow(cw), reviews = Number(cw.reviews_count) || 0, rating = Number(cw.rating_avg) || 0;
+    var dist = fmtDistance(cw.distance_km);
+    var svcs = pricedServices(cw);
+    var meta = [cw.bairro ? esc(cw.bairro) : null, dist,
+      reviews ? '<span class="ch-star">' + icon('star', 13, { color: '#d6a419', fill: '#d6a419' }) + rating.toFixed(1).replace('.', ',') + ' <span style="color:var(--graphite);font-weight:400">(' + reviews + ')</span></span>' : '<span class="ch-new">Novo</span>'
+    ].filter(Boolean).join(' · ');
+    var titles = (cw.services || []).map(function (x) { return x.title; }).filter(Boolean);
+    var body = feature
+      ? (svcs.length ? '<ul class="ch-specs">' + svcs.slice(0, 4).map(function (x) { return '<li><span>' + esc(x.title) + '</span><span>' + money(x.price) + '</span></li>'; }).join('') + '</ul>' +
+          (svcs.length > 4 ? '<div class="ch-specs-more">+ ' + (svcs.length - 4) + ' serviços</div>' : '') : '')
+      : (titles.length ? '<div class="ch-card-svcs">' + esc(titles.slice(0, 3).join(' · ')) + (titles.length > 3 ? ' · +' + (titles.length - 3) : '') + '</div>' : '');
+    return '<a class="ch-card' + (open ? '' : ' is-closed') + (feature ? ' is-feature' : '') + '" href="/car_washes/' + cw.id + '" data-open-shop="' + cw.id + '">' +
+      '<div class="ch-card-vis" style="' + toneOf(cw.id) + '">' +
+        '<span class="ch-card-initial" aria-hidden="true">' + esc((cw.name || '?')[0].toUpperCase()) + '</span>' +
+        '<span class="ch-card-status"><i></i>' + esc(hoursStatus(cw)) + '</span>' +
+        '<button type="button" class="ch-card-fav" data-fav="' + cw.id + '" aria-pressed="' + !!cw.favorited + '" aria-label="' + (cw.favorited ? 'Remover dos favoritos' : 'Adicionar aos favoritos') + '">' + icon('heart', 18) + '</button>' +
+      '</div>' +
+      '<div class="ch-card-body">' +
+        (eyebrow ? '<div class="ch-card-eyebrow">' + eyebrow + '</div>' : '') +
+        '<div class="ch-card-name">' + esc(cw.name) + '</div>' +
+        '<div class="ch-card-meta">' + meta + '</div>' +
+        body +
+        '<div class="ch-card-foot">' +
+          (svcs.length ? '<span class="ch-card-price">a partir de <b>' + money(svcs[0].price) + '</b></span>' : '<span></span>') +
+          '<span class="ch-card-cta">Ver horários ' + icon('arrow-right', 14) + '</span>' +
+        '</div>' +
+      '</div></a>';
+  }
+  var wideMQ = window.matchMedia('(min-width: 640px)');
+
   // ── Render: lista ─────────────────────────────────────────────────────────
   function filteredShops() {
     var list = state.shops.slice();
@@ -554,7 +679,20 @@
         (filtered ? '<button type="button" class="ch-clear-all" id="ch-clear-all">Limpar tudo</button>' : '') + '</div>';
       return;
     }
-    el.innerHTML = '<div class="ch-grid">' + list.map(shopRow).join('') + '</div>';
+    $('ch-count').textContent = list.length + (list.length === 1 ? ' lava-rápido' : ' lava-rápidos');
+    if (!wideMQ.matches) {
+      el.innerHTML = '<div class="ch-grid">' + list.map(shopRow).join('') + '</div>';
+      return;
+    }
+    var shown = list.slice(0, state.visible), rest = list.length - shown.length;
+    // Destaque só na lista "pura" do primeiro aberto mais perto: com ordem
+    // por nota, o primeiro é o mais bem avaliado — o selo diz o que é.
+    var first = shown[0], eyebrow = null;
+    if (first && isOpenNow(first)) {
+      eyebrow = state.filter === 'melhores avaliados' ? 'Mais bem avaliado' : 'Aberto e mais perto';
+    }
+    el.innerHTML = '<div class="ch-cards">' + shown.map(function (cw, i) { return shopCard(cw, i === 0 && !!eyebrow, i === 0 ? eyebrow : null); }).join('') + '</div>' +
+      (rest > 0 ? '<div class="ch-more"><button type="button" id="ch-more">Mostrar mais · ' + rest + (rest === 1 ? ' restante' : ' restantes') + '</button></div>' : '<div style="height:32px"></div>');
   }
 
   // ── Render: busca ─────────────────────────────────────────────────────────
@@ -637,13 +775,14 @@
     if ((t = e.target.closest('[data-cat]'))) {
       var k = t.dataset.cat, i = state.categories.indexOf(k);
       if (i === -1) state.categories.push(k); else state.categories.splice(i, 1);
-      renderCategories(); renderList(); return;
+      state.visible = 12; renderCategories(); renderList(); return;
     }
-    if ((t = e.target.closest('[data-filter]'))) { state.filter = state.filter === t.dataset.filter ? null : t.dataset.filter; renderFilters(); renderList(); return; }
+    if ((t = e.target.closest('[data-filter]'))) { state.filter = state.filter === t.dataset.filter ? null : t.dataset.filter; state.visible = 12; renderFilters(); renderList(); return; }
     if (e.target.closest('#ch-filter-clear')) { state.filter = null; renderFilters(); renderList(); return; }
     if (e.target.closest('#ch-cat-clear')) { state.categories = []; renderCategories(); renderList(); return; }
     if (e.target.closest('#ch-clear-all')) { state.categories = []; state.filter = null; renderCategories(); renderFilters(); renderList(); return; }
     if (e.target.closest('#ch-retry')) { load(); return; }
+    if (e.target.closest('#ch-more')) { state.visible += 12; renderList(); return; }
     if (e.target.closest('#ch-lm-prev')) { pageShelf(-1); return; }
     if (e.target.closest('#ch-lm-next')) { pageShelf(1); return; }
   });
@@ -664,6 +803,7 @@
   });
 
   window.addEventListener('resize', updateArrows, { passive: true });
+  wideMQ.addEventListener('change', renderList);
   // Contagem regressiva do Last minute: re-render a cada 15s (como o app).
   setInterval(function () { renderLastMinute(); renderGreeting(); }, 15000);
   // Voltar pra aba recarrega (o app recarrega ao ganhar foco).
