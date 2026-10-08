@@ -1,0 +1,588 @@
+<%#
+  Home do cliente logado — porte fiel da HomeScreen do app
+  (LoovApp/src/screens/HomeScreen.js): mesmas seções, mesmos textos, mesmas
+  regras de busca/filtro/ordem e os MESMOS endpoints JSON que o app consome
+  (/car_washes.json e /disponivel), pra site e app nunca discordarem.
+
+    · Cabeçalho fixo: localização, avatar, saudação e busca (padrão Uber/99:
+      busca nunca some ao rolar).
+    · Modo busca (Spotify): recentes guardados no navegador; ao vivo por
+      nome/bairro, e por serviço só com 5+ letras ("lava" acharia todos).
+    · Last minute: vagas nos próximos 30 min, cards escuros com horário e
+      distância, contagem regressiva que se atualiza sozinha.
+    · Categorias com seleção múltipla (E, não OU) e filtros de ordem.
+    · Perto de você: lista estilo Spotify, favoritar otimista com reversão.
+
+  Ícones: Feather, o mesmo pacote do app.
+%>
+<%
+  first_name = current_user.greeting_name || current_user.display_name.to_s.split.first
+  initial    = (first_name.presence || "L")[0].upcase
+%>
+<%# Feather (MIT) hospedado aqui — o mesmo pacote de ícones do app. %>
+<script src="/vendor/feather-4.29.2.min.js"></script>
+
+<style>
+  .ch { --w: 760px; background: var(--cream); min-height: 100vh; padding-top: 60px; color: var(--ink); }
+  .ch *, .ch *::before, .ch *::after { box-sizing: border-box; }
+  .ch-col { width: 100%; max-width: var(--w); margin: 0 auto; }
+  .ch svg.feather { display: block; }
+  .ch button { font-family: inherit; line-height: normal; cursor: pointer; }
+
+  /* ── Cabeçalho fixo ─────────────────────────────────────────────────── */
+  .ch-head { position: sticky; top: 60px; z-index: 20; background: var(--cream); border-bottom: 1px solid var(--stone); }
+  .ch-head-in { padding: 10px 20px 12px; }
+  .ch-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .ch-loc { display: inline-flex; align-items: center; gap: 6px; max-width: 75%; padding: 8px 12px; margin-left: -12px; border: 0; background: transparent; border-radius: 100px; color: var(--ink); font-size: 13px; font-weight: 600; }
+  .ch-loc:hover { background: var(--sand); }
+  .ch-loc[disabled] { cursor: default; background: transparent; }
+  .ch-avatar { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--coral-500); display: flex; align-items: center; justify-content: center; color: var(--coral-500) !important; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px; text-decoration: none; }
+  .ch-greet { font-size: 14px; color: var(--graphite); margin: -2px 0 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ch-search-row { display: flex; align-items: center; gap: 6px; }
+  .ch-search { flex: 1; display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 16px; background: var(--paper); border: 1px solid var(--stone); border-radius: 23px; transition: border-color .15s, box-shadow .2s; }
+  .ch-search:focus-within { border-color: var(--coral-500); box-shadow: 0 0 0 4px rgba(221,120,82,.14); }
+  .ch-search input { flex: 1; min-width: 0; height: 100%; border: 0 !important; background: transparent !important; padding: 0; font-size: 14px; color: var(--ink); box-shadow: none !important; outline: none; }
+  .ch-search-x { border: 0; background: transparent; color: var(--graphite); padding: 4px; display: none; }
+  .ch-cancel { border: 0; background: transparent; color: var(--coral-500); font-size: 14px; font-weight: 600; padding: 12px 4px; display: none; }
+  .ch.is-searching .ch-cancel { display: block; }
+  /* Modo busca troca a home pela lista de busca. Classe no container em vez
+     do atributo hidden: CSS global do site sobrescreve [hidden]. */
+  .ch-search-view { display: none; }
+  .ch.is-searching .ch-search-view { display: block; }
+  .ch.is-searching .ch-home-view { display: none; }
+  #ch-lm.is-off { display: none; }
+
+  /* ── Seções ─────────────────────────────────────────────────────────── */
+  .ch-sec-head { display: flex; justify-content: space-between; align-items: center; padding: 0 20px 4px; margin-top: 20px; }
+  .ch-sec-title { display: flex; align-items: center; gap: 8px; margin: 0; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 22px; letter-spacing: -0.4px; color: var(--ink); }
+  .ch-sec-title--solo { padding: 0 20px; margin: 24px 0 14px; }
+  .ch-helper { padding: 0 20px; margin: 2px 0 12px; font-size: 13px; color: var(--graphite); }
+  .ch-link { font-size: 13px; font-weight: 600; color: var(--coral-500) !important; text-decoration: none; }
+  .ch-link:hover { color: var(--coral-700) !important; }
+
+  /* Last minute */
+  .ch-hscroll { display: flex; gap: 12px; overflow-x: auto; padding: 0 20px 24px; scroll-padding: 0 20px; scroll-snap-type: x mandatory; scrollbar-width: none; }
+  .ch-hscroll::-webkit-scrollbar { display: none; }
+  .ch-lm { position: relative; flex: 0 0 264px; height: 214px; border-radius: 22px; overflow: hidden; background: var(--ink); color: var(--cream); text-decoration: none; display: flex; flex-direction: column; scroll-snap-align: start; box-shadow: 0 6px 16px rgba(40,35,28,.15); transition: transform .2s ease, box-shadow .2s ease; }
+  .ch-lm:hover { transform: translateY(-3px); box-shadow: 0 14px 26px rgba(40,35,28,.22); }
+  .ch-lm-stats { display: flex; align-items: center; padding: 26px 8px 22px; border-bottom: 1px solid rgba(250,250,246,.08); }
+  .ch-lm-stat { flex: 1; text-align: center; }
+  .ch-lm-val { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 30px; line-height: 34px; letter-spacing: -1px; color: var(--coral-500); }
+  .ch-lm-lab { margin-top: 8px; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1.6px; color: rgba(250,250,246,.55); }
+  .ch-lm-div { width: 1px; height: 44px; background: rgba(250,250,246,.12); }
+  .ch-lm-shop { flex: 1; display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+  .ch-lm-logo { flex: 0 0 40px; height: 40px; border-radius: 10px; background: var(--coral-500); color: var(--cream); display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 18px; }
+  .ch-lm-text { flex: 1; min-width: 0; }
+  .ch-lm-name { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; line-height: 18px; letter-spacing: -0.3px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .ch-lm-sub { margin-top: 3px; font-size: 11px; color: rgba(250,250,246,.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ch-lm-cd { color: var(--coral-500); font-weight: 600; }
+  .ch-lm-rate { position: absolute; top: 12px; right: 12px; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 100px; background: rgba(250,250,246,.08); font-size: 11px; font-weight: 600; }
+  .ch-lm-rate.is-new { color: rgba(250,250,246,.55); font-weight: 400; letter-spacing: .3px; }
+  .ch-lm-empty { display: flex; align-items: center; gap: 12px; margin: 4px 16px 8px; padding: 14px; background: var(--paper); border: 1px solid var(--stone); border-radius: 16px; }
+  .ch-lm-empty-ic { flex: 0 0 34px; height: 34px; border-radius: 50%; background: var(--sand); display: flex; align-items: center; justify-content: center; color: var(--graphite); }
+  .ch-lm-empty p { margin: 0; font-size: 12.5px; line-height: 18px; color: var(--graphite); }
+
+  /* Categorias */
+  .ch-cats { display: flex; gap: 8px; overflow-x: auto; padding: 0 20px 4px; scrollbar-width: none; }
+  .ch-cats::-webkit-scrollbar { display: none; }
+  .ch-cat { flex: 0 0 108px; height: 88px; border-radius: 16px; border: 1px solid var(--stone); background: var(--paper); color: var(--ink); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 0 8px; transition: background .15s, border-color .15s, transform .12s; }
+  .ch-cat:hover { border-color: var(--ash); }
+  .ch-cat:active { transform: scale(.97); }
+  .ch-cat span { font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .ch-cat[aria-checked="true"] { background: var(--coral-500); border-color: var(--coral-500); color: var(--cream); }
+  .ch-cat-clear { display: none; align-items: center; gap: 4px; margin: 8px 0 4px; padding: 8px 20px; border: 0; background: transparent; color: var(--graphite); font-size: 12px; font-weight: 600; }
+
+  /* Filtros */
+  .ch-filters { display: flex; gap: 8px; overflow-x: auto; padding: 4px 20px 16px; scrollbar-width: none; }
+  .ch-filters::-webkit-scrollbar { display: none; }
+  .ch-pill { flex-shrink: 0; height: 36px; padding: 0 14px; border-radius: 18px; border: 1px solid var(--stone); background: transparent; color: var(--ink); display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; white-space: nowrap; transition: background .15s, border-color .15s; }
+  .ch-pill:hover { border-color: var(--ash); }
+  .ch-pill[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--cream); }
+  .ch-pill-clear { flex-shrink: 0; height: 36px; padding: 0 12px; border: 0; background: transparent; color: var(--rose-500); display: none; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; }
+
+  /* Lista */
+  .ch-row { display: flex; align-items: center; gap: 12px; padding: 8px 20px; text-decoration: none; color: var(--ink) !important; transition: background .15s; }
+  .ch-row:hover { background: var(--paper); }
+  .ch-thumb { flex: 0 0 56px; height: 56px; border-radius: 12px; background: var(--coral-500); display: flex; align-items: center; justify-content: center; color: rgba(250,250,246,.9); }
+  .ch-row.is-closed .ch-thumb { background: var(--sand); color: var(--ash); }
+  .ch-body { flex: 1; min-width: 0; }
+  .ch-name-line { display: flex; align-items: center; gap: 4px; }
+  .ch-name { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; letter-spacing: -0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ch-row.is-closed .ch-name { color: var(--graphite); }
+  .ch-closed-tag { flex-shrink: 0; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: .5px; color: var(--ash); }
+  .ch-meta { margin-top: 2px; font-size: 13px; color: var(--graphite); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ch-row.is-closed .ch-meta { color: var(--ash); }
+  .ch-right { height: 56px; display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; margin-left: 4px; }
+  .ch-fav { border: 0; background: transparent; padding: 4px; margin-right: -4px; color: var(--ash); border-radius: 50%; }
+  .ch-fav:hover { background: var(--sand); }
+  .ch-fav[aria-pressed="true"] { color: var(--coral-500); }
+  .ch-fav[aria-pressed="true"] svg { fill: var(--coral-500); }
+  .ch-fav.pop svg { animation: ch-pop .35s ease; }
+  @keyframes ch-pop { 40% { transform: scale(1.3); } }
+  .ch-rate { display: inline-flex; align-items: center; gap: 3px; font-size: 13px; font-weight: 600; }
+  .ch-rate.is-empty { color: var(--ash); font-weight: 400; }
+
+  /* Busca */
+  .ch-recents-title { margin: 0; padding: 22px 20px 6px; font-family: 'Space Grotesk', sans-serif !important; font-weight: 600; font-size: 20px; letter-spacing: -0.3px; }
+  .ch-result { display: flex; align-items: center; gap: 12px; padding: 10px 20px; text-decoration: none; color: var(--ink) !important; }
+  .ch-result:hover { background: var(--paper); }
+  .ch-result .ch-thumb { flex-basis: 52px; height: 52px; }
+  .ch-result-sub { margin-top: 2px; font-size: 12px; color: var(--graphite); }
+  .ch-x { border: 0; background: transparent; color: var(--ash); padding: 6px; margin-right: -6px; border-radius: 50%; }
+  .ch-x:hover { background: var(--sand); color: var(--ink); }
+  .ch-empty-recent { padding: 24px 32px; text-align: center; font-size: 13px; line-height: 20px; color: var(--graphite); }
+  .ch-search-empty { text-align: center; padding: 28px 24px 0; }
+  .ch-search-empty img { width: 78%; max-width: 340px; height: auto; margin-bottom: 16px; }
+  .ch-search-empty h3 { margin: 0; font-family: 'Space Grotesk', sans-serif !important; font-weight: 600; font-size: 16px; letter-spacing: -0.2px; }
+  .ch-search-empty p { margin: 6px 0 0; font-size: 13px; line-height: 19px; color: var(--graphite); }
+
+  /* Estados */
+  .ch-empty { text-align: center; padding: 32px; }
+  .ch-empty img { width: 80%; max-width: 360px; height: auto; margin-bottom: 14px; }
+  .ch-empty p { margin: 0; font-size: 13px; line-height: 19px; color: var(--ash); }
+  .ch-clear-all { margin-top: 14px; padding: 13px 16px; border: 1px solid var(--stone); border-radius: 100px; background: var(--paper); color: var(--ink); font-size: 12px; font-weight: 600; }
+  .ch-error { display: flex; align-items: center; gap: 10px; margin: 0 20px 12px; padding: 12px; border-radius: 12px; background: #fbe9e9; border: 1px solid #f3c8c8; }
+  .ch-error span { flex: 1; color: var(--rose-500); font-size: 12px; font-weight: 600; }
+  .ch-error button { border: 0; padding: 13px 10px; border-radius: 100px; background: var(--rose-500); color: var(--cream); font-size: 11px; font-weight: 600; }
+  .ch-skel { display: flex; align-items: center; gap: 12px; padding: 8px 20px; }
+  .ch-skel i { display: block; border-radius: 12px; background: linear-gradient(90deg, var(--sand), #f7f5ef, var(--sand)); background-size: 200% 100%; animation: ch-shimmer 1.2s linear infinite; }
+  @keyframes ch-shimmer { to { background-position: -200% 0; } }
+  @keyframes ch-spin { to { transform: rotate(360deg); } }
+
+  @media (min-width: 900px) {
+    .ch-head-in { padding-top: 16px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ch-skel i, .ch-fav.pop svg { animation: none; }
+  }
+</style>
+
+<div class="ch" id="ch">
+  <header class="ch-head">
+    <div class="ch-col ch-head-in">
+      <div class="ch-top">
+        <button type="button" class="ch-loc" id="ch-loc" disabled>
+          <span id="ch-loc-ic"></span>
+          <span id="ch-loc-text">Localizando...</span>
+        </button>
+        <a href="<%= edit_user_registration_path %>" class="ch-avatar" aria-label="Meu perfil"><%= initial %></a>
+      </div>
+      <div class="ch-greet" id="ch-greet"></div>
+      <div class="ch-search-row">
+        <label class="ch-search">
+          <i data-feather="search" style="width:16px;height:16px;color:var(--graphite)"></i>
+          <input type="search" id="ch-q" placeholder="Buscar lava-rápido ou serviço" autocomplete="off" autocorrect="off" autocapitalize="none" enterkeyhint="search" aria-label="Buscar lava-rápido ou serviço">
+          <button type="button" class="ch-search-x" id="ch-q-x" aria-label="Limpar busca"><i data-feather="x" style="width:16px;height:16px"></i></button>
+        </label>
+        <button type="button" class="ch-cancel" id="ch-cancel">Cancelar</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="ch-col">
+    <section id="ch-search-view" class="ch-search-view"></section>
+
+    <div id="ch-home-view" class="ch-home-view">
+      <section id="ch-lm" class="is-off">
+        <div class="ch-sec-head">
+          <h2 class="ch-sec-title"><i data-feather="zap" style="width:18px;height:18px;color:var(--coral-500)"></i>Last minute</h2>
+          <a href="/disponivel" class="ch-link" id="ch-lm-all">Ver todos →</a>
+        </div>
+        <p class="ch-helper">Vagas abertas nos próximos 30 min perto de você.</p>
+        <div id="ch-lm-body"></div>
+      </section>
+
+      <h2 class="ch-sec-title ch-sec-title--solo">Categorias</h2>
+      <div class="ch-cats" id="ch-cats" role="group" aria-label="Categorias"></div>
+      <button type="button" class="ch-cat-clear" id="ch-cat-clear"><i data-feather="x" style="width:12px;height:12px"></i><span>Limpar filtro</span></button>
+
+      <div class="ch-sec-head"><h2 class="ch-sec-title">Perto de você</h2></div>
+      <div class="ch-filters" id="ch-filters"></div>
+
+      <div id="ch-error"></div>
+      <div id="ch-list"></div>
+    </div>
+  </main>
+</div>
+
+<script>
+(function () {
+  // ── Constantes (iguais às do app) ────────────────────────────────────────
+  var CATEGORIES = [
+    { key: 'lavagem',           label: 'Lavagem',          icon: 'droplet',    patterns: ['lavagem', 'lavar', 'wash'] },
+    { key: 'polimento',         label: 'Polimento',        icon: 'feather',    patterns: ['polimento', 'polir'] },
+    { key: 'higienizacao',      label: 'Higienização',     icon: 'wind',       patterns: ['higieniz', 'limpeza interna', 'sanitiz'] },
+    { key: 'cristalizacao',     label: 'Cristalização',    icon: 'aperture',   patterns: ['cristaliz'] },
+    { key: 'vitrificacao',      label: 'Vitrificação',     icon: 'shield',     patterns: ['vitrific'] },
+    { key: 'enceramento',       label: 'Enceramento',      icon: 'disc',       patterns: ['enceram', 'cera'] },
+    { key: 'hidratacao',        label: 'Hidratação Couro', icon: 'layers',     patterns: ['hidrat', 'couro'] },
+    { key: 'motor',             label: 'Motor',            icon: 'cpu',        patterns: ['motor'] },
+    { key: 'plasticos',         label: 'Plásticos',        icon: 'refresh-cw', patterns: ['plástic', 'plastic', 'revitaliz'] },
+    { key: 'farois',            label: 'Faróis',           icon: 'sun',        patterns: ['farol', 'faróis', 'farois'] },
+    { key: 'impermeabilizacao', label: 'Impermeab.',       icon: 'umbrella',   patterns: ['impermeabil'] },
+    { key: 'oxi',               label: 'Oxi-sanitiz.',     icon: 'filter',     patterns: ['oxi', 'sanitiz'] },
+    { key: 'outros',            label: 'Outros',           icon: 'grid',       patterns: ['outros', 'outras'] }
+  ];
+  var FILTERS = [
+    { key: 'aberto agora',       label: 'Aberto agora',       icon: 'clock' },
+    { key: 'perto de mim',       label: 'Perto de mim',       icon: 'map-pin' },
+    { key: 'melhores avaliados', label: 'Melhores avaliados', icon: 'star' }
+  ];
+  var ARTE = '/illustrations/busca-vazia.svg';
+  var ARTE_ALT = 'Ilustração de uma lupa ampliando um terreno vazio com mato, e um passarinho pousado nela';
+  var RECENTS_KEY = 'loov_recent_shops';
+  var COORDS_KEY = 'loov_last_coords';
+  var FIRST_NAME = <%= raw first_name.to_s.to_json %>;
+  var CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content;
+
+  // ── Estado ────────────────────────────────────────────────────────────────
+  var state = {
+    shops: [], disponiveis: [], coords: null, locating: true,
+    loading: true, error: null,
+    categories: [], filter: null,
+    search: '', searchMode: false, searchConfirmed: false,
+    recents: readRecents()
+  };
+
+  // ── Utilitários (portados do app) ─────────────────────────────────────────
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function icon(name, size, extra) {
+    if (!window.feather || !feather.icons[name]) return '';
+    return feather.icons[name].toSvg(Object.assign({ width: size, height: size }, extra || {}));
+  }
+  function normalize(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+  function matchesCategory(services, key) {
+    var cat = CATEGORIES.find(function (c) { return c.key === key; });
+    if (!cat) return true;
+    return (services || []).some(function (s) {
+      var hay = normalize((s.category || '') + ' ' + (s.title || '') + ' ' + (s.description || ''));
+      return cat.patterns.some(function (p) { return hay.indexOf(normalize(p)) !== -1; });
+    });
+  }
+  function isOpenNow(cw) { return !!(cw && cw.open_now); }
+  function fmtDistance(km) {
+    var n = parseFloat(km);
+    if (km == null || isNaN(n)) return null;
+    return n < 1 ? Math.round(n * 1000) + ' m' : n.toFixed(1).replace('.', ',') + ' km';
+  }
+  function greeting(h) { return h < 5 ? 'Boa noite' : h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite'; }
+  function distanceKm(a, b) {
+    var R = 6371, dLat = (b.latitude - a.latitude) * Math.PI / 180, dLng = (b.longitude - a.longitude) * Math.PI / 180;
+    var x = Math.sin(dLat / 2) ** 2 + Math.cos(a.latitude * Math.PI / 180) * Math.cos(b.latitude * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(x));
+  }
+  function readRecents() { try { var r = JSON.parse(localStorage.getItem(RECENTS_KEY) || '[]'); return Array.isArray(r) ? r.slice(0, 15) : []; } catch (e) { return []; } }
+  function writeRecents() { try { localStorage.setItem(RECENTS_KEY, JSON.stringify(state.recents)); } catch (e) {} }
+  function qs() { return state.coords ? '?latitude=' + state.coords.latitude + '&longitude=' + state.coords.longitude : ''; }
+
+  // ── Dados (mesmos endpoints do app) ───────────────────────────────────────
+  function loadShops(silent) {
+    if (!silent) { state.loading = true; renderList(); }
+    state.error = null;
+    return fetch('/car_washes.json' + qs(), { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+      .then(function (r) {
+        if (!r.ok) throw new Error('Erro ' + r.status + ' ao carregar lava-rápidos.');
+        return r.json();
+      })
+      .then(function (data) {
+        if (!Array.isArray(data)) throw new Error('Resposta inesperada do servidor.');
+        state.shops = data;
+      })
+      .catch(function (e) {
+        // Mantém a lista anterior: um soluço do servidor não apaga a tela.
+        state.error = e.message && e.message.indexOf('Erro') === 0 ? e.message : 'Não foi possível conectar ao servidor.';
+      })
+      .finally(function () { state.loading = false; renderError(); renderList(); if (state.searchMode) renderSearch(); });
+  }
+
+  function loadDisponiveis() {
+    if (!state.coords) return Promise.resolve();
+    return fetch('/disponivel' + qs(), { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : []; })
+      .then(function (list) {
+        var seen = {};
+        state.disponiveis = (Array.isArray(list) ? list : []).filter(function (it) {
+          var id = it.car_wash && it.car_wash.id;
+          if (id == null || seen[id]) return false;
+          seen[id] = true; return true;
+        });
+      })
+      .catch(function () {})
+      .finally(renderLastMinute);
+  }
+
+  function load(silent) { return Promise.all([loadShops(silent), loadDisponiveis()]); }
+
+  // ── Localização: URL → cache → GPS (o cache solta a tela na hora) ─────────
+  function setCoords(c) {
+    state.coords = c;
+    try { localStorage.setItem(COORDS_KEY, JSON.stringify({ lat: c.latitude, lng: c.longitude })); } catch (e) {}
+    var u = new URL(window.location);
+    u.searchParams.set('latitude', c.latitude); u.searchParams.set('longitude', c.longitude);
+    history.replaceState(null, '', u);
+  }
+  function initLocation() {
+    var u = new URL(window.location), lat = parseFloat(u.searchParams.get('latitude')), lng = parseFloat(u.searchParams.get('longitude'));
+    var start = null;
+    if (!isNaN(lat) && !isNaN(lng)) start = { latitude: lat, longitude: lng };
+    else { try { var c = JSON.parse(localStorage.getItem(COORDS_KEY) || 'null'); if (c) start = { latitude: c.lat, longitude: c.lng }; } catch (e) {} }
+
+    if (start) { setCoords(start); state.locating = false; renderLoc(); load(); }
+
+    if (!navigator.geolocation) {
+      state.locating = false; renderLoc();
+      if (!start) load();
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      var fresh = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+      if (!start) { setCoords(fresh); state.locating = false; renderLoc(); load(); return; }
+      // Só refaz se a pessoa se moveu o bastante pra mudar a ordem da lista.
+      if (distanceKm(start, fresh) > 0.3) { setCoords(fresh); load(true); }
+    }, function () {
+      state.locating = false; renderLoc();
+      if (!start) load();
+    }, { enableHighAccuracy: false, timeout: start ? 12000 : 6000, maximumAge: 300000 });
+  }
+
+  // ── Render: cabeçalho ─────────────────────────────────────────────────────
+  function renderLoc() {
+    var btn = $('ch-loc');
+    btn.disabled = state.locating || !!state.coords;
+    $('ch-loc-ic').innerHTML = state.locating
+      ? '<span class="ch-spin" style="display:inline-block;width:13px;height:13px;border-radius:50%;border:2px solid var(--coral-100);border-top-color:var(--coral-500);animation:ch-spin .7s linear infinite"></span>'
+      : icon('map-pin', 13, { color: state.coords ? 'var(--coral-500)' : 'var(--ash)' });
+    $('ch-loc-text').textContent = state.locating ? 'Localizando...' : (state.coords ? 'Sua região' : 'Ativar localização');
+  }
+  function renderGreeting() {
+    var h = new Date().getHours();
+    $('ch-greet').textContent = FIRST_NAME ? greeting(h) + ', ' + FIRST_NAME + ' 👋' : greeting(h) + ' 👋';
+  }
+
+  // ── Render: Last minute ───────────────────────────────────────────────────
+  function vagasAgora() {
+    var now = Date.now();
+    return state.disponiveis.filter(function (it) {
+      var t = it.slots && it.slots[0] ? new Date(it.slots[0]).getTime() : 0;
+      return t > now;
+    });
+  }
+  function renderLastMinute() {
+    var sec = $('ch-lm');
+    sec.classList.toggle('is-off', !state.coords);
+    if (!state.coords) return;
+    $('ch-lm-all').href = '/disponivel' + qs();
+    var list = vagasAgora(), body = $('ch-lm-body');
+    if (!list.length) {
+      body.innerHTML = '<div class="ch-lm-empty"><div class="ch-lm-empty-ic">' + icon('clock', 16) + '</div>' +
+        '<p>Nenhum lava-rápido perto de você tem vaga livre nos próximos 30 minutos. Os que estão abertos continuam logo abaixo, com horário pra escolher.</p></div>';
+      return;
+    }
+    var now = Date.now();
+    body.innerHTML = '<div class="ch-hscroll">' + list.map(function (it) {
+      var cw = it.car_wash, slot = new Date(it.slots[0]);
+      var time = slot.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      var mins = Math.ceil((slot.getTime() - now) / 60000);
+      var dist = fmtDistance(cw.distance_km);
+      var reviews = Number(cw.reviews_count) || 0, rating = Number(cw.rating_avg) || 0;
+      var street = cw.logradouro ? cw.logradouro + (cw.numero ? ', ' + cw.numero : '') : null;
+      var href = '/disponivel?car_wash_id=' + cw.id + (state.coords ? '&latitude=' + state.coords.latitude + '&longitude=' + state.coords.longitude : '');
+      return '<a class="ch-lm" href="' + href + '">' +
+        '<div class="ch-lm-stats"><div class="ch-lm-stat"><div class="ch-lm-val">' + esc(time || '—') + '</div><div class="ch-lm-lab">HORÁRIO</div></div>' +
+        '<div class="ch-lm-div"></div><div class="ch-lm-stat"><div class="ch-lm-val">' + esc(dist || '—') + '</div><div class="ch-lm-lab">DISTÂNCIA</div></div></div>' +
+        '<div class="ch-lm-shop"><div class="ch-lm-logo">' + esc((cw.name || '?')[0].toUpperCase()) + '</div><div class="ch-lm-text">' +
+          '<div class="ch-lm-name">' + esc(cw.name) + '</div>' +
+          (street ? '<div class="ch-lm-sub">' + esc(street) + '</div>' : '') +
+          '<div class="ch-lm-sub">' + esc(cw.bairro || cw.cidade || '—') + (mins > 0 && mins < 1000 ? ' · <span class="ch-lm-cd">em ' + mins + 'min</span>' : '') + '</div>' +
+        '</div></div>' +
+        '<div class="ch-lm-rate' + (reviews ? '' : ' is-new') + '">' + icon('star', 10, { color: reviews ? 'var(--coral-500)' : 'rgba(250,250,246,.45)' }) +
+          (reviews ? rating.toFixed(1).replace('.', ',') : 'Novo') + '</div>' +
+      '</a>';
+    }).join('') + '</div>';
+  }
+
+  // ── Render: categorias e filtros ──────────────────────────────────────────
+  function renderCategories() {
+    $('ch-cats').innerHTML = CATEGORIES.map(function (c) {
+      var on = state.categories.indexOf(c.key) !== -1;
+      return '<button type="button" class="ch-cat" role="checkbox" aria-checked="' + on + '" data-cat="' + c.key + '">' + icon(c.icon, 22) + '<span>' + c.label + '</span></button>';
+    }).join('');
+    var clear = $('ch-cat-clear'), n = state.categories.length;
+    clear.style.display = n ? 'inline-flex' : 'none';
+    clear.querySelector('span').textContent = n > 1 ? 'Limpar filtros (' + n + ')' : 'Limpar filtro';
+  }
+  function renderFilters() {
+    $('ch-filters').innerHTML = FILTERS.map(function (f) {
+      return '<button type="button" class="ch-pill" aria-pressed="' + (state.filter === f.key) + '" data-filter="' + f.key + '">' + icon(f.icon, 13) + f.label + '</button>';
+    }).join('') + '<button type="button" class="ch-pill-clear" id="ch-filter-clear" style="display:' + (state.filter ? 'inline-flex' : 'none') + '">' + icon('x', 13) + 'Limpar</button>';
+  }
+
+  // ── Render: lista ─────────────────────────────────────────────────────────
+  function filteredShops() {
+    var list = state.shops.slice();
+    if (state.categories.length) list = list.filter(function (cw) { return state.categories.every(function (k) { return matchesCategory(cw.services, k); }); });
+    if (state.filter === 'aberto agora') list = list.filter(isOpenNow);
+    if (state.filter === 'perto de mim') {
+      list.sort(function (a, b) { return (a.distance_km == null ? Infinity : a.distance_km) - (b.distance_km == null ? Infinity : b.distance_km); });
+    } else if (state.filter === 'melhores avaliados') {
+      list.sort(function (a, b) {
+        var ra = Number(a.rating_avg || 0), rb = Number(b.rating_avg || 0);
+        return ra !== rb ? rb - ra : Number(b.reviews_count || 0) - Number(a.reviews_count || 0);
+      });
+    }
+    // Abertos sempre antes de fechados (sort estável preserva a ordem interna).
+    list.sort(function (a, b) { return (isOpenNow(a) ? 0 : 1) - (isOpenNow(b) ? 0 : 1); });
+    return list;
+  }
+  function shopRow(cw) {
+    var open = isOpenNow(cw), reviews = Number(cw.reviews_count) || 0, rating = Number(cw.rating_avg) || 0;
+    var meta = [cw.bairro, fmtDistance(cw.distance_km)].filter(Boolean).join(' · ');
+    return '<a class="ch-row' + (open ? '' : ' is-closed') + '" href="/car_washes/' + cw.id + '" data-open-shop="' + cw.id + '">' +
+      '<div class="ch-thumb">' + icon('droplet', 20) + '</div>' +
+      '<div class="ch-body"><div class="ch-name-line"><span class="ch-name">' + esc(cw.name) + '</span>' + (open ? '' : '<span class="ch-closed-tag">· FECHADO</span>') + '</div>' +
+        (meta ? '<div class="ch-meta">' + esc(meta) + '</div>' : '') + '</div>' +
+      '<div class="ch-right">' +
+        '<button type="button" class="ch-fav" data-fav="' + cw.id + '" aria-pressed="' + !!cw.favorited + '" aria-label="' + (cw.favorited ? 'Remover dos favoritos' : 'Adicionar aos favoritos') + '">' + icon('heart', 20) + '</button>' +
+        '<span class="ch-rate' + (reviews ? '' : ' is-empty') + '">' + icon('star', 12, { color: reviews && open ? '#d6a419' : 'var(--ash)' }) + (reviews ? rating.toFixed(1).replace('.', ',') : '—') + '</span>' +
+      '</div></a>';
+  }
+  function renderError() {
+    $('ch-error').innerHTML = state.error && !state.loading
+      ? '<div class="ch-error">' + icon('wifi-off', 14, { color: 'var(--rose-500)' }) + '<span>' + esc(state.error) + '</span><button type="button" id="ch-retry">Tentar novamente</button></div>'
+      : '';
+  }
+  function renderList() {
+    var el = $('ch-list');
+    if (state.loading && !state.shops.length) {
+      el.innerHTML = Array.from({ length: 6 }).map(function () {
+        return '<div class="ch-skel"><i style="width:56px;height:56px"></i><div style="flex:1"><i style="width:55%;height:14px;margin-bottom:8px"></i><i style="width:35%;height:12px"></i></div></div>';
+      }).join('');
+      return;
+    }
+    var list = filteredShops();
+    if (!list.length) {
+      var filtered = state.categories.length || state.filter;
+      el.innerHTML = '<div class="ch-empty"><img src="' + ARTE + '" alt="' + ARTE_ALT + '"><p>' +
+        (filtered ? 'Nenhum lava-rápido corresponde a esses filtros.' : 'Nenhum lava-rápido por aqui.') + '</p>' +
+        (filtered ? '<button type="button" class="ch-clear-all" id="ch-clear-all">Limpar tudo</button>' : '') + '</div>';
+      return;
+    }
+    el.innerHTML = '<div style="padding-bottom:20px">' + list.map(shopRow).join('') + '</div>';
+  }
+
+  // ── Render: busca ─────────────────────────────────────────────────────────
+  function searchResults() {
+    var q = normalize(state.search.trim());
+    if (!q) return [];
+    var svc = q.length >= 5; // "lava" bateria em todo mundo
+    return state.shops.filter(function (cw) {
+      return normalize(cw.name).indexOf(q) !== -1 || normalize(cw.bairro).indexOf(q) !== -1 ||
+        (svc && (cw.services || []).some(function (s) { return normalize(s.title).indexOf(q) !== -1 || normalize(s.category).indexOf(q) !== -1; }));
+    }).slice(0, 15);
+  }
+  function resultRow(shop, removable) {
+    var sub = shop.bairro ? 'Lava-rápido · ' + shop.bairro : (shop.cidade ? 'Lava-rápido · ' + shop.cidade : 'Lava-rápido');
+    return '<a class="ch-result" href="/car_washes/' + shop.id + '" data-open-shop="' + shop.id + '">' +
+      '<div class="ch-thumb">' + icon('droplet', 20) + '</div>' +
+      '<div class="ch-body"><div class="ch-name">' + esc(shop.name) + '</div><div class="ch-result-sub">' + esc(sub) + '</div></div>' +
+      (removable ? '<button type="button" class="ch-x" data-remove-recent="' + shop.id + '" aria-label="Remover dos recentes">' + icon('x', 16) + '</button>' : '') +
+    '</a>';
+  }
+  function renderSearch() {
+    var view = $('ch-search-view'), q = state.search.trim();
+    $('ch-q-x').style.display = state.search ? 'block' : 'none';
+    if (!q) {
+      view.innerHTML = '<h2 class="ch-recents-title">Buscas recentes</h2>' + (state.recents.length
+        ? '<div style="padding-bottom:40px">' + state.recents.map(function (s) { return resultRow(s, true); }).join('') + '</div>'
+        : '<p class="ch-empty-recent">Nada por aqui ainda. Digite acima pra procurar um lava-rápido ou serviço.</p>');
+      return;
+    }
+    var res = searchResults();
+    if (!res.length) {
+      // Enquanto digita, só o texto; a ilustração entra quando a busca é confirmada.
+      view.innerHTML = '<div class="ch-search-empty">' + (state.searchConfirmed ? '<img src="' + ARTE + '" alt="' + ARTE_ALT + '">' : '') +
+        '<h3>Nada encontrado para "' + esc(q) + '"</h3><p>Tente o nome do bairro ou de um serviço, como "polimento".</p></div>';
+      return;
+    }
+    view.innerHTML = '<div style="padding-bottom:40px">' + res.map(function (s) { return resultRow(s, false); }).join('') + '</div>';
+  }
+  function setSearchMode(on) {
+    state.searchMode = on;
+    $('ch').classList.toggle('is-searching', on);
+    if (on) renderSearch();
+  }
+
+  // ── Ações ─────────────────────────────────────────────────────────────────
+  function saveRecent(id) {
+    var shop = state.shops.find(function (s) { return String(s.id) === String(id); }) || state.recents.find(function (s) { return String(s.id) === String(id); });
+    if (!shop) return;
+    var snap = { id: shop.id, name: shop.name, bairro: shop.bairro, cidade: shop.cidade, address: shop.address };
+    state.recents = [snap].concat(state.recents.filter(function (x) { return String(x.id) !== String(id); })).slice(0, 15);
+    writeRecents();
+  }
+  function toggleFavorite(id, btn) {
+    var shop = state.shops.find(function (s) { return String(s.id) === String(id); });
+    if (!shop) return;
+    var prev = !!shop.favorited;
+    shop.favorited = !prev;                       // otimista
+    btn.setAttribute('aria-pressed', String(!prev));
+    btn.setAttribute('aria-label', !prev ? 'Remover dos favoritos' : 'Adicionar aos favoritos');
+    btn.classList.remove('pop'); void btn.offsetWidth; if (!prev) btn.classList.add('pop');
+    var req = prev
+      ? fetch('/client/favorites/' + id, { method: 'DELETE', credentials: 'same-origin', headers: { Accept: 'application/json', 'X-CSRF-Token': CSRF } })
+      : fetch('/client/favorites', { method: 'POST', credentials: 'same-origin', headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF }, body: JSON.stringify({ car_wash_id: id }) });
+    req.then(function (r) { if (!r.ok) throw new Error(); }).catch(function () {
+      shop.favorited = prev;                      // reverte: volta ao estado real
+      btn.setAttribute('aria-pressed', String(prev));
+      btn.setAttribute('aria-label', prev ? 'Remover dos favoritos' : 'Adicionar aos favoritos');
+    });
+  }
+
+  document.addEventListener('click', function (e) {
+    var t;
+    if ((t = e.target.closest('[data-fav]'))) { e.preventDefault(); e.stopPropagation(); toggleFavorite(t.dataset.fav, t); return; }
+    if ((t = e.target.closest('[data-remove-recent]'))) {
+      e.preventDefault(); e.stopPropagation();
+      state.recents = state.recents.filter(function (x) { return String(x.id) !== t.dataset.removeRecent; });
+      writeRecents(); renderSearch(); return;
+    }
+    if ((t = e.target.closest('[data-open-shop]'))) { saveRecent(t.dataset.openShop); return; }
+    if ((t = e.target.closest('[data-cat]'))) {
+      var k = t.dataset.cat, i = state.categories.indexOf(k);
+      if (i === -1) state.categories.push(k); else state.categories.splice(i, 1);
+      renderCategories(); renderList(); return;
+    }
+    if ((t = e.target.closest('[data-filter]'))) { state.filter = state.filter === t.dataset.filter ? null : t.dataset.filter; renderFilters(); renderList(); return; }
+    if (e.target.closest('#ch-filter-clear')) { state.filter = null; renderFilters(); renderList(); return; }
+    if (e.target.closest('#ch-cat-clear')) { state.categories = []; renderCategories(); renderList(); return; }
+    if (e.target.closest('#ch-clear-all')) { state.categories = []; state.filter = null; renderCategories(); renderFilters(); renderList(); return; }
+    if (e.target.closest('#ch-retry')) { load(); return; }
+  });
+
+  var input = $('ch-q');
+  // Entra no modo busca por foco, clique ou digitação — qualquer caminho até
+  // o campo (mouse, Tab, autopreenchimento) troca a home pela busca.
+  function enterSearch() { if (!state.searchMode) setSearchMode(true); }
+  input.addEventListener('focus', enterSearch);
+  input.addEventListener('click', enterSearch);
+  input.addEventListener('input', function () { enterSearch(); state.search = input.value; state.searchConfirmed = false; renderSearch(); });
+  input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); state.searchConfirmed = true; renderSearch(); input.blur(); } if (e.key === 'Escape') cancelSearch(); });
+  $('ch-q-x').addEventListener('click', function (e) { e.preventDefault(); input.value = ''; state.search = ''; state.searchConfirmed = false; renderSearch(); input.focus(); });
+  function cancelSearch() { input.value = ''; state.search = ''; state.searchConfirmed = false; setSearchMode(false); input.blur(); }
+  $('ch-cancel').addEventListener('click', cancelSearch);
+  $('ch-loc').addEventListener('click', function () { if (!state.coords && !state.locating) { state.locating = true; renderLoc(); initLocation(); } });
+
+  // Contagem regressiva do Last minute: re-render a cada 15s (como o app).
+  setInterval(function () { renderLastMinute(); renderGreeting(); }, 15000);
+  // Voltar pra aba recarrega (o app recarrega ao ganhar foco).
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && !state.locating) load(true); });
+
+  function boot() {
+    if (window.feather) feather.replace({ 'stroke-width': 2 });
+    renderGreeting(); renderLoc(); renderCategories(); renderFilters(); renderList();
+    initLocation();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+</script>
