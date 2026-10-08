@@ -23,16 +23,18 @@
 <script src="/vendor/feather-4.29.2.min.js"></script>
 
 <style>
-  .ch { --w: 760px; background: var(--cream); min-height: 100vh; padding-top: 60px; color: var(--ink); }
+  .ch { background: var(--cream); min-height: 100vh; padding-top: 60px; color: var(--ink); }
   .ch *, .ch *::before, .ch *::after { box-sizing: border-box; }
-  .ch-col { width: 100%; max-width: var(--w); margin: 0 auto; }
+  .ch-col { width: 100%; max-width: 1680px; margin: 0 auto; }
   .ch svg.feather { display: block; }
   .ch button { font-family: inherit; line-height: normal; cursor: pointer; }
 
   /* ── Cabeçalho fixo ─────────────────────────────────────────────────── */
   .ch-head { position: sticky; top: 60px; z-index: 20; background: var(--cream); border-bottom: 1px solid var(--stone); }
   .ch-head-in { padding: 10px 20px 12px; }
-  .ch-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .ch-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 0; }
+  .ch-who { min-width: 0; flex: 1; }
+  .ch-who .ch-loc { display: flex; margin-bottom: 6px; }
   .ch-loc { display: inline-flex; align-items: center; gap: 6px; max-width: 75%; padding: 8px 12px; margin-left: -12px; border: 0; background: transparent; border-radius: 100px; color: var(--ink); font-size: 13px; font-weight: 600; }
   .ch-loc:hover { background: var(--sand); }
   .ch-loc[disabled] { cursor: default; background: transparent; }
@@ -78,6 +80,11 @@
   .ch-lm-cd { color: var(--coral-500); font-weight: 600; }
   .ch-lm-rate { position: absolute; top: 12px; right: 12px; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 100px; background: rgba(250,250,246,.08); font-size: 11px; font-weight: 600; }
   .ch-lm-rate.is-new { color: rgba(250,250,246,.55); font-weight: 400; letter-spacing: .3px; }
+  .ch-shelf { position: relative; }
+  .ch-shelf-nav { display: none; gap: 8px; }
+  .ch-arrow { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--stone); background: var(--paper); color: var(--ink); display: flex; align-items: center; justify-content: center; transition: background .15s, border-color .15s, opacity .15s; }
+  .ch-arrow:hover:not([disabled]) { border-color: var(--ink); }
+  .ch-arrow[disabled] { opacity: .35; cursor: default; }
   .ch-lm-empty { display: flex; align-items: center; gap: 12px; margin: 4px 16px 8px; padding: 14px; background: var(--paper); border: 1px solid var(--stone); border-radius: 16px; }
   .ch-lm-empty-ic { flex: 0 0 34px; height: 34px; border-radius: 50%; background: var(--sand); display: flex; align-items: center; justify-content: center; color: var(--graphite); }
   .ch-lm-empty p { margin: 0; font-size: 12.5px; line-height: 18px; color: var(--graphite); }
@@ -149,8 +156,53 @@
   @keyframes ch-shimmer { to { background-position: -200% 0; } }
   @keyframes ch-spin { to { transform: rotate(360deg); } }
 
+  /* ── Responsivo ───────────────────────────────────────────────────────
+     Celular: o app como é. A partir daí a tela inteira é usada — e o que é
+     carrossel/faixa no celular vira grade, porque no computador não existe
+     o gesto de arrastar pro lado (rolagem horizontal com mouse é escondida
+     e cansativa). */
+  .ch-grid { padding-bottom: 24px; }
+  .ch-grid--results { padding-bottom: 40px; }
+
+  @media (min-width: 640px) {
+    .ch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); column-gap: 8px; padding: 0 12px 32px; }
+    .ch-grid .ch-row, .ch-grid .ch-result { padding-left: 8px; padding-right: 8px; border-radius: 16px; }
+  }
+
   @media (min-width: 900px) {
-    .ch-head-in { padding-top: 16px; }
+    .ch-col { padding: 0 28px; }
+    .ch-head-in { display: flex; align-items: center; gap: 32px; padding-top: 14px; padding-bottom: 14px; }
+    .ch-top { order: 3; flex: 0 0 auto; margin-left: auto; }
+    .ch-desk-who .ch-loc { white-space: nowrap; margin-left: -12px; }
+    .ch-who { display: none; }
+    .ch-search-row { order: 2; flex: 1; max-width: 760px; }
+    .ch-desk-who { display: flex !important; order: 1; flex: 0 1 auto; min-width: 0; flex-direction: column; }
+    .ch-search { height: 50px; border-radius: 25px; }
+    .ch-search input { font-size: 15px; }
+
+    .ch-sec-head { margin-top: 36px; }
+    .ch-sec-title { font-size: 26px; }
+    .ch-sec-title--solo { margin-top: 40px; }
+
+    /* Last minute: continua prateleira de UMA linha (grade com 20 vagas
+       empurrava a página inteira pra baixo); setas no lugar do arrastar. */
+    .ch-shelf-nav { display: flex; }
+    .ch-hscroll { scroll-behavior: smooth; }
+    .ch-lm { flex-basis: 288px; }
+    .ch-lm-empty { margin: 4px 20px 8px; max-width: 760px; }
+
+    /* Categorias: todas visíveis, sem rolagem lateral */
+    /* 13 categorias: 7 + 6 equilibradas; numa linha só quando cabe. */
+    .ch-cats { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); overflow: visible; }
+    .ch-cat { flex: none; width: auto; height: 96px; }
+    .ch-filters { flex-wrap: wrap; overflow: visible; }
+  }
+
+  @media (min-width: 1280px) {
+    .ch-col { padding: 0 44px; }
+  }
+  @media (min-width: 1560px) {
+    .ch-cats { grid-template-columns: repeat(13, minmax(0, 1fr)); }
   }
   @media (prefers-reduced-motion: reduce) {
     .ch-skel i, .ch-fav.pop svg { animation: none; }
@@ -161,13 +213,19 @@
   <header class="ch-head">
     <div class="ch-col ch-head-in">
       <div class="ch-top">
+        <div class="ch-who">
         <button type="button" class="ch-loc" id="ch-loc" disabled>
           <span id="ch-loc-ic"></span>
           <span id="ch-loc-text">Localizando...</span>
         </button>
+        <div class="ch-greet" id="ch-greet"></div>
+        </div>
         <a href="<%= edit_user_registration_path %>" class="ch-avatar" aria-label="Meu perfil"><%= initial %></a>
       </div>
-      <div class="ch-greet" id="ch-greet"></div>
+      <div class="ch-desk-who" style="display:none">
+        <button type="button" class="ch-loc" id="ch-loc-d" disabled><span id="ch-loc-ic-d"></span><span id="ch-loc-text-d">Localizando...</span></button>
+        <div class="ch-greet" id="ch-greet-d" style="margin:0"></div>
+      </div>
       <div class="ch-search-row">
         <label class="ch-search">
           <i data-feather="search" style="width:16px;height:16px;color:var(--graphite)"></i>
@@ -186,7 +244,13 @@
       <section id="ch-lm" class="is-off">
         <div class="ch-sec-head">
           <h2 class="ch-sec-title"><i data-feather="zap" style="width:18px;height:18px;color:var(--coral-500)"></i>Last minute</h2>
-          <a href="/disponivel" class="ch-link" id="ch-lm-all">Ver todos →</a>
+          <div style="display:flex;align-items:center;gap:16px">
+            <a href="/disponivel" class="ch-link" id="ch-lm-all">Ver todos →</a>
+            <div class="ch-shelf-nav" id="ch-lm-nav">
+              <button type="button" class="ch-arrow" id="ch-lm-prev" aria-label="Vagas anteriores"><i data-feather="chevron-left" style="width:18px;height:18px"></i></button>
+              <button type="button" class="ch-arrow" id="ch-lm-next" aria-label="Mais vagas"><i data-feather="chevron-right" style="width:18px;height:18px"></i></button>
+            </div>
+          </div>
         </div>
         <p class="ch-helper">Vagas abertas nos próximos 30 min perto de você.</p>
         <div id="ch-lm-body"></div>
@@ -354,10 +418,14 @@
       ? '<span class="ch-spin" style="display:inline-block;width:13px;height:13px;border-radius:50%;border:2px solid var(--coral-100);border-top-color:var(--coral-500);animation:ch-spin .7s linear infinite"></span>'
       : icon('map-pin', 13, { color: state.coords ? 'var(--coral-500)' : 'var(--ash)' });
     $('ch-loc-text').textContent = state.locating ? 'Localizando...' : (state.coords ? 'Sua região' : 'Ativar localização');
+    $('ch-loc-d').disabled = btn.disabled;
+    $('ch-loc-ic-d').innerHTML = $('ch-loc-ic').innerHTML;
+    $('ch-loc-text-d').textContent = $('ch-loc-text').textContent;
   }
   function renderGreeting() {
     var h = new Date().getHours();
     $('ch-greet').textContent = FIRST_NAME ? greeting(h) + ', ' + FIRST_NAME + ' 👋' : greeting(h) + ' 👋';
+    $('ch-greet-d').textContent = $('ch-greet').textContent;
   }
 
   // ── Render: Last minute ───────────────────────────────────────────────────
@@ -374,13 +442,15 @@
     if (!state.coords) return;
     $('ch-lm-all').href = '/disponivel' + qs();
     var list = vagasAgora(), body = $('ch-lm-body');
+    var keepScroll = $('ch-lm-track') ? $('ch-lm-track').scrollLeft : 0;
     if (!list.length) {
+      $('ch-lm-nav').style.visibility = 'hidden';
       body.innerHTML = '<div class="ch-lm-empty"><div class="ch-lm-empty-ic">' + icon('clock', 16) + '</div>' +
         '<p>Nenhum lava-rápido perto de você tem vaga livre nos próximos 30 minutos. Os que estão abertos continuam logo abaixo, com horário pra escolher.</p></div>';
       return;
     }
     var now = Date.now();
-    body.innerHTML = '<div class="ch-hscroll">' + list.map(function (it) {
+    body.innerHTML = '<div class="ch-hscroll" id="ch-lm-track">' + list.map(function (it) {
       var cw = it.car_wash, slot = new Date(it.slots[0]);
       var time = slot.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       var mins = Math.ceil((slot.getTime() - now) / 60000);
@@ -400,6 +470,22 @@
           (reviews ? rating.toFixed(1).replace('.', ',') : 'Novo') + '</div>' +
       '</a>';
     }).join('') + '</div>';
+    var track = $('ch-lm-track');
+    track.scrollLeft = keepScroll;
+    track.addEventListener('scroll', updateArrows, { passive: true });
+    updateArrows();
+  }
+  function updateArrows() {
+    var t = $('ch-lm-track'), nav = $('ch-lm-nav');
+    if (!t) { nav.style.visibility = 'hidden'; return; }
+    var max = t.scrollWidth - t.clientWidth;
+    nav.style.visibility = max > 4 ? 'visible' : 'hidden';
+    $('ch-lm-prev').disabled = t.scrollLeft <= 4;
+    $('ch-lm-next').disabled = t.scrollLeft >= max - 4;
+  }
+  function pageShelf(dir) {
+    var t = $('ch-lm-track');
+    if (t) t.scrollBy({ left: dir * Math.max(t.clientWidth - 120, 288), behavior: 'smooth' });
   }
 
   // ── Render: categorias e filtros ──────────────────────────────────────────
@@ -468,7 +554,7 @@
         (filtered ? '<button type="button" class="ch-clear-all" id="ch-clear-all">Limpar tudo</button>' : '') + '</div>';
       return;
     }
-    el.innerHTML = '<div style="padding-bottom:20px">' + list.map(shopRow).join('') + '</div>';
+    el.innerHTML = '<div class="ch-grid">' + list.map(shopRow).join('') + '</div>';
   }
 
   // ── Render: busca ─────────────────────────────────────────────────────────
@@ -494,7 +580,7 @@
     $('ch-q-x').style.display = state.search ? 'block' : 'none';
     if (!q) {
       view.innerHTML = '<h2 class="ch-recents-title">Buscas recentes</h2>' + (state.recents.length
-        ? '<div style="padding-bottom:40px">' + state.recents.map(function (s) { return resultRow(s, true); }).join('') + '</div>'
+        ? '<div class="ch-grid ch-grid--results">' + state.recents.map(function (s) { return resultRow(s, true); }).join('') + '</div>'
         : '<p class="ch-empty-recent">Nada por aqui ainda. Digite acima pra procurar um lava-rápido ou serviço.</p>');
       return;
     }
@@ -505,7 +591,7 @@
         '<h3>Nada encontrado para "' + esc(q) + '"</h3><p>Tente o nome do bairro ou de um serviço, como "polimento".</p></div>';
       return;
     }
-    view.innerHTML = '<div style="padding-bottom:40px">' + res.map(function (s) { return resultRow(s, false); }).join('') + '</div>';
+    view.innerHTML = '<div class="ch-grid ch-grid--results">' + res.map(function (s) { return resultRow(s, false); }).join('') + '</div>';
   }
   function setSearchMode(on) {
     state.searchMode = on;
@@ -558,6 +644,8 @@
     if (e.target.closest('#ch-cat-clear')) { state.categories = []; renderCategories(); renderList(); return; }
     if (e.target.closest('#ch-clear-all')) { state.categories = []; state.filter = null; renderCategories(); renderFilters(); renderList(); return; }
     if (e.target.closest('#ch-retry')) { load(); return; }
+    if (e.target.closest('#ch-lm-prev')) { pageShelf(-1); return; }
+    if (e.target.closest('#ch-lm-next')) { pageShelf(1); return; }
   });
 
   var input = $('ch-q');
@@ -571,8 +659,11 @@
   $('ch-q-x').addEventListener('click', function (e) { e.preventDefault(); input.value = ''; state.search = ''; state.searchConfirmed = false; renderSearch(); input.focus(); });
   function cancelSearch() { input.value = ''; state.search = ''; state.searchConfirmed = false; setSearchMode(false); input.blur(); }
   $('ch-cancel').addEventListener('click', cancelSearch);
-  $('ch-loc').addEventListener('click', function () { if (!state.coords && !state.locating) { state.locating = true; renderLoc(); initLocation(); } });
+  ['ch-loc', 'ch-loc-d'].forEach(function (id) {
+    $(id).addEventListener('click', function () { if (!state.coords && !state.locating) { state.locating = true; renderLoc(); initLocation(); } });
+  });
 
+  window.addEventListener('resize', updateArrows, { passive: true });
   // Contagem regressiva do Last minute: re-render a cada 15s (como o app).
   setInterval(function () { renderLastMinute(); renderGreeting(); }, 15000);
   // Voltar pra aba recarrega (o app recarrega ao ganhar foco).
