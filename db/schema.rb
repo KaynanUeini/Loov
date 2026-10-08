@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_08_13_000002) do
+ActiveRecord::Schema[7.1].define(version: 2026_10_07_230000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -77,6 +77,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_08_13_000002) do
     t.string "cancellation_reason"
     t.string "cancelled_by_role"
     t.datetime "attended_at"
+    t.datetime "reminder_sent_at"
     t.index ["acceptance_expires_at"], name: "index_appointments_on_acceptance_expires_at"
     t.index ["appointment_type"], name: "index_appointments_on_appointment_type"
     t.index ["attended_at"], name: "index_appointments_on_attended_at"

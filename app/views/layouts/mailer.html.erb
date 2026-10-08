@@ -4,8 +4,8 @@
     content_for :footer    — por que a pessoa recebeu este e-mail
 
   Regras de e-mail, não de site: layout em tabela e estilo inline (Gmail e
-  Outlook ignoram <style> e flex), nenhuma imagem — a marca é o selo LOOV
-  em HTML, igual ao do topo do site. Peças em app/views/emails/_*.
+  Outlook ignoram <style> e flex), a única imagem é a marca — a pill LOOV
+  em imagem (pill do app), o resto é HTML. Peças em app/views/emails/_*.
 %>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -26,15 +26,16 @@
       <td align="center" style="padding:40px 16px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;">
 
+          <%# Pill da marca — a mesma do topo do login do app (dois anéis + "loov").
+              Imagem porque os anéis sobrepostos precisam de posição absoluta,
+              que Gmail/Outlook ignoram. Gerada 3x a partir dos estilos do
+              LoovPill (LoovApp/src/screens/LoginScreen.js), cantos na cor do
+              fundo. Imagem bloqueada: sobra uma pill escura escrita "loov". %>
           <tr>
             <td style="padding:0 0 24px 4px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td style="background:#1a1612;border-radius:999px;padding:9px 16px 9px 14px;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;font-weight:700;letter-spacing:0.5px;color:#fafaf6;">
-                    <span style="color:#dd7852;">&#9673;</span>&nbsp; LOOV
-                  </td>
-                </tr>
-              </table>
+              <img src="<%= "#{ENV.fetch('APP_PROTOCOL', 'https')}://#{ENV.fetch('APP_HOST', 'loov-api.onrender.com')}/email/loov-pill.png" %>"
+                   width="111" height="44" alt="loov"
+                   style="display:block;border:0;outline:none;text-decoration:none;width:111px;height:44px;background:#28231c;border-radius:22px;color:#fafaf6;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:20px;font-weight:700;line-height:44px;text-align:center;">
             </td>
           </tr>
 
