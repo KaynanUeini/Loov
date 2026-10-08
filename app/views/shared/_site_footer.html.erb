@@ -1,0 +1,89 @@
+<%#
+  Rodapé do site — o mesmo pra visitante e cliente (local `audience`:
+  :visitor ou :client). Fica sempre no fim do conteúdo, inclusive quando a
+  lista ainda tem "Mostrar mais": cada clique empurra o rodapé pra baixo,
+  ele nunca some.
+
+  Desenho Apple: fundo areia, texto pequeno e organizado em colunas,
+  hierarquia só por peso e cor, uma linha fina separando a assinatura.
+  Só links pra páginas que existem.
+%>
+<% client = local_assigns[:audience] == :client %>
+<style>
+  .sf { background: var(--sand); color: var(--graphite); margin-top: 48px; font-size: 13px; line-height: 1.5; }
+  .sf-in { max-width: 1680px; margin: 0 auto; padding: 48px 20px 28px; }
+  .sf-top { display: grid; grid-template-columns: minmax(220px, 1.4fr) repeat(auto-fit, minmax(150px, 1fr)); gap: 32px 40px; }
+  .sf-brand p { margin: 14px 0 0; max-width: 28ch; color: var(--graphite); }
+  .sf-brand .loov-brand { text-decoration: none; }
+  .sf h3 { margin: 0 0 12px !important; font-family: 'Inter', sans-serif !important; font-size: 12.5px; font-weight: 600; letter-spacing: 0; color: var(--ink); }
+  .sf ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
+  /* Só os links das colunas — o logo mantém as cores da pill. */
+  .sf ul a { color: var(--graphite) !important; text-decoration: none; }
+  .sf ul a:hover { color: var(--ink) !important; text-decoration: underline; text-underline-offset: 3px; }
+  .sf-bottom { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--stone); font-size: 12px; color: var(--ash); }
+  .sf-bottom a { color: var(--graphite) !important; }
+  @media (min-width: 900px) { .sf-in { padding: 64px 48px 32px; } }
+  @media (min-width: 1280px) { .sf-in { padding-left: 64px; padding-right: 64px; } }
+  @media (max-width: 640px) { .sf-top { grid-template-columns: 1fr 1fr; } .sf-brand { grid-column: 1 / -1; } }
+</style>
+
+<footer class="sf">
+  <div class="sf-in">
+    <div class="sf-top">
+      <div class="sf-brand">
+        <a href="/" class="loov-brand" aria-label="Loov — início">
+          <span class="glyph"><span class="ring-cream"></span><span class="ring-coral"></span><span class="ring-coral-dot"></span></span>
+          <span class="word">loov</span>
+        </a>
+        <p>Lava-rápido sem fila. Escolha o lugar, o horário e o serviço — a Loov cuida do resto.</p>
+      </div>
+
+      <% if client %>
+        <nav aria-label="Explorar">
+          <h3>Explorar</h3>
+          <ul>
+            <li><a href="/">Perto de você</a></li>
+            <li><%= link_to "Disponível agora", disponivel_index_path %></li>
+            <li><%= link_to "Favoritos", client_favorites_path %></li>
+            <li><%= link_to "Cartões fidelidade", client_loyalty_cards_path %></li>
+          </ul>
+        </nav>
+        <nav aria-label="Sua conta">
+          <h3>Sua conta</h3>
+          <ul>
+            <li><%= link_to "Meus agendamentos", appointments_path %></li>
+            <li><%= link_to "Meu perfil", edit_user_registration_path %></li>
+            <li><%= link_to "Sair", destroy_user_session_path, method: :delete, data: { turbo_method: :delete } %></li>
+          </ul>
+        </nav>
+      <% else %>
+        <nav aria-label="Para você">
+          <h3>Para você</h3>
+          <ul>
+            <li><%= link_to "Criar conta", new_user_registration_path %></li>
+            <li><%= link_to "Entrar", new_user_session_path %></li>
+          </ul>
+        </nav>
+        <nav aria-label="Para lava-rápidos">
+          <h3>Para lava-rápidos</h3>
+          <ul>
+            <li><%= link_to "Cadastrar meu lava-rápido", new_user_registration_path(role: "owner") %></li>
+            <li><a href="/#para-lava-rapidos">Como funciona</a></li>
+          </ul>
+        </nav>
+      <% end %>
+
+      <nav aria-label="Ajuda">
+        <h3>Ajuda</h3>
+        <ul>
+          <li><a href="mailto:suporte@loov.app">suporte@loov.app</a></li>
+        </ul>
+      </nav>
+    </div>
+
+    <div class="sf-bottom">
+      <span>© <%= Time.current.year %> Loov. Agendamento de lava-rápidos.</span>
+      <span>Feito no Brasil</span>
+    </div>
+  </div>
+</footer>

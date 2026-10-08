@@ -434,17 +434,7 @@
     </div>
   </section>
 
-  <footer class="lh-foot">
-    <div class="lh-wrap lh-foot-in">
-      <span>© <%= Time.current.year %> Loov · agendamento de lava-rápidos</span>
-      <span>
-        <a href="<%= new_user_session_path %>">Entrar</a>
-        <a href="<%= new_user_registration_path %>">Criar conta</a>
-        <a href="#para-lava-rapidos">Para lava-rápidos</a>
-        <a href="mailto:suporte@loov.app">Suporte</a>
-      </span>
-    </div>
-  </footer>
+  <%= render "shared/site_footer", audience: :visitor %>
 </div>
 
 <script>

@@ -17,7 +17,6 @@
 %>
 <%
   first_name = current_user.greeting_name || current_user.display_name.to_s.split.first
-  initial    = (first_name.presence || "L")[0].upcase
 %>
 <%# Feather (MIT) hospedado aqui — o mesmo pacote de ícones do app. %>
 <script src="/vendor/feather-4.29.2.min.js"></script>
@@ -29,21 +28,20 @@
   .ch svg.feather { display: block; }
   .ch button { font-family: inherit; line-height: normal; cursor: pointer; }
 
-  /* ── Cabeçalho fixo ─────────────────────────────────────────────────── */
-  .ch-head { position: sticky; top: 60px; z-index: 20; background: var(--cream); border-bottom: 1px solid var(--stone); }
-  .ch-head-in { padding: 10px 20px 12px; }
-  .ch-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 0; }
-  .ch-who { min-width: 0; flex: 1; }
-  .ch-who .ch-loc { display: flex; margin-bottom: 6px; }
-  .ch-loc { display: inline-flex; align-items: center; gap: 6px; max-width: 75%; padding: 8px 12px; margin-left: -12px; border: 0; background: transparent; border-radius: 100px; color: var(--ink); font-size: 13px; font-weight: 600; }
-  .ch-loc:hover { background: var(--sand); }
-  .ch-loc[disabled] { cursor: default; background: transparent; }
-  .ch-avatar { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--coral-500); display: flex; align-items: center; justify-content: center; color: var(--coral-500) !important; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px; text-decoration: none; }
-  .ch-greet { font-size: 14px; color: var(--graphite); margin: -2px 0 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* ── Abertura da página ─────────────────────────────────────────────
+     Sem barra fixa: localização, saudação e busca são o começo do conteúdo,
+     não um menu. Spotify abre com a saudação grande ("Boa noite") direto;
+     Apple usa um campo de busca amplo, limpo, com respiro em volta. */
+  .ch-hero { padding: 36px 20px 8px; }
+  .ch-loc { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 14px 0 12px; border: 0; background: var(--sand); border-radius: 100px; color: var(--ink); font-size: 13px; font-weight: 600; transition: background .15s; }
+  .ch-loc:hover:not([disabled]) { background: var(--stone); }
+  .ch-loc[disabled] { cursor: default; }
+  .ch-hello { margin: 14px 0 22px !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: clamp(30px, 4.4vw, 60px); line-height: 1.02; letter-spacing: -0.045em; color: var(--ink); }
   .ch-search-row { display: flex; align-items: center; gap: 6px; }
-  .ch-search { flex: 1; display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 16px; background: var(--paper); border: 1px solid var(--stone); border-radius: 23px; transition: border-color .15s, box-shadow .2s; }
+  .ch-search-row { max-width: 760px; }
+  .ch-search { flex: 1; display: flex; align-items: center; gap: 12px; height: 54px; padding: 0 20px; background: var(--paper); border: 1px solid var(--stone); border-radius: 27px; box-shadow: 0 1px 2px rgba(40,35,28,.04), 0 8px 24px -18px rgba(40,35,28,.25); transition: border-color .15s, box-shadow .2s; }
   .ch-search:focus-within { border-color: var(--coral-500); box-shadow: 0 0 0 4px rgba(221,120,82,.14); }
-  .ch-search input { flex: 1; min-width: 0; height: 100%; border: 0 !important; background: transparent !important; padding: 0; font-size: 14px; color: var(--ink); box-shadow: none !important; outline: none; }
+  .ch-search input { flex: 1; min-width: 0; height: 100%; border: 0 !important; background: transparent !important; padding: 0; font-size: 16px; color: var(--ink); box-shadow: none !important; outline: none; }
   .ch-search-x { border: 0; background: transparent; color: var(--graphite); padding: 4px; display: none; }
   .ch-cancel { border: 0; background: transparent; color: var(--coral-500); font-size: 14px; font-weight: 600; padding: 12px 4px; display: none; }
   .ch.is-searching .ch-cancel { display: block; }
@@ -237,14 +235,8 @@
 
   @media (min-width: 900px) {
     .ch-col { padding: 0 28px; }
-    .ch-head-in { display: flex; align-items: center; gap: 32px; padding-top: 14px; padding-bottom: 14px; }
-    .ch-top { order: 3; flex: 0 0 auto; margin-left: auto; }
-    .ch-desk-who .ch-loc { white-space: nowrap; margin-left: -12px; }
-    .ch-who { display: none; }
-    .ch-search-row { order: 2; flex: 1; max-width: 760px; }
-    .ch-desk-who { display: flex !important; order: 1; flex: 0 1 auto; min-width: 0; flex-direction: column; }
-    .ch-search { height: 50px; border-radius: 25px; }
-    .ch-search input { font-size: 15px; }
+    .ch-hero { padding-top: 64px; padding-bottom: 16px; }
+    .ch-search { height: 60px; border-radius: 30px; }
 
     .ch-sec-head { margin-top: 36px; }
     .ch-sec-title { font-size: 26px; }
@@ -276,32 +268,21 @@
 </style>
 
 <div class="ch" id="ch">
-  <header class="ch-head">
-    <div class="ch-col ch-head-in">
-      <div class="ch-top">
-        <div class="ch-who">
-        <button type="button" class="ch-loc" id="ch-loc" disabled>
-          <span id="ch-loc-ic"></span>
-          <span id="ch-loc-text">Localizando...</span>
-        </button>
-        <div class="ch-greet" id="ch-greet"></div>
-        </div>
-        <a href="<%= edit_user_registration_path %>" class="ch-avatar" aria-label="Meu perfil"><%= initial %></a>
-      </div>
-      <div class="ch-desk-who" style="display:none">
-        <button type="button" class="ch-loc" id="ch-loc-d" disabled><span id="ch-loc-ic-d"></span><span id="ch-loc-text-d">Localizando...</span></button>
-        <div class="ch-greet" id="ch-greet-d" style="margin:0"></div>
-      </div>
-      <div class="ch-search-row">
-        <label class="ch-search">
-          <i data-feather="search" style="width:16px;height:16px;color:var(--graphite)"></i>
-          <input type="search" id="ch-q" placeholder="Buscar lava-rápido ou serviço" autocomplete="off" autocorrect="off" autocapitalize="none" enterkeyhint="search" aria-label="Buscar lava-rápido ou serviço">
-          <button type="button" class="ch-search-x" id="ch-q-x" aria-label="Limpar busca"><i data-feather="x" style="width:16px;height:16px"></i></button>
-        </label>
-        <button type="button" class="ch-cancel" id="ch-cancel">Cancelar</button>
-      </div>
+  <section class="ch-col" aria-label="Início"><div class="ch-hero">
+    <button type="button" class="ch-loc" id="ch-loc" disabled>
+      <span id="ch-loc-ic"></span>
+      <span id="ch-loc-text">Localizando...</span>
+    </button>
+    <h1 class="ch-hello" id="ch-greet"></h1>
+    <div class="ch-search-row">
+      <label class="ch-search">
+        <i data-feather="search" style="width:18px;height:18px;color:var(--graphite)"></i>
+        <input type="search" id="ch-q" placeholder="Buscar lava-rápido ou serviço" autocomplete="off" autocorrect="off" autocapitalize="none" enterkeyhint="search" aria-label="Buscar lava-rápido ou serviço">
+        <button type="button" class="ch-search-x" id="ch-q-x" aria-label="Limpar busca"><i data-feather="x" style="width:16px;height:16px"></i></button>
+      </label>
+      <button type="button" class="ch-cancel" id="ch-cancel">Cancelar</button>
     </div>
-  </header>
+  </div></section>
 
   <main class="ch-col">
     <section id="ch-search-view" class="ch-search-view"></section>
@@ -333,6 +314,8 @@
       <div id="ch-list"></div>
     </div>
   </main>
+
+  <%= render "shared/site_footer", audience: :client %>
 </div>
 
 <script>
@@ -485,14 +468,10 @@
       ? '<span class="ch-spin" style="display:inline-block;width:13px;height:13px;border-radius:50%;border:2px solid var(--coral-100);border-top-color:var(--coral-500);animation:ch-spin .7s linear infinite"></span>'
       : icon('map-pin', 13, { color: state.coords ? 'var(--coral-500)' : 'var(--ash)' });
     $('ch-loc-text').textContent = state.locating ? 'Localizando...' : (state.coords ? 'Sua região' : 'Ativar localização');
-    $('ch-loc-d').disabled = btn.disabled;
-    $('ch-loc-ic-d').innerHTML = $('ch-loc-ic').innerHTML;
-    $('ch-loc-text-d').textContent = $('ch-loc-text').textContent;
   }
   function renderGreeting() {
     var h = new Date().getHours();
     $('ch-greet').textContent = FIRST_NAME ? greeting(h) + ', ' + FIRST_NAME + ' 👋' : greeting(h) + ' 👋';
-    $('ch-greet-d').textContent = $('ch-greet').textContent;
   }
 
   // ── Render: Last minute ───────────────────────────────────────────────────
@@ -734,7 +713,11 @@
   function setSearchMode(on) {
     state.searchMode = on;
     $('ch').classList.toggle('is-searching', on);
-    if (on) renderSearch();
+    if (on) {
+      renderSearch();
+      var top = $('ch-q').getBoundingClientRect().top + window.scrollY - 76;
+      if (window.scrollY > top) window.scrollTo({ top: top, behavior: 'smooth' });
+    }
   }
 
   // ── Ações ─────────────────────────────────────────────────────────────────
@@ -796,11 +779,9 @@
   input.addEventListener('input', function () { enterSearch(); state.search = input.value; state.searchConfirmed = false; renderSearch(); });
   input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); state.searchConfirmed = true; renderSearch(); input.blur(); } if (e.key === 'Escape') cancelSearch(); });
   $('ch-q-x').addEventListener('click', function (e) { e.preventDefault(); input.value = ''; state.search = ''; state.searchConfirmed = false; renderSearch(); input.focus(); });
-  function cancelSearch() { input.value = ''; state.search = ''; state.searchConfirmed = false; setSearchMode(false); input.blur(); }
+  function cancelSearch() { input.value = ''; state.search = ''; state.searchConfirmed = false; $('ch-q-x').style.display = 'none'; setSearchMode(false); input.blur(); }
   $('ch-cancel').addEventListener('click', cancelSearch);
-  ['ch-loc', 'ch-loc-d'].forEach(function (id) {
-    $(id).addEventListener('click', function () { if (!state.coords && !state.locating) { state.locating = true; renderLoc(); initLocation(); } });
-  });
+  $('ch-loc').addEventListener('click', function () { if (!state.coords && !state.locating) { state.locating = true; renderLoc(); initLocation(); } });
 
   window.addEventListener('resize', updateArrows, { passive: true });
   wideMQ.addEventListener('change', renderList);
