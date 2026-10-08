@@ -98,11 +98,11 @@
       <%= render "devise/shared/flash" %>
       <%= render "devise/shared/error_messages", resource: resource %>
 
-      <%# Depois de um erro o formulário volta com o papel que a pessoa tinha
-          escolhido — antes voltava sempre "client", e um dono que corrigia a
-          senha e reenviava virava cliente sem perceber. %>
+      <%# Papel inicial: ?role=owner (link "Cadastrar meu lava-rápido" da
+          landing) ao abrir; depois de um erro, o que a pessoa tinha escolhido
+          — antes voltava sempre "client", e o dono virava cliente sem notar. %>
       <%= f.hidden_field :role, id: "role-hidden",
-            value: (resource.role.presence_in(%w[client owner]) || "client") %>
+            value: (params[:role].presence_in(%w[client owner]) || resource.role.presence_in(%w[client owner]) || "client") %>
 
       <div class="client-fields visible" id="client-fields">
         <div class="loov-field">

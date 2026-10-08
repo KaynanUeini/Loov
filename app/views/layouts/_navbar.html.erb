@@ -34,8 +34,10 @@
 
   .loov-nav-logo { display:flex; align-items:center; text-decoration:none; flex-shrink:0; }
 
-  /* Loov pill — replicates the React Native LoovPill */
-  .loov-pill {
+  /* Pill da marca — réplica do LoovPill do app. Chamava .loov-pill, mesmo
+     nome das etiquetas de status do layout (que são uppercase): o "loov"
+     saía "LOOV". */
+  .loov-brand {
     display:inline-flex; align-items:center; gap:8px;
     background: var(--ink);
     color: var(--cream);
@@ -43,24 +45,24 @@
     padding: 7px 14px 7px 11px;
     transition: transform .15s ease, box-shadow .15s ease;
   }
-  .loov-pill:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(40,35,28,0.16); }
-  .loov-pill .glyph { position:relative; width:22px; height:22px; }
-  .loov-pill .glyph .ring-cream {
+  .loov-brand:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(40,35,28,0.16); }
+  .loov-brand .glyph { position:relative; width:22px; height:22px; }
+  .loov-brand .glyph .ring-cream {
     position:absolute; left:0; top:1px;
     width:18px; height:18px; border-radius:50%;
     border:2px solid var(--cream);
   }
-  .loov-pill .glyph .ring-coral {
+  .loov-brand .glyph .ring-coral {
     position:absolute; right:0; top:1px;
     width:18px; height:18px; border-radius:50%;
     border:2px solid var(--coral-500);
   }
-  .loov-pill .glyph .ring-coral-dot {
+  .loov-brand .glyph .ring-coral-dot {
     position:absolute; right:6px; top:8px;
     width:5px; height:5px; border-radius:50%;
     background: var(--coral-500);
   }
-  .loov-pill .word {
+  .loov-brand .word {
     font-family: 'Space Grotesk', 'Inter', sans-serif;
     font-weight: 700; font-size: 18px;
     letter-spacing: -0.4px; color: var(--cream);
@@ -419,7 +421,7 @@
 
 <nav class="loov-nav">
   <a href="/" class="loov-nav-logo" aria-label="Loov">
-    <span class="loov-pill">
+    <span class="loov-brand">
       <span class="glyph">
         <span class="ring-cream"></span>
         <span class="ring-coral"></span>

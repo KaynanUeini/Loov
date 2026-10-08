@@ -1,93 +1,312 @@
-<%
-  now_sp_login = Time.current.in_time_zone("America/Sao_Paulo")
-  h_login = now_sp_login.hour
-  greet_login = if h_login < 5      then "Boa madrugada"
-                elsif h_login < 12  then "Bom dia"
-                elsif h_login < 18  then "Boa tarde"
-                else                     "Boa noite"
-                end
-  weekdays_login = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado']
-  months_login   = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro']
-  day_login   = weekdays_login[now_sp_login.wday].capitalize
-  date_login  = "#{now_sp_login.day} de #{months_login[now_sp_login.month - 1]}"
-%>
+<%#
+  Login do site — a mesma linguagem da tela de login do app, adaptada pro
+  desktop.
 
+  Desktop: duas metades. À esquerda, o momento de marca — "Chegou. Lavou.
+  Vazou.", as três palavras da abertura do app, entrando uma a uma em tipo
+  gigante sobre obsidian (tipografia cinética; o "Lavou" em coral é o que
+  vira "Loov"). À direita, só o formulário, em creme, sem nada competindo.
+  Celular: vira a tela do app — pill, manchete, formulário.
+
+  Base: Apple (uma ideia por tela, tipo grande, espaço em branco), Spotify
+  (contraste escuro, um acento só), Fitts (alvos de 52px+), Nielsen H1
+  (estado de carregamento no botão), WCAG (foco visível, prefers-reduced-
+  motion respeitado, labels reais nos campos).
+%>
 <style>
-  .login-wave {
-    display: inline-block;
-    animation: login-wave 2.4s ease-in-out infinite;
-    transform-origin: 70% 70%;
-    font-size: 0.85em;
-    margin-left: 8px;
+  .lx-login {
+    min-height: 100vh;
+    padding-top: 60px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    background: var(--cream);
   }
-  @keyframes login-wave {
-    0%, 60%, 100% { transform: rotate(0); }
-    10% { transform: rotate(14deg); }
-    20% { transform: rotate(-8deg); }
-    30% { transform: rotate(14deg); }
-    40% { transform: rotate(-4deg); }
-    50% { transform: rotate(10deg); }
+
+  /* ── Metade de marca ──────────────────────────────────────────────── */
+  .lx-stage {
+    position: relative;
+    overflow: hidden;
+    background: var(--obsidian);
+    color: var(--cream);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 56px 64px 48px;
+    isolation: isolate;
+  }
+  /* Brilho coral que respira devagar — dá vida sem distrair. */
+  .lx-stage::before {
+    content: "";
+    position: absolute;
+    width: 720px; height: 720px;
+    right: -260px; bottom: -300px;
+    background: radial-gradient(closest-side, rgba(221,120,82,.42), rgba(221,120,82,0) 70%);
+    filter: blur(10px);
+    z-index: -1;
+    animation: lx-breathe 9s ease-in-out infinite;
+  }
+  @keyframes lx-breathe {
+    0%, 100% { transform: translate(0, 0) scale(1); opacity: .85; }
+    50%      { transform: translate(-40px, -30px) scale(1.08); opacity: 1; }
+  }
+  .lx-stage-top {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--ash);
+  }
+  .lx-kinetic {
+    margin: 0;
+    font-family: 'Space Grotesk', sans-serif !important;
+    font-weight: 700;
+    font-size: clamp(64px, 7.6vw, 128px);
+    line-height: .92;
+    letter-spacing: -0.045em;
+    color: var(--cream);
+  }
+  .lx-kinetic span {
+    display: block;
+    opacity: 0;
+    transform: translateY(40%);
+    filter: blur(12px);
+    animation: lx-word .9s cubic-bezier(.2,.8,.2,1) forwards;
+  }
+  .lx-kinetic span:nth-child(1) { animation-delay: .15s; }
+  .lx-kinetic span:nth-child(2) { animation-delay: .55s; color: var(--coral-500); }
+  .lx-kinetic span:nth-child(3) { animation-delay: .95s; }
+  @keyframes lx-word {
+    to { opacity: 1; transform: none; filter: none; }
+  }
+  .lx-stage-foot {
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 24px;
+    opacity: 0; animation: lx-fade .8s ease 1.5s forwards;
+  }
+  .lx-stage-foot p {
+    margin: 0; max-width: 30ch;
+    font-size: 17px; line-height: 1.5; color: #cfc8bb;
+  }
+  .lx-stage-foot strong { color: var(--cream); font-weight: 600; }
+  @keyframes lx-fade { to { opacity: 1; } }
+
+  /* ── Metade do formulário ─────────────────────────────────────────── */
+  .lx-panel {
+    display: flex; align-items: center; justify-content: center;
+    padding: 56px 40px;
+  }
+  .lx-form-wrap { width: 100%; max-width: 400px; }
+
+  .lx-mobile-head { display: none; }
+
+  .lx-title {
+    margin: 0 0 8px;
+    font-family: 'Space Grotesk', sans-serif !important;
+    font-size: 40px; line-height: 1.05; letter-spacing: -0.035em;
+    font-weight: 700; color: var(--ink);
+  }
+  .lx-sub {
+    margin: 0 0 32px;
+    font-size: 16px; line-height: 1.5; color: var(--graphite);
+  }
+
+  .lx-field { margin-bottom: 18px; }
+  .lx-label {
+    display: block; margin-bottom: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; letter-spacing: 1.6px; text-transform: uppercase;
+    color: var(--graphite);
+  }
+  .lx-input {
+    width: 100%; height: 54px;
+    padding: 0 16px;
+    font-size: 16px; /* 16px: o iOS não dá zoom ao focar */
+    font-family: 'Inter', sans-serif;
+    border-radius: 14px !important;
+    transition: border-color .15s ease, box-shadow .2s ease, background .2s ease !important;
+  }
+  .lx-input:focus {
+    background: var(--cream) !important;
+    box-shadow: 0 0 0 4px rgba(221,120,82,.16);
+  }
+  .lx-pass { position: relative; }
+  .lx-pass .lx-input { padding-right: 52px; }
+  .lx-eye {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    width: 44px; height: 44px; border-radius: 12px;
+    border: 0; background: transparent; color: var(--graphite);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  .lx-eye:hover { background: var(--sand); color: var(--ink); }
+  .lx-eye:focus-visible { outline: 2px solid var(--coral-500); outline-offset: 2px; }
+
+  .lx-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin: 4px 0 26px; min-height: 44px;
+  }
+  .lx-remember {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 14px; color: var(--graphite); cursor: pointer;
+  }
+  .lx-remember input { width: 18px; height: 18px; accent-color: var(--coral-500); }
+  .lx-forgot {
+    font-size: 14px; font-weight: 600; color: var(--coral-700) !important;
+    text-decoration: none; padding: 12px 0;
+  }
+  .lx-forgot:hover { color: var(--coral-500) !important; }
+
+  .lx-submit {
+    width: 100%; height: 56px;
+    border-radius: 9999px !important;
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; letter-spacing: .2px;
+    cursor: pointer;
+    box-shadow: 0 10px 24px -10px rgba(221,120,82,.7);
+    transition: transform .15s ease, box-shadow .2s ease, background .15s ease !important;
+  }
+  .lx-submit:hover { transform: translateY(-1px); box-shadow: 0 14px 28px -10px rgba(221,120,82,.8); }
+  .lx-submit:active { transform: translateY(0) scale(.99); }
+  .lx-submit .lx-arrow { transition: transform .2s ease; }
+  .lx-submit:hover .lx-arrow { transform: translateX(3px); }
+  .lx-submit .lx-spin {
+    display: none; width: 18px; height: 18px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,.4); border-top-color: #fff;
+    animation: lx-spin .7s linear infinite;
+  }
+  .lx-submit.is-loading { pointer-events: none; opacity: .9; }
+  .lx-submit.is-loading .lx-spin { display: inline-block; }
+  .lx-submit.is-loading .lx-arrow { display: none; }
+  @keyframes lx-spin { to { transform: rotate(360deg); } }
+
+  .lx-alt {
+    margin-top: 28px; padding-top: 24px;
+    border-top: 1px solid var(--stone);
+    text-align: center; font-size: 15px; color: var(--graphite);
+  }
+  .lx-alt a { color: var(--coral-700); font-weight: 600; text-decoration: none; }
+  .lx-alt a:hover { color: var(--coral-500); }
+
+  /* ── Celular: vira a tela do app ──────────────────────────────────── */
+  @media (max-width: 900px) {
+    .lx-login { grid-template-columns: 1fr; }
+    .lx-stage { display: none; }
+    .lx-panel { align-items: flex-start; padding: 40px 24px 48px; }
+    .lx-mobile-head { display: block; text-align: center; margin-bottom: 32px; }
+    .lx-mobile-head h2 {
+      margin: 0;
+      font-family: 'Space Grotesk', sans-serif !important;
+      font-size: 34px; line-height: 1.1; letter-spacing: -0.03em; font-weight: 700;
+    }
+    .lx-mobile-head em { font-style: normal; color: var(--coral-500); }
+    .lx-title { font-size: 26px; text-align: center; }
+    .lx-sub { text-align: center; margin-bottom: 24px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lx-kinetic span, .lx-stage-foot { animation: none; opacity: 1; transform: none; filter: none; }
+    .lx-stage::before { animation: none; }
   }
 </style>
 
-<div class="loov-auth">
+<div class="lx-login">
 
-  <!-- ── EDITORIAL ──────────────────────────────────── -->
-  <aside class="loov-auth-editorial">
-    <div class="loov-eyebrow"><span class="dot"></span><%= day_login %> · <%= date_login %></div>
-    <h1 class="loov-h1" style="text-align:left;">
-      <%= greet_login %><br><span class="accent">por aqui</span><span class="login-wave">👋</span>
+  <section class="lx-stage" aria-hidden="true">
+    <div class="lx-stage-top">Lava-rápido sem fila</div>
+    <h1 class="lx-kinetic">
+      <span>Chegou.</span>
+      <span>Lavou.</span>
+      <span>Vazou.</span>
     </h1>
-    <p class="loov-lead" style="margin-left:0;text-align:left;">
-      Você escolhe o lugar, o horário e o serviço.<br>
-      A Loov cuida do resto.
-    </p>
-    <div class="loov-auth-detail-row">
-      <div class="loov-auth-detail-num">100%</div>
-      <div class="loov-auth-detail-label">online<br><span class="weak">sem ligação, sem fila</span></div>
-    </div>
-  </aside>
-
-  <!-- ── FORM ──────────────────────────────────────── -->
-  <section class="loov-auth-form-side">
-    <div class="loov-eyebrow"><span class="dot"></span>ENTRAR</div>
-    <h2 class="loov-h1" style="font-size:clamp(28px,4vw,40px);text-align:left;">
-      Bem-<span class="accent">vindo</span>.
-    </h2>
-    <p class="loov-lead" style="margin-left:0;text-align:left;margin-bottom:32px;">
-      Entre pra agendar ou gerenciar seu lava-rápido.
-    </p>
-
-    <%= form_for(resource, as: resource_name, url: session_path(resource_name)) do |f| %>
-      <%= render "devise/shared/flash" %>
-
-
-      <div class="loov-field">
-        <%= f.label :email, "E-mail", class: "loov-label" %>
-        <%= f.email_field :email, autofocus: true, autocomplete: "email",
-            class: "loov-input", placeholder: "seu@email.com" %>
-      </div>
-
-      <div class="loov-field">
-        <%= f.label :password, "Senha", class: "loov-label" %>
-        <%= f.password_field :password, autocomplete: "current-password",
-            class: "loov-input", placeholder: "••••••••" %>
-      </div>
-
-      <% if devise_mapping.rememberable? %>
-        <label style="display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--graphite);margin-bottom:18px;cursor:pointer;">
-          <%= f.check_box :remember_me, style: "width:16px;height:16px;accent-color:var(--coral-500);" %>
-          Lembrar de mim
-        </label>
-      <% end %>
-
-      <%= f.submit "Entrar", class: "loov-btn-primary loov-btn-block loov-btn-lg" %>
-
-    <% end %>
-
-    <div class="loov-footer-row">
-      <%= render "devise/shared/links" %>
+    <div class="lx-stage-foot">
+      <p>Seu carro <strong>limpo</strong>, sem fila e sem complicação. Escolha o lugar, o horário e o serviço — a Loov cuida do resto.</p>
     </div>
   </section>
 
+  <section class="lx-panel">
+    <div class="lx-form-wrap">
+
+      <div class="lx-mobile-head">
+        <h2>Seu carro <em>limpo</em><br>sem fila, sem complicação.</h2>
+      </div>
+
+      <h2 class="lx-title">Bem-vindo de volta.</h2>
+      <p class="lx-sub">Entre para agendar ou cuidar do seu lava-rápido.</p>
+
+      <%= render "devise/shared/flash" %>
+
+      <%= form_for(resource, as: resource_name, url: session_path(resource_name), html: { id: "lx-login-form", novalidate: false }) do |f| %>
+        <div class="lx-field">
+          <%= f.label :email, "E-mail", class: "lx-label" %>
+          <%= f.email_field :email, autofocus: true, autocomplete: "email", required: true,
+                class: "lx-input", placeholder: "seu@email.com" %>
+        </div>
+
+        <div class="lx-field">
+          <%= f.label :password, "Senha", class: "lx-label" %>
+          <div class="lx-pass">
+            <%= f.password_field :password, autocomplete: "current-password", required: true,
+                  class: "lx-input", placeholder: "Sua senha", id: "lx-password" %>
+            <button type="button" class="lx-eye" id="lx-eye" aria-label="Mostrar senha" aria-controls="lx-password" aria-pressed="false">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="lx-row">
+          <% if devise_mapping.rememberable? %>
+            <label class="lx-remember">
+              <%= f.check_box :remember_me %>
+              Lembrar de mim
+            </label>
+          <% else %>
+            <span></span>
+          <% end %>
+          <%= link_to "Esqueci minha senha", new_password_path(resource_name), class: "lx-forgot" %>
+        </div>
+
+        <button type="submit" class="lx-submit" id="lx-submit">
+          <span class="lx-spin" aria-hidden="true"></span>
+          <span class="lx-submit-label">Entrar</span>
+          <svg class="lx-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+      <% end %>
+
+      <div class="lx-alt">
+        Novo por aqui? <%= link_to "Criar conta", new_registration_path(resource_name) %>
+      </div>
+    </div>
+  </section>
 </div>
+
+<script>
+  (function () {
+    // Mostrar/ocultar senha — mesmo comportamento do olho no app.
+    var eye  = document.getElementById('lx-eye');
+    var pass = document.getElementById('lx-password');
+    if (eye && pass) {
+      eye.addEventListener('click', function () {
+        var show = pass.type === 'password';
+        pass.type = show ? 'text' : 'password';
+        eye.setAttribute('aria-pressed', show ? 'true' : 'false');
+        eye.setAttribute('aria-label', show ? 'Ocultar senha' : 'Mostrar senha');
+        eye.innerHTML = show
+          ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+          : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+      });
+    }
+
+    // Feedback de envio: spinner no botão e trava contra duplo clique.
+    var form = document.getElementById('lx-login-form');
+    var btn  = document.getElementById('lx-submit');
+    if (form && btn) {
+      form.addEventListener('submit', function () {
+        if (!form.checkValidity()) return;
+        btn.classList.add('is-loading');
+        btn.querySelector('.lx-submit-label').textContent = 'Entrando…';
+      });
+      // Volta ao normal se a página vier do cache (botão voltar do navegador).
+      window.addEventListener('pageshow', function () {
+        btn.classList.remove('is-loading');
+        btn.querySelector('.lx-submit-label').textContent = 'Entrar';
+      });
+    }
+  })();
+</script>
