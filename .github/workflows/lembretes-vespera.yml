@@ -1,0 +1,14 @@
+        env:
+          CRON_SECRET: ${{ secrets.LOOV_CRON_SECRET }}
+          URL: https://loov-api.onrender.com/internal/reminders
+        run: |
+          for i in $(seq 1 25); do
+            resp=$(curl -sS --fail-with-body --max-time 120 --retry 3 --retry-delay 20 \
+              -X POST -H "Authorization: Bearer $CRON_SECRET" "$URL")
+            echo "lote $i: $resp"
+            remaining=$(echo "$resp" | jq -r '.remaining')
+            processed=$(echo "$resp" | jq -r '.sent + .failed')
+            if [ "$remaining" = "0" ] || [ "$processed" = "0" ]; then
+              exit 0
+            fi
+          done
