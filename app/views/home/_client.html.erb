@@ -71,7 +71,8 @@
   .ch-lm-lab { margin-top: 8px; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1.6px; color: rgba(250,250,246,.55); }
   .ch-lm-div { width: 1px; height: 44px; background: rgba(250,250,246,.12); }
   .ch-lm-shop { flex: 1; display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
-  .ch-lm-logo { flex: 0 0 40px; height: 40px; border-radius: 10px; background: var(--coral-500); color: var(--cream); display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 18px; }
+  .ch-lm-logo { flex: 0 0 40px; height: 40px; }
+  .ch-lm-logo svg { width: 100%; height: 100%; display: block; }
   .ch-lm-text { flex: 1; min-width: 0; }
   .ch-lm-name { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; line-height: 18px; letter-spacing: -0.3px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .ch-lm-sub { margin-top: 3px; font-size: 11px; color: rgba(250,250,246,.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -140,16 +141,27 @@
   .ch-card { position: relative; display: flex; flex-direction: column; border-radius: 24px; background: var(--paper); border: 1px solid var(--stone); overflow: hidden; text-decoration: none; color: var(--ink) !important; transition: transform .25s cubic-bezier(.2,.8,.2,1), box-shadow .25s ease, border-color .2s; }
   .ch-card:hover { transform: translateY(-4px); box-shadow: 0 24px 48px -28px rgba(40,35,28,.45); border-color: var(--ash); }
   .ch-card:focus-visible { outline: 2px solid var(--coral-500); outline-offset: 3px; }
-  .ch-card-vis { position: relative; height: 148px; background: radial-gradient(120% 120% at var(--gx, 80%) 0%, var(--tone2, #fbeae3) 0%, var(--tone, #f1eee6) 62%); overflow: hidden; }
-  .ch-card-initial { position: absolute; right: 22px; bottom: -26px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 132px; line-height: 1; letter-spacing: -0.06em; color: var(--coral-500); opacity: .9; transition: transform .4s cubic-bezier(.2,.8,.2,1); user-select: none; }
-  .ch-card:hover .ch-card-initial { transform: translate(-6px, -6px) rotate(-4deg); }
+  /* Topo do card: logo da loja sobre um tom bem leve da cor da própria
+     marca (Apple Music tinge o fundo com a capa). Hover: o logo sobe e
+     inclina e um brilho atravessa o card — a cera recém-passada. */
+  .ch-card-vis { position: relative; height: 180px; padding-top: 44px; display: flex; align-items: center; justify-content: center; background: radial-gradient(110% 90% at 50% 0%, color-mix(in srgb, var(--brand, #dd7852) 22%, #fff) 0%, color-mix(in srgb, var(--brand, #dd7852) 9%, #fefefd) 70%); overflow: hidden; isolation: isolate; }
+  .ch-card-vis::after { content: ""; position: absolute; inset: -40% -60%; z-index: 2; pointer-events: none; background: linear-gradient(105deg, transparent 42%, rgba(255,255,255,.75) 50%, transparent 58%); transform: translateX(-70%); }
+  .ch-card:hover .ch-card-vis::after { transform: translateX(70%); transition: transform .9s cubic-bezier(.2,.8,.2,1); }
+  .ch-card-logo { width: 96px; height: 96px; filter: drop-shadow(0 10px 18px rgba(26,22,18,.18)); transition: transform .5s cubic-bezier(.2,1.4,.4,1); }
+  .ch-card-logo svg { width: 100%; height: 100%; display: block; }
+  .ch-card:hover .ch-card-logo { transform: translateY(-6px) rotate(-6deg) scale(1.06); }
   .ch-card.is-closed .ch-card-vis { background: var(--sand); }
-  .ch-card.is-closed .ch-card-initial { color: var(--stone); }
-  .ch-card-status { position: absolute; left: 14px; top: 14px; display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 99px; background: rgba(254,254,253,.88); backdrop-filter: blur(6px); font-size: 12px; font-weight: 600; color: var(--ink); }
+  .ch-card.is-closed .ch-card-logo { filter: grayscale(1); opacity: .55; }
+  .ch-thumb.has-logo { background: transparent !important; overflow: hidden; }
+  .ch-thumb.has-logo svg { width: 100%; height: 100%; display: block; }
+  .ch-row.is-closed .ch-thumb.has-logo svg { filter: grayscale(1); opacity: .55; }
+  .ch-card-x { position: absolute; right: 10px; top: 10px; width: 40px; height: 40px; border: 0; border-radius: 50%; background: rgba(254,254,253,.88); color: var(--graphite); display: flex; align-items: center; justify-content: center; z-index: 3; }
+  .ch-card-x:hover { background: #fff; color: var(--ink); }
+  .ch-card-status { position: absolute; z-index: 3; left: 14px; top: 14px; display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 99px; background: rgba(254,254,253,.88); backdrop-filter: blur(6px); font-size: 12px; font-weight: 600; color: var(--ink); }
   .ch-card-status i { width: 7px; height: 7px; border-radius: 50%; background: #2fa36b; }
   .ch-card.is-closed .ch-card-status { color: var(--graphite); font-weight: 500; }
   .ch-card.is-closed .ch-card-status i { background: var(--ash); }
-  .ch-card-fav { position: absolute; right: 10px; top: 10px; width: 40px; height: 40px; border: 0; border-radius: 50%; background: rgba(254,254,253,.88); backdrop-filter: blur(6px); color: var(--graphite); display: flex; align-items: center; justify-content: center; transition: transform .15s; }
+  .ch-card-fav { position: absolute; z-index: 3; right: 10px; top: 10px; width: 40px; height: 40px; border: 0; border-radius: 50%; background: rgba(254,254,253,.88); backdrop-filter: blur(6px); color: var(--graphite); display: flex; align-items: center; justify-content: center; transition: transform .15s; }
   .ch-card-fav:hover { transform: scale(1.08); background: #fff; }
   .ch-card-fav[aria-pressed="true"] { color: var(--coral-500); }
   .ch-card-fav[aria-pressed="true"] svg { fill: var(--coral-500); }
@@ -171,8 +183,8 @@
   /* Destaque (bento): o aberto mais perto ocupa 2 colunas, com a lista de
      serviços e preços como "specs". */
   .ch-card.is-feature { grid-column: span 2; flex-direction: row; }
-  .ch-card.is-feature .ch-card-vis { flex: 0 0 46%; height: auto; min-height: 300px; }
-  .ch-card.is-feature .ch-card-initial { font-size: 240px; bottom: -48px; right: 36px; }
+  .ch-card.is-feature .ch-card-vis { flex: 0 0 46%; height: auto; min-height: 300px; padding-top: 0; }
+  .ch-card.is-feature .ch-card-logo { width: 168px; height: 168px; }
   .ch-card.is-feature .ch-card-body { padding: 26px 28px; }
   .ch-card.is-feature .ch-card-name { font-size: 30px; }
   .ch-specs { list-style: none; margin: 18px 0 0; padding: 0; border-top: 1px solid var(--stone); }
@@ -185,12 +197,13 @@
   .ch-more button:hover { background: var(--ink); color: var(--cream); }
   @media (max-width: 760px) {
     .ch-card.is-feature { grid-column: auto; flex-direction: column; }
-    .ch-card.is-feature .ch-card-vis { min-height: 0; height: 148px; }
-    .ch-card.is-feature .ch-card-initial { font-size: 132px; bottom: -26px; right: 22px; }
+    .ch-card.is-feature .ch-card-vis { min-height: 0; height: 180px; padding-top: 44px; }
+    .ch-card.is-feature .ch-card-logo { width: 96px; height: 96px; }
     .ch-card.is-feature .ch-card-name { font-size: 22px; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .ch-card, .ch-card-initial, .ch-card-cta { transition: none; }
+    .ch-card, .ch-card-logo, .ch-card-cta { transition: none; }
+    .ch-card:hover .ch-card-vis::after { transition: none; transform: translateX(-70%); }
   }
 
   /* Busca */
@@ -507,7 +520,7 @@
       return '<a class="ch-lm" href="' + href + '">' +
         '<div class="ch-lm-stats"><div class="ch-lm-stat"><div class="ch-lm-val">' + esc(time || '—') + '</div><div class="ch-lm-lab">HORÁRIO</div></div>' +
         '<div class="ch-lm-div"></div><div class="ch-lm-stat"><div class="ch-lm-val">' + esc(dist || '—') + '</div><div class="ch-lm-lab">DISTÂNCIA</div></div></div>' +
-        '<div class="ch-lm-shop"><div class="ch-lm-logo">' + esc((cw.name || '?')[0].toUpperCase()) + '</div><div class="ch-lm-text">' +
+        '<div class="ch-lm-shop"><div class="ch-lm-logo">' + logoOf(cw) + '</div><div class="ch-lm-text">' +
           '<div class="ch-lm-name">' + esc(cw.name) + '</div>' +
           (street ? '<div class="ch-lm-sub">' + esc(street) + '</div>' : '') +
           '<div class="ch-lm-sub">' + esc(cw.bairro || cw.cidade || '—') + (mins > 0 && mins < 1000 ? ' · <span class="ch-lm-cd">em ' + mins + 'min</span>' : '') + '</div>' +
@@ -574,10 +587,87 @@
     return (cw.services || []).filter(function (s) { return Number(s.price) > 0; })
       .sort(function (a, b) { return Number(a.price) - Number(b.price); });
   }
-  var TONES = [['#f1eee6', '#fbeae3'], ['#efe9df', '#f5d3c3'], ['#f3efe8', '#f8e1d6'], ['#ece6dc', '#fbeae3']];
-  function toneOf(id) { var t = TONES[Number(id) % TONES.length]; return '--tone:' + t[0] + ';--tone2:' + t[1] + ';--gx:' + (20 + (Number(id) * 37) % 70) + '%'; }
+  // ── Logos ─────────────────────────────────────────────────────────────────
+  // Prévia: logo gerado e estável por loja (mesmo nome → mesmo logo). Quando
+  // o dono subir o logo real (`logo_url`, já previsto no app), ele vence.
+  // 6 estilos de emblema comuns em lava-rápido × 10 cores de marca; as
+  // iniciais vêm da parte do nome que identifica a loja ("Eco Lava Bonfim"
+  // → EB, não EL), pulando as palavras genéricas do ramo.
+  var BRANDS = [
+    { bg: '#1e63d6', fg: '#ffffff' }, { bg: '#0e9aa7', fg: '#ffffff' }, { bg: '#13294b', fg: '#ffffff' },
+    { bg: '#d7263d', fg: '#ffffff' }, { bg: '#1a9e5c', fg: '#ffffff' }, { bg: '#f2b705', fg: '#1a1612' },
+    { bg: '#1a1612', fg: '#ffffff' }, { bg: '#6c3fc5', fg: '#ffffff' }, { bg: '#f26b1d', fg: '#ffffff' },
+    { bg: '#2ba3e0', fg: '#ffffff' }
+  ];
+  var GENERIC = ['lava', 'rapido', 'car', 'wash', 'jato', 'lavagem', 'lava-rapido', 'lava-jato', 'estetica', 'automotiva', 'carwash'];
+  var STOP = ['do', 'da', 'de', 'dos', 'das', 'e', 'o', 'a'];
+  function hashStr(str) { var h = 7; for (var i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0; return h; }
+  function brandOf(cw) {
+    var name = String(cw.name || 'Loov');
+    var words = name.split(/[\s\-]+/).filter(function (w) { return w && STOP.indexOf(normalize(w)) === -1; });
+    var key = words.filter(function (w) { return GENERIC.indexOf(normalize(w)) === -1; });
+    var ini = key.length >= 2 ? key[0][0] + key[1][0] : key.length === 1 ? key[0].slice(0, 2) : (words[0] || 'L')[0] + ((words[1] || '')[0] || '');
+    var h = hashStr(normalize(name));
+    return {
+      initials: ini.toUpperCase(),
+      label: (key.length ? key.slice(0, 2) : words.slice(0, 2)).join(' ').toUpperCase().slice(0, 16),
+      style: h % 6,
+      color: BRANDS[(h >>> 3) % BRANDS.length],
+      uid: 'lg' + (cw.id != null ? cw.id : h)
+    };
+  }
+  var DROP = 'M60 40c0 0-15 17-15 27a15 15 0 0 0 30 0c0-10-15-27-15-27z';
+  function logoSvg(cw) {
+    var b = brandOf(cw), C = b.color.bg, F = b.color.fg, ini = esc(b.initials), id = b.uid;
+    var T = function (x, y, size, fill, txt, extra) {
+      return '<text x="' + x + '" y="' + y + '" text-anchor="middle" font-family="Space Grotesk, Inter, sans-serif" font-weight="700" font-size="' + size + '" fill="' + fill + '"' + (extra || '') + '>' + txt + '</text>';
+    };
+    var body;
+    switch (b.style) {
+      case 0: // selo redondo: nome em arco + gota
+        body = '<circle cx="60" cy="60" r="58" fill="' + C + '"/><circle cx="60" cy="60" r="49" fill="none" stroke="' + F + '" stroke-opacity=".45" stroke-width="1.5"/>' +
+          '<path id="' + id + 'a" d="M21 62 A39 39 0 0 1 99 62" fill="none"/>' +
+          '<text font-family="Inter, sans-serif" font-weight="700" font-size="9.5" letter-spacing="1.6" fill="' + F + '"><textPath href="#' + id + 'a" startOffset="50%" text-anchor="middle">' + esc(b.label) + '</textPath></text>' +
+          '<path d="' + DROP + '" fill="' + F + '" transform="translate(0 6)"/>' +
+          '<circle cx="44" cy="96" r="2" fill="' + F + '"/><circle cx="60" cy="99" r="2" fill="' + F + '"/><circle cx="76" cy="96" r="2" fill="' + F + '"/>';
+        break;
+      case 1: // escudo com monograma
+        body = '<path d="M60 5l46 15v37c0 30-21 48-46 58C35 105 14 87 14 57V20z" fill="' + C + '"/>' +
+          '<path d="M60 15l36 12v30c0 24-16 39-36 47-20-8-36-23-36-47V27z" fill="none" stroke="' + F + '" stroke-opacity=".4" stroke-width="1.5"/>' +
+          T(60, 72, 38, F, ini, ' letter-spacing="-1"') + '<path d="M40 84q20 10 40 0" fill="none" stroke="' + F + '" stroke-width="3" stroke-linecap="round"/>';
+        break;
+      case 2: // quadrado escuro com ondas
+        body = '<rect x="4" y="4" width="112" height="112" rx="30" fill="#1a1612"/>' +
+          T(60, 66, 42, C, ini, ' letter-spacing="-1.5"') +
+          '<path d="M22 86q9-8 19 0t19 0t19 0t19 0" fill="none" stroke="' + C + '" stroke-width="4" stroke-linecap="round"/>' +
+          '<path d="M22 98q9-8 19 0t19 0t19 0t19 0" fill="none" stroke="' + C + '" stroke-opacity=".45" stroke-width="4" stroke-linecap="round"/>';
+        break;
+      case 3: // bolhas
+        body = '<circle cx="60" cy="60" r="58" fill="' + C + '"/>' +
+          '<circle cx="36" cy="36" r="11" fill="none" stroke="' + F + '" stroke-width="3"/><circle cx="54" cy="24" r="6" fill="none" stroke="' + F + '" stroke-width="2.5"/><circle cx="28" cy="56" r="4.5" fill="' + F + '"/>' +
+          '<circle cx="33" cy="33" r="3" fill="' + F + '" fill-opacity=".7"/>' + T(66, 84, 40, F, ini, ' letter-spacing="-1"');
+        break;
+      case 4: // carro com brilho
+        body = '<rect x="4" y="4" width="112" height="112" rx="36" fill="' + C + '"/>' +
+          '<path d="M22 76l7-15c3-7 8-10 16-10h30c8 0 13 3 16 10l7 15c2 4-1 8-5 8H27c-4 0-7-4-5-8z" fill="' + F + '"/>' +
+          '<path d="M38 62c2-4 5-6 9-6h11v8H36zM62 56h11c4 0 7 2 9 6l2 2H62z" fill="' + C + '"/>' +
+          '<circle cx="40" cy="84" r="8" fill="' + F + '"/><circle cx="40" cy="84" r="3.5" fill="' + C + '"/><circle cx="80" cy="84" r="8" fill="' + F + '"/><circle cx="80" cy="84" r="3.5" fill="' + C + '"/>' +
+          '<path d="M90 22l2.6 6.4L99 31l-6.4 2.6L90 40l-2.6-6.4L81 31l6.4-2.6z" fill="' + F + '"/>' +
+          T(60, 41, 17, F, ini, ' letter-spacing="1.5"');
+        break;
+      default: // hexágono
+        body = '<path d="M60 4l50 28v56l-50 28-50-28V32z" fill="' + C + '"/>' +
+          '<path d="' + DROP + '" fill="' + F + '" transform="translate(30 10) scale(.5)"/>' +
+          T(60, 84, 30, F, ini, ' letter-spacing="1"');
+    }
+    return '<svg viewBox="0 0 120 120" role="img" aria-label="Logo ' + esc(cw.name) + '" xmlns="http://www.w3.org/2000/svg">' + body + '</svg>';
+  }
+  function logoOf(cw) {
+    return cw.logo_url ? '<img src="' + esc(cw.logo_url) + '" alt="Logo ' + esc(cw.name) + '" style="width:100%;height:100%;object-fit:contain">' : logoSvg(cw);
+  }
 
-  function shopCard(cw, feature, eyebrow) {
+
+  function shopCard(cw, feature, eyebrow, removable) {
     var open = isOpenNow(cw), reviews = Number(cw.reviews_count) || 0, rating = Number(cw.rating_avg) || 0;
     var dist = fmtDistance(cw.distance_km);
     var svcs = pricedServices(cw);
@@ -590,10 +680,12 @@
           (svcs.length > 4 ? '<div class="ch-specs-more">+ ' + (svcs.length - 4) + ' serviços</div>' : '') : '')
       : (titles.length ? '<div class="ch-card-svcs">' + esc(titles.slice(0, 3).join(' · ')) + (titles.length > 3 ? ' · +' + (titles.length - 3) : '') + '</div>' : '');
     return '<a class="ch-card' + (open ? '' : ' is-closed') + (feature ? ' is-feature' : '') + '" href="/car_washes/' + cw.id + '" data-open-shop="' + cw.id + '">' +
-      '<div class="ch-card-vis" style="' + toneOf(cw.id) + '">' +
-        '<span class="ch-card-initial" aria-hidden="true">' + esc((cw.name || '?')[0].toUpperCase()) + '</span>' +
+      '<div class="ch-card-vis" style="--brand:' + brandOf(cw).color.bg + '">' +
+        '<span class="ch-card-logo">' + logoOf(cw) + '</span>' +
         '<span class="ch-card-status"><i></i>' + esc(hoursStatus(cw)) + '</span>' +
-        '<button type="button" class="ch-card-fav" data-fav="' + cw.id + '" aria-pressed="' + !!cw.favorited + '" aria-label="' + (cw.favorited ? 'Remover dos favoritos' : 'Adicionar aos favoritos') + '">' + icon('heart', 18) + '</button>' +
+        (removable
+          ? '<button type="button" class="ch-card-x" data-remove-recent="' + cw.id + '" aria-label="Remover dos recentes">' + icon('x', 16) + '</button>'
+          : '<button type="button" class="ch-card-fav" data-fav="' + cw.id + '" aria-pressed="' + !!cw.favorited + '" aria-label="' + (cw.favorited ? 'Remover dos favoritos' : 'Adicionar aos favoritos') + '">' + icon('heart', 18) + '</button>') +
       '</div>' +
       '<div class="ch-card-body">' +
         (eyebrow ? '<div class="ch-card-eyebrow">' + eyebrow + '</div>' : '') +
@@ -629,7 +721,7 @@
     var open = isOpenNow(cw), reviews = Number(cw.reviews_count) || 0, rating = Number(cw.rating_avg) || 0;
     var meta = [cw.bairro, fmtDistance(cw.distance_km)].filter(Boolean).join(' · ');
     return '<a class="ch-row' + (open ? '' : ' is-closed') + '" href="/car_washes/' + cw.id + '" data-open-shop="' + cw.id + '">' +
-      '<div class="ch-thumb">' + icon('droplet', 20) + '</div>' +
+      '<div class="ch-thumb has-logo">' + logoOf(cw) + '</div>' +
       '<div class="ch-body"><div class="ch-name-line"><span class="ch-name">' + esc(cw.name) + '</span>' + (open ? '' : '<span class="ch-closed-tag">· FECHADO</span>') + '</div>' +
         (meta ? '<div class="ch-meta">' + esc(meta) + '</div>' : '') + '</div>' +
       '<div class="ch-right">' +
@@ -687,7 +779,7 @@
   function resultRow(shop, removable) {
     var sub = shop.bairro ? 'Lava-rápido · ' + shop.bairro : (shop.cidade ? 'Lava-rápido · ' + shop.cidade : 'Lava-rápido');
     return '<a class="ch-result" href="/car_washes/' + shop.id + '" data-open-shop="' + shop.id + '">' +
-      '<div class="ch-thumb">' + icon('droplet', 20) + '</div>' +
+      '<div class="ch-thumb has-logo">' + logoOf(shop) + '</div>' +
       '<div class="ch-body"><div class="ch-name">' + esc(shop.name) + '</div><div class="ch-result-sub">' + esc(sub) + '</div></div>' +
       (removable ? '<button type="button" class="ch-x" data-remove-recent="' + shop.id + '" aria-label="Remover dos recentes">' + icon('x', 16) + '</button>' : '') +
     '</a>';
@@ -697,7 +789,7 @@
     $('ch-q-x').style.display = state.search ? 'block' : 'none';
     if (!q) {
       view.innerHTML = '<h2 class="ch-recents-title">Buscas recentes</h2>' + (state.recents.length
-        ? '<div class="ch-grid ch-grid--results">' + state.recents.map(function (s) { return resultRow(s, true); }).join('') + '</div>'
+        ? resultsBlock(state.recents, true)
         : '<p class="ch-empty-recent">Nada por aqui ainda. Digite acima pra procurar um lava-rápido ou serviço.</p>');
       return;
     }
@@ -708,7 +800,17 @@
         '<h3>Nada encontrado para "' + esc(q) + '"</h3><p>Tente o nome do bairro ou de um serviço, como "polimento".</p></div>';
       return;
     }
-    view.innerHTML = '<div class="ch-grid ch-grid--results">' + res.map(function (s) { return resultRow(s, false); }).join('') + '</div>';
+    view.innerHTML = resultsBlock(res, false);
+  }
+  // Celular: linhas do app. Tablet/desktop: os cards do "Perto de você" —
+  // a busca não pode parecer outra página. Recentes são um retrato salvo no
+  // navegador; o card usa o dado completo da loja quando ele já carregou.
+  function resultsBlock(list, removable) {
+    if (!wideMQ.matches) return '<div class="ch-grid ch-grid--results">' + list.map(function (s) { return resultRow(s, removable); }).join('') + '</div>';
+    return '<div class="ch-cards" style="padding-bottom:40px">' + list.map(function (s) {
+      var full = state.shops.find(function (x) { return String(x.id) === String(s.id); });
+      return full ? shopCard(full, false, null, removable) : resultRow(s, removable);
+    }).join('') + '</div>';
   }
   function setSearchMode(on) {
     state.searchMode = on;
@@ -784,7 +886,7 @@
   $('ch-loc').addEventListener('click', function () { if (!state.coords && !state.locating) { state.locating = true; renderLoc(); initLocation(); } });
 
   window.addEventListener('resize', updateArrows, { passive: true });
-  wideMQ.addEventListener('change', renderList);
+  wideMQ.addEventListener('change', function () { renderList(); if (state.searchMode) renderSearch(); });
   // Contagem regressiva do Last minute: re-render a cada 15s (como o app).
   setInterval(function () { renderLastMinute(); renderGreeting(); }, 15000);
   // Voltar pra aba recarrega (o app recarrega ao ganhar foco).
