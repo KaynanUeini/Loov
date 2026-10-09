@@ -158,92 +158,101 @@ class CarWashesController < ApplicationController
     respond_to do |format|
       format.html do
         @closures = @car_wash.car_wash_closures.where("end_date >= ?", Date.current)
+        @detail   = detail_payload(@car_wash)
+        # Visitante que tocar em "Agendar" vai pro login; ao entrar, volta
+        # pra esta loja em vez de cair na home.
+        store_location_for(:user, request.fullpath) unless user_signed_in?
       end
       format.json do
-        cw   = @car_wash
-        dist = if params[:latitude].present? && params[:longitude].present? && cw.has_valid_coordinates?
-          cw.distance_to([params[:latitude].to_f, params[:longitude].to_f], :km).round(1)
-        end
-
-        favorited = user_signed_in? && current_user.client? &&
-          current_user.favorite_car_washes.exists?(car_wash_id: cw.id)
-
-        # Rating real (média + contagem de Reviews)
-        rating_stats = Review.where(car_wash_id: cw.id)
-                             .pick(Arel.sql("COALESCE(AVG(rating), 0)"), Arel.sql("COUNT(*)"))
-        rating_avg    = rating_stats[0].to_f.round(1)
-        reviews_count = rating_stats[1].to_i
-
-        # Aberto agora? (operating_hours + nenhum CarWashClosure ativo)
-        now_sp     = Time.current.in_time_zone("America/Sao_Paulo")
-        today_oh   = cw.operating_hours.find_by(day_of_week: now_sp.wday)
-        open_now   = open_at_time?(today_oh, now_sp) && !cw.closed_on?(now_sp.to_date)
-
-        # Próxima vaga (em minutos a partir de agora) — null se fechado o dia inteiro.
-        next_slot_minutes = next_available_slot_minutes(cw, now_sp)
-
-        render json: {
-          id:                cw.id,
-          name:              cw.name,
-          address:           cw.address,
-          favorited:         favorited,
-          cep:               cw.cep,
-          logradouro:        cw.logradouro,
-          bairro:            cw.bairro,
-          cidade:            cw.cidade,
-          uf:                cw.uf,
-          city:              cw.cidade,
-          state:             cw.uf,
-          lat:               cw.latitude,
-          lng:               cw.longitude,
-          latitude:          cw.latitude,
-          longitude:         cw.longitude,
-          distance_km:       dist,
-          capacity_per_slot: cw.capacity_per_slot,
-          rating_avg:         rating_avg,
-          reviews_count:      reviews_count,
-          open_now:           open_now,
-          next_slot_minutes:  next_slot_minutes,
-          # Elegível pro Last Minute: aberto agora + vende lavagem. Frontend usa
-          # pra liberar slots disponivel_only como link pro fluxo Disponível.
-          # Mesma regra da listagem (Service.last_minute) — antes era duração
-          # curta, e um lava-rápido só de polimento entrava por engano.
-          disponivel_eligible: open_now && cw.services.any?(&:last_minute?),
-          reviews:           Review.where(car_wash_id: cw.id)
-                                   .order(created_at: :desc)
-                                   .limit(20)
-                                   .includes(:user)
-                                   .map { |r|
-                                     {
-                                       id:         r.id,
-                                       rating:     r.rating,
-                                       comment:    r.comment.to_s,
-                                       tags:       r.tags_list,
-                                       author:     r.user&.display_name || "Cliente",
-                                       created_at: r.created_at.iso8601,
-                                     }
-                                   },
-          operating_hours: (cw.operating_hours || []).order(:day_of_week).map { |oh|
-            {
-              id:          oh.id,
-              day_of_week: oh.day_of_week,
-              opens_at:    oh.opens_at&.strftime('%H:%M'),
-              closes_at:   oh.closes_at&.strftime('%H:%M')
-            }
-          },
-          services: (cw.services || []).order(:title).map { |s|
-            {
-              id:          s.id,
-              title:       s.title,
-              category:    s.category,
-              description: s.description,
-              price:       s.price.to_f,
-              duration:    s.duration
-            }
-          }
-        }
+        render json: detail_payload(@car_wash)
       end
     end
+  end
+
+  # Mesmo payload do app (CarWashDetailScreen). A página HTML também usa:
+  # vai embutido nela, então o site e o app leem exatamente os mesmos dados.
+  private def detail_payload(cw)
+    dist = if params[:latitude].present? && params[:longitude].present? && cw.has_valid_coordinates?
+      cw.distance_to([params[:latitude].to_f, params[:longitude].to_f], :km).round(1)
+    end
+
+    favorited = user_signed_in? && current_user.client? &&
+      current_user.favorite_car_washes.exists?(car_wash_id: cw.id)
+
+    # Rating real (média + contagem de Reviews)
+    rating_stats = Review.where(car_wash_id: cw.id)
+                         .pick(Arel.sql("COALESCE(AVG(rating), 0)"), Arel.sql("COUNT(*)"))
+    rating_avg    = rating_stats[0].to_f.round(1)
+    reviews_count = rating_stats[1].to_i
+
+    # Aberto agora? (operating_hours + nenhum CarWashClosure ativo)
+    now_sp     = Time.current.in_time_zone("America/Sao_Paulo")
+    today_oh   = cw.operating_hours.find_by(day_of_week: now_sp.wday)
+    open_now   = open_at_time?(today_oh, now_sp) && !cw.closed_on?(now_sp.to_date)
+
+    # Próxima vaga (em minutos a partir de agora) — null se fechado o dia inteiro.
+    next_slot_minutes = next_available_slot_minutes(cw, now_sp)
+
+    {
+      id:                cw.id,
+      name:              cw.name,
+      address:           cw.address,
+      favorited:         favorited,
+      cep:               cw.cep,
+      logradouro:        cw.logradouro,
+      bairro:            cw.bairro,
+      cidade:            cw.cidade,
+      uf:                cw.uf,
+      city:              cw.cidade,
+      state:             cw.uf,
+      lat:               cw.latitude,
+      lng:               cw.longitude,
+      latitude:          cw.latitude,
+      longitude:         cw.longitude,
+      distance_km:       dist,
+      capacity_per_slot: cw.capacity_per_slot,
+      rating_avg:         rating_avg,
+      reviews_count:      reviews_count,
+      open_now:           open_now,
+      next_slot_minutes:  next_slot_minutes,
+      # Elegível pro Last Minute: aberto agora + vende lavagem. Frontend usa
+      # pra liberar slots disponivel_only como link pro fluxo Disponível.
+      # Mesma regra da listagem (Service.last_minute) — antes era duração
+      # curta, e um lava-rápido só de polimento entrava por engano.
+      disponivel_eligible: open_now && cw.services.any?(&:last_minute?),
+      reviews:           Review.where(car_wash_id: cw.id)
+                               .order(created_at: :desc)
+                               .limit(20)
+                               .includes(:user)
+                               .map { |r|
+                                 {
+                                   id:         r.id,
+                                   rating:     r.rating,
+                                   comment:    r.comment.to_s,
+                                   tags:       r.tags_list,
+                                   author:     r.user&.display_name || "Cliente",
+                                   created_at: r.created_at.iso8601,
+                                 }
+                               },
+      operating_hours: (cw.operating_hours || []).order(:day_of_week).map { |oh|
+        {
+          id:          oh.id,
+          day_of_week: oh.day_of_week,
+          opens_at:    oh.opens_at&.strftime('%H:%M'),
+          closes_at:   oh.closes_at&.strftime('%H:%M')
+        }
+      },
+      services: (cw.services || []).order(:title).map { |s|
+        {
+          id:          s.id,
+          title:       s.title,
+          category:    s.category,
+          description: s.description,
+          price:       s.price.to_f,
+          duration:    s.duration
+        }
+      }
+    }
   end
 
   def new

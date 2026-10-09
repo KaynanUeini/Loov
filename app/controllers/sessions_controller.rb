@@ -8,6 +8,8 @@ class SessionsController < Devise::SessionsController
     # Admin não tem o que fazer na home de cliente: vai direto pro painel. Se
     # ele tinha aberto uma página do admin e caiu no login, volta pra ela.
     return stored_location_for(resource) || admin_dashboard_path if resource.admin?
+    # Cliente que entrou pelo "Agendar" de uma loja volta pra ela.
+    return stored_location_for(resource) || root_path if resource.client?
 
     root_path
   end
