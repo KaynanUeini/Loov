@@ -1,716 +1,496 @@
-<%
-months_pt    = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
-weekdays_pt  = ['dom','seg','ter','qua','qui','sex','sáb']
-current_time = Time.current.in_time_zone("America/Sao_Paulo")
+<%#
+  Meus agendamentos — porte da aba Agenda do app
+  (LoovApp/src/screens/AppointmentsScreen.js + ReviewScreen.js), lendo o
+  mesmo JSON (AppointmentsController#appointments_payload), embutido aqui e
+  atualizado a cada 20 s, com recuo se o servidor recusar — o dono pode marcar
+  "compareceu" enquanto o cliente olha, e a avaliação aparece sozinha.
 
-is_last_minute = lambda { |appt| appt.appointment_type == 'disponivel' }
+    · Próximos / Anteriores, agrupados por dia (HOJE, AMANHÃ, QUI · 14 AGO):
+      a data vira cabeçalho em vez de se repetir em cada cartão.
+    · Cartão escuro = é HOJE (iminência, não tipo de reserva); Last Minute
+      é selo.
+    · Código de chegada + Rota; cancelar só com mais de 2 h de antecedência,
+      numa folha de confirmação; avaliar tocando nas estrelas abre a tela
+      de avaliação já com a nota (#avaliar-ID).
 
-is_today_date = lambda do |appt|
-  appt.scheduled_at.in_time_zone("America/Sao_Paulo").to_date == current_time.to_date &&
-    appt.scheduled_at >= current_time
-end
-
-can_cancel = lambda do |appt|
-  next false unless appt.status == 'confirmed'
-  next false if appt.appointment_type == 'disponivel'
-  ((appt.scheduled_at - current_time) / 60.0) > 120
-end
+  Tela grande: título, abas e resumo ficam numa coluna fixa à esquerda e os
+  cartões usam o resto da largura em grade.
 %>
+<script src="/vendor/feather-4.29.2.min.js"></script>
 
 <style>
-  .appts-page { max-width: 760px; margin: 0 auto; padding: 24px 20px 80px; }
+  .loov-nav { background: var(--cream) !important; }
+  html, body { overflow-x: clip !important; }
+  .ag { background: var(--cream); color: var(--ink); min-height: 100vh; padding-top: 60px; }
+  .ag *, .ag *::before, .ag *::after { box-sizing: border-box; }
+  .ag button { font-family: inherit; line-height: normal; cursor: pointer; }
+  .ag svg.feather { display: block; }
+  .ag a { text-decoration: none; }
+  .ag-wrap { width: 100%; max-width: 1240px; margin: 0 auto; }
+  .ag-view { display: none; }
+  .ag-view.is-on { display: block; }
 
-  .appts-header {
-    padding: 8px 0 20px;
-  }
-  .appts-eyebrow {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; letter-spacing: 1.4px;
-    color: var(--ash); text-transform: uppercase;
-  }
-  .appts-title {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: clamp(28px, 5vw, 40px);
-    color: var(--ink); letter-spacing: -0.8px;
-    margin-top: 4px; font-weight: 700;
-  }
+  .ag-head { padding: 24px 20px 20px; }
+  .ag-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px; color: var(--ash); text-transform: uppercase; }
+  .ag-title { margin: 4px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 32px; line-height: 1.1; letter-spacing: -0.8px; color: var(--ink) !important; }
+  .ag-tabs { display: flex; gap: 4px; margin: 0 20px 20px; padding: 4px; background: var(--sand); border-radius: 14px; }
+  .ag-tabs button { flex: 1; height: 40px; border: 0; border-radius: 10px; background: transparent; color: var(--ink); font-size: 13px; font-weight: 600; transition: background .15s, box-shadow .15s; }
+  .ag-tabs button[aria-selected="true"] { background: var(--paper); box-shadow: 0 1px 3px rgba(40,35,28,.12); }
+  .ag-tabs small { margin-left: 4px; color: var(--ash); font-weight: 500; }
+  .ag-side-extra { display: none; }
 
-  /* ── Tabs (sand pill container) ─────────────────────── */
-  .appts-tabs {
-    display: flex; gap: 4px;
-    background: var(--sand); padding: 4px;
-    border-radius: 14px;
-    margin-bottom: 22px;
-  }
-  .appts-tab-btn {
-    flex: 1; height: 40px; border-radius: 10px;
-    background: transparent; border: none;
-    color: var(--ink); cursor: pointer;
-    font-family: 'Inter', sans-serif;
-    font-size: 13.5px; font-weight: 600;
-    transition: background .15s, box-shadow .15s;
-  }
-  .appts-tab-btn.active {
-    background: var(--paper);
-    box-shadow: 0 2px 6px rgba(40,35,28,0.06);
-  }
+  .ag-list { padding: 4px 20px 48px; }
+  .ag-day { margin: 18px 0 10px; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.3px; color: var(--ash); text-transform: uppercase; }
+  .ag-day:first-child { margin-top: 0; }
+  .ag-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; align-items: start; }
 
-  /* ── Flash ──────────────────────────────────────────── */
-  .flash-msg {
-    display: flex; align-items: center; gap: 10px;
-    padding: 12px 16px; border-radius: 14px;
-    margin-bottom: 14px; font-size: 13.5px;
-  }
-  .flash-msg.flash-error   { background: #fdecec; border: 1px solid #f5cccc; color: #7a3838; }
-  .flash-msg.flash-success { background: #d6ecde; border: 1px solid #b5d8c1; color: #2d6b42; }
+  /* Cartão — o tom vem de variáveis: claro por padrão, escuro quando é hoje. */
+  .ag-card { --t: var(--ink); --b: var(--graphite); --q: var(--ash); --l: var(--stone);
+    padding: 14px 16px 4px; border-radius: 18px; background: var(--paper); border: 1px solid var(--stone); }
+  .ag-card.is-today { --t: var(--cream); --b: #c9c4ba; --q: #9e9688; --l: rgba(255,255,255,.12); background: var(--ink); border-color: var(--ink); }
+  .ag-top { display: flex; align-items: flex-start; gap: 14px; padding-bottom: 10px; }
+  .ag-time { flex: 0 0 72px; }
+  .ag-time b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 24px; line-height: 27px; letter-spacing: -0.8px; color: var(--t); }
+  .ag-time small { display: block; margin-top: 3px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .8px; color: var(--q); }
+  .ag-mid { flex: 1; min-width: 0; }
+  .ag-shoprow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 7px; min-width: 0; }
+  /* Nome tem prioridade: sem espaço, o selo Last Minute desce pra linha de baixo. */
+  .ag-shoprow .ag-shop { max-width: 100%; }
+  .ag-shop { min-width: 0; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 16px; letter-spacing: -0.2px; color: var(--t) !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  a.ag-shop:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .ag-lm { flex-shrink: 0; display: inline-flex; align-items: center; gap: 3px; padding: 3px 7px; border-radius: 100px; background: var(--coral-50); color: var(--coral-700); font-family: 'JetBrains Mono', monospace; font-size: 8.5px; font-weight: 500; letter-spacing: .6px; }
+  .ag-card.is-today .ag-lm { background: var(--coral-300); color: var(--ink); }
+  .ag-svc { margin-top: 3px; font-size: 12.5px; color: var(--b); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ag-money { text-align: right; }
+  .ag-price { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; letter-spacing: -0.3px; color: var(--t); white-space: nowrap; }
+  .ag-id { margin-top: 4px; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: .5px; color: var(--q); }
+  .ag-foot { display: flex; align-items: center; gap: 10px; margin-top: 4px; padding: 12px 0 10px; border-top: 1px solid var(--l); }
+  .ag-code { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 100px; background: var(--coral-500); color: var(--cream); font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500; letter-spacing: 1px; }
+  .ag-card.is-today .ag-code { background: var(--cream); color: var(--ink); }
+  .ag-hint { flex: 1; min-width: 0; font-size: 11.5px; color: var(--b); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ag-hint.is-quiet { color: var(--q); }
+  .ag-route { display: inline-flex; align-items: center; gap: 5px; padding: 11px 13px; border-radius: 100px; border: 1px solid var(--l); color: var(--coral-700) !important; font-size: 11.5px; font-weight: 600; transition: background .15s; }
+  .ag-route:hover { background: var(--coral-50); }
+  .ag-card.is-today .ag-route { color: var(--cream) !important; }
+  .ag-card.is-today .ag-route:hover { background: rgba(255,255,255,.08); }
+  .ag-stars { display: flex; align-items: center; gap: 4px; }
+  .ag-rate-l { flex: 1; font-size: 12.5px; font-weight: 500; color: var(--b); }
+  .ag-star { border: 0; background: transparent; padding: 4px; margin: -4px 0; color: var(--coral-500); border-radius: 8px; transition: transform .15s, background .15s; }
+  .ag-star:hover { transform: scale(1.15); background: var(--coral-50); }
+  .ag-cancel { display: block; width: 100%; margin-top: 2px; padding: 13px 0; border: 0; border-top: 1px solid var(--l); background: transparent; color: var(--q); font-size: 11.5px; font-weight: 600; letter-spacing: .2px; transition: color .15s; }
+  .ag-cancel:hover { color: var(--rose-500, #c0392b); }
 
-  /* ── Card ──────────────────────────────────────────── */
-  .appt-list { display: flex; flex-direction: column; gap: 12px; }
+  .ag-empty { display: flex; flex-direction: column; align-items: center; padding: 48px 32px 60px; text-align: center; }
+  .ag-empty img { width: min(84%, 340px); height: auto; margin-bottom: 18px; }
+  .ag-empty h2 { margin: 0 0 8px !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 600; font-size: 18px; letter-spacing: -0.3px; color: var(--ink) !important; }
+  .ag-empty p { margin: 0; max-width: 36ch; font-size: 13px; line-height: 20px; color: var(--graphite); }
+  .ag-empty a { margin-top: 20px; padding: 13px 22px; border-radius: 100px; background: var(--coral-500); color: var(--cream) !important; font-size: 14px; font-weight: 600; }
 
-  .appt-card {
-    padding: 16px; border-radius: 18px;
-    background: var(--paper);
-    border: 1px solid var(--stone);
-    position: relative; overflow: hidden;
-  }
-  .appt-card.today {
-    background: var(--ink); border-color: var(--ink); color: var(--cream);
-  }
-  .appt-card-blob {
-    position: absolute; top: -30px; right: -30px;
-    width: 120px; height: 120px; border-radius: 50%;
-    background: var(--coral-500); opacity: .2; pointer-events: none;
-  }
+  /* Folha de cancelar */
+  .ag-sheet-bg { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; background: rgba(20,14,9,.55); opacity: 0; pointer-events: none; transition: opacity .2s; }
+  .ag-sheet-bg.is-on { opacity: 1; pointer-events: auto; }
+  .ag-sheet { width: 100%; max-width: 440px; display: flex; flex-direction: column; align-items: center; padding: 10px 22px calc(30px + env(safe-area-inset-bottom, 0px)); background: var(--cream); border-radius: 24px 24px 0 0; transform: translateY(24px); transition: transform .25s; }
+  .ag-sheet-bg.is-on .ag-sheet { transform: none; }
+  .ag-handle { width: 42px; height: 4px; border-radius: 2px; background: var(--stone); margin-bottom: 20px; }
+  .ag-sheet-ic { width: 52px; height: 52px; margin-bottom: 14px; border-radius: 50%; background: rgba(200,80,80,.12); border: 1px solid rgba(200,80,80,.25); color: var(--rose-500, #c0392b); display: flex; align-items: center; justify-content: center; }
+  .ag-sheet h2 { margin: 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 600; font-size: 19px; letter-spacing: -0.3px; color: var(--ink) !important; text-align: center; }
+  .ag-sum { align-self: stretch; margin-top: 14px; padding: 12px 14px; background: var(--paper); border: 1px solid var(--stone); border-radius: 12px; }
+  .ag-sum b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ag-sum small { display: block; margin-top: 3px; font-size: 12px; letter-spacing: .2px; color: var(--graphite); }
+  .ag-desc { margin: 14px 0 0; padding: 0 12px; font-size: 12px; line-height: 17px; color: var(--graphite); text-align: center; }
+  .ag-err { align-self: stretch; display: flex; align-items: center; gap: 8px; margin-top: 14px; padding: 9px 12px; border-radius: 10px; background: rgba(200,80,80,.10); border: 1px solid rgba(200,80,80,.25); color: var(--rose-500, #c0392b); font-size: 12px; font-weight: 600; line-height: 16px; }
+  .ag-err.is-off { display: none; }
+  .ag-btn-danger { align-self: stretch; min-height: 46px; margin-top: 20px; border: 0; border-radius: 100px; background: var(--rose-500, #c0392b); color: var(--cream); font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+  .ag-btn-danger[disabled] { opacity: .6; }
+  .ag-btn-ghost { align-self: stretch; margin-top: 8px; padding: 12px; border: 0; border-radius: 100px; background: transparent; color: var(--graphite); font-size: 13px; font-weight: 600; }
+  .ag-btn-ghost:hover { background: var(--sand); }
+  .ag-spin { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(250,250,246,.35); border-top-color: var(--cream); animation: agspin .8s linear infinite; }
+  @keyframes agspin { to { transform: rotate(360deg); } }
 
-  .appt-inner {
-    display: flex; gap: 14px; position: relative;
-  }
-  .date-col {
-    width: 56px; flex-shrink: 0;
-    padding-right: 14px; border-right: 1px solid var(--stone);
-    display: flex; flex-direction: column; align-items: center;
-  }
-  .appt-card.today .date-col { border-right-color: rgba(255,255,255,0.15); }
-  .date-dow, .date-mon {
-    font-size: 10px; text-transform: uppercase;
-    color: var(--graphite); opacity: .65;
-    font-family: 'JetBrains Mono', monospace; letter-spacing: 0.3px;
-  }
-  .date-day {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 30px; font-weight: 700;
-    line-height: 32px; color: var(--ink);
-    letter-spacing: -1px;
-  }
-  .date-mon { margin-top: 2px; }
-  .appt-card.today .date-dow,
-  .appt-card.today .date-day,
-  .appt-card.today .date-mon { color: var(--cream); }
+  /* Avaliar (porte da ReviewScreen) */
+  .rv { max-width: 560px; margin: 0 auto; padding-bottom: 48px; }
+  .rv-head { display: flex; align-items: center; padding: 8px 16px; }
+  .rv-back { flex: 0 0 40px; height: 40px; border: 0; border-radius: 50%; background: var(--sand); color: var(--ink); display: flex; align-items: center; justify-content: center; }
+  .rv-back:hover { background: var(--stone); }
+  .rv-hc { flex: 1; text-align: center; }
+  .rv-hc small { display: block; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; color: var(--coral-500); }
+  .rv-hc h1 { margin: 2px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 18px; letter-spacing: -0.3px; color: var(--ink) !important; }
+  .rv-body { padding: 18px; }
+  .rv-card { margin-bottom: 24px; padding: 16px; background: var(--paper); border: 1px solid var(--stone); border-radius: 16px; box-shadow: 0 6px 18px -14px rgba(40,35,28,.4); }
+  .rv-lab { margin-bottom: 6px; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1.5px; color: var(--ash); }
+  .rv-name { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 18px; letter-spacing: -0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rv-div { height: 1px; background: var(--stone); margin: 14px 0; }
+  .rv-row { display: flex; align-items: center; }
+  .rv-item { flex: 1; min-width: 0; }
+  .rv-item b { display: block; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rv-sep { width: 1px; height: 28px; background: var(--stone); margin: 0 12px; }
+  .rv-sec { margin-bottom: 8px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.8px; color: var(--ash); }
+  .rv-help { margin: -2px 0 12px; font-size: 11px; color: var(--graphite); }
+  .rv-stars { display: flex; justify-content: center; gap: 6px; padding: 10px 0; margin-bottom: 6px; }
+  .rv-star { border: 0; background: transparent; padding: 6px; color: var(--stone); transition: transform .15s, color .15s; }
+  .rv-star:hover { transform: scale(1.12); }
+  .rv-star.is-on { color: var(--coral-500); }
+  .rv-star.is-on svg { fill: currentColor; }
+  .rv-rlab { min-height: 18px; text-align: center; font-size: 14px; font-weight: 600; letter-spacing: .5px; color: var(--coral-700); }
+  .rv-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+  .rv-tag { display: inline-flex; align-items: center; gap: 5px; padding: 9px 14px; border-radius: 100px; background: var(--paper); border: 1px solid var(--stone); color: var(--graphite); font-size: 12px; font-weight: 600; transition: background .15s, border-color .15s; }
+  .rv-tag:hover { border-color: var(--ink); }
+  .rv-tag.is-on { background: var(--coral-500); border-color: var(--coral-500); color: var(--cream); }
+  .rv-comment { padding: 14px; background: var(--paper); border: 1px solid var(--stone); border-radius: 14px; transition: border-color .15s, box-shadow .15s; }
+  .rv-comment:focus-within { border-color: var(--coral-500); box-shadow: 0 0 0 4px rgba(221,120,82,.14); }
+  .rv-comment textarea { display: block; width: 100%; min-height: 90px; padding: 0; border: 0 !important; outline: none; resize: vertical; background: transparent !important; box-shadow: none !important; font: inherit; font-size: 14px; line-height: 20px; color: var(--ink); }
+  .rv-count { margin-top: 8px; text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ash); }
+  .rv-count.is-warn { color: var(--amber-500, #c98a1a); }
+  .rv-send { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 28px; padding: 15px; border: 0; border-radius: 100px; background: var(--coral-500); color: var(--cream); font-size: 14px; font-weight: 600; transition: opacity .15s; }
+  .rv-send[disabled] { opacity: .4; cursor: default; }
+  .rv-note { margin: 16px 0 0; padding: 0 12px; text-align: center; font-size: 11px; line-height: 16px; color: var(--ash); }
 
-  .appt-body { flex: 1; min-width: 0; }
+  .ag-toast { position: fixed; left: 16px; right: 16px; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); z-index: 70; max-width: 440px; margin: 0 auto; display: flex; align-items: center; gap: 10px; padding: 13px; border-radius: 14px; border: 1px solid var(--coral-100); background: var(--coral-50); color: var(--coral-700); font-size: 12.5px; font-weight: 600; box-shadow: 0 14px 36px -16px rgba(40,35,28,.45); transform: translateY(16px); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+  .ag-toast.is-on { opacity: 1; transform: none; }
+  .ag-toast.is-err { background: #fdecec; border-color: #f5cccc; color: var(--rose-500, #c0392b); }
 
-  .appt-id {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; letter-spacing: 0.5px;
-    color: var(--ash); margin-bottom: 4px;
+  @media (min-width: 720px) {
+    .ag-head { padding: 36px 32px 24px; }
+    .ag-title { font-size: 44px; letter-spacing: -1.4px; }
+    .ag-tabs { margin: 0 32px 24px; max-width: 420px; }
+    .ag-list { padding: 4px 32px 64px; }
+    .ag-cards { grid-template-columns: repeat(auto-fill, minmax(min(380px, 100%), 1fr)); gap: 14px; }
+    .ag-sheet-bg { align-items: center; }
+    .ag-sheet { border-radius: 24px; padding-top: 22px; }
+    .ag-handle { display: none; }
   }
-  .appt-card.today .appt-id { color: #b5ae9f; }
-
-  .shop-name {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 16px; font-weight: 600;
-    color: var(--ink); margin-top: 8px;
-    letter-spacing: -0.2px;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  @media (min-width: 1100px) {
+    .ag-split { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 24px; align-items: start; padding: 0 32px; }
+    .ag-side { position: sticky; top: 84px; padding-top: 24px; }
+    .ag-side .ag-head { padding: 0 0 24px; }
+    .ag-side .ag-tabs { margin: 0; }
+    .ag-side-extra { display: block; margin-top: 20px; padding: 18px; background: var(--paper); border: 1px solid var(--stone); border-radius: 18px; }
+    .ag-side-extra .ag-eyebrow { margin-bottom: 8px; }
+    .ag-next b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.5px; }
+    .ag-next small { display: block; margin-top: 2px; font-size: 13px; color: var(--graphite); }
+    .ag-new { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 16px; padding: 13px; border-radius: 100px; background: var(--coral-500); color: var(--cream) !important; font-size: 14px; font-weight: 600; }
+    .ag-list { padding: 24px 0 64px; }
   }
-  .appt-card.today .shop-name { color: var(--cream); }
-  .service-name {
-    font-size: 12px; color: var(--graphite);
-    margin-top: 2px;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
-  .appt-card.today .service-name { color: #c9c4ba; }
-
-  .time-price {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 20px; font-weight: 700;
-    color: var(--ink); margin-top: 12px;
-    letter-spacing: -0.4px;
-  }
-  .appt-card.today .time-price { color: var(--coral-500); }
-
-  /* ── Code block (pill + hint) ───────────────────────── */
-  .code-block {
-    display: flex; align-items: center; gap: 10px;
-    margin-top: 12px;
-    padding: 10px 12px;
-    border-radius: 12px;
-  }
-  .code-block.light {
-    background: var(--coral-50);
-    border: 1px solid var(--coral-100);
-  }
-  .code-block.ink {
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.14);
-  }
-  .code-pill {
-    display: inline-flex; align-items: center; gap: 5px;
-    padding: 5px 10px; border-radius: 100px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px; font-weight: 600; letter-spacing: 1px;
-    flex-shrink: 0;
-  }
-  .code-pill.light { background: var(--coral-500); color: var(--cream); }
-  .code-pill.ink   { background: var(--cream);     color: var(--ink); }
-  .code-hint {
-    flex: 1; font-size: 11px; line-height: 15px;
-  }
-  .code-hint.light { color: var(--coral-700); }
-  .code-hint.ink   { color: var(--cream); }
-
-  /* ── Stars rows ────────────────────────────────────── */
-  .stars-row-result {
-    display: flex; align-items: center; gap: 3px;
-    margin-top: 10px;
-  }
-  .stars-row-result i { font-size: 12px; }
-  .stars-hint {
-    color: var(--ash); font-size: 11px; margin-left: 6px;
-  }
-
-  .rate-row {
-    display: flex; align-items: center; gap: 10px;
-    margin-top: 14px; padding-top: 12px;
-    border-top: 1px solid var(--stone);
-  }
-  .rate-row-label {
-    font-family: 'Inter', sans-serif;
-    font-size: 12.5px; font-weight: 600; color: var(--graphite);
-  }
-  .rate-row-stars {
-    display: flex; gap: 8px;
-  }
-  .rate-row-star-btn {
-    background: none; border: none; cursor: pointer;
-    padding: 2px;
-    color: var(--coral-500);
-    transition: transform .12s ease;
-  }
-  .rate-row-star-btn:hover { transform: scale(1.18); }
-  .rate-row-star-btn i { font-size: 16px; }
-
-  /* ── Actions (today card) ──────────────────────────── */
-  .card-actions {
-    display: flex; gap: 8px;
-    margin-top: 14px; position: relative;
-  }
-  .action-primary {
-    flex: 1; background: var(--coral-500);
-    color: var(--cream); border: none;
-    padding: 10px; border-radius: 100px;
-    text-align: center; cursor: pointer;
-    font-family: 'Inter', sans-serif;
-    font-size: 13px; font-weight: 600;
-    text-decoration: none;
-    transition: background .15s;
-  }
-  .action-primary:hover { background: var(--coral-700); color: var(--cream); }
-  .action-ghost {
-    flex: 1; background: transparent;
-    border: 1px solid rgba(255,255,255,0.25);
-    color: var(--cream);
-    padding: 10px; border-radius: 100px;
-    text-align: center; cursor: pointer;
-    font-family: 'Inter', sans-serif;
-    font-size: 13px; font-weight: 600;
-  }
-  .action-ghost:hover { background: rgba(255,255,255,0.08); }
-
-  /* Cancel link no rodapé pra cards futuros não-hoje */
-  .cancel-link {
-    display: inline-flex; align-items: center; gap: 5px;
-    margin-top: 12px; padding: 4px 0;
-    background: none; border: none; cursor: pointer;
-    color: var(--ash); font-size: 11.5px;
-    font-family: 'Inter', sans-serif;
-  }
-  .cancel-link:hover { color: var(--rose-500); }
-
-  /* ── Empty state ───────────────────────────────────── */
-  .appts-empty {
-    text-align: center; padding: 60px 24px;
-    border: 1px solid var(--stone); border-radius: 20px;
-    background: var(--paper);
-  }
-  .appts-empty-icon {
-    width: 56px; height: 56px; border-radius: 50%;
-    background: var(--coral-50); border: 1px solid var(--coral-100);
-    color: var(--coral-700);
-    display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 14px; font-size: 22px;
-  }
-  .appts-empty-title {
-    font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700; font-size: 20px;
-    color: var(--ink); margin-bottom: 6px;
-    letter-spacing: -0.3px;
-  }
-  .appts-empty-text {
-    font-size: 13.5px; color: var(--graphite);
-    margin-bottom: 18px; line-height: 1.55;
-  }
-
-  /* ── Review modal ──────────────────────────────────── */
-  .review-overlay {
-    position: fixed; inset: 0; z-index: 300;
-    background: rgba(40,35,28,0.55); backdrop-filter: blur(8px);
-    display: none; align-items: center; justify-content: center;
-    padding: 1rem; opacity: 0; transition: opacity .25s ease;
-  }
-  .review-overlay.open { display: flex; opacity: 1; }
-  .review-modal {
-    background: var(--paper); border: 1px solid var(--stone);
-    border-radius: 22px; padding: 32px; width: 100%; max-width: 480px;
-    transform: translateY(20px); transition: transform .25s cubic-bezier(.16,1,.3,1);
-    box-shadow: 0 24px 60px rgba(40,35,28,0.18);
-  }
-  .review-overlay.open .review-modal { transform: translateY(0); }
-  .review-modal-title {
-    font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700; font-size: 22px;
-    color: var(--ink); margin-bottom: 4px;
-    letter-spacing: -0.4px;
-  }
-  .review-modal-sub {
-    font-size: 13.5px; color: var(--graphite); margin-bottom: 22px;
-  }
-  .stars-input-row { display: flex; gap: 6px; margin-bottom: 16px; justify-content: center; }
-  .star-btn {
-    background: none; border: none; cursor: pointer;
-    color: var(--stone); font-size: 28px; padding: 6px;
-    transition: color .15s, transform .12s;
-  }
-  .star-btn.active { color: var(--coral-500); }
-  .star-btn:hover { transform: scale(1.15); }
-
-  .tags-input-row {
-    display: flex; flex-wrap: wrap; gap: 6px;
-    margin-bottom: 14px;
-  }
-  .tag-btn {
-    padding: 6px 12px; border-radius: 100px;
-    background: var(--paper); border: 1px solid var(--stone);
-    color: var(--graphite); font-size: 12px;
-    cursor: pointer; transition: all .15s;
-  }
-  .tag-btn:hover { border-color: var(--coral-300); }
-  .tag-btn.selected {
-    background: var(--coral-50); border-color: var(--coral-500);
-    color: var(--coral-700); font-weight: 600;
-  }
-
-  .review-textarea {
-    width: 100%; padding: 12px 14px; border-radius: 12px;
-    background: var(--cream); border: 1px solid var(--stone);
-    color: var(--ink); font-family: 'Inter', sans-serif;
-    font-size: 14px; resize: vertical; outline: none;
-    margin-bottom: 18px; min-height: 80px;
-  }
-  .review-textarea:focus { border-color: var(--coral-500); }
-
-  .review-actions { display: flex; gap: 10px; }
-  .btn-modal-cancel {
-    flex: 1; padding: 12px; border-radius: 100px;
-    background: var(--paper); color: var(--graphite);
-    border: 1px solid var(--stone);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase;
-    cursor: pointer; transition: all .2s ease;
-  }
-  .btn-modal-cancel:hover { border-color: var(--coral-500); color: var(--coral-700); }
-  .btn-modal-submit {
-    flex: 2; padding: 12px; border-radius: 100px;
-    background: var(--coral-500); color: var(--cream); border: none;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase;
-    cursor: pointer; transition: background .2s ease;
-  }
-  .btn-modal-submit:hover:not(:disabled) { background: var(--coral-700); }
-  .btn-modal-submit:disabled { opacity: .45; cursor: not-allowed; }
-
-  /* ── Cancel modal ──────────────────────────────────── */
-  .cancel-overlay {
-    position: fixed; inset: 0; z-index: 310;
-    background: rgba(40,35,28,0.55); backdrop-filter: blur(8px);
-    display: none; align-items: flex-end; justify-content: center;
-    padding: 0;
-  }
-  .cancel-overlay.open { display: flex; }
-  .cancel-sheet {
-    background: var(--paper);
-    width: 100%; max-width: 480px;
-    border-radius: 22px 22px 0 0;
-    padding: 14px 22px 28px;
-    box-shadow: 0 -10px 30px rgba(40,35,28,0.18);
-    text-align: center;
-  }
-  @media (min-width: 600px) {
-    .cancel-overlay { align-items: center; padding: 1rem; }
-    .cancel-sheet   { border-radius: 22px; padding: 28px 26px 22px; }
-  }
-  .cancel-handle {
-    width: 36px; height: 4px;
-    background: var(--stone); border-radius: 99px;
-    margin: 0 auto 14px;
-  }
-  .cancel-icon-circle {
-    width: 56px; height: 56px; border-radius: 50%;
-    background: #fdecec; border: 1px solid #f5cccc;
-    color: #c85050;
-    display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 14px; font-size: 22px;
-  }
-  .cancel-title {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 19px; font-weight: 700;
-    color: var(--ink); letter-spacing: -0.3px;
-    margin-bottom: 14px;
-  }
-  .cancel-summary {
-    background: var(--cream); border: 1px solid var(--stone);
-    border-radius: 14px; padding: 14px 16px;
-    margin-bottom: 14px;
-  }
-  .cancel-shop {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 15px; font-weight: 600; color: var(--ink);
-  }
-  .cancel-when {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px; color: var(--graphite);
-    margin-top: 4px;
-  }
-  .cancel-desc {
-    font-size: 13px; color: var(--graphite);
-    line-height: 1.55; margin-bottom: 16px;
-  }
-  .btn-cancel-confirm {
-    width: 100%; padding: 14px;
-    background: var(--rose-500); color: var(--cream);
-    border: none; border-radius: 100px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px; font-weight: 700; letter-spacing: 1.4px; text-transform: uppercase;
-    cursor: pointer; margin-bottom: 8px;
-    transition: background .15s;
-  }
-  .btn-cancel-confirm:hover { background: #a83a3a; }
-  .btn-cancel-back {
-    width: 100%; padding: 13px;
-    background: transparent; color: var(--graphite);
-    border: none; cursor: pointer;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase;
-  }
-  .btn-cancel-back:hover { color: var(--ink); }
 </style>
 
-<%# Review modal %>
-<div class="review-overlay" id="review-overlay">
-  <div class="review-modal">
-    <div class="review-modal-title">Avaliar <span id="modal-car-wash-name" style="color:var(--coral-500);"></span></div>
-    <div class="review-modal-sub">Como foi sua experiência?</div>
-    <%= form_with url: client_reviews_path, method: :post, data: { turbo: false }, id: "review-form" do |f| %>
-      <%= f.hidden_field :appointment_id, id: "review-appointment-id" %>
-      <div class="stars-input-row" id="stars-row">
-        <% (1..5).each do |i| %>
-          <button type="button" class="star-btn" data-value="<%= i %>" onclick="setStar(<%= i %>)">
-            <i class="fas fa-star"></i>
-          </button>
-        <% end %>
+<div class="ag" id="ag">
+  <section class="ag-view is-on" id="ag-main">
+    <div class="ag-wrap ag-split">
+      <div class="ag-side">
+        <div class="ag-head">
+          <div class="ag-eyebrow">Histórico</div>
+          <h1 class="ag-title">Meus agendamentos</h1>
+        </div>
+        <div class="ag-tabs" role="tablist">
+          <button type="button" role="tab" data-tab="proximos" aria-selected="true">Próximos<small id="ag-n-up"></small></button>
+          <button type="button" role="tab" data-tab="passados" aria-selected="false">Anteriores<small id="ag-n-past"></small></button>
+        </div>
+        <div class="ag-side-extra" id="ag-side-extra"></div>
       </div>
-      <%= f.hidden_field :rating, id: "review-rating", value: "" %>
-      <div class="tags-input-row" id="tags-row">
-        <% Review::TAGS.each do |tag| %>
-          <button type="button" class="tag-btn" data-tag="<%= tag %>" onclick="toggleTag(this)"><%= tag %></button>
-        <% end %>
-      </div>
-      <%= f.hidden_field :tags, id: "review-tags", value: "" %>
-      <%= f.text_area :comment, class: "review-textarea", rows: 3, placeholder: "Comentário opcional..." %>
-      <div class="review-actions">
-        <button type="button" class="btn-modal-cancel" onclick="closeReviewModal()">Cancelar</button>
-        <%= f.submit "Enviar Avaliação", class: "btn-modal-submit", id: "review-submit", disabled: true %>
-      </div>
-    <% end %>
-  </div>
-</div>
-
-<%# Cancel modal %>
-<div class="cancel-overlay" id="cancel-overlay">
-  <div class="cancel-sheet">
-    <div class="cancel-handle"></div>
-    <div class="cancel-icon-circle"><i class="fas fa-circle-xmark"></i></div>
-    <div class="cancel-title">Cancelar agendamento?</div>
-    <div class="cancel-summary">
-      <div class="cancel-shop" id="cancel-shop">—</div>
-      <div class="cancel-when" id="cancel-when">—</div>
+      <div class="ag-list" id="ag-list"></div>
     </div>
-    <div class="cancel-desc">O horário será liberado e esta ação não pode ser desfeita.</div>
-    <%= form_with url: "#", method: :delete, local: true, data: { turbo: false }, id: "cancel-form" do %>
-      <button type="submit" class="btn-cancel-confirm">Cancelar agendamento</button>
-    <% end %>
-    <button type="button" class="btn-cancel-back" onclick="closeCancelModal()">Voltar</button>
-  </div>
-</div>
+    <%= render "shared/site_footer", audience: :client %>
+  </section>
 
-<div class="appts-page">
+  <section class="ag-view" id="ag-review"></section>
 
-  <div class="appts-header">
-    <div class="appts-eyebrow">HISTÓRICO</div>
-    <h1 class="appts-title">Meus agendamentos</h1>
-  </div>
-
-  <% if flash[:alert] %>
-    <div class="flash-msg flash-error" id="flash-error"><i class="fas fa-circle-exclamation"></i><span><%= flash[:alert] %></span></div>
-  <% end %>
-  <% if flash[:notice] %>
-    <div class="flash-msg flash-success" id="flash-notice"><i class="fas fa-circle-check"></i><span><%= flash[:notice] %></span></div>
-  <% end %>
-
-  <div class="appts-tabs">
-    <button class="appts-tab-btn active" data-tab="proximos">Próximos</button>
-    <button class="appts-tab-btn" data-tab="passados">Anteriores</button>
+  <div class="ag-sheet-bg" id="ag-cancel" aria-hidden="true">
+    <div class="ag-sheet" role="dialog" aria-modal="true" aria-labelledby="ag-cancel-t">
+      <div class="ag-handle"></div>
+      <div class="ag-sheet-ic"><i data-feather="x-circle" style="width:22px;height:22px"></i></div>
+      <h2 id="ag-cancel-t">Cancelar agendamento?</h2>
+      <div class="ag-sum"><b id="ag-cancel-shop"></b><small id="ag-cancel-when"></small></div>
+      <p class="ag-desc">O horário será liberado e esta ação não pode ser desfeita.</p>
+      <div class="ag-err is-off" id="ag-cancel-err"></div>
+      <button type="button" class="ag-btn-danger" id="ag-cancel-go">Cancelar agendamento</button>
+      <button type="button" class="ag-btn-ghost" id="ag-cancel-back">Voltar</button>
+    </div>
   </div>
 
-  <%# ── Tab Próximos ─────────────────────────────────── %>
-  <div id="tab-proximos">
-    <% if @upcoming_appointments.any? %>
-      <div class="appt-list">
-        <% @upcoming_appointments.each do |appt| %>
-          <% sched_sp   = appt.scheduled_at.in_time_zone("America/Sao_Paulo") %>
-          <% is_lm     = is_last_minute.call(appt) %>
-          <% is_today  = is_today_date.call(appt) %>
-          <% is_ongoing = @ongoing_appointments.include?(appt.id) %>
-          <% mins_until = ((appt.scheduled_at - current_time) / 60.0).to_i %>
-          <% show_code  = @client_code.present? && (is_ongoing || mins_until <= 30) && appt.status == 'confirmed' %>
-          <% can_can    = can_cancel.call(appt) %>
-          <% dow_label  = is_today ? 'hoje' : weekdays_pt[sched_sp.wday] %>
-
-          <div class="appt-card <%= 'today' if is_lm %>">
-            <% if is_lm %><div class="appt-card-blob"></div><% end %>
-
-            <div class="appt-inner">
-              <div class="date-col">
-                <span class="date-dow"><%= dow_label %></span>
-                <span class="date-day"><%= sched_sp.day %></span>
-                <span class="date-mon"><%= months_pt[sched_sp.month - 1] %></span>
-              </div>
-
-              <div class="appt-body">
-                <div class="appt-id">#LV-<%= sprintf('%04d', appt.id) %></div>
-                <div class="shop-name"><%= appt.car_wash.name %></div>
-                <div class="service-name">
-                  <%= appt.service.title %><% if appt.service.duration.present? %> · <%= appt.service.duration %>min<% end %>
-                </div>
-                <div class="time-price">
-                  <%= sched_sp.strftime("%H:%M") %> · R$ <%= sprintf('%.2f', appt.service.price.to_f).gsub('.', ',') %>
-                </div>
-
-                <% if show_code %>
-                  <div class="code-block <%= is_lm ? 'ink' : 'light' %>">
-                    <span class="code-pill <%= is_lm ? 'ink' : 'light' %>">
-                      <i class="fas fa-shield"></i><%= @client_code %>
-                    </span>
-                    <span class="code-hint <%= is_lm ? 'ink' : 'light' %>">
-                      Passe esse código pro lava-rápido na chegada
-                    </span>
-                  </div>
-                <% end %>
-              </div>
-            </div>
-
-            <% if is_lm && is_today %>
-              <div class="card-actions">
-                <% if appt.car_wash.try(:address).present? %>
-                  <% map_q = ERB::Util.url_encode(appt.car_wash.address) %>
-                  <a href="https://www.google.com/maps/search/?api=1&query=<%= map_q %>" target="_blank" rel="noopener" class="action-primary">Ver rota</a>
-                <% end %>
-                <% if can_can %>
-                  <button type="button" class="action-ghost"
-                          onclick="openCancelModal(<%= appt.id %>, '<%= j appt.car_wash.name %>', '<%= dow_label %> <%= sched_sp.day %> <%= months_pt[sched_sp.month - 1] %> · <%= sched_sp.strftime("%H:%M") %>', '<%= cancel_appointment_path(appt) %>')">
-                    Cancelar
-                  </button>
-                <% end %>
-              </div>
-            <% else %>
-              <% if can_can %>
-                <button type="button" class="cancel-link"
-                        onclick="openCancelModal(<%= appt.id %>, '<%= j appt.car_wash.name %>', '<%= dow_label %> <%= sched_sp.day %> <%= months_pt[sched_sp.month - 1] %> · <%= sched_sp.strftime("%H:%M") %>', '<%= cancel_appointment_path(appt) %>')">
-                  <i class="fas fa-xmark"></i> Cancelar agendamento
-                </button>
-              <% end %>
-            <% end %>
-          </div>
-        <% end %>
-      </div>
-    <% else %>
-      <div class="appts-empty">
-        <div class="appts-empty-icon"><i class="fas fa-calendar-xmark"></i></div>
-        <div class="appts-empty-title">Nenhum agendamento próximo</div>
-        <p class="appts-empty-text">Suas reservas confirmadas aparecem aqui.</p>
-        <%= link_to "Explorar lava-rápidos", car_washes_path, class: "loov-btn-primary" %>
-      </div>
-    <% end %>
-  </div>
-
-  <%# ── Tab Anteriores ───────────────────────────────── %>
-  <div id="tab-passados" style="display: none;">
-    <% if @past_appointments.any? %>
-      <div class="appt-list">
-        <% @past_appointments.each do |appt| %>
-          <% sched_sp = appt.scheduled_at.in_time_zone("America/Sao_Paulo") %>
-          <% reviewed = appt.review.present? %>
-          <% rating   = appt.review&.rating.to_i %>
-
-          <div class="appt-card">
-            <div class="appt-inner">
-              <div class="date-col">
-                <span class="date-dow"><%= weekdays_pt[sched_sp.wday] %></span>
-                <span class="date-day"><%= sched_sp.day %></span>
-                <span class="date-mon"><%= months_pt[sched_sp.month - 1] %></span>
-              </div>
-
-              <div class="appt-body">
-                <div class="appt-id">#LV-<%= sprintf('%04d', appt.id) %></div>
-                <div class="shop-name"><%= appt.car_wash.name %></div>
-                <div class="service-name">
-                  <%= appt.service.title %><% if appt.service.duration.present? %> · <%= appt.service.duration %>min<% end %>
-                </div>
-                <div class="time-price">
-                  <%= sched_sp.strftime("%H:%M") %> · R$ <%= sprintf('%.2f', appt.service.price.to_f).gsub('.', ',') %>
-                </div>
-
-                <% if appt.status == 'attended' && reviewed && rating > 0 %>
-                  <div class="stars-row-result">
-                    <% 5.times do |n| %>
-                      <i class="fas fa-star" style="color: <%= n < rating ? 'var(--coral-500)' : 'var(--stone)' %>;"></i>
-                    <% end %>
-                    <span class="stars-hint">sua avaliação</span>
-                  </div>
-                <% end %>
-              </div>
-            </div>
-
-            <% if appt.status == 'attended' && !reviewed %>
-              <div class="rate-row">
-                <span class="rate-row-label">Avalie</span>
-                <div class="rate-row-stars">
-                  <% (1..5).each do |n| %>
-                    <button type="button" class="rate-row-star-btn"
-                            onclick="openReviewModal(<%= appt.id %>, '<%= j appt.car_wash.name %>', <%= n %>)">
-                      <i class="fas fa-star"></i>
-                    </button>
-                  <% end %>
-                </div>
-              </div>
-            <% end %>
-          </div>
-        <% end %>
-      </div>
-    <% else %>
-      <div class="appts-empty">
-        <div class="appts-empty-icon"><i class="fas fa-clock-rotate-left"></i></div>
-        <div class="appts-empty-title">Sem anteriores</div>
-        <p class="appts-empty-text">Atendimentos concluídos aparecem nesta aba.</p>
-      </div>
-    <% end %>
-  </div>
-
+  <div class="ag-toast" id="ag-toast" role="status" aria-live="polite"></div>
 </div>
 
 <script>
-(function() {
-  // ── Tabs ────────────────────────────────────────────
-  document.querySelectorAll('.appts-tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const t = btn.dataset.tab;
-      document.querySelectorAll('.appts-tab-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById('tab-proximos').style.display = (t === 'proximos') ? '' : 'none';
-      document.getElementById('tab-passados').style.display = (t === 'passados') ? '' : 'none';
+(function () {
+  var DATA  = <%= raw json_escape(@payload.to_json) %>;
+  var FLASH = <%= raw json_escape({ notice: flash[:notice], alert: flash[:alert] }.to_json) %>;
+  var CSRF  = (document.querySelector('meta[name="csrf-token"]') || {}).content;
+  var HOME  = '/' + location.search;
+
+  var MONTHS = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  var WD = ['dom','seg','ter','qua','qui','sex','sáb'];
+  var WD_CAP = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  // Próximos = confirmados; Anteriores = só os que o dono marcou "compareceu".
+  // cancelled/no_show/rejected/expired ficam de fora, como no app.
+  var ACTIVE = ['confirmed'], HISTORY = ['attended'];
+  var TAGS_BY_RATING = {
+    1: ['Demorou muito', 'Serviço ruim', 'Atendimento ruim'],
+    2: ['Demorou muito', 'Serviço ruim', 'Atendimento ruim'],
+    3: ['Podia ser melhor', 'OK mas não voltaria'],
+    4: ['Rápido', 'Bem atendido', 'Ótimo serviço', 'Recomendaria'],
+    5: ['Rápido', 'Bem atendido', 'Ótimo serviço', 'Recomendaria']
+  };
+  var RATING_LABELS = { 1: 'Péssimo', 2: 'Ruim', 3: 'Regular', 4: 'Bom', 5: 'Excelente' };
+  var MAX_TAGS = 3, MAX_COMMENT = 500;
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function icon(n, size, extra) { return window.feather && feather.icons[n] ? feather.icons[n].toSvg(Object.assign({ width: size, height: size }, extra || {})) : ''; }
+  function hm(iso) { var d = new Date(iso); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+  function sameDay(a, b) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
+  function sectionTitle(d) {
+    var now = new Date(), tm = new Date(now); tm.setDate(now.getDate() + 1);
+    if (sameDay(d, now)) return 'Hoje';
+    if (sameDay(d, tm)) return 'Amanhã';
+    return WD[d.getDay()] + ' · ' + d.getDate() + ' ' + MONTHS[d.getMonth()];
+  }
+  // Horário + duração + 15 min de tolerância passou → sai de Próximos.
+  function isPast(a) {
+    var t = new Date(a.scheduled_at).getTime();
+    if (!isFinite(t)) return false;
+    return t + ((Number(a.service && a.service.duration) || 30) + 15) * 60000 < Date.now();
+  }
+  // Cancelar: só confirmado, não Last Minute, com mais de 2 h de antecedência.
+  function canCancel(a) {
+    if (!a || a.status !== 'confirmed' || a.appointment_type === 'disponivel') return false;
+    var t = new Date(a.scheduled_at).getTime();
+    return isFinite(t) && (t - Date.now()) / 60000 > 120;
+  }
+  function hasCoords(cw) { var la = Number(cw && cw.latitude), lo = Number(cw && cw.longitude); return isFinite(la) && isFinite(lo) && la !== 0 && lo !== 0; }
+  function routeUrl(cw) {
+    var dest = hasCoords(cw) ? cw.latitude + ',' + cw.longitude : (cw && cw.address ? encodeURIComponent(cw.address) : null);
+    return dest ? 'https://www.google.com/maps/dir/?api=1&destination=' + dest : null;
+  }
+  function money2(v) { return 'R$ ' + (Number(v) || 0).toFixed(2).replace('.', ','); }
+
+  var state = { tab: 'proximos', pending: null, cancelling: false, review: null };
+
+  function lists() {
+    var up = DATA.filter(function (a) { return ACTIVE.indexOf(a.status) !== -1 && !isPast(a); })
+      .sort(function (a, b) { return new Date(a.scheduled_at) - new Date(b.scheduled_at); });
+    var past = DATA.filter(function (a) { return HISTORY.indexOf(a.status) !== -1 || (ACTIVE.indexOf(a.status) !== -1 && isPast(a)); })
+      .sort(function (a, b) { return new Date(b.scheduled_at) - new Date(a.scheduled_at); });
+    return { up: up, past: past };
+  }
+
+  function card(a) {
+    var d = new Date(a.scheduled_at), cw = a.car_wash || {}, s = a.service || {};
+    var lm = a.appointment_type === 'disponivel';
+    var today = sameDay(d, new Date()) && !isPast(a);
+    var active = a.status === 'confirmed' && !isPast(a);
+    var route = routeUrl(cw), out = '';
+    out += '<article class="ag-card' + (today ? ' is-today' : '') + '">' +
+      '<div class="ag-top">' +
+        '<div class="ag-time"><b>' + hm(a.scheduled_at) + '</b>' + (s.duration ? '<small>' + s.duration + 'MIN</small>' : '') + '</div>' +
+        '<div class="ag-mid"><div class="ag-shoprow"><a class="ag-shop" href="/car_washes/' + cw.id + location.search + '">' + esc(cw.name || 'Lava-rápido') + '</a>' +
+          (lm ? '<span class="ag-lm">' + icon('zap', 9) + 'LAST MINUTE</span>' : '') + '</div>' +
+          '<div class="ag-svc">' + esc(s.title || 'Serviço') + '</div></div>' +
+        '<div class="ag-money"><div class="ag-price">' + money2(s.price) + '</div><div class="ag-id">LV-' + String(a.id).padStart(4, '0') + '</div></div>' +
+      '</div>';
+    // Código de chegada: a frase de instrução só quando é hoje (é quando age).
+    if (active && a.phone_last4) {
+      out += '<div class="ag-foot"><span class="ag-code">' + icon('shield', 12) + esc(a.phone_last4) + '</span>' +
+        '<span class="ag-hint">' + (today ? 'Passe na chegada' : 'Código de chegada') + '</span>' +
+        (route ? '<a class="ag-route" target="_blank" rel="noopener" href="' + route + '">' + icon('navigation', 12) + 'Rota</a>' : '') + '</div>';
+    }
+    if (a.status === 'attended' && a.reviewed && a.review && a.review.rating) {
+      var st = '';
+      for (var n = 1; n <= 5; n++) st += icon('star', 13, { color: n <= a.review.rating ? 'var(--coral-500)' : 'var(--stone)', fill: n <= a.review.rating ? 'var(--coral-500)' : 'none' });
+      out += '<div class="ag-foot"><span class="ag-stars">' + st + '</span><span class="ag-hint is-quiet">sua avaliação</span></div>';
+    }
+    if (a.status === 'attended' && !a.reviewed) {
+      var bt = '';
+      for (var k = 1; k <= 5; k++) bt += '<button type="button" class="ag-star" data-rate="' + a.id + '" data-n="' + k + '" aria-label="' + k + (k === 1 ? ' estrela' : ' estrelas') + '">' + icon('star', 18) + '</button>';
+      out += '<div class="ag-foot"><span class="ag-rate-l">Como foi?</span><span class="ag-stars">' + bt + '</span></div>';
+    }
+    if (canCancel(a)) out += '<button type="button" class="ag-cancel" data-cancel="' + a.id + '">Cancelar agendamento</button>';
+    return out + '</article>';
+  }
+
+  function render() {
+    var L = lists(), list = state.tab === 'proximos' ? L.up : L.past;
+    $('ag-n-up').textContent = L.up.length ? L.up.length : '';
+    $('ag-n-past').textContent = L.past.length ? L.past.length : '';
+    document.querySelectorAll('.ag-tabs button').forEach(function (b) { b.setAttribute('aria-selected', b.dataset.tab === state.tab ? 'true' : 'false'); });
+
+    var nx = L.up[0];
+    $('ag-side-extra').innerHTML = nx
+      ? '<div class="ag-eyebrow">Próximo</div><div class="ag-next"><b>' + sectionTitle(new Date(nx.scheduled_at)).replace(/^./, function (c) { return c.toUpperCase(); }) + ', ' + hm(nx.scheduled_at) + '</b><small>' + esc(nx.car_wash && nx.car_wash.name) + '</small></div>' +
+        '<a class="ag-new" href="' + HOME + '">' + icon('plus', 16) + 'Agendar outra lavagem</a>'
+      : '<div class="ag-eyebrow">Nada marcado</div><div class="ag-next"><small>Escolha um lava-rápido perto de você e reserve em poucos toques.</small></div>' +
+        '<a class="ag-new" href="' + HOME + '">' + icon('search', 16) + 'Encontrar lava-rápido</a>';
+
+    if (!list.length) {
+      $('ag-list').innerHTML = state.tab === 'proximos'
+        ? '<div class="ag-empty"><img src="/illustrations/agenda-vazia.svg" alt="Ilustração de um calendário vazio com um dia marcado e um passarinho pousado"><h2>Nenhum agendamento próximo</h2><p>Quando você reservar uma lavagem, ela aparece aqui com dia, hora e lava-rápido.</p><a href="' + HOME + '">Encontrar lava-rápido</a></div>'
+        : '<div class="ag-empty"><h2>Sem anteriores</h2><p>Atendimentos concluídos aparecem nesta aba.</p></div>';
+      return;
+    }
+    var groups = [];
+    list.forEach(function (a) {
+      var d = new Date(a.scheduled_at), key = d.toDateString(), last = groups[groups.length - 1];
+      if (last && last.key === key) last.items.push(a); else groups.push({ key: key, title: sectionTitle(d), items: [a] });
     });
+    $('ag-list').innerHTML = groups.map(function (g) {
+      return '<h2 class="ag-day">' + esc(g.title) + '</h2><div class="ag-cards">' + g.items.map(card).join('') + '</div>';
+    }).join('');
+  }
+
+  // ── Dados: polling de 20 s com recuo (até 2 min) se falhar ───────────────
+  var wait = 20000, timer = null;
+  function poll() {
+    fetch('/appointments.json', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+      .then(function (d) { if (Array.isArray(d)) { DATA = d; if (!state.review) render(); } wait = 20000; })
+      .catch(function () { wait = Math.min(120000, wait * 2); })
+      .then(function () { timer = setTimeout(poll, wait); });
+  }
+  // Re-render a cada 30 s: um horário que passa do limite muda de aba sozinho.
+  setInterval(function () { if (!state.review) render(); }, 30000);
+
+  // ── Toast ────────────────────────────────────────────────────────────────
+  var toastT = null;
+  function toast(text, err) {
+    var t = $('ag-toast');
+    t.className = 'ag-toast is-on' + (err ? ' is-err' : '');
+    t.innerHTML = icon(err ? 'x-circle' : 'check-circle', 14) + '<span>' + esc(text) + '</span>';
+    clearTimeout(toastT); toastT = setTimeout(function () { t.className = 'ag-toast' + (err ? ' is-err' : ''); }, 3500);
+  }
+
+  // ── Cancelar ─────────────────────────────────────────────────────────────
+  function openCancel(id) {
+    var a = DATA.filter(function (x) { return x.id === id; })[0]; if (!a) return;
+    state.pending = a; state.cancelling = false;
+    var d = new Date(a.scheduled_at);
+    $('ag-cancel-shop').textContent = (a.car_wash && a.car_wash.name) || 'Lava-rápido';
+    $('ag-cancel-when').textContent = WD[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' · ' + hm(a.scheduled_at);
+    setCancelErr(null); setCancelBusy(false);
+    var s = $('ag-cancel'); s.classList.add('is-on'); s.setAttribute('aria-hidden', 'false');
+    $('ag-cancel-back').focus();
+  }
+  function closeCancel() {
+    if (state.cancelling) return;
+    state.pending = null;
+    var s = $('ag-cancel'); s.classList.remove('is-on'); s.setAttribute('aria-hidden', 'true');
+  }
+  function setCancelErr(msg) { var e = $('ag-cancel-err'); e.classList.toggle('is-off', !msg); e.innerHTML = msg ? icon('alert-circle', 13) + '<span>' + esc(msg) + '</span>' : ''; }
+  function setCancelBusy(b) { var g = $('ag-cancel-go'); g.disabled = b; g.innerHTML = b ? '<span class="ag-spin"></span>' : 'Cancelar agendamento'; $('ag-cancel-back').disabled = b; }
+  function confirmCancel() {
+    var a = state.pending; if (!a || state.cancelling) return;
+    state.cancelling = true; setCancelBusy(true); setCancelErr(null);
+    fetch('/appointments/' + a.id + '/cancel', { method: 'DELETE', credentials: 'same-origin', headers: { Accept: 'application/json', 'X-CSRF-Token': CSRF } })
+      .then(function (r) { return r.text().then(function (t) { var d = {}; try { d = JSON.parse(t); } catch (e) {} return { ok: r.ok, status: r.status, data: d }; }); })
+      .then(function (res) {
+        state.cancelling = false; setCancelBusy(false);
+        if (!res.ok) { setCancelErr(res.data.error || 'Não foi possível cancelar (erro ' + res.status + ').'); return; }
+        a.status = 'cancelled'; closeCancel(); render(); toast('Agendamento cancelado. O horário foi liberado.');
+      })
+      .catch(function () { state.cancelling = false; setCancelBusy(false); setCancelErr('Erro de conexão. Tente novamente.'); });
+  }
+
+  // ── Avaliar (tela própria, com o voltar do navegador) ────────────────────
+  function openReview(id, n, push) {
+    var a = DATA.filter(function (x) { return x.id === id; })[0];
+    if (!a || a.status !== 'attended' || a.reviewed) return;
+    state.review = { a: a, rating: n || 0, tags: [], comment: '', sending: false };
+    if (push) history.pushState({ v: 'review', id: id, n: n }, '', '#avaliar-' + id);
+    $('ag-main').classList.remove('is-on'); $('ag-review').classList.add('is-on');
+    window.scrollTo(0, 0);
+    renderReview();
+  }
+  function closeReview() {
+    state.review = null;
+    $('ag-review').classList.remove('is-on'); $('ag-main').classList.add('is-on');
+    render();
+  }
+  function renderReview() {
+    var r = state.review, a = r.a, d = new Date(a.scheduled_at);
+    var stars = '';
+    for (var n = 1; n <= 5; n++) stars += '<button type="button" class="rv-star' + (n <= r.rating ? ' is-on' : '') + '" data-rv-star="' + n + '" aria-label="' + n + (n === 1 ? ' estrela' : ' estrelas') + '">' + icon('star', 36) + '</button>';
+    var tags = (TAGS_BY_RATING[r.rating] || []).map(function (t) {
+      var on = r.tags.indexOf(t) !== -1;
+      return '<button type="button" class="rv-tag' + (on ? ' is-on' : '') + '" data-rv-tag="' + esc(t) + '" aria-pressed="' + on + '">' + (on ? icon('check', 11) : '') + esc(t) + '</button>';
+    }).join('');
+    $('ag-review').innerHTML = '<div class="rv">' +
+      '<div class="rv-head"><button type="button" class="rv-back" data-rv-back aria-label="Voltar">' + icon('chevron-left', 18) + '</button>' +
+        '<div class="rv-hc"><small>FEEDBACK</small><h1>Avaliar atendimento</h1></div><span style="width:40px"></span></div>' +
+      '<div class="rv-body">' +
+        '<div class="rv-card"><div class="rv-lab">VOCÊ FOI ATENDIDO EM</div><div class="rv-name">' + esc(a.car_wash && a.car_wash.name || 'Lava-rápido') + '</div>' +
+          '<div class="rv-div"></div><div class="rv-row">' +
+            '<div class="rv-item"><div class="rv-lab">SERVIÇO</div><b>' + esc(a.service && a.service.title || 'Serviço') + '</b></div><div class="rv-sep"></div>' +
+            '<div class="rv-item"><div class="rv-lab">DATA</div><b>' + WD_CAP[d.getDay()] + ', ' + d.getDate() + ' de ' + MONTHS[d.getMonth()] + '</b></div>' +
+          '</div></div>' +
+        '<div class="rv-sec">SUA AVALIAÇÃO</div>' +
+        '<div class="rv-stars">' + stars + '</div>' +
+        '<div class="rv-rlab">' + (r.rating ? RATING_LABELS[r.rating] : 'Toque nas estrelas') + '</div>' +
+        (r.rating ? '<div class="rv-sec" style="margin-top:28px">COMO FOI O ATENDIMENTO?</div><div class="rv-help">Selecione até ' + MAX_TAGS + ' opções</div><div class="rv-tags">' + tags + '</div>' +
+          '<div class="rv-sec" style="margin-top:24px">COMENTÁRIO (OPCIONAL)</div>' +
+          '<div class="rv-comment"><textarea id="rv-text" maxlength="' + MAX_COMMENT + '" placeholder="Conte mais sobre sua experiência…">' + esc(r.comment) + '</textarea>' +
+          '<div class="rv-count' + (r.comment.length > MAX_COMMENT * 0.9 ? ' is-warn' : '') + '" id="rv-count">' + r.comment.length + '/' + MAX_COMMENT + '</div></div>' : '') +
+        '<button type="button" class="rv-send" data-rv-send' + (!r.rating || r.sending ? ' disabled' : '') + '>' + (r.sending ? '<span class="ag-spin"></span>' : icon('send', 14) + 'Enviar avaliação') + '</button>' +
+        '<p class="rv-note">Sua avaliação ajuda outros clientes e o lava-rápido a melhorar.</p>' +
+      '</div></div>';
+  }
+  function sendReview() {
+    var r = state.review; if (!r || !r.rating || r.sending) return;
+    r.sending = true; renderReview();
+    fetch('/client/reviews', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF },
+      body: JSON.stringify({ appointment_id: r.a.id, rating: r.rating, tags: r.tags, comment: r.comment.trim() || null })
+    }).then(function (res) { return res.json().catch(function () { return {}; }); })
+      .then(function (data) {
+        if (data.ok) {
+          r.a.reviewed = true; r.a.review = { rating: r.rating, tags: r.tags };
+          history.back(); // fecha a tela de avaliação pelo próprio histórico
+          toast('Avaliação enviada! Obrigado pelo feedback.');
+          return;
+        }
+        r.sending = false; renderReview(); toast(data.error || 'Erro ao enviar avaliação.', true);
+      })
+      .catch(function () { r.sending = false; renderReview(); toast('Erro de conexão. Tente novamente.', true); });
+  }
+
+  window.addEventListener('popstate', function (e) {
+    var st = e.state || {};
+    if (st.v === 'review') openReview(st.id, st.n, false);
+    else if (state.review) closeReview();
   });
 
-  // ── Review modal ────────────────────────────────────
-  window.openReviewModal = function(id, name, prefillRating) {
-    document.getElementById('review-appointment-id').value = id;
-    document.getElementById('modal-car-wash-name').textContent = name;
-    const ratingVal = prefillRating ? Number(prefillRating) : '';
-    document.getElementById('review-rating').value = ratingVal || '';
-    document.getElementById('review-tags').value = '';
-    document.getElementById('review-submit').disabled = !ratingVal;
-    document.querySelectorAll('.star-btn').forEach(b => {
-      b.classList.toggle('active', ratingVal && parseInt(b.dataset.value) <= ratingVal);
-    });
-    document.querySelectorAll('.tag-btn').forEach(b => b.classList.remove('selected'));
-    const ta = document.querySelector('.review-textarea');
-    if (ta) ta.value = '';
-    document.getElementById('review-overlay').classList.add('open');
-  };
-
-  window.closeReviewModal = function() {
-    document.getElementById('review-overlay').classList.remove('open');
-  };
-
-  document.getElementById('review-overlay').addEventListener('click', function(e) {
-    if (e.target === this) window.closeReviewModal();
+  document.addEventListener('click', function (e) {
+    var t;
+    if ((t = e.target.closest('.ag-tabs button'))) { state.tab = t.dataset.tab; render(); return; }
+    if ((t = e.target.closest('[data-cancel]'))) { openCancel(Number(t.dataset.cancel)); return; }
+    if ((t = e.target.closest('[data-rate]'))) { openReview(Number(t.dataset.rate), Number(t.dataset.n), true); return; }
+    if (e.target.closest('#ag-cancel-go')) { confirmCancel(); return; }
+    if (e.target.closest('#ag-cancel-back') || e.target.id === 'ag-cancel') { closeCancel(); return; }
+    if (!state.review) return;
+    if (e.target.closest('[data-rv-back]')) { history.back(); return; }
+    if ((t = e.target.closest('[data-rv-star]'))) { state.review.rating = Number(t.dataset.rvStar); state.review.tags = []; renderReview(); return; }
+    if ((t = e.target.closest('[data-rv-tag]'))) {
+      var tag = t.dataset.rvTag, tags = state.review.tags, i = tags.indexOf(tag);
+      if (i !== -1) tags.splice(i, 1); else if (tags.length < MAX_TAGS) tags.push(tag);
+      renderReview(); return;
+    }
+    if (e.target.closest('[data-rv-send]')) { sendReview(); return; }
   });
-
-  window.setStar = function(val) {
-    document.getElementById('review-rating').value = val;
-    document.getElementById('review-submit').disabled = false;
-    document.querySelectorAll('.star-btn').forEach(b => {
-      b.classList.toggle('active', parseInt(b.dataset.value) <= val);
-    });
-  };
-
-  window.toggleTag = function(btn) {
-    btn.classList.toggle('selected');
-    const sel = Array.from(document.querySelectorAll('.tag-btn.selected')).map(b => b.dataset.tag);
-    document.getElementById('review-tags').value = sel.join(',');
-  };
-
-  // ── Cancel modal ────────────────────────────────────
-  window.openCancelModal = function(id, shopName, whenStr, cancelUrl) {
-    document.getElementById('cancel-shop').textContent = shopName;
-    document.getElementById('cancel-when').textContent = whenStr;
-    document.getElementById('cancel-form').action = cancelUrl;
-    document.getElementById('cancel-overlay').classList.add('open');
-  };
-
-  window.closeCancelModal = function() {
-    document.getElementById('cancel-overlay').classList.remove('open');
-  };
-
-  document.getElementById('cancel-overlay').addEventListener('click', function(e) {
-    if (e.target === this) window.closeCancelModal();
+  document.addEventListener('input', function (e) {
+    if (e.target.id !== 'rv-text' || !state.review) return;
+    state.review.comment = e.target.value.slice(0, MAX_COMMENT);
+    var c = $('rv-count'); c.textContent = state.review.comment.length + '/' + MAX_COMMENT;
+    c.classList.toggle('is-warn', state.review.comment.length > MAX_COMMENT * 0.9);
   });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeCancel(); });
 
-  // ── Auto-dismiss flash ──────────────────────────────
-  document.addEventListener('DOMContentLoaded', function() {
-    ['flash-notice', 'flash-error'].forEach(function(id) {
-      const el = document.getElementById(id); if (!el) return;
-      setTimeout(() => {
-        el.style.transition = 'opacity .5s ease';
-        el.style.opacity = '0';
-        setTimeout(() => el.style.display = 'none', 500);
-      }, 6000);
-    });
-  });
-
-  // ── Auto-refresh ticker ──────────────────────────────
-  // Re-renderiza cards quando a hora atual cruza a fronteira de "hoje"
-  // pra que o card siga a regra do app (today→ink, past→reload).
-  setTimeout(() => { window.location.reload(); }, 1000 * 60 * 5);
+  function boot() {
+    if (window.feather) feather.replace();
+    render();
+    if (FLASH.notice) toast(FLASH.notice); else if (FLASH.alert) toast(FLASH.alert, true);
+    var m = location.hash.match(/^#avaliar-(\d+)/);
+    history.replaceState({ v: 'list' }, '', location.pathname + location.search);
+    if (m) openReview(Number(m[1]), 0, true);
+    timer = setTimeout(poll, 20000);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
 </script>

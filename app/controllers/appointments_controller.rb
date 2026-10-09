@@ -22,111 +22,13 @@ class AppointmentsController < ApplicationController
   def index
     respond_to do |format|
       format.html do
-        current_time = Time.current.in_time_zone("America/Sao_Paulo")
-        all          = current_user.appointments.includes(:service, :car_wash, :review)
-
-        @upcoming_appointments = all
-          .select { |a| active_status?(a) && end_time(a) >= current_time }
-          .sort_by(&:scheduled_at)
-
-        @past_appointments = all
-          .reject { |a| %w[cancelled no_show].include?(a.status) }
-          .select { |a| end_time(a) < current_time || a.status == 'attended' }
-          .uniq(&:id)
-          .sort_by(&:scheduled_at)
-          .reverse
-
-        @ongoing_appointments = @upcoming_appointments
-          .select { |a| current_time.between?(a.scheduled_at, end_time(a)) }
-          .map(&:id)
-
-        phone = current_user.phone.to_s.gsub(/\D/, '')
-        @client_code = phone.length >= 4 ? phone.last(4) : nil
-
-        car_wash_ids = all.map(&:car_wash_id).uniq
-        active_programs = LoyaltyProgram
-          .where(car_wash_id: car_wash_ids, active: true)
-          .index_by(&:car_wash_id)
-
-        if active_programs.any?
-          @loyalty_by_car_wash = {}
-          active_programs.each do |car_wash_id, prog|
-            visits = current_user.appointments
-              .where(car_wash_id: car_wash_id, status: "attended")
-              .where("scheduled_at >= ?", prog.created_at)
-              .count
-
-            goal           = prog.visits_required
-            cycle          = visits % goal
-            last_milestone = visits > 0 && cycle == 0
-
-            @loyalty_by_car_wash[car_wash_id] = {
-              visits:         visits,
-              goal:           goal,
-              filled:         last_milestone ? goal : cycle,
-              milestone:      last_milestone,
-              reward:         prog.reward_description,
-              program_active: true
-            }
-          end
-        else
-          @loyalty_by_car_wash = {}
-        end
+        # A página do site é o porte da aba Agenda do app e lê o mesmo JSON,
+        # embutido nela (sem esperar uma segunda requisição).
+        @payload = appointments_payload
       end
 
       format.json do
-        all = current_user.appointments
-          .includes(:service, :car_wash, :review)
-          .order(scheduled_at: :desc)
-
-        # Último 4 dígitos do próprio telefone do cliente — usado no card do
-        # app pro cliente ver qual código dizer ao lava-rápido quando chegar.
-        phone_digits = current_user.phone.to_s.gsub(/\D/, "")
-        phone_last4  = phone_digits.length >= 4 ? phone_digits.last(4) : nil
-
-        render json: all.map { |a|
-          # show_code: de 15 min antes do horário agendado até 5 min depois
-          # (buffer pequeno pra quando o cliente chega atrasado). Só em
-          # confirmed — depois de attended/no_show/cancelled não faz sentido.
-          show_code = a.status == "confirmed" &&
-                      a.scheduled_at <= Time.current + 15.minutes &&
-                      a.scheduled_at >= Time.current - 5.minutes
-
-          review_data = a.review ? {
-            id:      a.review.id,
-            rating:  a.review.rating,
-            tags:    a.review.tags_list,
-            comment: a.review.comment
-          } : nil
-
-          {
-            id:               a.id,
-            status:            a.status,
-            appointment_type:  a.appointment_type,
-            scheduled_at:      a.scheduled_at,
-            reviewed:          a.review.present?,
-            review_id:         a.review&.id,
-            review:            review_data,
-            phone_last4:       phone_last4,
-            show_code:         show_code,
-            car_wash: {
-              id:   a.car_wash.id,
-              name: a.car_wash.name,
-              # Coordenada e endereço pro botão "Ver rota" do card abrir o app de
-              # mapas direto. Sem isso o app só conseguia levar pra tela do
-              # lava-rápido, que não é rota.
-              latitude:  a.car_wash.latitude,
-              longitude: a.car_wash.longitude,
-              address:   a.car_wash.address
-            },
-            service: {
-              id:       a.service.id,
-              title:    a.service.title,
-              price:    a.service.price,
-              duration: a.service.duration
-            }
-          }
-        }
+        render json: appointments_payload
       end
     end
   rescue StandardError => e
@@ -290,6 +192,62 @@ class AppointmentsController < ApplicationController
       format.html { redirect_to appointments_path, notice: "Agendamento criado com sucesso!" }
       format.json { render json: { message: "Agendamento confirmado!", appointment_id: @appointment.id }, status: :created }
     end
+  end
+
+  # Mesmo JSON da aba Agenda do app; a página HTML também o usa (embutido).
+  private def appointments_payload
+    all = current_user.appointments
+      .includes(:service, :car_wash, :review)
+      .order(scheduled_at: :desc)
+
+    # Último 4 dígitos do próprio telefone do cliente — usado no card do
+    # app pro cliente ver qual código dizer ao lava-rápido quando chegar.
+    phone_digits = current_user.phone.to_s.gsub(/\D/, "")
+    phone_last4  = phone_digits.length >= 4 ? phone_digits.last(4) : nil
+
+    all.map { |a|
+      # show_code: de 15 min antes do horário agendado até 5 min depois
+      # (buffer pequeno pra quando o cliente chega atrasado). Só em
+      # confirmed — depois de attended/no_show/cancelled não faz sentido.
+      show_code = a.status == "confirmed" &&
+                  a.scheduled_at <= Time.current + 15.minutes &&
+                  a.scheduled_at >= Time.current - 5.minutes
+
+      review_data = a.review ? {
+        id:      a.review.id,
+        rating:  a.review.rating,
+        tags:    a.review.tags_list,
+        comment: a.review.comment
+      } : nil
+
+      {
+        id:               a.id,
+        status:            a.status,
+        appointment_type:  a.appointment_type,
+        scheduled_at:      a.scheduled_at,
+        reviewed:          a.review.present?,
+        review_id:         a.review&.id,
+        review:            review_data,
+        phone_last4:       phone_last4,
+        show_code:         show_code,
+        car_wash: {
+          id:   a.car_wash.id,
+          name: a.car_wash.name,
+          # Coordenada e endereço pro botão "Ver rota" do card abrir o app de
+          # mapas direto. Sem isso o app só conseguia levar pra tela do
+          # lava-rápido, que não é rota.
+          latitude:  a.car_wash.latitude,
+          longitude: a.car_wash.longitude,
+          address:   a.car_wash.address
+        },
+        service: {
+          id:       a.service.id,
+          title:    a.service.title,
+          price:    a.service.price,
+          duration: a.service.duration
+        }
+      }
+    }
   end
 
   def show
