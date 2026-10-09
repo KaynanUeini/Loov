@@ -782,7 +782,11 @@
 
       // Geolocalização automática para clientes — silenciosa
       const urlParams = new URLSearchParams(window.location.search);
-      <% if user_signed_in? && current_user.client? %>
+      <%# Só em GET e sem aviso pendente: numa resposta de formulário (ex.:
+          senha errada, 422) ou logo após um redirect com aviso ("Conta
+          atualizada"), o recarregamento virava um GET novo e apagava a
+          mensagem antes de o cliente ler. %>
+      <% if user_signed_in? && current_user.client? && request.get? && flash.empty? %>
       if (!window.location.pathname.includes('/client/profile') &&
           (!urlParams.has('latitude') || !urlParams.has('longitude'))) {
         const cached = localStorage.getItem('loov_last_coords');

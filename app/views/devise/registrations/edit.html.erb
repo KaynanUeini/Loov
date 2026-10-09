@@ -1,70 +1,541 @@
-<div class="loov-page loov-page--narrow">
-  <div class="loov-hero">
-    <div class="loov-eyebrow"><span class="dot"></span>MINHA CONTA</div>
-    <h1 class="loov-h1">
-      Editar <span class="accent">conta</span>.
-    </h1>
-    <p class="loov-lead">
-      Atualize seu e-mail ou troque sua senha. Precisamos da senha atual para confirmar as alterações.
-    </p>
-  </div>
+<%#
+  Conta — porte da ClientProfileScreen do app (e da ClientVehicleScreen,
+  aberta a partir dela). Só pro cliente; dono e admin seguem no formulário
+  clássico de e-mail e senha (_classic_edit).
 
-  <div class="loov-card loov-card--lg">
-    <%= form_for(resource, as: resource_name, url: registration_path(resource_name), html: { method: :put }) do |f| %>
-      <%= render "devise/shared/error_messages", resource: resource %>
+    · Nome como título, cartão escuro com LAVAGENS e FAVORITOS, carimbos de
+      fidelidade (só com visitas reais), Meu veículo, lista de ajustes e
+      Encerrar sessão.
+    · Dados pessoais: folha com nome, telefone e CPF (PATCH /client/profile,
+      o mesmo do app). E-mail aparece trancado: muda em Privacidade e
+      segurança, que pede a senha atual.
+    · Meu veículo e Privacidade e segurança são telas próprias (#veiculo,
+      #seguranca), com o voltar do navegador voltando pra Conta.
 
-      <div class="loov-field">
-        <%= f.label :email, "E-mail", class: "loov-label" %>
-        <%= f.email_field :email, autofocus: true, autocomplete: "email", class: "loov-input" %>
-      </div>
+  Tela grande: o resumo (nome, números, carimbos, veículo) fica à esquerda e
+  a lista de ajustes à direita.
+%>
+<% if @account.nil? %>
+  <%= render "devise/registrations/classic_edit" %>
+<% else %>
+<%
+  # Mensagem própria pra senha atual: a genérica sai "Senha atual não é
+  # válido" (concordância errada) e não diz o que fazer.
+  security_errors = resource.errors.map { |e|
+    e.attribute == :current_password ? "A senha atual não confere. Confira e tente de novo" : e.full_message
+  }.uniq
+  open_view = security_errors.any? ? "seguranca" : nil
+%>
+<script src="/vendor/feather-4.29.2.min.js"></script>
 
-      <% if devise_mapping.confirmable? && resource.pending_reconfirmation? %>
-        <div class="loov-help" style="margin-bottom:16px;">
-          Aguardando confirmação para: <strong><%= resource.unconfirmed_email %></strong>
+<style>
+  .loov-nav { background: var(--cream) !important; }
+  .ac { background: var(--cream); color: var(--ink); min-height: 100vh; padding-top: 60px; }
+  .ac *, .ac *::before, .ac *::after { box-sizing: border-box; }
+  .ac button { font-family: inherit; line-height: normal; cursor: pointer; }
+  .ac svg.feather { display: block; }
+  .ac a { text-decoration: none; }
+  .ac-wrap { width: 100%; max-width: 1180px; margin: 0 auto; }
+  .ac-view { display: none; }
+  .ac-view.is-on { display: block; }
+  .ac-mono { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px; color: var(--ash); text-transform: uppercase; }
+
+  .ac-title { padding: 24px 20px 18px; }
+  .ac-title h1 { margin: 4px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 32px; letter-spacing: -0.8px; line-height: 1.1; color: var(--ink) !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .ac-id { margin: 0 20px 20px; padding: 22px 20px; border-radius: 20px; background: var(--ink); display: flex; gap: 16px; }
+  .ac-stat { flex: 1; color: var(--cream) !important; border-radius: 12px; transition: opacity .15s; }
+  a.ac-stat:hover { opacity: .85; }
+  .ac-stat b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 34px; line-height: 38px; letter-spacing: -1px; }
+  .ac-stat.is-fav b { color: var(--coral-300, #e8a48a); }
+  .ac-stat small { display: block; margin-top: 3px; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.2px; color: #9e9688; }
+  .ac-sep { width: 1px; background: rgba(255,255,255,.1); }
+
+  .ac-sec { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 20px 12px; }
+  .ac-sec h2 { margin: 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 600; font-size: 18px; letter-spacing: -0.3px; color: var(--ink) !important; }
+  .ac-sec small { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: .5px; color: var(--ash); }
+
+  .ac-loyal { display: grid; gap: 10px; padding: 0 20px 20px; }
+  .ac-lc { padding: 18px; background: var(--paper); border: 1px solid var(--stone); border-radius: 20px; }
+  .ac-lc-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .ac-lc-h b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; letter-spacing: -0.2px; }
+  .ac-lc-h small { display: block; margin-top: 2px; font-size: 12px; color: var(--graphite); }
+  .ac-lc-badge { flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 100px; background: #fde8b5; color: #7a6419; font-size: 11px; font-weight: 600; }
+  .ac-stamps { display: flex; gap: 4px; margin-top: 14px; }
+  .ac-stamps i { flex: 1; height: 28px; border-radius: 6px; background: var(--sand); display: flex; align-items: center; justify-content: center; color: var(--cream); }
+  .ac-stamps i.is-on { background: var(--coral-500); }
+
+  .ac-veh { display: flex; align-items: center; gap: 14px; width: calc(100% - 40px); margin: 0 20px 20px; padding: 16px; text-align: left; background: var(--paper); border: 1px solid var(--stone); border-radius: 16px; color: var(--ink); transition: border-color .15s, box-shadow .2s; }
+  .ac-veh:hover { border-color: var(--ink); box-shadow: 0 10px 24px -18px rgba(40,35,28,.5); }
+  .ac-veh-ic { flex: 0 0 40px; height: 40px; border-radius: 12px; background: var(--coral-50); color: var(--coral-500); display: flex; align-items: center; justify-content: center; }
+  .ac-veh-t { flex: 1; min-width: 0; }
+  .ac-veh-t b { display: block; font-size: 14px; font-weight: 600; }
+  .ac-veh-t b.is-plate { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 500; letter-spacing: 2px; }
+  .ac-veh-t small { display: block; margin-top: 2px; font-size: 12px; color: var(--graphite); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ac-veh-go { flex: 0 0 30px; height: 30px; border-radius: 50%; background: var(--coral-50); color: var(--coral-700); display: flex; align-items: center; justify-content: center; }
+
+  .ac-list { margin: 4px 20px 20px; }
+  .ac-item { display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px 0; border: 0; border-bottom: 1px solid var(--stone); background: transparent; text-align: left; color: var(--ink) !important; transition: background .15s; }
+  .ac-item:last-child { border-bottom: 0; }
+  .ac-item:hover .ac-item-ic { background: var(--stone); }
+  .ac-item-ic { flex: 0 0 40px; height: 40px; border-radius: 12px; background: var(--sand); display: flex; align-items: center; justify-content: center; transition: background .15s; }
+  .ac-item-t { flex: 1; min-width: 0; }
+  .ac-item-t b { display: block; font-size: 14px; font-weight: 600; }
+  .ac-item-t small { display: block; margin-top: 1px; font-size: 12px; color: var(--graphite); }
+  .ac-badge { min-width: 22px; height: 22px; padding: 0 7px; margin-right: 6px; border-radius: 11px; background: var(--coral-500); color: var(--cream); font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+  .ac-badge.is-off { display: none; }
+  .ac-item .ac-chev { color: var(--ash); }
+
+  .ac-logout { display: flex; align-items: center; justify-content: center; gap: 8px; width: calc(100% - 40px); margin: 4px 20px 0; padding: 14px; border: 0; border-radius: 14px; background: #f6d4d4; color: var(--rose-500, #c0392b); font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: .8px; transition: background .15s; }
+  .ac-logout:hover { background: #f0c4c4; }
+  .ac-version { margin: 18px 0 40px; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ash); }
+
+  /* Folhas (dados pessoais, sair) */
+  .ac-sheet-bg { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; background: rgba(25,20,15,.5); opacity: 0; pointer-events: none; transition: opacity .2s; }
+  .ac-sheet-bg.is-on { opacity: 1; pointer-events: auto; }
+  .ac-sheet { width: 100%; max-width: 480px; max-height: 92vh; overflow-y: auto; background: var(--paper); border-radius: 28px 28px 0 0; padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateY(24px); transition: transform .25s; }
+  .ac-sheet-bg.is-on .ac-sheet { transform: none; }
+  .ac-handle { width: 40px; height: 4px; margin: 10px auto 0; border-radius: 2px; background: var(--stone); }
+  .ac-sheet-h { display: flex; justify-content: space-between; align-items: center; padding: 20px 20px 4px; }
+  .ac-sheet-h h2 { margin: 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 20px; letter-spacing: -0.3px; color: var(--ink) !important; }
+  .ac-x { border: 0; background: transparent; color: var(--graphite); padding: 6px; border-radius: 50%; }
+  .ac-x:hover { background: var(--sand); }
+  .ac-sheet-b { padding: 20px 20px 12px; }
+  .ac-f { margin-bottom: 16px; }
+  .ac-f label { display: block; margin-bottom: 6px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; color: var(--ash); text-transform: uppercase; }
+  .ac-f input { display: block; width: 100%; padding: 12px 14px !important; border: 1px solid transparent !important; border-radius: 14px !important; background: var(--sand) !important; box-shadow: none !important; outline: none; font: inherit; font-size: 15px; font-weight: 500; color: var(--ink); transition: border-color .15s, box-shadow .15s; }
+  .ac-f input:focus { border-color: var(--coral-500) !important; box-shadow: 0 0 0 4px rgba(221,120,82,.14) !important; }
+  .ac-f input.is-err { border-color: var(--rose-500, #c0392b) !important; }
+  .ac-f .ac-help { margin-top: 6px; font-size: 11.5px; color: var(--graphite); }
+  .ac-f .ac-ferr { margin-top: 6px; font-size: 11.5px; font-weight: 600; color: var(--rose-500, #c0392b); }
+  .ac-ro { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px solid var(--stone); border-radius: 14px; background: var(--cream); color: var(--graphite); font-size: 15px; }
+  .ac-ro span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ac-ro a { color: var(--coral-500) !important; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .ac-save { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px; padding: 16px; border: 0; border-radius: 100px; background: var(--coral-500); color: var(--cream); font-size: 14px; font-weight: 600; transition: opacity .15s; }
+  .ac-save[disabled] { opacity: .7; cursor: default; }
+  .ac-spin { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(250,250,246,.35); border-top-color: var(--cream); animation: acspin .8s linear infinite; }
+  @keyframes acspin { to { transform: rotate(360deg); } }
+  .ac-confirm { text-align: center; padding: 26px 22px 6px; }
+  .ac-confirm-ic { width: 52px; height: 52px; margin: 0 auto 14px; border-radius: 50%; background: rgba(200,80,80,.12); border: 1px solid rgba(200,80,80,.25); color: var(--rose-500, #c0392b); display: flex; align-items: center; justify-content: center; }
+  .ac-confirm h2 { margin: 0 0 6px !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 600; font-size: 19px; color: var(--ink) !important; }
+  .ac-confirm p { margin: 0; font-size: 13px; color: var(--graphite); }
+  .ac-danger { width: 100%; margin-top: 20px; padding: 13px; border: 0; border-radius: 100px; background: var(--rose-500, #c0392b); color: var(--cream); font-size: 14px; font-weight: 600; }
+  .ac-ghost { width: 100%; margin-top: 8px; padding: 12px; border: 0; border-radius: 100px; background: transparent; color: var(--graphite); font-size: 13px; font-weight: 600; }
+  .ac-ghost:hover { background: var(--sand); }
+
+  /* Telas próprias (veículo, segurança) */
+  .sub { max-width: 560px; margin: 0 auto; padding-bottom: 120px; }
+  .sub-head { padding: 8px 20px; }
+  .sub-back { width: 40px; height: 40px; border: 0; border-radius: 50%; background: var(--sand); color: var(--ink); display: flex; align-items: center; justify-content: center; }
+  .sub-back:hover { background: var(--stone); }
+  .sub-body { padding: 8px 20px 0; }
+  .sub-body h1 { margin: 6px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 34px; letter-spacing: -1px; color: var(--ink) !important; }
+  .sub-lead { margin: 8px 0 0; font-size: 14px; line-height: 20px; color: var(--graphite); }
+  .plate { margin-top: 22px; border-radius: 14px; overflow: hidden; background: #fff; border: 2px solid var(--ink); box-shadow: 0 14px 30px -20px rgba(40,35,28,.5); text-align: center; }
+  .plate-top { padding: 4px; background: #1f4fa3; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 3px; }
+  .plate-v { padding: 14px 10px 2px; font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 40px; letter-spacing: 6px; color: var(--ink); }
+  .plate-v.is-ph { color: var(--stone); }
+  .plate-m { padding: 0 12px 12px; font-size: 12px; color: var(--graphite); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ac-notice { display: flex; gap: 8px; margin-top: 14px; padding: 12px; border-radius: 12px; background: var(--pool-50, #eef5fa); color: var(--pool-700, #1f5078); font-size: 12.5px; line-height: 18px; }
+  .ac-notice svg { flex-shrink: 0; margin-top: 2px; }
+  .ac-f input.is-plate { font-family: 'JetBrains Mono', monospace; letter-spacing: 2px; text-transform: uppercase; }
+  .ac-formerr { display: flex; align-items: center; gap: 8px; padding: 12px; border-radius: 12px; background: #f6d4d4; color: var(--rose-500, #c0392b); font-size: 13px; font-weight: 600; }
+  .ac-formerr.is-off { display: none; }
+  .sub-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; padding: 12px 20px calc(16px + env(safe-area-inset-bottom, 0px)); background: linear-gradient(to top, var(--cream) 70%, rgba(250,250,246,0)); }
+  .sub-bar .ac-save { max-width: 520px; margin: 0 auto; }
+  .sec-card { margin-top: 22px; padding: 18px; background: var(--paper); border: 1px solid var(--stone); border-radius: 18px; }
+  .sec-card h2 { margin: 0 0 4px !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 600; font-size: 16px; color: var(--ink) !important; }
+  .sec-card > p { margin: 0 0 16px; font-size: 12.5px; line-height: 18px; color: var(--graphite); }
+  .sec-div { height: 1px; background: var(--stone); margin: 4px 0 18px; }
+  .sec-danger { margin-top: 18px; padding: 18px; border-radius: 18px; border: 1px solid rgba(200,80,80,.25); background: #fdf6f6; }
+  .sec-danger h2 { margin: 0 0 4px !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 600; font-size: 16px; color: var(--rose-500, #c0392b) !important; }
+  .sec-danger p { margin: 0 0 14px; font-size: 12.5px; color: var(--graphite); }
+  .sec-danger .ac-danger { margin-top: 0; }
+  .sec-danger-btn { padding: 11px 16px; border-radius: 100px; border: 1px solid rgba(200,80,80,.3); background: transparent; color: var(--rose-500, #c0392b); font-size: 13px; font-weight: 600; }
+  .sec-danger-btn:hover { background: rgba(200,80,80,.06); }
+  .sec-danger-confirm { display: none; }
+  .sec-danger.is-asking .sec-danger-confirm { display: block; }
+  .sec-danger.is-asking .sec-danger-btn { display: none; }
+
+  .ac-toast { position: fixed; left: 20px; right: 20px; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); z-index: 70; max-width: 440px; margin: 0 auto; display: flex; align-items: center; gap: 10px; padding: 14px; border-radius: 14px; border: 1px solid var(--coral-100); background: var(--coral-50); color: var(--coral-700); font-size: 13px; font-weight: 600; box-shadow: 0 14px 36px -16px rgba(40,35,28,.45); transform: translateY(16px); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+  .ac-toast.is-on { opacity: 1; transform: none; }
+  .ac-toast.is-err { background: #f6d4d4; border-color: #e89999; color: var(--rose-500, #c0392b); }
+
+  @media (min-width: 720px) {
+    .ac-sheet-bg { align-items: center; }
+    .ac-sheet { border-radius: 28px; }
+    .ac-handle { display: none; }
+  }
+  @media (min-width: 960px) {
+    .ac-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; align-items: start; padding: 24px 32px 0; }
+    .ac-split .ac-title, .ac-split .ac-sec { padding-left: 0; padding-right: 0; }
+    .ac-split .ac-title h1 { font-size: 48px; letter-spacing: -1.6px; }
+    .ac-split .ac-id, .ac-split .ac-veh, .ac-split .ac-list, .ac-split .ac-logout { margin-left: 0; margin-right: 0; width: 100%; }
+    .ac-split .ac-loyal { padding-left: 0; padding-right: 0; }
+    .ac-right { padding-top: 24px; }
+    .ac-list { margin-top: 0; padding: 4px 20px; background: var(--paper); border: 1px solid var(--stone); border-radius: 20px; }
+  }
+</style>
+
+<div class="ac">
+  <%# ── Conta ─────────────────────────────────────────────────────── %>
+  <section class="ac-view is-on" id="ac-main">
+    <div class="ac-wrap ac-split">
+      <div class="ac-left">
+        <div class="ac-title"><div class="ac-mono">Conta</div><h1 id="ac-first"></h1></div>
+        <div class="ac-id">
+          <a class="ac-stat" href="/appointments<%= request.query_string.present? ? "?#{request.query_string}" : '' %>"><b id="ac-n-wash"></b><small id="ac-l-wash"></small></a>
+          <span class="ac-sep"></span>
+          <a class="ac-stat is-fav" href="/client/favorites<%= request.query_string.present? ? "?#{request.query_string}" : '' %>"><b id="ac-n-fav"></b><small id="ac-l-fav"></small></a>
         </div>
-      <% end %>
+        <div id="ac-loyal-wrap"></div>
+        <div class="ac-sec"><h2>Meu veículo</h2></div>
+        <button type="button" class="ac-veh" data-open="veiculo" id="ac-veh"></button>
+      </div>
+      <div class="ac-right">
+        <div class="ac-list">
+          <button type="button" class="ac-item" data-sheet="dados">
+            <span class="ac-item-ic"><i data-feather="user" style="width:18px;height:18px"></i></span>
+            <span class="ac-item-t"><b>Dados pessoais</b><small>Nome, telefone e CPF</small></span>
+            <i data-feather="chevron-right" class="ac-chev" style="width:16px;height:16px"></i>
+          </button>
+          <a class="ac-item" href="/client/favorites<%= request.query_string.present? ? "?#{request.query_string}" : '' %>">
+            <span class="ac-item-ic"><i data-feather="heart" style="width:18px;height:18px"></i></span>
+            <span class="ac-item-t"><b>Favoritos</b><small id="ac-fav-sub"></small></span>
+            <i data-feather="chevron-right" class="ac-chev" style="width:16px;height:16px"></i>
+          </a>
+          <a class="ac-item" href="/client/notifications">
+            <span class="ac-item-ic"><i data-feather="bell" style="width:18px;height:18px"></i></span>
+            <span class="ac-item-t"><b>Notificações</b><small id="ac-notif-sub">Tudo em dia</small></span>
+            <span class="ac-badge is-off" id="ac-notif-badge"></span>
+            <i data-feather="chevron-right" class="ac-chev" style="width:16px;height:16px"></i>
+          </a>
+          <a class="ac-item" href="/client/profile/edit">
+            <span class="ac-item-ic"><i data-feather="credit-card" style="width:18px;height:18px"></i></span>
+            <span class="ac-item-t"><b>Pagamentos</b><small><%= @account[:has_card] ? @account[:card_display] : "Pagamento presencial" %></small></span>
+            <i data-feather="chevron-right" class="ac-chev" style="width:16px;height:16px"></i>
+          </a>
+          <button type="button" class="ac-item" data-open="seguranca">
+            <span class="ac-item-ic"><i data-feather="shield" style="width:18px;height:18px"></i></span>
+            <span class="ac-item-t"><b>Privacidade e segurança</b><small>E-mail, senha e conta</small></span>
+            <i data-feather="chevron-right" class="ac-chev" style="width:16px;height:16px"></i>
+          </button>
+          <a class="ac-item" href="mailto:suporte@loov.app">
+            <span class="ac-item-ic"><i data-feather="message-circle" style="width:18px;height:18px"></i></span>
+            <span class="ac-item-t"><b>Suporte</b><small>suporte@loov.app</small></span>
+            <i data-feather="chevron-right" class="ac-chev" style="width:16px;height:16px"></i>
+          </a>
+        </div>
+        <button type="button" class="ac-logout" data-sheet="sair"><i data-feather="log-out" style="width:15px;height:15px"></i>ENCERRAR SESSÃO</button>
+        <div class="ac-version">LOOV · v1.0.0</div>
+      </div>
+    </div>
+    <%= render "shared/site_footer", audience: :client %>
+  </section>
 
-      <hr class="loov-divider">
+  <%# ── Meu veículo (ClientVehicleScreen) ─────────────────────────── %>
+  <section class="ac-view" id="ac-veiculo">
+    <div class="sub">
+      <div class="sub-head"><button type="button" class="sub-back" data-back aria-label="Voltar"><i data-feather="chevron-left" style="width:18px;height:18px"></i></button></div>
+      <div class="sub-body">
+        <div class="ac-mono">Meu veículo</div>
+        <h1>Seu carro.</h1>
+        <p class="sub-lead">O lava-rápido usa a placa pra identificar seu carro na chegada.</p>
+        <div class="plate" aria-hidden="true"><div class="plate-top">BRASIL</div><div class="plate-v" id="vh-prev"></div><div class="plate-m" id="vh-prev-m"></div></div>
+        <div class="ac-notice" id="vh-migrated" style="display:none"><i data-feather="info" style="width:14px;height:14px"></i><span>Separamos a placa do modelo que você já tinha cadastrado. Confira e toque em salvar.</span></div>
+        <div style="margin-top:22px">
+          <div class="ac-f"><label for="vh-model">Modelo e cor</label><input id="vh-model" maxlength="60" placeholder="Ex.: Honda Civic preto" autocomplete="off"><div class="ac-ferr" id="vh-model-err"></div></div>
+          <div class="ac-f"><label for="vh-plate">Placa</label><input id="vh-plate" class="is-plate" maxlength="8" placeholder="ABC1D23" autocomplete="off" autocapitalize="characters"><div class="ac-help" id="vh-plate-help">Antiga (ABC-1234) ou Mercosul (ABC1D23)</div></div>
+          <div class="ac-formerr is-off" id="vh-err"></div>
+        </div>
+      </div>
+      <div class="sub-bar"><button type="button" class="ac-save" id="vh-save"><i data-feather="truck" style="width:17px;height:17px"></i>Salvar veículo</button></div>
+    </div>
+  </section>
 
-      <div class="loov-field">
-        <%= f.label :password, "Nova senha", class: "loov-label" %>
-        <%= f.password_field :password, autocomplete: "new-password",
-            class: "loov-input", placeholder: "Deixe em branco se não quiser alterar" %>
-        <% if @minimum_password_length %>
-          <div class="loov-help">Mínimo <%= @minimum_password_length %> caracteres.</div>
+  <%# ── Privacidade e segurança (Devise: e-mail, senha, excluir) ───── %>
+  <section class="ac-view" id="ac-seguranca">
+    <div class="sub">
+      <div class="sub-head"><button type="button" class="sub-back" data-back aria-label="Voltar"><i data-feather="chevron-left" style="width:18px;height:18px"></i></button></div>
+      <div class="sub-body">
+        <div class="ac-mono">Privacidade e segurança</div>
+        <h1>Acesso à conta.</h1>
+        <p class="sub-lead">Troque o e-mail de login ou a senha. Pra confirmar que é você, pedimos a senha atual.</p>
+        <% if security_errors.any? %>
+          <div class="ac-formerr" style="margin-top:18px"><i data-feather="alert-circle" style="width:14px;height:14px;flex-shrink:0"></i><span><%= security_errors.join(". ") %>.</span></div>
         <% end %>
-      </div>
+        <%= form_for(resource, as: resource_name, url: registration_path(resource_name), html: { method: :put, class: "sec-card", id: "sec-form", data: { turbo: false } }) do |f| %>
+          <h2>E-mail e senha</h2>
+          <p>Deixe a nova senha em branco se quiser trocar só o e-mail.</p>
+          <div class="ac-f"><%= f.label :email, "E-mail" %><%= f.email_field :email, autocomplete: "email", class: (resource.errors[:email].any? ? "is-err" : nil) %></div>
+          <div class="sec-div"></div>
+          <div class="ac-f"><%= f.label :password, "Nova senha" %><%= f.password_field :password, autocomplete: "new-password", placeholder: "Em branco pra manter a atual", class: (resource.errors[:password].any? ? "is-err" : nil) %>
+            <% if @minimum_password_length %><div class="ac-help">Mínimo de <%= @minimum_password_length %> caracteres.</div><% end %></div>
+          <div class="ac-f"><%= f.label :password_confirmation, "Confirmar nova senha" %><%= f.password_field :password_confirmation, autocomplete: "new-password", class: (resource.errors[:password_confirmation].any? ? "is-err" : nil) %></div>
+          <div class="sec-div"></div>
+          <div class="ac-f"><%= f.label :current_password, "Senha atual" %><%= f.password_field :current_password, autocomplete: "current-password", required: true, class: (resource.errors[:current_password].any? ? "is-err" : nil) %></div>
+          <button type="submit" class="ac-save" id="sec-save">Salvar alterações</button>
+        <% end %>
 
-      <div class="loov-field">
-        <%= f.label :password_confirmation, "Confirmar nova senha", class: "loov-label" %>
-        <%= f.password_field :password_confirmation, autocomplete: "new-password", class: "loov-input" %>
+        <div class="sec-danger" id="sec-danger">
+          <h2>Excluir minha conta</h2>
+          <p>Seus dados, agendamentos e favoritos são apagados. Não dá pra desfazer.</p>
+          <button type="button" class="sec-danger-btn" id="sec-danger-ask">Excluir minha conta</button>
+          <div class="sec-danger-confirm">
+            <%= button_to "Sim, excluir de vez", registration_path(resource_name), method: :delete, class: "ac-danger", form: { data: { turbo: false } } %>
+            <button type="button" class="ac-ghost" id="sec-danger-no">Manter minha conta</button>
+          </div>
+        </div>
       </div>
+    </div>
+  </section>
 
-      <hr class="loov-divider">
-
-      <div class="loov-field">
-        <%= f.label :current_password, "Senha atual", class: "loov-label" %>
-        <%= f.password_field :current_password, autocomplete: "current-password",
-            class: "loov-input", placeholder: "Necessária para confirmar as alterações" %>
+  <%# ── Folha: Dados pessoais ─────────────────────────────────────── %>
+  <div class="ac-sheet-bg" id="sh-dados" aria-hidden="true">
+    <div class="ac-sheet" role="dialog" aria-modal="true" aria-labelledby="sh-dados-t">
+      <div class="ac-handle"></div>
+      <div class="ac-sheet-h"><h2 id="sh-dados-t">Editar perfil</h2><button type="button" class="ac-x" data-close aria-label="Fechar"><i data-feather="x" style="width:20px;height:20px"></i></button></div>
+      <div class="ac-sheet-b">
+        <div class="ac-f"><label>E-mail</label><div class="ac-ro"><span id="pd-email"></span><a href="#" data-goto-sec>Alterar</a><i data-feather="lock" style="width:13px;height:13px"></i></div></div>
+        <div class="ac-f"><label for="pd-name">Nome</label><input id="pd-name" autocomplete="name"></div>
+        <div class="ac-f"><label for="pd-phone">Telefone</label><input id="pd-phone" inputmode="tel" autocomplete="tel" placeholder="(11) 99999-9999"></div>
+        <div class="ac-f"><label for="pd-cpf">CPF</label><input id="pd-cpf" inputmode="numeric" placeholder="000.000.000-00"></div>
+        <button type="button" class="ac-save" id="pd-save">Salvar alterações</button>
       </div>
-
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
-        <%= f.submit "Atualizar conta", class: "loov-btn-primary loov-btn-lg" %>
-        <%= link_to "Voltar", :back, class: "loov-btn-secondary loov-btn-lg" %>
-      </div>
-    <% end %>
+    </div>
   </div>
 
-  <div class="loov-card" style="margin-top:24px;border-color:rgba(200,80,80,0.2);background:#fdf6f6;">
-    <h3 class="loov-card-title" style="color:#c85050;">Cancelar minha conta</h3>
-    <p class="loov-card-text" style="margin-bottom:16px;">
-      Esta ação é permanente. Todos os seus dados serão removidos.
-    </p>
-    <%= button_to "Cancelar minha conta", registration_path(resource_name),
-        data: { confirm: "Tem certeza? Esta ação não pode ser desfeita.",
-                turbo_confirm: "Tem certeza? Esta ação não pode ser desfeita." },
-        method: :delete,
-        class: "loov-btn-secondary",
-        style: "border-color:rgba(200,80,80,0.3);color:#c85050;" %>
+  <%# ── Folha: Encerrar sessão ────────────────────────────────────── %>
+  <div class="ac-sheet-bg" id="sh-sair" aria-hidden="true">
+    <div class="ac-sheet" role="dialog" aria-modal="true" aria-labelledby="sh-sair-t">
+      <div class="ac-handle"></div>
+      <div class="ac-confirm">
+        <div class="ac-confirm-ic"><i data-feather="log-out" style="width:22px;height:22px"></i></div>
+        <h2 id="sh-sair-t">Encerrar sessão?</h2>
+        <p>Você precisará fazer login novamente.</p>
+        <%= button_to "Sair", destroy_user_session_path, method: :delete, class: "ac-danger", form: { data: { turbo: false } } %>
+        <button type="button" class="ac-ghost" data-close>Cancelar</button>
+      </div>
+    </div>
   </div>
+
+  <div class="ac-toast" id="ac-toast" role="status" aria-live="polite"></div>
 </div>
+
+<script>
+(function () {
+  var A = <%= raw json_escape(@account.to_json) %>;
+  var FLASH = <%= raw json_escape({ notice: flash[:notice], alert: flash[:alert] }.to_json) %>;
+  var OPEN_VIEW = <%= raw json_escape(open_view.to_json) %>;
+  var CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content;
+  var PLATE_RE = /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/;
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function icon(n, size, extra) { return window.feather && feather.icons[n] ? feather.icons[n].toSvg(Object.assign({ width: size, height: size }, extra || {})) : ''; }
+  function maskPhone(t) {
+    var d = String(t || '').replace(/\D/g, '').slice(0, 11);
+    if (d.length <= 2) return d.length ? '(' + d : '';
+    if (d.length <= 7) return '(' + d.slice(0, 2) + ') ' + d.slice(2);
+    if (d.length <= 10) return '(' + d.slice(0, 2) + ') ' + d.slice(2, 6) + '-' + d.slice(6);
+    return '(' + d.slice(0, 2) + ') ' + d.slice(2, 7) + '-' + d.slice(7);
+  }
+  function maskCpf(t) {
+    var d = String(t || '').replace(/\D/g, '').slice(0, 11);
+    if (d.length <= 3) return d;
+    if (d.length <= 6) return d.slice(0, 3) + '.' + d.slice(3);
+    if (d.length <= 9) return d.slice(0, 3) + '.' + d.slice(3, 6) + '.' + d.slice(6);
+    return d.slice(0, 3) + '.' + d.slice(3, 6) + '.' + d.slice(6, 9) + '-' + d.slice(9);
+  }
+  function normalizePlate(t) { return String(t || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 7); }
+  // Hífen só no padrão antigo; Mercosul não usa separador.
+  function formatPlate(raw) { return raw.length > 3 && /^[A-Z]{3}[0-9]{1,4}$/.test(raw) ? raw.slice(0, 3) + '-' + raw.slice(3) : raw; }
+  function fmtPlate(p) { p = String(p || '').toUpperCase().trim(); return /^[A-Z]{3}[0-9]{4}$/.test(p) ? p.slice(0, 3) + '-' + p.slice(3) : p; }
+  // Cadastros antigos guardavam tudo junto ("Civic preto ABC-1234"): se dá
+  // pra achar a placa no texto, oferece separada pro cliente conferir.
+  function splitLegacy(model) {
+    var text = String(model || '').trim();
+    if (!text) return { model: '', plate: '' };
+    var tokens = text.split(/\s+/);
+    for (var i = tokens.length - 1; i >= 0; i--) {
+      var c = normalizePlate(tokens[i]);
+      if (PLATE_RE.test(c)) return { model: tokens.slice(0, i).concat(tokens.slice(i + 1)).join(' ').trim(), plate: c };
+    }
+    return { model: text, plate: '' };
+  }
+
+  var toastT = null;
+  function toast(text, err) {
+    var t = $('ac-toast');
+    t.className = 'ac-toast is-on' + (err ? ' is-err' : '');
+    t.innerHTML = icon(err ? 'x-circle' : 'check-circle', 15) + '<span>' + esc(text) + '</span>';
+    clearTimeout(toastT); toastT = setTimeout(function () { t.classList.remove('is-on'); }, 3500);
+  }
+
+  // ── Conta ────────────────────────────────────────────────────────────────
+  function renderMain() {
+    $('ac-first').textContent = String(A.full_name || '').split(' ')[0] || 'Você';
+    var w = A.attended_count || 0, f = A.favorites_count || 0;
+    $('ac-n-wash').textContent = w; $('ac-l-wash').textContent = w === 1 ? 'LAVAGEM' : 'LAVAGENS';
+    $('ac-n-fav').textContent = f; $('ac-l-fav').textContent = f === 1 ? 'FAVORITO' : 'FAVORITOS';
+    $('ac-fav-sub').textContent = f > 0 ? f + ' lava-rápido' + (f > 1 ? 's' : '') : 'Nenhum favorito';
+    var p = A.vehicle_plate, m = A.vehicle_model;
+    $('ac-veh').innerHTML = '<span class="ac-veh-ic">' + icon('truck', 20) + '</span><span class="ac-veh-t">' +
+      (p ? '<b class="is-plate">' + esc(fmtPlate(p)) + '</b><small>' + esc(m || 'Toque para completar o modelo') + '</small>'
+         : '<b>' + esc(m || 'Nenhum veículo cadastrado') + '</b><small>' + (m ? 'Falta cadastrar a placa' : 'Toque para adicionar modelo e placa') + '</small>') +
+      '</span><span class="ac-veh-go">' + icon(p ? 'chevron-right' : 'plus', p ? 18 : 16) + '</span>';
+  }
+
+  // Carimbos e não lidas: mesmos endpoints que o app chama ao abrir a Conta.
+  function loadExtras() {
+    fetch('/client/loyalty_cards', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      .then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; })
+      .then(function (cards) {
+        if (!Array.isArray(cards) || !cards.length) return;
+        $('ac-loyal-wrap').innerHTML = '<div class="ac-sec"><h2>Carimbos</h2><small>' + cards.length + (cards.length === 1 ? ' ativo' : ' ativos') + '</small></div>' +
+          '<div class="ac-loyal">' + cards.map(function (c) {
+            var st = '';
+            for (var i = 0; i < c.visits_required; i++) st += '<i class="' + (i < c.filled ? 'is-on' : '') + '">' + (i < c.filled ? icon('check', 14) : '') + '</i>';
+            return '<div class="ac-lc"><div class="ac-lc-h"><div><b>' + esc(c.car_wash_name) + '</b><small>' + esc(c.reward_description) + '</small></div>' +
+              '<span class="ac-lc-badge">' + icon('star', 11) + c.filled + '/' + c.visits_required + '</span></div><div class="ac-stamps">' + st + '</div></div>';
+          }).join('') + '</div>';
+      });
+    fetch('/client/notifications', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      .then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; })
+      .then(function (list) {
+        var n = Array.isArray(list) ? list.filter(function (x) { return !x.read; }).length : 0;
+        $('ac-notif-sub').textContent = n > 0 ? n + ' não lida' + (n > 1 ? 's' : '') : 'Tudo em dia';
+        var b = $('ac-notif-badge'); b.textContent = n > 9 ? '9+' : n; b.classList.toggle('is-off', !n);
+      });
+  }
+
+  // ── Folhas ───────────────────────────────────────────────────────────────
+  var lastFocus = null;
+  function openSheet(name) {
+    lastFocus = document.activeElement;
+    if (name === 'dados') {
+      $('pd-email').textContent = A.email || '';
+      $('pd-name').value = A.full_name || '';
+      $('pd-phone').value = maskPhone(A.phone);
+      $('pd-cpf').value = A.cpf || '';
+    }
+    var s = $('sh-' + name); s.classList.add('is-on'); s.setAttribute('aria-hidden', 'false');
+    var first = s.querySelector('input, button'); if (first) setTimeout(function () { first.focus(); }, 50);
+  }
+  function closeSheets() {
+    document.querySelectorAll('.ac-sheet-bg.is-on').forEach(function (s) { s.classList.remove('is-on'); s.setAttribute('aria-hidden', 'true'); });
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+  // PATCH /client/profile é update parcial — mandar só o que esta folha edita
+  // preserva o veículo (mesma regra do app).
+  function patchProfile(user) {
+    return fetch('/client/profile', {
+      method: 'PATCH', credentials: 'same-origin',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF },
+      body: JSON.stringify({ user: user })
+    }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok && d.ok, data: d, status: r.status }; }); });
+  }
+  function busy(btn, on, label) { btn.disabled = on; btn.innerHTML = on ? '<span class="ac-spin"></span>' : label; }
+  function saveDados() {
+    var name = $('pd-name').value.trim();
+    if (!name) { toast('Informe seu nome.', true); $('pd-name').focus(); return; }
+    var btn = $('pd-save');
+    busy(btn, true);
+    patchProfile({ full_name: name, phone: $('pd-phone').value.replace(/\D/g, ''), cpf: $('pd-cpf').value.trim() })
+      .then(function (res) {
+        busy(btn, false, 'Salvar alterações');
+        if (!res.ok) { toast(res.data.error || 'Erro ao salvar perfil.', true); return; }
+        var p = res.data.profile || {};
+        A.full_name = p.full_name || name; A.phone = p.phone; A.cpf = p.cpf;
+        renderMain(); closeSheets(); toast('Perfil atualizado com sucesso!');
+      })
+      .catch(function () { busy(btn, false, 'Salvar alterações'); toast('Erro ao salvar perfil.', true); });
+  }
+
+  // ── Telas próprias (#veiculo, #seguranca) ────────────────────────────────
+  function showView(v, push) {
+    ['main', 'veiculo', 'seguranca'].forEach(function (k) { $('ac-' + k).classList.toggle('is-on', k === v); });
+    if (push) history.pushState({ v: v }, '', v === 'main' ? location.pathname + location.search : '#' + v);
+    if (v === 'veiculo') initVehicle();
+    window.scrollTo(0, 0);
+  }
+  window.addEventListener('popstate', function (e) { closeSheets(); showView((e.state && e.state.v) || 'main', false); });
+
+  var vh = { model: '', plate: '' };
+  function initVehicle() {
+    if (A.vehicle_plate) { vh.model = A.vehicle_model || ''; vh.plate = A.vehicle_plate; $('vh-migrated').style.display = 'none'; }
+    else { var g = splitLegacy(A.vehicle_model); vh.model = g.model; vh.plate = g.plate; $('vh-migrated').style.display = g.plate ? 'flex' : 'none'; }
+    $('vh-model').value = vh.model; $('vh-plate').value = formatPlate(vh.plate);
+    setVhErr({}); $('vh-err').classList.add('is-off');
+    renderPlate();
+  }
+  function renderPlate() {
+    var prev = formatPlate(vh.plate);
+    $('vh-prev').textContent = prev || 'ABC1D23'; $('vh-prev').classList.toggle('is-ph', !prev);
+    $('vh-prev-m').textContent = vh.model.trim() || 'modelo e cor';
+  }
+  function setVhErr(e) {
+    $('vh-model').classList.toggle('is-err', !!e.model); $('vh-model-err').textContent = e.model || '';
+    $('vh-plate').classList.toggle('is-err', !!e.plate);
+    var h = $('vh-plate-help'); h.textContent = e.plate || 'Antiga (ABC-1234) ou Mercosul (ABC1D23)'; h.className = e.plate ? 'ac-ferr' : 'ac-help';
+  }
+  function saveVehicle() {
+    var e = {};
+    if (!vh.model.trim()) e.model = 'Informe o modelo do carro';
+    if (!vh.plate) e.plate = 'Informe a placa';
+    else if (!PLATE_RE.test(vh.plate)) e.plate = 'Placa inválida (ex: ABC1D23 ou ABC-1234)';
+    setVhErr(e); $('vh-err').classList.add('is-off');
+    if (Object.keys(e).length) return;
+    var btn = $('vh-save'), label = icon('truck', 17) + 'Salvar veículo';
+    busy(btn, true);
+    patchProfile({ full_name: A.full_name || '', phone: A.phone || '', cpf: A.cpf || '', vehicle_model: vh.model.trim(), vehicle_plate: vh.plate })
+      .then(function (res) {
+        busy(btn, false, label);
+        if (!res.ok) { var x = $('vh-err'); x.innerHTML = icon('alert-circle', 14) + '<span>' + esc(res.data.error || 'Não foi possível salvar. (HTTP ' + res.status + ')') + '</span>'; x.classList.remove('is-off'); return; }
+        A.vehicle_model = vh.model.trim(); A.vehicle_plate = vh.plate;
+        renderMain(); history.back(); toast('Veículo salvo!');
+      })
+      .catch(function () { busy(btn, false, label); var x = $('vh-err'); x.innerHTML = icon('alert-circle', 14) + '<span>Erro de conexão. Tente novamente.</span>'; x.classList.remove('is-off'); });
+  }
+
+  // ── Eventos ──────────────────────────────────────────────────────────────
+  document.addEventListener('click', function (e) {
+    var t;
+    if ((t = e.target.closest('[data-sheet]'))) { openSheet(t.dataset.sheet); return; }
+    if ((t = e.target.closest('[data-open]'))) { showView(t.dataset.open, true); return; }
+    if (e.target.closest('[data-back]')) { history.back(); return; }
+    if (e.target.closest('[data-close]') || e.target.classList.contains('ac-sheet-bg')) { closeSheets(); return; }
+    if (e.target.closest('[data-goto-sec]')) { e.preventDefault(); closeSheets(); showView('seguranca', true); return; }
+    if (e.target.closest('#pd-save')) { saveDados(); return; }
+    if (e.target.closest('#vh-save')) { saveVehicle(); return; }
+    if (e.target.closest('#sec-danger-ask')) { $('sec-danger').classList.add('is-asking'); return; }
+    if (e.target.closest('#sec-danger-no')) { $('sec-danger').classList.remove('is-asking'); return; }
+  });
+  document.addEventListener('input', function (e) {
+    var id = e.target.id;
+    if (id === 'pd-phone') e.target.value = maskPhone(e.target.value);
+    else if (id === 'pd-cpf') e.target.value = maskCpf(e.target.value);
+    else if (id === 'vh-model') { vh.model = e.target.value; renderPlate(); }
+    else if (id === 'vh-plate') { vh.plate = normalizePlate(e.target.value); e.target.value = formatPlate(vh.plate); renderPlate(); }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeSheets();
+    if (e.key === 'Enter' && e.target.closest && e.target.closest('#sh-dados') && e.target.tagName === 'INPUT') saveDados();
+    if (e.key === 'Enter' && (e.target.id === 'vh-model' || e.target.id === 'vh-plate')) { if (e.target.id === 'vh-model') $('vh-plate').focus(); else saveVehicle(); }
+  });
+  $('sec-form').addEventListener('submit', function () { var b = $('sec-save'); b.disabled = true; b.innerHTML = '<span class="ac-spin"></span>'; });
+
+  if (window.feather) feather.replace();
+  renderMain();
+  loadExtras();
+  var hash = location.hash.replace('#', '');
+  // Senha errada: o Devise devolve a página no endereço do POST (/users), que
+  // não abre com GET — recarregar daria erro. Volta pro endereço da Conta.
+  var base = location.pathname === '/users' ? '/users/edit' : location.pathname + location.search;
+  history.replaceState({ v: 'main' }, '', base);
+  if (OPEN_VIEW) showView(OPEN_VIEW, true);
+  else if (hash === 'veiculo' || hash === 'seguranca') showView(hash, true);
+  if (FLASH.notice) toast(FLASH.notice); else if (FLASH.alert) toast(FLASH.alert, true);
+})();
+</script>
+<% end %>
