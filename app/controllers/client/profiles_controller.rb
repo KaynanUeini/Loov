@@ -20,7 +20,9 @@ module Client
         redirect_to edit_user_registration_path(request.query_parameters.slice("latitude", "longitude")) and return
       end
 
-      if current_user.stripe_customer_id.present? || params[:add_card]
+      # Na página do cartão o SetupIntent é sempre preparado: serve pra
+      # cadastrar o primeiro cartão e também pra trocar o atual.
+      if request.format.html? || current_user.stripe_customer_id.present? || params[:add_card]
         customer = current_user.stripe_customer!
         @setup_intent = Stripe::SetupIntent.create(
           customer:             customer.id,

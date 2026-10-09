@@ -158,9 +158,14 @@
     display:flex; align-items:flex-start; gap:.75rem;
     padding:.875rem 1rem; border-bottom:1px solid var(--stone);
     text-decoration:none; transition:background .15s; cursor:pointer;
+    /* Estilos globais de link (pílula, largura do conteúdo) vazavam aqui. */
+    width:100%; box-sizing:border-box; border-radius:0 !important; white-space:normal;
   }
+  .nav-notif-item > div:last-child { min-width:0; flex:1; }
+  .nav-notif-sub { white-space:normal; overflow-wrap:anywhere; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
   .nav-notif-item:hover { background:var(--sand); }
   .nav-notif-item:last-child { border-bottom:none; }
+  #nav-notif-list { max-height: min(70vh, 520px); overflow-y: auto; }
   .nav-notif-icon {
     width:34px; height:34px; border-radius:10px; flex-shrink:0;
     display:flex; align-items:center; justify-content:center; font-size:.82rem;
@@ -170,6 +175,11 @@
   .nav-notif-icon.rejected  { background:rgba(200,80,80,0.08); color:#c85050; border:1px solid rgba(200,80,80,0.16); }
   .nav-notif-icon.cancelled { background:rgba(249,115,22,.08); color:#c95612; border:1px solid rgba(249,115,22,.18); }
   .nav-notif-icon.regular   { background:#dceaf3; color:#2a5f8a; border:1px solid #b5cee0; }
+  .nav-notif-meta { display:flex; justify-content:space-between; gap:8px; margin-bottom:.15rem; font-family:'JetBrains Mono', monospace; font-size:.58rem; letter-spacing:.1em; color:var(--ash); }
+  .nav-notif-meta span:last-child { display:inline-flex; align-items:center; gap:5px; letter-spacing:0; white-space:nowrap; }
+  .nav-notif-dot { width:6px; height:6px; border-radius:50%; background:var(--coral-500); display:inline-block; }
+  .nav-notif-item.is-unread { background: var(--coral-50); }
+  .nav-notif-item.is-unread:hover { background: var(--coral-100); }
   .nav-notif-title { font-size:.82rem; font-weight:600; color:var(--ink); margin-bottom:.18rem; }
   .nav-notif-sub { font-size:.72rem; color:var(--graphite); line-height:1.45; }
   .nav-notif-empty { padding:1.5rem 1rem; text-align:center; font-size:.78rem; color:var(--ash); }
@@ -449,7 +459,7 @@
             <div class="nav-notif-dropdown" id="nav-notif-dropdown">
               <div class="nav-notif-header">Notificações</div>
               <div id="nav-notif-list"><div class="nav-notif-empty">Nenhuma notificação.</div></div>
-              <div class="nav-notif-footer"><%= link_to "Ver todos os agendamentos", appointments_path %></div>
+              <div class="nav-notif-footer"><%= link_to "Ver todas as notificações", client_notifications_path %></div>
             </div>
           </div>
         </li>
@@ -563,43 +573,64 @@
 
     function loadNotifications() {
       fetch('/client/notifications', { headers: { Accept: 'application/json' } })
-        .then(r => r.json()).then(data => { allNotifs = data; renderNotifications(data, PAGE_SIZE); }).catch(() => {});
+        .then(r => r.json()).then(data => { allNotifs = Array.isArray(data) ? data : []; renderNotifications(allNotifs, PAGE_SIZE); }).catch(() => {});
     }
 
-    function notifMeta(item) {
-      let iconClass, icon, title;
-      if (item.type === 'cancelled_by_establishment') {
-        iconClass = 'cancelled'; icon = 'fa-calendar-xmark'; title = 'Reserva cancelada';
-      } else if (item.type === 'regular_confirmed') {
-        iconClass = 'regular'; icon = 'fa-calendar-check'; title = 'Agendamento confirmado';
-      } else if (item.type === 'disponivel') {
-        if (item.status === 'confirmed')      { iconClass='confirmed'; icon='fa-check';    title='Reserva confirmada!'; }
-        else if (item.status === 'rejected')  { iconClass='rejected';  icon='fa-times';    title='Reserva recusada'; }
-        else if (item.status === 'cancelled') { iconClass='rejected';  icon='fa-times';    title='Reserva expirou'; }
-        else                                  { iconClass='pending';   icon='fa-clock';    title='Aguardando confirmação'; }
-      } else {
-        iconClass = 'pending'; icon = 'fa-clock'; title = 'Notificação';
-      }
-      return { iconClass, icon, title };
+    // Mesmo formato da página /client/notifications e do app:
+    // { id, type, title, desc, created_at, read }. O sino ainda lia o formato
+    // antigo (service_name, car_wash_name…) e mostrava "undefined".
+    const NOTIF_META = {
+      appointment_confirmed: { iconClass: 'confirmed', icon: 'fa-check',          tag: 'CONFIRMADA' },
+      appointment_rejected:  { iconClass: 'rejected',  icon: 'fa-times',          tag: 'RECUSADA' },
+      appointment_cancelled: { iconClass: 'cancelled', icon: 'fa-calendar-xmark', tag: 'CANCELADA' },
+      review_available:      { iconClass: 'pending',   icon: 'fa-star',           tag: 'AVALIAR' },
+      owner_message:         { iconClass: 'regular',   icon: 'fa-comment',        tag: 'MENSAGEM' }
+    };
+    function notifEsc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+    function notifTime(iso) {
+      if (!iso) return '';
+      const t = new Date(iso), s = Math.floor((Date.now() - t.getTime()) / 1000);
+      if (s < 60) return 'agora';
+      if (s < 3600) return 'há ' + Math.floor(s / 60) + ' min';
+      if (s < 86400) return 'há ' + Math.floor(s / 3600) + 'h';
+      if (s < 604800) return 'há ' + Math.floor(s / 86400) + 'd';
+      return t.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    }
+    // Pra onde o toque leva: avaliação direto no atendimento; reservas, Agenda.
+    function notifHref(item) {
+      if (item.type === 'review_available') { const m = /-(\d+)$/.exec(item.id || ''); return '/appointments' + (m ? '#avaliar-' + m[1] : ''); }
+      if (/^appointment_/.test(item.type || '')) return '/appointments';
+      return '/client/notifications';
     }
 
     function renderNotifications(items, limit) {
-      if (!items.length) { notifList.innerHTML='<div class="nav-notif-empty">Nenhuma notificação.</div>'; return; }
+      if (!Array.isArray(items) || !items.length) { notifList.innerHTML='<div class="nav-notif-empty">Nenhuma notificação.</div>'; return; }
       const visible  = items.slice(0, limit);
       const hasMore  = items.length > limit;
       notifList.innerHTML = visible.map(item => {
-        const { iconClass, icon, title } = notifMeta(item);
-        return `<a class="nav-notif-item" href="/appointments">
-          <div class="nav-notif-icon ${iconClass}"><i class="fas ${icon}"></i></div>
-          <div style="min-width:0;">
-            <div class="nav-notif-title">${title}</div>
-            <div class="nav-notif-sub">${item.service_name} · ${item.car_wash_name}<br>${item.scheduled_at}</div>
+        const m = NOTIF_META[item.type] || { iconClass: 'pending', icon: 'fa-bell', tag: 'AVISO' };
+        return `<a class="nav-notif-item${item.read ? '' : ' is-unread'}" href="${notifHref(item)}" data-notif-id="${notifEsc(item.id)}">
+          <div class="nav-notif-icon ${m.iconClass}"><i class="fas ${m.icon}"></i></div>
+          <div style="min-width:0;flex:1;">
+            <div class="nav-notif-meta"><span>${m.tag}</span><span>${notifTime(item.created_at)}${item.read ? '' : '<i class="nav-notif-dot"></i>'}</span></div>
+            <div class="nav-notif-title">${notifEsc(item.title)}</div>
+            <div class="nav-notif-sub">${notifEsc(item.desc)}</div>
           </div>
         </a>`;
       }).join('') + (hasMore
         ? `<button onclick="expandNotifs()" style="width:100%;padding:.7rem;background:var(--cream);border:none;border-top:1px solid var(--stone);color:var(--coral-700);font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.1em;cursor:pointer;transition:color .15s;">VER MAIS ${items.length - limit}</button>`
         : '');
     }
+
+    // Tocar marca como lida antes de sair (senão a próxima página ainda a vê nova).
+    notifList.addEventListener('click', function (e) {
+      const a = e.target.closest('[data-notif-id]');
+      if (!a || !a.classList.contains('is-unread')) return;
+      e.preventDefault();
+      const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
+      fetch('/client/notifications/' + encodeURIComponent(a.dataset.notifId) + '/read', { method: 'PATCH', credentials: 'same-origin', headers: { Accept: 'application/json', 'X-CSRF-Token': csrf } })
+        .catch(() => {}).finally(() => { location.href = a.getAttribute('href'); });
+    });
 
     window.expandNotifs = function() { renderNotifications(allNotifs, allNotifs.length); };
 

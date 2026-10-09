@@ -1,445 +1,450 @@
-<% Rails.logger.info("Renderizando client/profiles/edit.html.erb") %>
+<%#
+  Pagamentos — só o cartão (o perfil foi pra Conta, /users/edit).
+
+  O cartão na tela acompanha o preenchimento, inspirado no "interactive card
+  form" do CodePen (veronicadev/VXqZgR): a moldura coral anda até o campo em
+  foco, a bandeira e a cor mudam ao reconhecer o cartão e ele vira de costas
+  no CVV. Diferença deliberada: os campos de número, validade e CVV são do
+  Stripe (iframes) — por segurança o número nunca passa pela Loov, então o
+  cartão não ecoa os dígitos; ele mostra o progresso (vazio → digitando →
+  completo ✓). Depois de salvo, aparecem os 4 últimos números de verdade.
+
+  Visual: objeto físico e tátil (Apple Wallet), inclinação e brilho que
+  seguem o cursor, grão sutil; tipografia grande e muito respiro (wiemer).
+  Movimento respeita "reduzir movimento" do sistema.
+%>
+<%
+  has_card   = current_user.has_payment_method?
+  return_to  = session[:return_to_after_card].presence
+  back_href  = return_to || edit_user_registration_path
+  brand_key  = current_user.stripe_card_brand.to_s.downcase
+%>
+<script src="/vendor/feather-4.29.2.min.js"></script>
 
 <style>
-  .pf-tabs {
-    display: flex; gap: 4px; margin-bottom: 28px;
-    background: var(--paper); border: 1px solid var(--stone);
-    border-radius: 14px; padding: 4px;
-  }
-  .pf-tab {
-    flex: 1; padding: 12px 18px; border-radius: 10px; border: none;
-    background: transparent; color: var(--graphite);
-    font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 600;
-    letter-spacing: 1.4px; text-transform: uppercase;
-    cursor: pointer; transition: all .15s ease;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-  }
-  .pf-tab:hover { color: var(--ink); background: var(--sand); }
-  .pf-tab.active {
-    background: var(--coral-50); color: var(--coral-700);
-    box-shadow: inset 0 0 0 1px var(--coral-100);
-  }
-  .pf-tab.active i { color: var(--coral-500); }
-  .pf-tab i { font-size: 12px; }
-  .pf-tab .pf-dot {
-    width: 7px; height: 7px; border-radius: 50%; background: var(--rose-500);
-    display: inline-block; margin-left: 2px;
-  }
+  .loov-nav { background: var(--cream) !important; }
+  html, body { overflow-x: clip !important; }
+  .pg { background: var(--cream); color: var(--ink); min-height: 100vh; padding-top: 60px; }
+  .pg *, .pg *::before, .pg *::after { box-sizing: border-box; }
+  .pg button { font-family: inherit; line-height: normal; cursor: pointer; }
+  .pg svg.feather { display: block; }
+  .pg a { text-decoration: none; }
+  .pg-wrap { width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 20px 64px; }
 
-  .pf-tab-content { display: none; }
-  .pf-tab-content.active { display: block; }
+  .pg-head { padding: 8px 0; }
+  .pg-back { width: 40px; height: 40px; border-radius: 50%; background: var(--sand); color: var(--ink) !important; display: inline-flex; align-items: center; justify-content: center; transition: background .15s; }
+  .pg-back:hover { background: var(--stone); }
+  .pg-eyebrow { margin-top: 18px; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px; color: var(--ash); text-transform: uppercase; }
+  .pg-title { margin: 6px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: clamp(36px, 6vw, 72px); line-height: .98; letter-spacing: -0.04em; color: var(--ink) !important; }
+  .pg-title em { font-style: normal; color: var(--coral-500); }
+  .pg-lead { margin: 14px 0 0; max-width: 46ch; font-size: 15px; line-height: 22px; color: var(--graphite); }
+  .pg-req { display: flex; gap: 10px; margin-top: 18px; padding: 14px; border-radius: 14px; background: var(--coral-50); border: 1px solid var(--coral-100); color: var(--coral-700); font-size: 13px; line-height: 18px; }
+  .pg-req svg { flex-shrink: 0; margin-top: 1px; }
 
-  .pf-card-saved {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 14px; flex-wrap: wrap;
-    padding: 14px 16px; background: var(--cream);
-    border: 1px solid var(--stone); border-radius: 14px;
-  }
-  .pf-card-saved-left { display: flex; align-items: center; gap: 12px; }
-  .pf-card-icon {
-    width: 44px; height: 44px; border-radius: 12px;
-    background: var(--coral-50); border: 1px solid var(--coral-100);
-    display: flex; align-items: center; justify-content: center;
-    color: var(--coral-700); font-size: 16px; flex-shrink: 0;
-  }
-  .pf-card-info-label {
-    font-family: 'JetBrains Mono', monospace; font-size: 10px;
-    letter-spacing: 1.4px; color: var(--ash); text-transform: uppercase;
-    margin-bottom: 2px;
-  }
-  .pf-card-info-val { font-size: 14.5px; font-weight: 600; color: var(--ink); }
+  .pg-grid { display: grid; gap: 28px; margin-top: 28px; }
 
-  #stripe-card-element {
-    background: var(--paper); border: 1px solid var(--stone);
-    border-radius: 12px; padding: 14px 16px;
-    transition: border-color .15s, box-shadow .15s;
-  }
-  #stripe-card-element.StripeElement--focus { border-color: var(--coral-500); box-shadow: 0 0 0 3px rgba(220,120,82,0.08); }
-  #stripe-card-element.StripeElement--invalid { border-color: var(--rose-500); }
-  #card-errors { color: var(--rose-500); font-size: 12.5px; margin-top: 6px; min-height: 1rem; }
+  /* ── O cartão ──────────────────────────────────────────────────────── */
+  .cc-stage { perspective: 1400px; }
+  .cc-tilt { position: relative; width: 100%; max-width: 440px; margin: 0 auto; aspect-ratio: 1.586; transform-style: preserve-3d; transition: transform .5s cubic-bezier(.2,.8,.2,1); }
+  .cc-flip { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform .8s cubic-bezier(.3,1.25,.4,1); }
+  .cc.is-back .cc-flip { transform: rotateY(180deg); }
+  .cc-face { position: absolute; inset: 0; border-radius: 20px; overflow: hidden; backface-visibility: hidden; -webkit-backface-visibility: hidden; color: #fafaf6;
+    background: var(--cc-bg); box-shadow: 0 2px 4px rgba(20,14,9,.18), 0 30px 60px -24px rgba(20,14,9,.55), inset 0 1px 0 rgba(255,255,255,.12); transition: background .6s ease; }
+  .cc-back { transform: rotateY(180deg); }
+  /* Grão + brilho: o brilho segue o cursor (--mx/--my), como luz num objeto. */
+  .cc-face::before { content: ''; position: absolute; inset: 0; opacity: .22; mix-blend-mode: overlay; pointer-events: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+  .cc-face::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(520px circle at var(--mx, 30%) var(--my, 20%), rgba(255,255,255,.22), transparent 42%); transition: opacity .3s; }
+  .cc-orb { position: absolute; width: 70%; aspect-ratio: 1; right: -22%; top: -40%; border-radius: 50%; background: var(--cc-orb); filter: blur(30px); opacity: .55; transition: background .6s ease; }
+  .cc-in { position: absolute; inset: 0; padding: 7% 7.5%; display: flex; flex-direction: column; }
+  .cc-top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .cc-chip { width: 15%; aspect-ratio: 1.3; border-radius: 6px; background: linear-gradient(135deg, #f3dca0, #c9a14c 55%, #f0d491); position: relative; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); }
+  .cc-chip::before, .cc-chip::after { content: ''; position: absolute; border: 1px solid rgba(80,55,10,.35); }
+  .cc-chip::before { inset: 28% -2px; border-left: 0; border-right: 0; }
+  .cc-chip::after { inset: -2px 34%; border-top: 0; border-bottom: 0; }
+  .cc-brand { height: 28px; display: flex; align-items: center; justify-content: flex-end; }
+  .cc-brand svg { height: 100%; width: auto; display: block; }
+  .cc-brand-txt { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.5px; }
+  .cc-brand-txt.is-visa { font-style: italic; font-size: 26px; letter-spacing: 0; }
+  .cc-brand-in { animation: ccbrand .5s cubic-bezier(.2,1.3,.4,1) both; }
+  @keyframes ccbrand { from { opacity: 0; transform: translateY(-8px) scale(.8); } }
+  .cc-num { margin-top: auto; display: flex; gap: 4%; font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: clamp(17px, 5.2vw, 24px); letter-spacing: 2px; }
+  .cc-num span { opacity: .45; transition: opacity .3s; }
+  .cc.n-typing .cc-num span, .cc.n-complete .cc-num span { opacity: 1; }
+  .cc-num .cc-last { display: inline-flex; align-items: center; gap: 6px; }
+  .cc-ok { display: inline-flex; width: 18px; height: 18px; border-radius: 50%; background: #3fa66b; color: #fff; align-items: center; justify-content: center; transform: scale(0); transition: transform .35s cubic-bezier(.2,1.5,.4,1); }
+  .cc-ok svg { width: 11px; height: 11px; }
+  .cc.n-complete .cc-num .cc-ok, .cc.e-complete .cc-exp .cc-ok { transform: scale(1); }
+  .cc-bottom { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-top: 6%; }
+  .cc-lab { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1.4px; opacity: .6; text-transform: uppercase; }
+  .cc-name { margin-top: 3px; max-width: 26ch; font-size: clamp(13px, 3.6vw, 16px); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 1.2em; }
+  .cc-name .cc-ph { opacity: .45; }
+  .cc-name .ch { display: inline-block; animation: ccch .25s ease both; }
+  @keyframes ccch { from { opacity: 0; transform: translateY(6px); } }
+  .cc-exp { text-align: right; }
+  .cc-exp div:last-child { margin-top: 3px; display: inline-flex; align-items: center; gap: 6px; font-family: 'JetBrains Mono', monospace; font-size: clamp(13px, 3.6vw, 16px); }
+  .cc-exp .v { opacity: .45; transition: opacity .3s; }
+  .cc.e-typing .cc-exp .v, .cc.e-complete .cc-exp .v { opacity: 1; }
+  .cc-loov { position: absolute; left: 7.5%; top: 34%; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: -0.2px; opacity: .55; }
+  /* Costas */
+  .cc-stripe { position: absolute; left: 0; right: 0; top: 13%; height: 19%; background: #14100c; }
+  .cc-sig { position: absolute; left: 7.5%; right: 7.5%; top: 42%; height: 17%; display: flex; align-items: center; justify-content: flex-end; padding: 0 12px; border-radius: 6px;
+    background: repeating-linear-gradient(-45deg, #f4efe4 0 6px, #e8e1d1 6px 12px); color: var(--ink); font-family: 'JetBrains Mono', monospace; font-size: 16px; letter-spacing: 3px; }
+  .cc-sig span { opacity: .4; transition: opacity .3s; }
+  .cc.c-typing .cc-sig span, .cc.c-complete .cc-sig span { opacity: 1; }
+  .cc-cvlab { position: absolute; right: 9%; top: 34%; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1.4px; opacity: .7; }
+  .cc-backnote { position: absolute; left: 7.5%; right: 7.5%; bottom: 9%; display: flex; justify-content: space-between; align-items: flex-end; font-size: 10px; line-height: 14px; opacity: .65; }
+  /* Moldura de foco — anda até o campo sendo preenchido. */
+  .cc-focus { position: absolute; z-index: 3; border-radius: 10px; border: 2px solid var(--coral-300, #e8a48a); box-shadow: 0 0 0 4px rgba(221,120,82,.18); pointer-events: none; opacity: 0; transition: all .45s cubic-bezier(.2,.9,.25,1); }
+  .cc-focus.is-on { opacity: 1; }
+  .cc-saved-pill { position: absolute; z-index: 2; left: 50%; bottom: -14px; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 100px; background: var(--paper); border: 1px solid var(--stone); color: #2d6b42; font-size: 12px; font-weight: 600; box-shadow: 0 8px 20px -12px rgba(40,35,28,.5); white-space: nowrap; }
+  .cc-saved-pill i { width: 7px; height: 7px; border-radius: 50%; background: #3fa66b; }
 
-  .pf-banner-card-required {
-    display: flex; align-items: flex-start; gap: 10px;
-    background: var(--coral-50); border: 1px solid var(--coral-100);
-    border-radius: 14px; padding: 14px 16px; margin-bottom: 18px;
-  }
-  .pf-banner-card-required i { color: var(--coral-700); margin-top: 2px; flex-shrink: 0; }
-  .pf-banner-card-required-text { font-size: 13.5px; color: var(--graphite); line-height: 1.55; }
-  .pf-banner-card-required-text strong { color: var(--ink); display: block; margin-bottom: 2px; }
+  /* Temas por bandeira — a cor muda quando o Stripe reconhece o cartão. */
+  .cc { --cc-bg: linear-gradient(135deg, #2a231c 0%, #1a1612 60%, #2f241b 100%); --cc-orb: radial-gradient(circle, #dd7852, transparent 65%); }
+  .cc[data-brand="visa"] { --cc-bg: linear-gradient(135deg, #1b3a8f 0%, #0f2160 55%, #1a2f7a 100%); --cc-orb: radial-gradient(circle, #4f8cff, transparent 65%); }
+  .cc[data-brand="mastercard"] { --cc-bg: linear-gradient(135deg, #2b2520 0%, #141110 60%, #2a1d16 100%); --cc-orb: radial-gradient(circle, #f79e1b, transparent 65%); }
+  .cc[data-brand="amex"] { --cc-bg: linear-gradient(135deg, #1d6f7a 0%, #0f4c56 60%, #17616b 100%); --cc-orb: radial-gradient(circle, #6fd3d8, transparent 65%); }
+  .cc[data-brand="elo"], .cc[data-brand="discover"], .cc[data-brand="diners"], .cc[data-brand="jcb"], .cc[data-brand="unionpay"] { --cc-bg: linear-gradient(135deg, #3a2a20 0%, #1d1510 60%, #3b2618 100%); --cc-orb: radial-gradient(circle, #f2b705, transparent 65%); }
 
-  .pf-payment-note {
-    display: flex; align-items: center; gap: 8px;
-    margin-top: 14px; font-size: 12px; color: var(--ash);
-  }
-  .pf-payment-note i { color: var(--coral-500); font-size: 11px; }
+  /* ── Formulário ────────────────────────────────────────────────────── */
+  .pg-form { padding: 22px; background: var(--paper); border: 1px solid var(--stone); border-radius: 24px; box-shadow: 0 14px 36px -28px rgba(40,35,28,.5); }
+  .pg-form h2 { margin: 0 0 4px !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 20px; letter-spacing: -0.3px; color: var(--ink) !important; }
+  .pg-form > p { margin: 0 0 20px; font-size: 13px; line-height: 19px; color: var(--graphite); }
+  .pg-f { margin-bottom: 16px; }
+  .pg-f label { display: flex; justify-content: space-between; margin-bottom: 6px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; color: var(--ash); text-transform: uppercase; }
+  .pg-f label b { font-weight: 500; color: #2d6b42; opacity: 0; transition: opacity .2s; }
+  .pg-f.is-ok label b { opacity: 1; }
+  .pg-in { display: block; width: 100%; height: 50px; padding: 15px 14px !important; border: 1px solid transparent !important; border-radius: 14px !important; background: var(--sand) !important; box-shadow: none !important; outline: none; font: inherit; font-size: 15px; font-weight: 500; color: var(--ink); transition: border-color .15s, box-shadow .15s, background .15s; }
+  .pg-in.StripeElement--focus, .pg-in:focus { border-color: var(--coral-500) !important; background: var(--paper) !important; box-shadow: 0 0 0 4px rgba(221,120,82,.14) !important; }
+  .pg-in.StripeElement--invalid { border-color: var(--rose-500, #c0392b) !important; }
+  input.pg-in { text-transform: uppercase; letter-spacing: .5px; }
+  input.pg-in::placeholder { text-transform: none; letter-spacing: 0; color: var(--ash); }
+  .pg-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .pg-err { display: none; align-items: center; gap: 8px; margin: 4px 0 14px; padding: 12px; border-radius: 12px; background: #f6d4d4; color: var(--rose-500, #c0392b); font-size: 13px; font-weight: 600; }
+  .pg-err.is-on { display: flex; }
+  .pg-save { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 6px; padding: 16px; border: 0; border-radius: 100px; background: var(--ink); color: var(--cream); font-size: 15px; font-weight: 600; transition: background .2s, transform .15s, opacity .2s; }
+  .pg-save.is-ready { background: var(--coral-500); }
+  .pg-save:hover:not([disabled]) { transform: translateY(-1px); }
+  .pg-save[disabled] { opacity: .55; cursor: default; }
+  .pg-spin { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(250,250,246,.35); border-top-color: var(--cream); animation: pgspin .8s linear infinite; }
+  @keyframes pgspin { to { transform: rotate(360deg); } }
+  .pg-safe { display: flex; gap: 8px; margin-top: 16px; font-size: 12px; line-height: 17px; color: var(--graphite); }
+  .pg-safe svg { flex-shrink: 0; margin-top: 1px; color: #2d6b42; }
+  .pg-cancel { display: block; width: 100%; margin-top: 8px; padding: 12px; border: 0; border-radius: 100px; background: transparent; color: var(--graphite); font-size: 13px; font-weight: 600; }
+  .pg-cancel:hover { background: var(--sand); }
 
-  .pf-spinner {
-    display: inline-block; width: 14px; height: 14px;
-    border: 2px solid rgba(254,254,253,.4); border-top-color: var(--cream);
-    border-radius: 50%; animation: pf-spin .7s linear infinite;
-  }
-  @keyframes pf-spin { to { transform: rotate(360deg); } }
+  /* Cartão salvo */
+  .pg-saved h2 { margin: 0 0 6px !important; }
+  .pg-facts { margin: 16px 0 20px; border-top: 1px solid var(--stone); }
+  .pg-facts div { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--stone); font-size: 14px; }
+  .pg-facts span { color: var(--graphite); }
+  .pg-facts b { font-weight: 600; }
+  .pg-alt { width: 100%; padding: 15px; border: 0; border-radius: 100px; background: var(--ink); color: var(--cream); font-size: 15px; font-weight: 600; transition: transform .15s; }
+  .pg-alt:hover { transform: translateY(-1px); }
+  .pg-remove { width: 100%; margin-top: 8px; padding: 13px; border: 1px solid rgba(200,80,80,.3); border-radius: 100px; background: transparent; color: var(--rose-500, #c0392b); font-size: 13px; font-weight: 600; }
+  .pg-remove:hover { background: rgba(200,80,80,.06); }
+  .pg-ask { display: none; margin-top: 10px; padding: 14px; border-radius: 14px; background: #fdf6f6; border: 1px solid rgba(200,80,80,.25); text-align: center; }
+  .pg-ask p { margin: 0 0 12px; font-size: 13px; line-height: 18px; color: var(--graphite); }
+  .pg-ask.is-on { display: block; }
+  .pg-ask .pg-danger { width: 100%; padding: 13px; border: 0; border-radius: 100px; background: var(--rose-500, #c0392b); color: var(--cream); font-size: 14px; font-weight: 600; }
+  .pg-hidden { display: none !important; }
 
-  .pf-toast {
-    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-    padding: 12px 22px; border-radius: 100px; font-size: 13.5px;
-    display: flex; align-items: center; gap: 8px; z-index: 9999;
-    box-shadow: 0 14px 40px rgba(40,35,28,0.18);
-    animation: pf-toast-up .3s cubic-bezier(.16,1,.3,1) forwards;
-    white-space: nowrap;
-  }
-  .pf-toast--success { background: #d6ecde; border: 1px solid #b5d8c1; color: #2d6b42; }
-  .pf-toast--error   { background: #fdecec; border: 1px solid #f5cccc; color: var(--rose-500); }
-  @keyframes pf-toast-up {
-    from { opacity:0; transform: translateX(-50%) translateY(12px); }
-    to   { opacity:1; transform: translateX(-50%) translateY(0); }
-  }
+  .pg-toast { position: fixed; left: 20px; right: 20px; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); z-index: 70; max-width: 440px; margin: 0 auto; display: flex; align-items: center; gap: 10px; padding: 14px; border-radius: 14px; border: 1px solid var(--coral-100); background: var(--coral-50); color: var(--coral-700); font-size: 13px; font-weight: 600; box-shadow: 0 14px 36px -16px rgba(40,35,28,.45); transform: translateY(16px); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+  .pg-toast.is-on { opacity: 1; transform: none; }
 
-  .pf-avatar-row {
-    display: flex; align-items: center; gap: 16px;
-    padding: 18px 20px; background: var(--paper);
-    border: 1px solid var(--stone); border-radius: 16px;
-    margin-bottom: 28px;
+  @media (min-width: 960px) {
+    .pg-wrap { padding: 0 40px 80px; }
+    .pg-head { padding-top: 28px; }
+    .pg-grid { grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 56px; align-items: center; margin-top: 40px; }
+    .cc-tilt { max-width: 520px; }
+    .pg-form { padding: 30px; }
   }
-  .pf-avatar-circle {
-    width: 56px; height: 56px; border-radius: 16px;
-    background: var(--coral-50); border: 1px solid var(--coral-100);
-    color: var(--coral-700);
-    font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
+  @media (prefers-reduced-motion: reduce) {
+    .cc-tilt, .cc-flip, .cc-focus, .cc-face { transition: none !important; }
+    .cc-name .ch, .cc-brand-in { animation: none !important; }
   }
-  .pf-avatar-name { font-size: 15.5px; font-weight: 600; color: var(--ink); }
-  .pf-avatar-email { font-size: 13px; color: var(--graphite); }
-
-  .pf-required-badge {
-    display: inline-block; font-family: 'JetBrains Mono', monospace;
-    font-size: 9.5px; font-weight: 700; letter-spacing: 1px;
-    padding: 2px 8px; border-radius: 100px; text-transform: uppercase;
-    margin-left: 6px;
-  }
-  .pf-required-badge.req { background: var(--coral-50); color: var(--coral-700); border: 1px solid var(--coral-100); }
-  .pf-required-badge.opt { background: transparent; color: var(--ash); border: 1px solid var(--stone); }
-
-  .pf-section-title-row {
-    display: flex; align-items: center; gap: 10px;
-    padding-bottom: 12px; margin-bottom: 18px;
-    border-bottom: 1px solid var(--stone);
-  }
-  .pf-section-title-row i { color: var(--coral-500); font-size: 13px; }
-  .pf-section-title-row .pf-section-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; font-weight: 700; letter-spacing: 1.6px;
-    color: var(--graphite); text-transform: uppercase;
-  }
-
-  .field-error-msg {
-    font-size: 12.5px; color: var(--rose-500); margin-top: 4px;
-    display: flex; align-items: center; gap: 5px;
-  }
-  .loov-input.error { border-color: var(--rose-500) !important; box-shadow: 0 0 0 3px rgba(200,80,80,0.08) !important; }
 </style>
 
-<div class="loov-page loov-page--narrow">
-
-  <div class="loov-hero">
-    <div class="loov-eyebrow"><span class="dot"></span>MEU PERFIL</div>
-    <h1 class="loov-h1">
-      Seus dados, do seu <span class="accent">jeito</span>.
-    </h1>
-    <p class="loov-lead">
-      Mantenha tudo atualizado pra agilizar seus agendamentos.
-    </p>
-  </div>
-
-  <div class="pf-avatar-row">
-    <div class="pf-avatar-circle"><%= current_user.initials %></div>
-    <div>
-      <div class="pf-avatar-name"><%= current_user.display_name %></div>
-      <div class="pf-avatar-email"><%= current_user.email %></div>
-    </div>
-  </div>
-
-  <% if notice %>
-    <div class="pf-toast pf-toast--success"><i class="fas fa-check-circle"></i> <%= notice %></div>
-  <% end %>
-  <% if flash[:errors] %>
-    <% flash[:errors].each do |msg| %>
-      <div class="pf-toast pf-toast--error"><i class="fas fa-circle-exclamation"></i> <%= msg %></div>
-    <% end %>
-  <% end %>
-  <% if flash[:alert] %>
-    <div class="pf-toast pf-toast--error"><i class="fas fa-circle-exclamation"></i> <%= flash[:alert] %></div>
-  <% end %>
-
-  <div class="pf-tabs">
-    <button class="pf-tab <%= payment_tab? ? '' : 'active' %>" data-tab="perfil">
-      <i class="fas fa-user"></i> PERFIL
-    </button>
-    <button class="pf-tab <%= payment_tab? ? 'active' : '' %>" data-tab="pagamento">
-      <i class="fas fa-credit-card"></i> PAGAMENTO
-      <% unless current_user.has_payment_method? %>
-        <span class="pf-dot"></span>
-      <% end %>
-    </button>
-  </div>
-
-  <!-- TAB: PERFIL -->
-  <div class="pf-tab-content <%= payment_tab? ? '' : 'active' %>" id="pf-tab-perfil">
-    <div class="loov-card loov-card--lg" style="margin-bottom:18px;">
-      <div class="pf-section-title-row">
-        <i class="fas fa-user"></i>
-        <span class="pf-section-label">Dados pessoais</span>
-      </div>
-
-      <%= form_with model: current_user, url: client_profile_path, method: :patch, data: { turbo: false }, id: "pf-form" do |f| %>
-        <div class="loov-field">
-          <%= f.label :full_name, class: "loov-label" do %>
-            Nome completo <span class="pf-required-badge req">obrigatório</span>
-          <% end %>
-          <%= f.text_field :full_name, class: "loov-input", placeholder: "Seu nome completo", id: "full_name_field" %>
-        </div>
-
-        <div class="loov-field">
-          <%= f.label :email, "E-mail", class: "loov-label" %>
-          <%= f.email_field :email, class: "loov-input", disabled: true, value: current_user.email, style: "opacity:.6;cursor:not-allowed;" %>
-          <div class="loov-help">O e-mail não pode ser alterado aqui.</div>
-        </div>
-
-        <div class="loov-field">
-          <%= f.label :phone, class: "loov-label" do %>
-            Telefone <span class="pf-required-badge req">obrigatório</span>
-          <% end %>
-          <%= f.text_field :phone, class: "loov-input", placeholder: "(11) 99999-9999", id: "phone_field", maxlength: 15 %>
-        </div>
-
-        <div class="loov-field">
-          <%= f.label :cpf, class: "loov-label" do %>
-            CPF <span class="pf-required-badge opt">opcional</span>
-          <% end %>
-          <%= f.text_field :cpf, class: "loov-input", placeholder: "000.000.000-00", id: "cpf_field", maxlength: 14 %>
-        </div>
-
-        <hr class="loov-divider">
-
-        <div class="pf-section-title-row" style="border:none;padding-bottom:0;margin-bottom:12px;">
-          <i class="fas fa-car"></i>
-          <span class="pf-section-label">Veículo</span>
-        </div>
-        <div class="loov-field">
-          <%= f.label :vehicle_model, class: "loov-label" do %>
-            Modelo <span class="pf-required-badge opt">opcional</span>
-          <% end %>
-          <%= f.text_field :vehicle_model, class: "loov-input", placeholder: "Ex: Honda Civic Preto 2022" %>
-          <div class="loov-help">Ajuda o lava-rápido a te encontrar na fila.</div>
-        </div>
-
-        <%= f.submit "Salvar perfil", class: "loov-btn-primary loov-btn-block loov-btn-lg", style: "margin-top:8px;" %>
+<div class="pg">
+  <div class="pg-wrap">
+    <div class="pg-head">
+      <a class="pg-back" href="<%= back_href %>" aria-label="Voltar"><i data-feather="chevron-left" style="width:18px;height:18px"></i></a>
+      <div class="pg-eyebrow">Pagamentos</div>
+      <h1 class="pg-title"><%= has_card ? raw("Seu <em>cartão</em>.") : raw("Um cartão, <em>zero fila</em>.") %></h1>
+      <p class="pg-lead">Usado só nas reservas Last Minute: o valor é reservado no cartão e só é cobrado depois que o lava-rápido aceitar. Agendamentos comuns você continua pagando no local.</p>
+      <% if params[:add_card] && !has_card %>
+        <div class="pg-req"><i data-feather="zap" style="width:15px;height:15px"></i><span><b>Falta só o cartão pra reservar no Last Minute.</b> Assim que salvar, você volta pra sua reserva.</span></div>
       <% end %>
     </div>
-  </div>
 
-  <!-- TAB: PAGAMENTO -->
-  <div class="pf-tab-content <%= payment_tab? ? 'active' : '' %>" id="pf-tab-pagamento">
-    <div class="loov-card loov-card--lg">
-      <div class="pf-section-title-row">
-        <i class="fas fa-credit-card"></i>
-        <span class="pf-section-label">Cartão de pagamento</span>
+    <div class="pg-grid">
+      <div class="cc-stage">
+        <div class="cc-tilt" id="cc-tilt">
+          <div class="cc" id="cc" data-brand="<%= brand_key.presence || 'loov' %>" style="position:absolute;inset:0">
+            <div class="cc-flip">
+              <div class="cc-face cc-front" aria-hidden="true">
+                <div class="cc-orb"></div>
+                <div class="cc-in">
+                  <div class="cc-top"><div class="cc-chip"></div><div class="cc-brand" id="cc-brand"></div></div>
+                  <div class="cc-loov">loov</div>
+                  <div class="cc-num" id="cc-num"><span>••••</span><span>••••</span><span>••••</span><span class="cc-last"><span id="cc-last4"><%= has_card ? current_user.stripe_card_last4 : '••••' %></span><i class="cc-ok"><%= raw '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' %></i></span></div>
+                  <div class="cc-bottom">
+                    <div style="min-width:0"><div class="cc-lab">Nome no cartão</div><div class="cc-name" id="cc-name"></div></div>
+                    <div class="cc-exp"><div class="cc-lab">Validade</div><div><span class="v" id="cc-exp">MM/AA</span><i class="cc-ok"><%= raw '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' %></i></div></div>
+                  </div>
+                </div>
+              </div>
+              <div class="cc-face cc-back" aria-hidden="true">
+                <div class="cc-orb"></div>
+                <div class="cc-stripe"></div>
+                <div class="cc-cvlab">CVV</div>
+                <div class="cc-sig"><span id="cc-cvv">•••</span></div>
+                <div class="cc-backnote"><span>Os 3 números atrás do cartão<br>(4 na frente, no Amex).</span><span class="cc-brand" id="cc-brand-back" style="height:20px"></span></div>
+              </div>
+            </div>
+            <div class="cc-focus" id="cc-focus"></div>
+          </div>
+          <% if has_card %><div class="cc-saved-pill" id="cc-saved-pill"><i></i>Cartão principal</div><% end %>
+        </div>
       </div>
 
-      <% if current_user.has_payment_method? %>
-        <div class="pf-card-saved">
-          <div class="pf-card-saved-left">
-            <div class="pf-card-icon"><i class="fas fa-credit-card"></i></div>
-            <div>
-              <div class="pf-card-info-label">CARTÃO CADASTRADO</div>
-              <div class="pf-card-info-val"><%= current_user.card_display %></div>
+      <div>
+        <% if has_card %>
+          <section class="pg-form pg-saved" id="pg-saved">
+            <h2>Cartão salvo</h2>
+            <p style="margin:0;font-size:13px;color:var(--graphite)">É ele que usamos nas reservas Last Minute.</p>
+            <div class="pg-facts">
+              <div><span>Cartão</span><b><%= current_user.card_display %></b></div>
+              <div><span>Cobrança</span><b>Só depois do aceite</b></div>
             </div>
-          </div>
-          <%= link_to "REMOVER", remove_payment_method_client_profile_path,
-                      method: :delete,
-                      data: { turbo: false, confirm: "Tem certeza? Você não poderá usar a aba Disponíveis sem um cartão." },
-                      class: "loov-btn-secondary loov-btn-sm",
-                      style: "border-color:rgba(200,80,80,.3);color:var(--rose-500);" %>
-        </div>
-        <div class="pf-payment-note">
-          <i class="fas fa-shield-halved"></i>
-          Seu cartão é armazenado com segurança pelo Stripe. A Loov não guarda dados do cartão.
-        </div>
-      <% else %>
-        <% if params[:add_card] %>
-          <div class="pf-banner-card-required">
-            <i class="fas fa-bolt"></i>
-            <div class="pf-banner-card-required-text">
-              <strong>Cartão necessário para a aba Disponíveis.</strong>
-              Cadastre um cartão para reservar vagas em tempo real. O valor é autorizado mas só cobrado após o lava-rápido confirmar.
+            <button type="button" class="pg-alt" id="pg-change">Trocar cartão</button>
+            <button type="button" class="pg-remove" id="pg-remove-ask">Remover cartão</button>
+            <div class="pg-ask" id="pg-ask">
+              <p>Sem cartão, você não consegue reservar no Last Minute. Agendamentos comuns continuam funcionando.</p>
+              <button type="button" class="pg-danger" id="pg-remove">Remover mesmo assim</button>
+              <button type="button" class="pg-cancel" id="pg-ask-no">Manter cartão</button>
             </div>
-          </div>
+          </section>
         <% end %>
 
-        <div class="loov-field">
-          <label class="loov-label">Dados do cartão</label>
-          <div id="stripe-card-element"></div>
-          <div id="card-errors" role="alert"></div>
-        </div>
-
-        <button id="btn-save-card" class="loov-btn-primary loov-btn-block loov-btn-lg">
-          <i class="fas fa-lock"></i> SALVAR CARTÃO
-        </button>
-
-        <div class="pf-payment-note">
-          <i class="fas fa-shield-halved"></i>
-          Pagamento processado com segurança pelo Stripe. Não armazenamos dados do cartão.
-        </div>
-      <% end %>
+        <section class="pg-form <%= 'pg-hidden' if has_card %>" id="pg-new">
+          <h2><%= has_card ? "Novo cartão" : "Adicionar cartão" %></h2>
+          <p>Crédito ou débito. A verificação é feita na hora pelo Stripe.</p>
+          <div class="pg-f" id="f-number"><label>Número do cartão <b>✓ ok</b></label><div class="pg-in" id="el-number"></div></div>
+          <div class="pg-f" id="f-name"><label for="cc-name-in">Nome impresso no cartão <b>✓ ok</b></label><input class="pg-in" id="cc-name-in" autocomplete="cc-name" maxlength="26" placeholder="Como está no cartão" value="<%= current_user.full_name %>"></div>
+          <div class="pg-row">
+            <div class="pg-f" id="f-exp"><label>Validade <b>✓</b></label><div class="pg-in" id="el-exp"></div></div>
+            <div class="pg-f" id="f-cvc"><label>CVV <b>✓</b></label><div class="pg-in" id="el-cvc"></div></div>
+          </div>
+          <div class="pg-err" id="pg-err"></div>
+          <button type="button" class="pg-save" id="pg-save" disabled><i data-feather="lock" style="width:15px;height:15px"></i>Salvar cartão</button>
+          <% if has_card %><button type="button" class="pg-cancel" id="pg-change-cancel">Manter o cartão atual</button><% end %>
+          <div class="pg-safe"><i data-feather="shield" style="width:15px;height:15px"></i><span>Protegido pelo Stripe. O número do cartão vai direto pra eles — a Loov nunca vê nem guarda.</span></div>
+        </section>
+      </div>
     </div>
   </div>
-
+  <%= render "shared/site_footer", audience: :client %>
+  <div class="pg-toast" id="pg-toast" role="status" aria-live="polite"></div>
 </div>
 
-<% if !current_user.has_payment_method? && @setup_client_secret.present? %>
 <script>
-  const STRIPE_PK        = "<%= ENV['STRIPE_PUBLISHABLE_KEY'] %>";
-  const SETUP_SECRET     = "<%= @setup_client_secret %>";
-  const CSRF_TOKEN       = document.querySelector('meta[name="csrf-token"]').content;
-  const RETURN_TO        = "<%= session[:return_to_after_card] || edit_client_profile_path %>";
-  const HAS_SETUP_INTENT = true;
-</script>
-<% else %>
-<script>
-  const HAS_SETUP_INTENT = false;
-  const STRIPE_PK        = "<%= ENV['STRIPE_PUBLISHABLE_KEY'] %>";
-  const CSRF_TOKEN       = document.querySelector('meta[name="csrf-token"]').content;
-  const RETURN_TO        = "<%= edit_client_profile_path %>";
-</script>
-<% end %>
+(function () {
+  var STRIPE_PK = <%= raw json_escape(ENV['STRIPE_PUBLISHABLE_KEY'].to_s.to_json) %>;
+  var SETUP_SECRET = <%= raw json_escape(@setup_client_secret.to_s.to_json) %>;
+  var RETURN_TO = <%= raw json_escape(return_to.to_s.to_json) %>;
+  var HAS_CARD = <%= has_card ? 'true' : 'false' %>;
+  var SAVED_BRAND = <%= raw json_escape(brand_key.to_json) %>;
+  var FLASH = <%= raw json_escape(flash[:notice].to_s.to_json) %>;
+  var CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content;
+  var REDUCED = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function icon(n, size) { return window.feather && feather.icons[n] ? feather.icons[n].toSvg({ width: size, height: size }) : ''; }
 
-  document.querySelectorAll('.pf-tab').forEach(btn => {
-    btn.addEventListener('click', function() {
-      const tab = this.dataset.tab;
-      document.querySelectorAll('.pf-tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.pf-tab-content').forEach(t => t.classList.remove('active'));
-      this.classList.add('active');
-      document.getElementById('pf-tab-' + tab).classList.add('active');
-    });
-  });
-
-  const phoneField = document.getElementById('phone_field');
-  const cpfField   = document.getElementById('cpf_field');
-  if (phoneField) {
-    phoneField.addEventListener('input', function() {
-      let v = this.value.replace(/\D/g, '');
-      v = v.length <= 10
-        ? v.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3')
-        : v.replace(/^(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
-      this.value = v;
-    });
-  }
-  if (cpfField) {
-    cpfField.addEventListener('input', function() {
-      let v = this.value.replace(/\D/g, '');
-      this.value = v.replace(/^(\d{3})(\d{3})(\d{3})(\d{0,2})/, '$1.$2.$3-$4');
-    });
+  var cc = $('cc');
+  // ── Bandeira ─────────────────────────────────────────────────────────────
+  var BRAND_SVG = {
+    visa: '<span class="cc-brand-txt is-visa">VISA</span>',
+    mastercard: '<svg viewBox="0 0 48 30"><circle cx="17" cy="15" r="13" fill="#eb001b"/><circle cx="31" cy="15" r="13" fill="#f79e1b" fill-opacity=".92"/><path d="M24 4.2a13 13 0 0 1 0 21.6 13 13 0 0 1 0-21.6z" fill="#ff5f00"/></svg>',
+    amex: '<span class="cc-brand-txt" style="padding:2px 6px;border:2px solid currentColor;border-radius:4px;font-size:16px">AMEX</span>',
+    discover: '<span class="cc-brand-txt">Discover</span>',
+    diners: '<span class="cc-brand-txt">Diners</span>',
+    jcb: '<span class="cc-brand-txt">JCB</span>',
+    unionpay: '<span class="cc-brand-txt">UnionPay</span>',
+    elo: '<span class="cc-brand-txt">elo</span>'
+  };
+  var currentBrand = null;
+  function setBrand(b) {
+    b = BRAND_SVG[b] ? b : 'loov';
+    if (b === currentBrand) return;
+    currentBrand = b; cc.dataset.brand = b;
+    var html = b === 'loov' ? '' : '<span class="cc-brand-in" style="display:flex;height:100%;align-items:center">' + BRAND_SVG[b] + '</span>';
+    $('cc-brand').innerHTML = html; $('cc-brand-back').innerHTML = html;
   }
 
-  const nameField = document.getElementById('full_name_field');
-  function validateField(field) {
-    const val = field.value.trim();
-    field.classList.remove('error');
-    const prev = field.parentElement.querySelector('.field-error-msg');
-    if (prev) prev.remove();
-    if (val === '') {
-      field.classList.add('error');
-      const msg = document.createElement('div');
-      msg.className = 'field-error-msg';
-      msg.innerHTML = '<i class="fas fa-circle-exclamation"></i> Campo obrigatório';
-      field.parentElement.appendChild(msg);
-      return false;
-    }
+  // ── Nome: cada letra entra com um pequeno movimento ──────────────────────
+  var lastName = null;
+  function setName(v) {
+    v = String(v || '').toUpperCase();
+    var el = $('cc-name');
+    if (!v.trim()) { el.innerHTML = '<span class="cc-ph">SEU NOME</span>'; lastName = ''; return; }
+    var prev = lastName || '';
+    // Só as letras novas animam; as que já estavam ficam paradas.
+    var common = 0; while (common < prev.length && common < v.length && prev[common] === v[common]) common++;
+    el.innerHTML = esc(v.slice(0, common)).replace(/ /g, '&nbsp;') + v.slice(common).split('').map(function (c) { return '<span class="ch">' + (c === ' ' ? '&nbsp;' : esc(c)) + '</span>'; }).join('');
+    lastName = v;
+  }
+
+  // ── Moldura de foco e virada ─────────────────────────────────────────────
+  var AREAS = { number: '#cc-num', name: '.cc-bottom > div:first-child', exp: '.cc-exp' };
+  var focused = null;
+  function moveFocus(which) {
+    focused = which;
+    var f = $('cc-focus');
+    cc.classList.toggle('is-back', which === 'cvc');
+    if (!which || which === 'cvc') { f.classList.remove('is-on'); return; }
+    var target = cc.querySelector(AREAS[which]); if (!target) return;
+    var box = cc.getBoundingClientRect(), r = target.getBoundingClientRect(), pad = 8;
+    f.style.left = (r.left - box.left - pad) + 'px'; f.style.top = (r.top - box.top - pad) + 'px';
+    f.style.width = (r.width + pad * 2) + 'px'; f.style.height = (r.height + pad * 2) + 'px';
+    f.classList.add('is-on');
+  }
+  window.addEventListener('resize', function () { if (focused) moveFocus(focused); });
+
+  // ── Inclinação e brilho seguindo o cursor ────────────────────────────────
+  var tilt = $('cc-tilt');
+  if (!REDUCED && window.matchMedia('(hover: hover)').matches) {
+    tilt.addEventListener('mousemove', function (e) {
+      var r = tilt.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+      tilt.style.transform = 'rotateX(' + ((0.5 - y) * 10) + 'deg) rotateY(' + ((x - 0.5) * 14) + 'deg)';
+      cc.querySelectorAll('.cc-face').forEach(function (f) { f.style.setProperty('--mx', (x * 100) + '%'); f.style.setProperty('--my', (y * 100) + '%'); });
+    });
+    tilt.addEventListener('mouseleave', function () { tilt.style.transform = ''; });
+  }
+
+  // ── Estado de cada campo → cartão ────────────────────────────────────────
+  var st = { number: false, exp: false, cvc: false };
+  function fieldState(key, ev) {
+    var cls = { number: 'n', exp: 'e', cvc: 'c' }[key];
+    cc.classList.toggle(cls + '-typing', !ev.empty && !ev.complete);
+    cc.classList.toggle(cls + '-complete', !!ev.complete);
+    $('f-' + key).classList.toggle('is-ok', !!ev.complete);
+    st[key] = !!ev.complete;
+    if (key === 'exp') $('cc-exp').textContent = ev.complete ? '••/••' : (ev.empty ? 'MM/AA' : '··/··');
+    if (key === 'cvc') $('cc-cvv').textContent = ev.complete ? '•••' : (ev.empty ? '•••' : '••');
+    if (key === 'number') setBrand(ev.brand);
+    showErr(ev.error ? ev.error.message : null);
+    refreshSave();
+  }
+  function nameOk() { return $('cc-name-in').value.trim().length >= 2; }
+  function refreshSave() {
+    var ready = st.number && st.exp && st.cvc && nameOk();
+    $('f-name').classList.toggle('is-ok', nameOk());
+    $('pg-save').disabled = !ready || saving;
+    $('pg-save').classList.toggle('is-ready', ready);
+  }
+  function showErr(msg) { var e = $('pg-err'); e.classList.toggle('is-on', !!msg); e.innerHTML = msg ? icon('alert-circle', 14) + '<span>' + esc(msg) + '</span>' : ''; }
+
+  // ── Stripe ───────────────────────────────────────────────────────────────
+  var stripe = null, els = {};
+  function mountStripe() {
+    if (stripe || !window.Stripe || !STRIPE_PK) return !!stripe;
+    stripe = Stripe(STRIPE_PK);
+    var elements = stripe.elements({ fonts: [{ cssSrc: 'https://fonts.googleapis.com/css2?family=Inter:wght@500&display=swap' }], locale: 'pt-BR' });
+    var style = { base: { color: '#28231c', fontFamily: 'Inter, system-ui, sans-serif', fontSize: '15px', fontWeight: '500', '::placeholder': { color: '#ada699' } }, invalid: { color: '#c0392b' } };
+    els.number = elements.create('cardNumber', { style: style, placeholder: '0000 0000 0000 0000', showIcon: false, classes: { base: 'pg-in' } });
+    els.exp = elements.create('cardExpiry', { style: style, placeholder: 'MM/AA', classes: { base: 'pg-in' } });
+    els.cvc = elements.create('cardCvc', { style: style, placeholder: '123', classes: { base: 'pg-in' } });
+    ['number', 'exp', 'cvc'].forEach(function (k) {
+      var host = $('el-' + k);
+      els[k].mount(host);
+      els[k].on('change', function (ev) { fieldState(k, ev); });
+      els[k].on('focus', function () { moveFocus(k); });
+      els[k].on('blur', function () { if (focused === k) moveFocus(null); });
+    });
     return true;
   }
-  if (nameField)  nameField.addEventListener('blur', () => validateField(nameField));
-  if (phoneField) phoneField.addEventListener('blur', () => validateField(phoneField));
-  const form = document.getElementById('pf-form');
-  if (form) {
-    form.addEventListener('submit', function(e) {
-      let valid = true, first = null;
-      [nameField, phoneField].forEach(f => {
-        if (!f) return;
-        if (!validateField(f)) { if (!first) first = f; valid = false; }
-      });
-      if (!valid) {
-        e.preventDefault();
-        first.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        setTimeout(() => first.focus(), 400);
-      }
-    });
+
+  var saving = false;
+  function busy(on) {
+    saving = on;
+    var b = $('pg-save');
+    b.innerHTML = on ? '<span class="pg-spin"></span>Salvando…' : icon('lock', 15) + 'Salvar cartão';
+    refreshSave();
   }
-
-  if (HAS_SETUP_INTENT && document.getElementById('stripe-card-element')) {
-    const stripe   = Stripe(STRIPE_PK);
-    const elements = stripe.elements();
-    const card     = elements.create('card', {
-      style: {
-        base: {
-          color: '#28231c', fontFamily: 'Inter, sans-serif',
-          fontSize: '15px', '::placeholder': { color: '#ada699' },
-          iconColor: '#dd7852', backgroundColor: '#fefefd'
-        },
-        invalid: { color: '#c85050', iconColor: '#c85050' }
-      },
-      hidePostalCode: true
-    });
-    card.mount('#stripe-card-element');
-    card.on('change', e => {
-      document.getElementById('card-errors').textContent = e.error ? e.error.message : '';
-    });
-
-    const saveBtn = document.getElementById('btn-save-card');
-    if (saveBtn) {
-      saveBtn.addEventListener('click', async function() {
-        saveBtn.disabled = true;
-        saveBtn.innerHTML = '<span class="pf-spinner"></span> Salvando...';
-        document.getElementById('card-errors').textContent = '';
-
-        const result = await stripe.confirmCardSetup(SETUP_SECRET, {
-          payment_method: { card: card }
-        });
-
-        if (result.error) {
-          document.getElementById('card-errors').textContent = result.error.message;
-          saveBtn.disabled = false;
-          saveBtn.innerHTML = '<i class="fas fa-lock"></i> SALVAR CARTÃO';
-          return;
-        }
-
-        const res = await fetch('/client/profile/attach_payment_method', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN, 'Accept': 'application/json' },
+  function save() {
+    if (saving) return;
+    if (!stripe || !SETUP_SECRET) { showErr('Pagamentos indisponíveis no momento. Tente de novo em alguns minutos.'); return; }
+    busy(true); showErr(null);
+    stripe.confirmCardSetup(SETUP_SECRET, { payment_method: { card: els.number, billing_details: { name: $('cc-name-in').value.trim() } } })
+      .then(function (result) {
+        if (result.error) { busy(false); showErr(result.error.message); return; }
+        return fetch('/client/profile/attach_payment_method', {
+          method: 'POST', credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-Token': CSRF },
           body: JSON.stringify({ payment_method_id: result.setupIntent.payment_method })
-        });
-        const data = await res.json();
-
-        if (data.ok) {
-          window.location.href = data.return_to || window.location.href;
-        } else {
-          document.getElementById('card-errors').textContent = data.error || 'Erro ao salvar cartão.';
-          saveBtn.disabled = false;
-          saveBtn.innerHTML = '<i class="fas fa-lock"></i> SALVAR CARTÃO';
-        }
-      });
-    }
+        }).then(function (r) { return r.json().catch(function () { return {}; }); })
+          .then(function (data) {
+            if (!data.ok) { busy(false); showErr(data.error || 'Não foi possível salvar o cartão.'); return; }
+            // Volta pra reserva do Last Minute, se veio de lá; senão mostra o cartão salvo.
+            location.href = data.return_to || RETURN_TO || (location.pathname + '?tab=pagamento&salvo=1');
+          });
+      })
+      .catch(function () { busy(false); showErr('Erro de conexão. Tente novamente.'); });
   }
 
-  document.querySelectorAll('.pf-toast').forEach(t => {
-    setTimeout(() => {
-      t.style.transition = 'opacity .5s ease';
-      t.style.opacity = '0';
-      setTimeout(() => t.remove(), 500);
-    }, 3500);
+  function removeCard() {
+    var b = $('pg-remove'); b.disabled = true; b.textContent = 'Removendo…';
+    fetch('/client/profile/remove_payment_method', { method: 'DELETE', credentials: 'same-origin', headers: { Accept: 'application/json', 'X-CSRF-Token': CSRF } })
+      .then(function (r) { if (!r.ok) throw 0; location.href = location.pathname + '?tab=pagamento&removido=1'; })
+      .catch(function () { b.disabled = false; b.textContent = 'Remover mesmo assim'; toast('Não foi possível remover. Tente de novo.'); });
+  }
+
+  function openNew() {
+    $('pg-saved') && $('pg-saved').classList.add('pg-hidden');
+    $('pg-new').classList.remove('pg-hidden');
+    var pill = $('cc-saved-pill'); if (pill) pill.style.display = 'none';
+    // O cartão "zera" pra acompanhar o novo preenchimento.
+    $('cc-last4').textContent = '••••'; setBrand('loov'); cc.classList.remove('n-complete');
+    mountStripe();
+    setTimeout(function () { els.number && els.number.focus(); }, 60);
+  }
+  function closeNew() {
+    $('pg-new').classList.add('pg-hidden');
+    $('pg-saved').classList.remove('pg-hidden');
+    var pill = $('cc-saved-pill'); if (pill) pill.style.display = '';
+    $('cc-last4').textContent = <%= raw json_escape(current_user.stripe_card_last4.to_s.to_json) %>;
+    setBrand(SAVED_BRAND); cc.classList.add('n-complete'); moveFocus(null);
+  }
+
+  var toastT = null;
+  function toast(t) { var el = $('pg-toast'); el.innerHTML = icon('check-circle', 15) + '<span>' + esc(t) + '</span>'; el.classList.add('is-on'); clearTimeout(toastT); toastT = setTimeout(function () { el.classList.remove('is-on'); }, 3500); }
+
+  // ── Eventos ──────────────────────────────────────────────────────────────
+  var nameIn = $('cc-name-in');
+  nameIn.addEventListener('input', function () { nameIn.value = nameIn.value.replace(/[^A-Za-zÀ-ÿ' .-]/g, ''); setName(nameIn.value); refreshSave(); });
+  nameIn.addEventListener('focus', function () { moveFocus('name'); });
+  nameIn.addEventListener('blur', function () { if (focused === 'name') moveFocus(null); });
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('#pg-save')) { save(); return; }
+    if (e.target.closest('#pg-change')) { openNew(); return; }
+    if (e.target.closest('#pg-change-cancel')) { closeNew(); return; }
+    if (e.target.closest('#pg-remove-ask')) { $('pg-ask').classList.add('is-on'); $('pg-remove-ask').classList.add('pg-hidden'); return; }
+    if (e.target.closest('#pg-ask-no')) { $('pg-ask').classList.remove('is-on'); $('pg-remove-ask').classList.remove('pg-hidden'); return; }
+    if (e.target.closest('#pg-remove')) { removeCard(); return; }
   });
-});
+
+  if (window.feather) feather.replace();
+  setName(HAS_CARD ? <%= raw json_escape(current_user.display_name.to_s.to_json) %> : nameIn.value);
+  if (HAS_CARD) { setBrand(SAVED_BRAND); cc.classList.add('n-complete'); $('cc-exp').textContent = '••/••'; }
+  else { setBrand('loov'); mountStripe(); }
+  var q = new URLSearchParams(location.search);
+  if (q.get('salvo')) toast('Cartão salvo! Já pode reservar no Last Minute.');
+  else if (q.get('removido')) toast('Cartão removido.');
+  else if (FLASH) toast(FLASH);
+  refreshSave();
+})();
 </script>
