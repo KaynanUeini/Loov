@@ -1,0 +1,90 @@
+<%#
+  Logos de prévia dos lava-rápidos — um módulo só (window.LoovLogos) usado na
+  home do cliente e no Disponível, pra loja ter o mesmo logo em todo lugar.
+  Logo estável por nome; `logo_url` real (quando o dono subir) tem prioridade.
+%>
+<script>
+window.LoovLogos = window.LoovLogos || (function () {
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function normalize(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+  // Prévia: logo gerado e estável por loja (mesmo nome → mesmo logo). Quando
+  // o dono subir o logo real (`logo_url`, já previsto no app), ele vence.
+  // 6 estilos de emblema comuns em lava-rápido × 10 cores de marca; as
+  // iniciais vêm da parte do nome que identifica a loja ("Eco Lava Bonfim"
+  // → EB, não EL), pulando as palavras genéricas do ramo.
+  var BRANDS = [
+    { bg: '#1e63d6', fg: '#ffffff' }, { bg: '#0e9aa7', fg: '#ffffff' }, { bg: '#13294b', fg: '#ffffff' },
+    { bg: '#d7263d', fg: '#ffffff' }, { bg: '#1a9e5c', fg: '#ffffff' }, { bg: '#f2b705', fg: '#1a1612' },
+    { bg: '#1a1612', fg: '#ffffff' }, { bg: '#6c3fc5', fg: '#ffffff' }, { bg: '#f26b1d', fg: '#ffffff' },
+    { bg: '#2ba3e0', fg: '#ffffff' }
+  ];
+  var GENERIC = ['lava', 'rapido', 'car', 'wash', 'jato', 'lavagem', 'lava-rapido', 'lava-jato', 'estetica', 'automotiva', 'carwash'];
+  var STOP = ['do', 'da', 'de', 'dos', 'das', 'e', 'o', 'a'];
+  function hashStr(str) { var h = 7; for (var i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0; return h; }
+  function brandOf(cw) {
+    var name = String(cw.name || 'Loov');
+    var words = name.split(/[\s\-]+/).filter(function (w) { return w && STOP.indexOf(normalize(w)) === -1; });
+    var key = words.filter(function (w) { return GENERIC.indexOf(normalize(w)) === -1; });
+    var ini = key.length >= 2 ? key[0][0] + key[1][0] : key.length === 1 ? key[0].slice(0, 2) : (words[0] || 'L')[0] + ((words[1] || '')[0] || '');
+    var h = hashStr(normalize(name));
+    return {
+      initials: ini.toUpperCase(),
+      label: (key.length ? key.slice(0, 2) : words.slice(0, 2)).join(' ').toUpperCase().slice(0, 16),
+      style: h % 6,
+      color: BRANDS[(h >>> 3) % BRANDS.length],
+      uid: 'lg' + (cw.id != null ? cw.id : h)
+    };
+  }
+  var DROP = 'M60 40c0 0-15 17-15 27a15 15 0 0 0 30 0c0-10-15-27-15-27z';
+  function logoSvg(cw) {
+    var b = brandOf(cw), C = b.color.bg, F = b.color.fg, ini = esc(b.initials), id = b.uid;
+    var T = function (x, y, size, fill, txt, extra) {
+      return '<text x="' + x + '" y="' + y + '" text-anchor="middle" font-family="Space Grotesk, Inter, sans-serif" font-weight="700" font-size="' + size + '" fill="' + fill + '"' + (extra || '') + '>' + txt + '</text>';
+    };
+    var body;
+    switch (b.style) {
+      case 0: // selo redondo: nome em arco + gota
+        body = '<circle cx="60" cy="60" r="58" fill="' + C + '"/><circle cx="60" cy="60" r="49" fill="none" stroke="' + F + '" stroke-opacity=".45" stroke-width="1.5"/>' +
+          '<path id="' + id + 'a" d="M21 62 A39 39 0 0 1 99 62" fill="none"/>' +
+          '<text font-family="Inter, sans-serif" font-weight="700" font-size="9.5" letter-spacing="1.6" fill="' + F + '"><textPath href="#' + id + 'a" startOffset="50%" text-anchor="middle">' + esc(b.label) + '</textPath></text>' +
+          '<path d="' + DROP + '" fill="' + F + '" transform="translate(0 6)"/>' +
+          '<circle cx="44" cy="96" r="2" fill="' + F + '"/><circle cx="60" cy="99" r="2" fill="' + F + '"/><circle cx="76" cy="96" r="2" fill="' + F + '"/>';
+        break;
+      case 1: // escudo com monograma
+        body = '<path d="M60 5l46 15v37c0 30-21 48-46 58C35 105 14 87 14 57V20z" fill="' + C + '"/>' +
+          '<path d="M60 15l36 12v30c0 24-16 39-36 47-20-8-36-23-36-47V27z" fill="none" stroke="' + F + '" stroke-opacity=".4" stroke-width="1.5"/>' +
+          T(60, 72, 38, F, ini, ' letter-spacing="-1"') + '<path d="M40 84q20 10 40 0" fill="none" stroke="' + F + '" stroke-width="3" stroke-linecap="round"/>';
+        break;
+      case 2: // quadrado escuro com ondas
+        body = '<rect x="4" y="4" width="112" height="112" rx="30" fill="#1a1612"/>' +
+          T(60, 66, 42, C, ini, ' letter-spacing="-1.5"') +
+          '<path d="M22 86q9-8 19 0t19 0t19 0t19 0" fill="none" stroke="' + C + '" stroke-width="4" stroke-linecap="round"/>' +
+          '<path d="M22 98q9-8 19 0t19 0t19 0t19 0" fill="none" stroke="' + C + '" stroke-opacity=".45" stroke-width="4" stroke-linecap="round"/>';
+        break;
+      case 3: // bolhas
+        body = '<circle cx="60" cy="60" r="58" fill="' + C + '"/>' +
+          '<circle cx="36" cy="36" r="11" fill="none" stroke="' + F + '" stroke-width="3"/><circle cx="54" cy="24" r="6" fill="none" stroke="' + F + '" stroke-width="2.5"/><circle cx="28" cy="56" r="4.5" fill="' + F + '"/>' +
+          '<circle cx="33" cy="33" r="3" fill="' + F + '" fill-opacity=".7"/>' + T(66, 84, 40, F, ini, ' letter-spacing="-1"');
+        break;
+      case 4: // carro com brilho
+        body = '<rect x="4" y="4" width="112" height="112" rx="36" fill="' + C + '"/>' +
+          '<path d="M22 76l7-15c3-7 8-10 16-10h30c8 0 13 3 16 10l7 15c2 4-1 8-5 8H27c-4 0-7-4-5-8z" fill="' + F + '"/>' +
+          '<path d="M38 62c2-4 5-6 9-6h11v8H36zM62 56h11c4 0 7 2 9 6l2 2H62z" fill="' + C + '"/>' +
+          '<circle cx="40" cy="84" r="8" fill="' + F + '"/><circle cx="40" cy="84" r="3.5" fill="' + C + '"/><circle cx="80" cy="84" r="8" fill="' + F + '"/><circle cx="80" cy="84" r="3.5" fill="' + C + '"/>' +
+          '<path d="M90 22l2.6 6.4L99 31l-6.4 2.6L90 40l-2.6-6.4L81 31l6.4-2.6z" fill="' + F + '"/>' +
+          T(60, 41, 17, F, ini, ' letter-spacing="1.5"');
+        break;
+      default: // hexágono
+        body = '<path d="M60 4l50 28v56l-50 28-50-28V32z" fill="' + C + '"/>' +
+          '<path d="' + DROP + '" fill="' + F + '" transform="translate(30 10) scale(.5)"/>' +
+          T(60, 84, 30, F, ini, ' letter-spacing="1"');
+    }
+    return '<svg viewBox="0 0 120 120" role="img" aria-label="Logo ' + esc(cw.name) + '" xmlns="http://www.w3.org/2000/svg">' + body + '</svg>';
+  }
+  function logoOf(cw) {
+    return cw.logo_url ? '<img src="' + esc(cw.logo_url) + '" alt="Logo ' + esc(cw.name) + '" style="width:100%;height:100%;object-fit:contain">' : logoSvg(cw);
+  }
+
+  return { brandOf: brandOf, logoOf: logoOf, logoSvg: logoSvg };
+})();
+</script>

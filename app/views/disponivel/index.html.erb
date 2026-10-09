@@ -1,453 +1,744 @@
+<%#
+  Disponível (last minute) — porte da DisponivelScreen do app
+  (LoovApp/src/screens/DisponivelScreen.js), consumindo os mesmos endpoints:
+    GET   /disponivel(.json)          lista (5 km · próximos 30 min)
+    POST  /disponivel                 cria a reserva (pending_acceptance)
+    GET   /disponivel/:id             status (polling)
+    PATCH /disponivel/:id/cancel      desistir antes do aceite
+
+  Fluxo: lista escura (Spotify) → folha "Reservar em" com o serviço →
+  espera de até 3 min pelo aceite (contador vivo, cancelar SEGURANDO 2,5s,
+  passarinho pra pegar enquanto espera) → desfecho.
+
+  ?car_wash_id=X (vem do Last minute da home) ABRE a reserva desse
+  lava-rápido por cima da lista inteira — não filtra, como no app: lista
+  filtrada sem indicação nem saída deixava o cliente preso em uma loja.
+%>
+<%= render "shared/loov_logos" %>
+<script src="/vendor/feather-4.29.2.min.js"></script>
+
 <style>
-  /* Página dark padrão Loov — espelha DisponivelScreen.js do app */
-  .disp-wrap {
-    background: var(--obsidian);
-    min-height: 100vh;
-    margin-top: -60px; /* compensa o navbar fixed cream — aqui queremos full-bleed dark */
-    padding-top: 60px;
-  }
-  body.disp-active { background: var(--obsidian); }
+  /* Menu do topo é translúcido; sobre o fundo escuro ele ficava cinza. */
+  .loov-nav { background: var(--cream) !important; }
+  .dp { --pad: 20px; background: var(--obsidian); color: var(--cream); min-height: 100vh; padding-top: 60px; }
+  .dp *, .dp *::before, .dp *::after { box-sizing: border-box; }
+  .dp button { font-family: inherit; line-height: normal; cursor: pointer; }
+  .dp svg.feather { display: block; }
+  .dp-col { width: 100%; max-width: 1240px; margin: 0 auto; }
 
-  .disp-back {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 44px; height: 44px; border-radius: 22px;
-    background: rgba(254,254,253,0.08);
-    border: 1px solid rgba(254,254,253,0.12);
-    color: var(--cream);
-    margin: 14px 20px 0;
-    text-decoration: none;
-    transition: background .15s ease;
-  }
-  .disp-back:hover { background: rgba(254,254,253,0.14); color: var(--cream); }
+  .dp-top { padding: 8px 16px; }
+  .dp-back { width: 40px; height: 40px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); color: var(--cream) !important; text-decoration: none; transition: background .15s; }
+  .dp-back:hover { background: rgba(255,255,255,.14); }
 
-  .disp-page {
-    max-width: 760px;
-    margin: 0 auto;
-    padding: 16px 20px 80px;
-  }
+  .dp-hero { padding: 20px var(--pad) 4px; }
+  .dp-badge { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 100px; background: var(--coral-500); color: var(--cream); font-size: 12px; font-weight: 600; }
+  .dp-title { margin: 14px 0 0 !important; color: var(--cream) !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: clamp(36px, 5vw, 64px); line-height: 1.05; letter-spacing: -0.035em; }
+  .dp-title em { font-style: normal; color: var(--coral-500); }
 
-  /* ── Hero ─────────────────────────────────────────────── */
-  .disp-hero { padding: 12px 0 28px; }
-  .disp-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: var(--coral-500);
-    color: var(--cream);
-    padding: 6px 12px;
-    border-radius: 100px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; font-weight: 600;
-    letter-spacing: 1.4px; text-transform: lowercase;
-    margin-bottom: 16px;
-  }
-  .disp-badge i { font-size: 11px; }
-  .disp-h1 {
-    font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700;
-    font-size: clamp(34px, 5.5vw, 52px);
-    line-height: 1.05;
-    color: var(--cream);
-    letter-spacing: -1px;
-    margin: 0;
-  }
-  .disp-h1 .accent { color: var(--coral-500); }
+  .dp-strip { display: flex; align-items: center; gap: 12px; margin: 24px var(--pad) 0; padding: 14px; border-radius: 16px; background: rgba(255,255,255,.06); max-width: 520px; }
+  .dp-strip-ic { flex: 0 0 40px; height: 40px; border-radius: 12px; background: var(--coral-500); display: flex; align-items: center; justify-content: center; color: var(--cream); }
+  .dp-strip b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; letter-spacing: -0.2px; color: var(--cream); }
+  .dp-strip span { display: block; margin-top: 2px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #b5ae9f; }
 
-  /* ── Info strip ───────────────────────────────────────── */
-  .disp-info-strip {
-    display: flex; align-items: center; gap: 14px;
-    background: rgba(254,254,253,0.05);
-    border: 1px solid rgba(254,254,253,0.10);
-    border-radius: 16px;
-    padding: 14px 18px;
-    margin-bottom: 24px;
-  }
-  .strip-icon {
-    width: 44px; height: 44px; border-radius: 14px;
-    background: rgba(220,120,82,0.18);
-    border: 1px solid rgba(220,120,82,0.30);
-    color: var(--coral-500);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
-    flex-shrink: 0;
-  }
-  .strip-label { color: var(--cream); font-size: 14px; font-weight: 600; }
-  .strip-value {
-    color: #b5ae9f; font-size: 12.5px;
-    font-family: 'JetBrains Mono', monospace;
-    letter-spacing: 0.5px; margin-top: 2px;
-  }
+  .dp-sort { display: flex; gap: 8px; padding: 20px var(--pad) 0; overflow-x: auto; scrollbar-width: none; }
+  .dp-sort::-webkit-scrollbar { display: none; }
+  .dp-chip { flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 100px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); color: rgba(250,250,246,.7); font-size: 12px; font-weight: 600; transition: background .15s, color .15s; }
+  .dp-chip:hover { background: rgba(255,255,255,.1); }
+  .dp-chip[aria-pressed="true"] { background: var(--cream); border-color: var(--cream); color: var(--obsidian); }
 
-  /* ── Geo banner / Empty state ─────────────────────────── */
-  .disp-banner {
-    background: rgba(220,120,82,0.10);
-    border: 1px solid rgba(220,120,82,0.25);
-    border-radius: 18px;
-    padding: 18px 20px;
-    margin-bottom: 24px;
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 14px; flex-wrap: wrap;
-  }
-  .disp-banner-text { color: var(--cream); font-size: 13.5px; }
-  .disp-banner-text i { color: var(--coral-500); margin-right: 6px; }
-  .disp-banner-btn {
-    background: var(--coral-500); color: var(--cream);
-    border: none; border-radius: 100px;
-    padding: 10px 18px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase;
-    cursor: pointer; transition: background .15s;
-  }
-  .disp-banner-btn:hover { background: var(--coral-700); }
+  .dp-list { display: grid; grid-template-columns: 1fr; gap: 14px; padding: 20px var(--pad) 80px; }
+  .dp-card { position: relative; display: block; width: 100%; text-align: left; border: 0; padding: 0; border-radius: 22px; overflow: hidden; background: var(--ink); color: var(--cream); box-shadow: 0 6px 16px rgba(40,35,28,.15); transition: transform .2s ease, box-shadow .2s ease; }
+  .dp-card:hover { transform: translateY(-3px); box-shadow: 0 18px 32px rgba(0,0,0,.35); }
+  .dp-card:focus-visible { outline: 2px solid var(--coral-500); outline-offset: 3px; }
+  .dp-stats { display: flex; align-items: center; padding: 20px 8px 18px; border-bottom: 1px solid rgba(250,250,246,.08); }
+  .dp-stat { flex: 1; text-align: center; }
+  .dp-stat b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 32px; line-height: 36px; letter-spacing: -1px; color: var(--coral-500); }
+  .dp-stat span { display: block; margin-top: 8px; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1.6px; color: rgba(250,250,246,.55); }
+  .dp-div { width: 1px; height: 48px; background: rgba(250,250,246,.12); }
+  .dp-shop { display: flex; align-items: center; gap: 14px; padding: 14px 18px; }
+  .dp-logo { flex: 0 0 48px; height: 48px; border-radius: 12px; overflow: hidden; }
+  .dp-logo svg { width: 100%; height: 100%; display: block; }
+  .dp-shop-txt { flex: 1; min-width: 0; }
+  .dp-shop-name { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 17px; line-height: 21px; letter-spacing: -0.3px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .dp-shop-meta { margin-top: 4px; font-size: 12px; line-height: 16px; color: rgba(250,250,246,.55); }
+  .dp-cd { color: var(--coral-500); font-weight: 600; letter-spacing: .2px; }
+  .dp-fav { flex: 0 0 26px; height: 26px; border-radius: 50%; background: rgba(250,250,246,.08); display: flex; align-items: center; justify-content: center; color: rgba(250,250,246,.5); }
+  .dp-chev { color: rgba(250,250,246,.35); transition: transform .2s; }
+  .dp-card:hover .dp-chev { transform: translateX(3px); color: rgba(250,250,246,.6); }
+  .dp-rate { position: absolute; top: 14px; right: 14px; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 100px; background: rgba(250,250,246,.08); font-size: 11px; font-weight: 600; }
+  .dp-rate.is-new { color: rgba(250,250,246,.55); font-weight: 400; letter-spacing: .3px; }
 
-  .disp-empty {
-    background: rgba(254,254,253,0.04);
-    border: 1px solid rgba(254,254,253,0.08);
-    border-radius: 20px;
-    padding: 56px 24px;
-    text-align: center;
-  }
-  .disp-empty-icon {
-    width: 64px; height: 64px; border-radius: 50%;
-    background: rgba(220,120,82,0.15);
-    color: var(--coral-500);
-    margin: 0 auto 16px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 28px;
-  }
-  .disp-empty-title {
-    font-family: 'Space Grotesk', sans-serif; font-weight: 700;
-    font-size: 22px; color: var(--cream);
-    letter-spacing: -0.3px; margin-bottom: 8px;
-  }
-  .disp-empty-text {
-    font-size: 14px; color: #b5ae9f; line-height: 1.55;
-    max-width: 380px; margin: 0 auto;
-  }
+  .dp-state { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 56px var(--pad) 80px; }
+  .dp-state img { width: 72%; max-width: 320px; height: auto; margin-bottom: 6px; }
+  .dp-state h2 { margin: 14px 0 6px !important; color: var(--cream) !important; font-family: 'Inter', sans-serif !important; font-size: 16px; font-weight: 700; letter-spacing: 0; }
+  .dp-state p { margin: 0; max-width: 420px; color: #b5ae9f; font-size: 13px; line-height: 19px; }
+  .dp-state .dp-btn { margin-top: 18px; }
+  .dp-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 22px; border: 0; border-radius: 100px; background: var(--coral-500); color: var(--cream) !important; font-size: 13.5px; font-weight: 600; text-decoration: none; transition: background .15s, transform .15s; }
+  .dp-btn:hover { background: var(--coral-700); }
+  .dp-spin { width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid rgba(221,120,82,.25); border-top-color: var(--coral-500); animation: dp-rot .8s linear infinite; }
+  @keyframes dp-rot { to { transform: rotate(360deg); } }
 
-  /* ── Card escuro (espelha cardDark do app) ───────────── */
-  .disp-list { display: flex; flex-direction: column; gap: 12px; }
+  /* ── Folha "Reservar em" ──────────────────────────────────────────────── */
+  .dp-sheet-bg { position: fixed; inset: 0; z-index: 200; background: rgba(25,20,15,.55); display: flex; align-items: flex-end; justify-content: center; opacity: 0; transition: opacity .2s ease; }
+  .dp-sheet-bg.is-open { opacity: 1; }
+  .dp-sheet-bg[hidden] { display: none; } /* display:flex anula o hidden; sem isto a camada invisível bloquearia a página */
+  .dp-sheet { width: 100%; max-height: 85vh; overflow: auto; background: var(--paper); color: var(--ink); border-radius: 28px 28px 0 0; padding: 0 20px 30px; transform: translateY(100%); transition: transform .32s cubic-bezier(.2,.8,.2,1); }
+  .dp-sheet-bg.is-open .dp-sheet { transform: none; }
+  .dp-handle { width: 40px; height: 4px; border-radius: 2px; background: var(--stone); margin: 10px auto 4px; }
+  .dp-sh-head { display: flex; align-items: flex-start; gap: 12px; padding: 14px 0 12px; }
+  .dp-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ash); margin-bottom: 4px; }
+  .dp-sh-name { margin: 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 600; font-size: 22px; line-height: 26px; letter-spacing: -0.5px; color: var(--ink) !important; }
+  .dp-sh-addr { margin-top: 4px; font-size: 13px; line-height: 17px; color: var(--graphite); }
+  .dp-x { flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; border: 0; background: transparent; color: var(--graphite); display: flex; align-items: center; justify-content: center; }
+  .dp-x:hover { background: var(--sand); color: var(--ink); }
+  .dp-sh-stats { display: flex; align-items: center; gap: 6px; padding: 10px 0; margin-top: 4px; border-top: 1px solid var(--stone); border-bottom: 1px solid var(--stone); font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px; letter-spacing: -0.2px; }
+  .dp-sh-stats .s { display: inline-flex; align-items: center; gap: 5px; }
+  .dp-sh-stats .sep { color: var(--ash); margin: 0 4px; }
+  .dp-sh-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ash); margin: 20px 0 10px; }
+  .dp-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+  .dp-pill { padding: 8px 14px; border-radius: 100px; border: 1px solid var(--stone); background: var(--cream); color: var(--graphite); font-size: 13px; font-weight: 600; transition: background .15s, color .15s, border-color .15s; }
+  .dp-pill:hover { border-color: var(--ash); }
+  .dp-pill[aria-pressed="true"] { background: var(--coral-500); border-color: var(--coral-500); color: var(--cream); }
+  .dp-svc { margin-top: 18px; max-height: 220px; overflow: auto; }
+  .dp-svc h3 { margin: 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 600; font-size: 18px; letter-spacing: -0.3px; color: var(--ink) !important; }
+  .dp-svc .price { margin-top: 4px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.5px; color: var(--coral-500); }
+  .dp-svc .price small { font-family: 'Inter', sans-serif; font-weight: 400; font-size: 14px; letter-spacing: 0; color: var(--graphite); }
+  .dp-svc p { margin: 12px 0 0; font-size: 14px; line-height: 20px; color: var(--graphite); white-space: pre-line; }
+  .dp-hint { margin: 16px 0 12px; text-align: center; font-size: 11px; line-height: 15px; color: var(--ash); }
+  .dp-confirm { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; padding: 16px; border: 0; border-radius: 14px !important; background: var(--coral-500) !important; color: var(--cream) !important; font-size: 14px; font-weight: 600; }
+  .dp-confirm[disabled] { opacity: .6; cursor: default; }
+  .dp-confirm .dp-spin { width: 18px; height: 18px; border-color: rgba(255,255,255,.35); border-top-color: #fff; }
 
-  .disp-card-dark {
-    background: var(--ink);
-    border-radius: 24px;
-    padding: 22px;
-    position: relative; overflow: hidden;
-    border: 1px solid rgba(254,254,253,0.05);
-  }
-  .disp-blob {
-    position: absolute; top: -50px; right: -50px;
-    width: 220px; height: 220px;
-    border-radius: 50%;
-    background: var(--coral-500);
-    pointer-events: none;
-  }
+  /* ── Espera / desfecho ────────────────────────────────────────────────── */
+  .dw { position: fixed; inset: 60px 0 0 0; z-index: 150; background: var(--cream); color: var(--ink); overflow: hidden auto; display: none; }
+  .dw.is-on { display: block; }
+  .dw-in { position: relative; z-index: 1; max-width: 460px; margin: 0 auto; min-height: 100%; padding: 18px 22px 24px; display: flex; flex-direction: column; }
+  .dw-head { text-align: center; padding-top: 6px; }
+  .dw-status { display: inline-flex; align-items: center; gap: 7px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); }
+  .dw-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: dw-blink 1.6s ease-in-out infinite; }
+  @keyframes dw-blink { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
+  .dw-shop { margin: 8px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 26px; line-height: 30px; letter-spacing: -0.6px; color: var(--ink) !important; }
+  .dw-hero { display: flex; flex-direction: column; align-items: center; gap: 18px; padding-top: 28px; }
+  .dw-stage { position: relative; width: 232px; height: 232px; display: flex; align-items: center; justify-content: center; }
+  .dw-ring { position: absolute; width: 196px; height: 196px; border-radius: 50%; border: 2px solid var(--accent); animation: dw-ring 1.6s ease-out infinite; }
+  @keyframes dw-ring { from { opacity: .45; transform: scale(.9); } to { opacity: 0; transform: scale(1.7); } }
+  .dw-halo { position: absolute; width: 200px; height: 200px; border-radius: 50%; background: color-mix(in srgb, var(--accent) 8%, transparent); animation: dw-halo 1.6s ease-in-out infinite; }
+  @keyframes dw-halo { 50% { transform: scale(1.05); } }
+  .dw-count { position: relative; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 62px; line-height: 66px; letter-spacing: -1.5px; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .dw.is-urgent .dw-count { color: var(--rose-500); }
+  .dw-subtle { max-width: 260px; text-align: center; font-size: 13.5px; color: var(--graphite); }
+  .dw-card { margin-top: 30px; background: var(--paper); border: 1px solid var(--stone); border-radius: 18px; padding: 0 16px; overflow: hidden; }
+  .dw-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--stone); }
+  .dw-row span { color: var(--ash); font-size: 13.5px; font-weight: 500; }
+  .dw-row b { max-width: 62%; text-align: right; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14.5px; letter-spacing: -0.2px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dw-cancel { position: relative; display: block; width: calc(100% + 32px); margin: 0 -16px; padding: 15px 16px; border: 0; background: transparent; color: var(--rose-500); font-size: 13.5px; font-weight: 600; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .dw-cancel i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: color-mix(in srgb, var(--rose-500) 13%, transparent); }
+  .dw-cancel.is-holding i { width: 100%; transition: width 2.5s linear; }
+  .dw-cancel span { position: relative; }
+  .dw-cancel:focus-visible { outline: 2px solid var(--rose-500); outline-offset: -2px; }
+  .dw-reassure { margin-top: 10px; padding: 0 16px; text-align: center; font-size: 11.5px; color: var(--ash); }
+  .dw-game { margin-top: auto; height: 40px; display: flex; align-items: center; justify-content: center; padding-top: 24px; pointer-events: none; }
+  .dw-tip { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--ash); }
+  .dw-score { display: inline-flex; align-items: center; gap: 7px; padding: 5px 13px 5px 8px; border-radius: 999px; background: var(--paper); border: 1px solid var(--stone); font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+  .dw-score img { width: 17px; height: 28px; }
+  .dw-score em { font-style: normal; font-size: 8.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--coral-500); }
 
-  .disp-top {
-    display: flex; align-items: flex-start; gap: 14px;
-    position: relative;
-  }
-  .shop-info { flex: 1; min-width: 0; }
-  .shop-name {
-    font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700;
-    font-size: 19px;
-    color: var(--cream);
-    letter-spacing: -0.3px;
-    line-height: 1.2;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
-  .shop-addr {
-    color: #c9c4ba;
-    font-size: 12.5px;
-    margin-top: 4px;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
-  .shop-addr-sub {
-    color: #8a857c;
-    font-size: 11.5px;
-    margin-top: 2px;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
-  .disp-distance-pill {
-    display: inline-flex; align-items: center; gap: 4px;
-    background: rgba(220,120,82,0.18);
-    border: 1px solid rgba(220,120,82,0.35);
-    color: var(--coral-500);
-    padding: 4px 10px;
-    border-radius: 100px;
-    font-size: 11px; font-weight: 600;
-    flex-shrink: 0;
-  }
-  .disp-distance-pill i { font-size: 10px; }
+  /* Passarinho: camada por cima da tela; só ele recebe clique. */
+  .dw-sky { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; }
+  .dw-bird { position: absolute; left: 0; top: 0; width: 56px; height: 92px; pointer-events: auto; cursor: pointer; border: 0; background: transparent; padding: 0; opacity: 0; will-change: transform; -webkit-tap-highlight-color: transparent; }
+  .dw-bird img { position: absolute; left: var(--slack, 0px); top: var(--slack, 0px); width: 56px; height: 92px; opacity: 0; pointer-events: none; }
+  .dw-bird img.on { opacity: 1; }
+  .dw-trail { position: absolute; width: 16px; height: 3.5px; border-radius: 2px; background: var(--ink); opacity: 0; }
+  .dw-puff-ring { position: absolute; width: 68px; height: 68px; border-radius: 50%; border: 2.5px solid var(--coral-500); animation: dw-puff .52s cubic-bezier(.2,.8,.2,1) forwards; }
+  @keyframes dw-puff { from { transform: scale(.25); opacity: .9; } to { transform: scale(1.5); opacity: 0; } }
+  .dw-feather { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: var(--coral-600); animation: dw-feather .52s cubic-bezier(.2,.8,.2,1) forwards; }
+  @keyframes dw-feather { 0% { opacity: 0; transform: translate(0,0) scale(.5); } 12% { opacity: 1; } 25% { transform: translate(calc(var(--fx) * .25), calc(var(--fy) * .25)) scale(1); } 100% { opacity: 0; transform: translate(var(--fx), var(--fy)) scale(.35); } }
 
-  /* Service pills */
-  .disp-svc-pills {
-    display: flex; gap: 6px;
-    margin-top: 14px;
-    overflow-x: auto;
-    padding-bottom: 4px;
-    position: relative;
-  }
-  .disp-svc-pills::-webkit-scrollbar { height: 0; }
-  .svc-pill {
-    flex-shrink: 0;
-    background: rgba(254,254,253,0.08);
-    border: 1px solid rgba(254,254,253,0.10);
-    border-radius: 100px;
-    padding: 7px 14px;
-    color: var(--cream);
-    font-size: 12.5px; font-weight: 500;
-    cursor: pointer;
-    transition: all .15s ease;
-    white-space: nowrap;
-  }
-  .svc-pill:hover { background: rgba(254,254,253,0.12); }
-  .svc-pill.active {
-    background: var(--cream);
-    color: var(--ink);
-    border-color: var(--cream);
-    font-weight: 600;
-  }
+  .dw-result { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 24px 8px; }
+  .dw-result > * { opacity: 0; transform: translateY(16px); animation: dw-surge .6s cubic-bezier(.2,.8,.2,1) forwards; }
+  .dw-result > :nth-child(2) { animation-delay: .12s; }
+  .dw-result > :nth-child(3) { animation-delay: .22s; }
+  .dw-result > :nth-child(4) { animation-delay: .34s; }
+  @keyframes dw-surge { to { opacity: 1; transform: none; } }
+  .dw-mark { width: 44px; height: 44px; border-radius: 50%; background: var(--mint-500); display: flex; align-items: center; justify-content: center; color: var(--cream); margin-bottom: 18px; }
+  .dw-result.is-ok .dw-mark { animation: dw-pop .55s cubic-bezier(.3,1.6,.5,1) forwards; }
+  @keyframes dw-pop { from { opacity: 0; transform: scale(.7); } to { opacity: 1; transform: scale(1); } }
+  .dw-result img { width: 86%; max-width: 340px; height: auto; margin-bottom: 20px; }
+  .dw-result h2 { margin: 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 30px; letter-spacing: -0.7px; color: var(--ink) !important; }
+  .dw-result p { margin: 0; max-width: 320px; font-size: 14.5px; line-height: 21px; color: var(--graphite); }
+  .dw-cta { margin-top: 30px; display: inline-flex; align-items: center; gap: 8px; padding: 14px 26px; border: 0; border-radius: 9999px; background: var(--coral-500); color: var(--cream); font-size: 14.5px; font-weight: 600; }
+  .dw-cta:hover { background: var(--coral-700); }
 
-  /* Bottom row */
-  .disp-bottom {
-    display: flex; align-items: center; gap: 14px;
-    margin-top: 18px;
-    position: relative;
-  }
-  .bottom-left { flex: 1; min-width: 0; }
-  .bottom-slot-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    letter-spacing: 1.6px;
-    color: var(--coral-500);
-    text-transform: uppercase;
-    margin-bottom: 4px;
-  }
-  .bottom-price {
-    font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700;
-    font-size: 42px;
-    color: var(--coral-500);
-    letter-spacing: -1.5px;
-    line-height: 1;
-  }
-  .bottom-subtext {
-    color: #c9c4ba; font-size: 12.5px;
-    margin-top: 8px;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
+  .dp-toast { position: fixed; left: 50%; bottom: 28px; z-index: 300; transform: translate(-50%, 20px); opacity: 0; display: inline-flex; align-items: center; gap: 8px; max-width: calc(100% - 32px); padding: 12px 16px; border-radius: 14px; background: var(--paper); border: 1px solid var(--stone); box-shadow: 0 12px 30px rgba(0,0,0,.25); color: var(--coral-500); font-size: 13px; font-weight: 600; transition: opacity .2s, transform .2s; }
+  .dp-toast.is-on { opacity: 1; transform: translate(-50%, 0); }
+  .dp-toast.is-err { color: var(--rose-500); }
 
-  .arrow-btn {
-    width: 56px; height: 56px;
-    border-radius: 50%;
-    background: var(--coral-500);
-    border: none;
-    color: var(--cream);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 22px;
-    cursor: pointer;
-    transition: background .15s ease, transform .15s ease, box-shadow .15s ease;
-    text-decoration: none;
-    flex-shrink: 0;
-    box-shadow: 0 8px 20px rgba(220,120,82,0.35);
+  /* ── Responsivo ───────────────────────────────────────────────────────── */
+  @media (min-width: 640px) {
+    .dp-list { grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 18px; }
   }
-  .arrow-btn:hover {
-    background: var(--coral-700);
-    transform: translateY(-2px);
-    color: var(--cream);
-    box-shadow: 0 10px 24px rgba(156,73,48,0.4);
+  @media (min-width: 900px) {
+    .dp { --pad: 48px; }
+    .dp-top { padding: 16px 40px 0; }
+    .dp-hero { padding-top: 36px; }
+    /* No computador a folha vira janela central — folha presa à base de uma
+       tela larga é um gesto de celular sem o celular. */
+    .dp-sheet-bg { align-items: center; padding: 24px; }
+    .dp-sheet { max-width: 520px; border-radius: 28px; padding-bottom: 26px; transform: translateY(24px) scale(.98); opacity: 0; transition: transform .28s cubic-bezier(.2,.8,.2,1), opacity .2s; }
+    .dp-sheet-bg.is-open .dp-sheet { opacity: 1; }
+    .dp-handle { display: none; }
+    .dp-sh-head { padding-top: 24px; }
+    .dw-in { padding-top: 32px; }
   }
-
-  @media (max-width: 600px) {
-    .disp-page { padding: 12px 16px 80px; }
-    .disp-card-dark { padding: 18px; border-radius: 20px; }
-    .bottom-price { font-size: 36px; }
-    .arrow-btn { width: 48px; height: 48px; font-size: 18px; }
+  @media (prefers-reduced-motion: reduce) {
+    .dw-ring, .dw-halo, .dw-dot { animation: none; }
+    .dw-result > * { animation: none; opacity: 1; transform: none; }
+    .dp-sheet { transition: none; }
   }
 </style>
 
-<script>document.body.classList.add('disp-active');</script>
-
-<div class="disp-wrap">
-
-  <a href="/" class="disp-back" aria-label="Voltar">
-    <i class="fas fa-chevron-left"></i>
-  </a>
-
-  <div class="disp-page">
-
-    <%# ── Hero ────────────────────────────────────────────── %>
-    <div class="disp-hero">
-      <span class="disp-badge"><i class="fas fa-bolt"></i> last minute</span>
-      <h1 class="disp-h1">
-        Vagas <span class="accent">agora</span>,<br>perto de você.
-      </h1>
-    </div>
-
-    <%# ── Info strip ──────────────────────────────────────── %>
-    <% slots_count = @available_slots.size %>
-    <div class="disp-info-strip">
-      <div class="strip-icon"><i class="fas fa-location-dot"></i></div>
-      <div style="flex:1;">
-        <div class="strip-label">
-          <%= slots_count %> <%= slots_count == 1 ? "vaga disponível" : "vagas disponíveis" %>
-        </div>
-        <div class="strip-value">raio de 5 km · próximos 30 min</div>
-      </div>
-    </div>
-
-    <%# ── Geo banner (sem lat) ────────────────────────────── %>
-    <% unless @lat %>
-      <div class="disp-banner">
-        <span class="disp-banner-text">
-          <i class="fas fa-location-dot"></i>
-          Permita sua localização para ver vagas perto de você.
-        </span>
-        <button class="disp-banner-btn" onclick="requestGeo()">USAR LOCALIZAÇÃO</button>
-      </div>
-    <% end %>
-
-    <%# ── Empty state ─────────────────────────────────────── %>
-    <% if @lat && @available_slots.empty? %>
-      <div class="disp-empty">
-        <div class="disp-empty-icon"><i class="fas fa-bolt"></i></div>
-        <div class="disp-empty-title">Nenhum slot disponível</div>
-        <p class="disp-empty-text">
-          Sem lava-rápidos com horários livres nos próximos 30 min num raio de 5 km.
-        </p>
-      </div>
-
-    <%# ── Lista de cards (espelha DisponivelCard) ─────────── %>
-    <% elsif @available_slots.any? %>
-      <div class="disp-list">
-        <% @available_slots.each_with_index do |slot_data, idx| %>
-          <% cw       = slot_data[:car_wash] %>
-          <% slot_iso = slot_data[:slots].first.iso8601 %>
-          <% slot_str = slot_data[:slots].first.strftime("%H:%M") %>
-          <% services = slot_data[:services] %>
-          <% first    = services.first %>
-
-          <% addr_line = [cw.try(:logradouro), cw.try(:bairro)].compact_blank.join(" · ").presence || cw.address.to_s %>
-          <% city_line = [cw.try(:cidade), cw.try(:uf)].compact_blank.join(" · ") %>
-          <% distance = (@lat && cw.has_valid_coordinates?) ? cw.distance_to([@lat, @lon], :km).to_f : nil %>
-          <% dist_label = distance ? (distance < 1 ? "#{(distance * 1000).round}m" : sprintf('%.1f km', distance)) : nil %>
-
-          <div class="disp-card-dark"
-               data-cw-id="<%= cw.id %>"
-               data-slot="<%= slot_iso %>"
-               style="--blob-opacity:<%= [0.20 - idx * 0.03, 0.05].max %>;">
-            <div class="disp-blob" style="opacity:<%= [0.20 - idx * 0.03, 0.05].max %>;"></div>
-
-            <div class="disp-top">
-              <div class="shop-info">
-                <div class="shop-name"><%= cw.name %></div>
-                <% if addr_line.present? %>
-                  <div class="shop-addr"><%= addr_line %></div>
-                <% end %>
-                <% if city_line.present? %>
-                  <div class="shop-addr-sub"><%= city_line %></div>
-                <% end %>
-              </div>
-              <% if distance %>
-                <div class="disp-distance-pill">
-                  <i class="fas fa-map-pin"></i><%= dist_label %>
-                </div>
-              <% end %>
-            </div>
-
-            <% if services.count > 1 %>
-              <div class="disp-svc-pills">
-                <% services.each_with_index do |svc, i| %>
-                  <button class="svc-pill <%= 'active' if i == 0 %>"
-                          data-svc-id="<%= svc.id %>"
-                          data-price="<%= number_with_precision(svc.price, precision: 0) %>"
-                          data-title="<%= svc.title %>"
-                          data-duration="<%= svc.duration %>"
-                          onclick="selectService(this)">
-                    <%= svc.title %>
-                  </button>
-                <% end %>
-              </div>
-            <% end %>
-
-            <div class="disp-bottom">
-              <div class="bottom-left">
-                <div class="bottom-slot-label">HOJE · <%= slot_str %></div>
-                <div class="bottom-price">R$<span class="price-val"><%= number_with_precision(first.price, precision: 0) %></span></div>
-                <div class="bottom-subtext">
-                  <span class="svc-name"><%= first.title.presence || "Lavagem" %></span>
-                  <% if first.duration.present? && first.duration > 0 %>
-                    · <span class="svc-dur"><%= first.duration %>min</span>
-                  <% end %>
-                  <% if distance %>
-                    · <%= dist_label %>
-                  <% end %>
-                </div>
-              </div>
-
-              <a href="<%= checkout_disponivel_index_path(car_wash_id: cw.id, service_id: first.id, slot: slot_iso) %>"
-                 class="arrow-btn" data-base-url="<%= checkout_disponivel_index_path %>"
-                 aria-label="Reservar">
-                <i class="fas fa-arrow-right"></i>
-              </a>
-            </div>
-          </div>
-        <% end %>
-      </div>
-    <% end %>
-
+<div class="dp" id="dp">
+  <div class="dp-col dp-top">
+    <a href="/" class="dp-back" aria-label="Voltar pra home"><i data-feather="chevron-left" style="width:18px;height:18px"></i></a>
   </div>
+
+  <main class="dp-col">
+    <section class="dp-hero">
+      <span class="dp-badge"><i data-feather="zap" style="width:12px;height:12px"></i>last minute</span>
+      <h1 class="dp-title">Vagas <em>agora</em>, perto de você.</h1>
+    </section>
+    <div id="dp-strip"></div>
+    <div class="dp-sort" id="dp-sort" role="group" aria-label="Ordenar"></div>
+    <div id="dp-body"></div>
+  </main>
+
+  <%= render "shared/site_footer", audience: (user_signed_in? ? :client : :visitor) %>
 </div>
 
+<%# Folha de reserva %>
+<div class="dp-sheet-bg" id="dp-sheet-bg" hidden>
+  <div class="dp-sheet" role="dialog" aria-modal="true" aria-labelledby="dp-sh-name" id="dp-sheet"></div>
+</div>
+
+<%# Espera pelo aceite / desfecho %>
+<section class="dw" id="dw" aria-live="polite">
+  <div class="dw-sky" id="dw-sky"></div>
+  <div class="dw-in" id="dw-in"></div>
+</section>
+
+<div class="dp-toast" id="dp-toast" role="status"></div>
+
 <script>
-function selectService(btn) {
-  const card = btn.closest('.disp-card-dark');
-  if (!card) return;
+(function () {
+  var SORTS = [
+    { key: 'relevance', label: 'Relevância',  icon: 'zap' },
+    { key: 'distance',  label: 'Mais perto',  icon: 'map-pin' },
+    { key: 'price',     label: 'Menor preço', icon: 'tag' }
+  ];
+  var ILL = '/illustrations/';
+  var POLL_MS = 3000;
+  var COORDS_KEY = 'loov_last_coords';
+  var RECORD_KEY = 'loov_ave_recorde';
+  var SIGNED_IN = <%= user_signed_in? ? "true" : "false" %>;
 
-  card.querySelectorAll('.svc-pill').forEach(p => p.classList.remove('active'));
-  btn.classList.add('active');
+  var state = {
+    loc: 'pending', coords: null, loading: true, items: [], sortBy: 'relevance',
+    openId: null, target: null, selectedId: null, reserving: false,
+    appt: null, secondsLeft: 0, outcome: null
+  };
 
-  const svcId    = btn.dataset.svcId;
-  const price    = btn.dataset.price;
-  const title    = btn.dataset.title;
-  const duration = btn.dataset.duration;
-
-  const priceEl = card.querySelector('.price-val');
-  const nameEl  = card.querySelector('.svc-name');
-  const durEl   = card.querySelector('.svc-dur');
-
-  if (priceEl) priceEl.textContent = price;
-  if (nameEl)  nameEl.textContent  = title;
-  if (durEl)   durEl.textContent   = duration + 'min';
-
-  const cwId = card.dataset.cwId;
-  const slot = card.dataset.slot;
-  const arrow = card.querySelector('.arrow-btn');
-  if (arrow) {
-    const params = new URLSearchParams({ car_wash_id: cwId, service_id: svcId, slot: slot });
-    arrow.href = '/disponivel/checkout?' + params.toString();
+  // ── utilitários ──────────────────────────────────────────────────────────
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function icon(n, size, extra) { return window.feather && feather.icons[n] ? feather.icons[n].toSvg(Object.assign({ width: size, height: size }, extra || {})) : ''; }
+  function money(v, d) { var n = Number(v); return isFinite(n) ? n.toFixed(d || 0).replace('.', ',') : '—'; }
+  function fmtTime(iso) { if (!iso) return ''; var d = new Date(iso); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+  function fmtDistance(km) { if (km == null) return null; return km < 1 ? Math.round(km * 1000) + ' m' : Number(km).toFixed(1).replace('.', ',') + ' km'; }
+  function mmss(s) { s = Math.max(0, s | 0); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
+  function itemMinPrice(it) {
+    var mp = Number(it && it.min_price); if (isFinite(mp) && mp > 0) return mp;
+    var p = (it.services || []).map(function (s) { return Number(s.price); }).filter(isFinite);
+    return p.length ? Math.min.apply(null, p) : Infinity;
   }
-}
+  function sortItems(list, by) {
+    if (by === 'relevance') return list;
+    var a = list.slice();
+    if (by === 'distance') a.sort(function (x, y) { return (x.car_wash.distance_km == null ? Infinity : x.car_wash.distance_km) - (y.car_wash.distance_km == null ? Infinity : y.car_wash.distance_km); });
+    if (by === 'price') a.sort(function (x, y) { return itemMinPrice(x) - itemMinPrice(y); });
+    return a;
+  }
+  function validItems() { var now = Date.now(); return state.items.filter(function (it) { return it.slots && it.slots[0] && new Date(it.slots[0]).getTime() > now; }); }
+  var toastT = null;
+  function toast(text, type) {
+    var t = $('dp-toast');
+    t.className = 'dp-toast is-on' + (type === 'error' ? ' is-err' : '');
+    t.innerHTML = icon(type === 'error' ? 'x-circle' : 'check-circle', 15) + '<span>' + esc(text) + '</span>';
+    clearTimeout(toastT); toastT = setTimeout(function () { t.className = 'dp-toast' + (type === 'error' ? ' is-err' : ''); }, 3500);
+  }
+  function api(url, opts) {
+    opts = opts || {};
+    var csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content;
+    return fetch(url, Object.assign({ credentials: 'same-origin' }, opts, {
+      headers: Object.assign({ Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-Token': csrf }, opts.headers || {})
+    }));
+  }
 
-function requestGeo() {
-  if (typeof window.loovGeoReload === 'function') {
-    window.loovGeoReload();
-    return;
+  // ── localização (URL → cache → GPS), como a home ─────────────────────────
+  function initLocation() {
+    var u = new URL(location.href), lat = parseFloat(u.searchParams.get('latitude')), lng = parseFloat(u.searchParams.get('longitude'));
+    state.openId = u.searchParams.get('car_wash_id');
+    var start = null;
+    if (!isNaN(lat) && !isNaN(lng)) start = { latitude: lat, longitude: lng };
+    else { try { var c = JSON.parse(localStorage.getItem(COORDS_KEY) || 'null'); if (c) start = { latitude: c.lat, longitude: c.lng }; } catch (e) {} }
+    if (start) { state.coords = start; state.loc = 'granted'; load(); }
+    if (!navigator.geolocation) { if (!start) { state.loc = 'error'; render(); } return; }
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      var fresh = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+      try { localStorage.setItem(COORDS_KEY, JSON.stringify({ lat: fresh.latitude, lng: fresh.longitude })); } catch (e) {}
+      if (!start) { state.coords = fresh; state.loc = 'granted'; load(); }
+    }, function (err) {
+      if (!start) { state.loc = err && err.code === 1 ? 'denied' : 'error'; render(); }
+    }, { timeout: start ? 12000 : 8000, maximumAge: 300000 });
   }
-  if (!navigator.geolocation) {
-    alert('Seu navegador não suporta localização.');
-    return;
+  function retryLocation() { state.loc = 'pending'; render(); initLocation(); }
+
+  // ── dados ────────────────────────────────────────────────────────────────
+  function load(silent) {
+    if (!silent) { state.loading = true; render(); }
+    var q = state.coords ? '?latitude=' + state.coords.latitude + '&longitude=' + state.coords.longitude : '';
+    return api('/disponivel' + q).then(function (r) { return r.json(); }).then(function (data) {
+      var seen = {};
+      state.items = (Array.isArray(data) ? data : []).filter(function (it) {
+        var id = it.car_wash && it.car_wash.id; if (id == null || seen[id]) return false; seen[id] = true; return true;
+      });
+      // Veio do Last minute da home: abre a reserva dessa loja sobre a lista.
+      if (state.openId) {
+        var it = state.items.find(function (x) { return String(x.car_wash.id) === String(state.openId); });
+        state.openId = null;
+        var u = new URL(location.href); u.searchParams.delete('car_wash_id'); history.replaceState(null, '', u);
+        if (it) setTimeout(function () { openSheet(it); }, 100);
+      }
+    }).catch(function () { state.items = []; }).finally(function () { state.loading = false; render(); });
   }
-  navigator.geolocation.getCurrentPosition(pos => {
-    const url = new URL(window.location);
-    url.searchParams.set('latitude',  pos.coords.latitude);
-    url.searchParams.set('longitude', pos.coords.longitude);
-    window.location.href = url.toString();
-  }, err => {
-    if (err.code === 1) alert('Permissão de localização negada. Libere nas configurações do site.');
-    else if (err.code === 2) alert('Não conseguimos detectar sua localização. Verifique se o GPS está ativo.');
-    else if (err.code === 3) alert('A busca demorou demais. Tente de novo.');
-    else alert('Não foi possível obter sua localização.');
-  }, { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 });
-}
+
+  // ── lista ────────────────────────────────────────────────────────────────
+  function card(it, now) {
+    var cw = it.car_wash, slot = new Date(it.slots[0]);
+    var mins = Math.ceil((slot.getTime() - now) / 60000);
+    var street = cw.logradouro ? cw.logradouro + (cw.numero ? ', ' + cw.numero : '') : null;
+    var reviews = Number(cw.reviews_count) || 0, rating = Number(cw.rating_avg) || 0;
+    var meta = [street, cw.bairro].filter(Boolean).join(' · ') || '—';
+    return '<button type="button" class="dp-card" data-open="' + cw.id + '" aria-label="Reservar em ' + esc(cw.name) + ', ' + fmtTime(it.slots[0]) + '">' +
+      '<div class="dp-stats"><div class="dp-stat"><b>' + fmtTime(it.slots[0]) + '</b><span>HORÁRIO</span></div><div class="dp-div"></div>' +
+      '<div class="dp-stat"><b>' + esc(fmtDistance(cw.distance_km) || '—') + '</b><span>DISTÂNCIA</span></div></div>' +
+      '<div class="dp-shop"><div class="dp-logo">' + LoovLogos.logoOf(cw) + '</div>' +
+        '<div class="dp-shop-txt"><div class="dp-shop-name">' + esc(cw.name) + '</div>' +
+        '<div class="dp-shop-meta">' + esc(meta) + (mins > 0 && mins < 1000 ? ' · <span class="dp-cd">em ' + mins + 'min</span>' : '') + '</div></div>' +
+        (cw.favorited ? '<span class="dp-fav" title="Favorito">' + icon('heart', 13) + '</span>' : '') +
+        '<span class="dp-chev">' + icon('chevron-right', 20) + '</span></div>' +
+      '<span class="dp-rate' + (reviews ? '' : ' is-new') + '">' + icon('star', 10, { color: reviews ? 'var(--coral-500)' : 'rgba(250,250,246,.45)' }) + (reviews ? rating.toFixed(1).replace('.', ',') : 'Novo') + '</span>' +
+    '</button>';
+  }
+  function render() {
+    var valid = validItems();
+    $('dp-strip').innerHTML = valid.length
+      ? '<div class="dp-strip"><div class="dp-strip-ic">' + icon('map-pin', 18) + '</div><div><b>' + valid.length + (valid.length === 1 ? ' vaga disponível' : ' vagas disponíveis') + '</b><span>raio de 5 km · próximos 30 min</span></div></div>'
+      : '';
+    $('dp-sort').innerHTML = state.loc === 'granted' && !state.loading && valid.length > 1
+      ? SORTS.map(function (o) { return '<button type="button" class="dp-chip" data-sort="' + o.key + '" aria-pressed="' + (state.sortBy === o.key) + '">' + icon(o.icon, 12) + o.label + '</button>'; }).join('')
+      : '';
+    var body = $('dp-body');
+    if (state.loc === 'pending') {
+      body.innerHTML = '<div class="dp-state"><div class="dp-spin"></div><p style="margin-top:12px">Localizando você…</p></div>';
+    } else if (state.loc !== 'granted') {
+      body.innerHTML = '<div class="dp-state">' + icon('map-pin', 32, { color: 'var(--coral-500)' }) + '<h2>Localização necessária</h2>' +
+        '<p>Pra mostrar lava-rápidos perto de você, precisamos da sua localização. Sem ela não dá pra filtrar a lista.' +
+        (state.loc === 'denied' ? ' Libere a localização nas configurações do navegador.' : '') + '</p>' +
+        '<button type="button" class="dp-btn" id="dp-retry">Tentar de novo</button></div>';
+    } else if (state.loading) {
+      body.innerHTML = '<div class="dp-state"><div class="dp-spin"></div></div>';
+    } else if (!valid.length) {
+      body.innerHTML = '<div class="dp-state"><img src="' + ILL + 'vaga-vazia.svg" alt="Ilustração de um relógio com um passarinho pousado em cima">' +
+        '<h2>Sem vaga por agora</h2><p>Nenhum lava-rápido a até 5 km tem horário livre nos próximos 30 minutos. Essa janela muda sozinha, vale voltar daqui a pouco. Se preferir não esperar, dá pra marcar um horário certo na Home.</p>' +
+        '<a class="dp-btn" href="/">Ver lava-rápidos</a></div>';
+    } else {
+      var now = Date.now();
+      body.innerHTML = '<div class="dp-list">' + sortItems(valid, state.sortBy).map(function (it) { return card(it, now); }).join('') + '</div>';
+    }
+  }
+
+  // ── folha "Reservar em" ──────────────────────────────────────────────────
+  var lastFocus = null;
+  function openSheet(it) {
+    state.target = it;
+    state.selectedId = it.services && it.services[0] ? it.services[0].id : null;
+    lastFocus = document.activeElement;
+    var bg = $('dp-sheet-bg');
+    bg.hidden = false;
+    renderSheet();
+    requestAnimationFrame(function () { bg.classList.add('is-open'); var x = bg.querySelector('.dp-x'); if (x) x.focus(); });
+    document.documentElement.style.overflow = 'hidden';
+  }
+  function closeSheet() {
+    if (state.reserving) return;
+    var bg = $('dp-sheet-bg');
+    bg.classList.remove('is-open');
+    setTimeout(function () { bg.hidden = true; state.target = null; }, 280);
+    document.documentElement.style.overflow = '';
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+  function renderSheet() {
+    var it = state.target; if (!it) return;
+    var cw = it.car_wash, svcs = it.services || [];
+    var svc = svcs.find(function (s) { return s.id === state.selectedId; }) || svcs[0];
+    var addr = [[cw.logradouro, cw.numero].filter(Boolean).join(', '), cw.bairro].filter(Boolean).join(' · ') || cw.address || '';
+    var dist = cw.distance_km != null ? Number(cw.distance_km).toFixed(1).replace('.', ',') + ' km' : null;
+    var dur = svc && Number(svc.duration) > 0 ? ' · ' + svc.duration + ' min' : '';
+    $('dp-sheet').innerHTML = '<div class="dp-handle"></div>' +
+      '<div class="dp-sh-head"><div style="flex:1;min-width:0"><div class="dp-eyebrow">Reservar em</div><h2 class="dp-sh-name" id="dp-sh-name">' + esc(cw.name) + '</h2>' +
+        (addr ? '<div class="dp-sh-addr">' + esc(addr) + '</div>' : '') + '</div>' +
+        '<button type="button" class="dp-x" id="dp-close" aria-label="Fechar"' + (state.reserving ? ' disabled' : '') + '>' + icon('x', 20) + '</button></div>' +
+      '<div class="dp-sh-stats"><span class="s">' + icon('clock', 13, { color: 'var(--coral-500)' }) + fmtTime(it.slots[0]) + '</span>' +
+        (dist ? '<span class="sep">·</span><span class="s">' + icon('map-pin', 13, { color: 'var(--coral-500)' }) + dist + '</span>' : '') + '</div>' +
+      (svcs.length > 1 ? '<div class="dp-sh-label">Escolha o serviço</div><div class="dp-pills" role="group" aria-label="Serviços">' +
+        svcs.map(function (s) { return '<button type="button" class="dp-pill" data-svc="' + s.id + '" aria-pressed="' + (svc && s.id === svc.id) + '">' + esc(s.title) + '</button>'; }).join('') + '</div>' : '') +
+      (svc ? '<div class="dp-svc"><h3>' + esc(svc.title) + '</h3><div class="price">R$ ' + money(svc.price, 2) + '<small>' + dur + '</small></div>' +
+        '<p>' + esc(svc.description && svc.description.trim() ? svc.description : 'Este lava-rápido não cadastrou uma descrição detalhada. Confirme os itens incluídos ao chegar.') + '</p></div>' : '') +
+      '<p class="dp-hint">O lava-rápido tem 3 min pra aceitar. Você não é cobrado se não for aceita. Pagamento na chegada.</p>' +
+      '<button type="button" class="dp-confirm" id="dp-confirm"' + (state.reserving || !svc ? ' disabled' : '') + '>' +
+        (state.reserving ? '<span class="dp-spin"></span>' : 'Confirmar reserva ' + icon('arrow-right', 16)) + '</button>';
+  }
+  function confirmReserve() {
+    var it = state.target;
+    var svc = it && ((it.services || []).find(function (s) { return s.id === state.selectedId; }) || (it.services || [])[0]);
+    var slot = it && it.slots && it.slots[0];
+    // Toque mudo em "Confirmar" era indistinguível de site travado.
+    if (!it || !svc || !slot) { toast(!slot ? 'Este horário não está mais disponível. Atualize a lista.' : 'Selecione um serviço para continuar.', 'error'); return; }
+    if (!SIGNED_IN) { toast('Entre na sua conta para reservar.', 'error'); setTimeout(function () { location.href = '/users/sign_in'; }, 900); return; }
+    state.reserving = true; renderSheet();
+    api('/disponivel', { method: 'POST', body: JSON.stringify({ car_wash_id: it.car_wash.id, service_id: svc.id, slot: slot }) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { r: r, d: d }; }); })
+      .then(function (x) {
+        if (x.r.status === 401) { location.href = '/users/sign_in'; return; }
+        if (!x.r.ok || !x.d.ok) { toast(x.d.error || ('Erro ' + x.r.status + ': não foi possível reservar.'), 'error'); return; }
+        state.reserving = false;
+        closeSheet();
+        startWaiting({ id: x.d.appointment_id, expires_at: x.d.expires_at, seconds: x.d.seconds || 180, car_wash: it.car_wash, service: svc, slot: slot });
+      })
+      .catch(function () { toast('Erro de conexão. Tente novamente.', 'error'); })
+      .finally(function () { if (state.reserving) { state.reserving = false; renderSheet(); } });
+  }
+
+  // ── espera pelo aceite ───────────────────────────────────────────────────
+  var pollT = null, tickT = null;
+  function startWaiting(appt) {
+    state.appt = appt; state.outcome = null;
+    state.secondsLeft = appt.seconds;
+    $('dw').classList.add('is-on');
+    document.documentElement.style.overflow = 'hidden';
+    window.scrollTo(0, 0);
+    renderWaiting();
+    // Polling ANTES do relógio: startPolling limpa o que estiver rodando
+    // (inclusive o relógio) — na ordem inversa o contador ficava em 03:00.
+    startPolling(appt.id);
+    startTicker(appt.expires_at);
+    bird.start();
+  }
+  function startTicker(exp) {
+    clearInterval(tickT);
+    var tick = function () {
+      state.secondsLeft = Math.max(0, Math.round((new Date(exp).getTime() - Date.now()) / 1000));
+      var el = $('dw-count'); if (el) el.textContent = mmss(state.secondsLeft);
+      updateUrgency();
+    };
+    tick(); tickT = setInterval(tick, 1000);
+  }
+  // Encadeado com recuo: servidor fora ou limitando não melhora com insistência.
+  function startPolling(id) {
+    stopPolling();
+    var wait = POLL_MS;
+    var step = function () {
+      api('/disponivel/' + id).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).then(function (d) {
+        if (d.status === 'confirmed') { stopPolling(); setOutcome('accepted'); }
+        else if (['rejected', 'cancelled', 'expired'].indexOf(d.status) !== -1) { stopPolling(); setOutcome(d.status); }
+        wait = POLL_MS;
+      }).catch(function () { wait = Math.min(30000, wait * 2); }).finally(function () {
+        if (pollT) pollT = setTimeout(step, wait);
+      });
+    };
+    pollT = setTimeout(step, POLL_MS);
+  }
+  function stopPolling() { clearTimeout(pollT); pollT = null; clearInterval(tickT); tickT = null; }
+  function setOutcome(o) { state.outcome = o; bird.stop(); renderWaiting(); }
+  function accentOf() {
+    var urgent = state.secondsLeft < 30 && !state.outcome;
+    return state.outcome === 'accepted' ? 'var(--mint-500)' : (state.outcome || urgent) ? 'var(--rose-500)' : 'var(--coral-500)';
+  }
+  function statusLabel() {
+    var o = state.outcome, urgent = state.secondsLeft < 30 && !o;
+    return o === 'accepted' ? 'RESERVA CONFIRMADA' : o === 'rejected' ? 'RESERVA RECUSADA' : o === 'expired' ? 'TEMPO ESGOTADO'
+      : o === 'cancelled' ? 'RESERVA CANCELADA' : urgent ? 'EXPIRA EM SEGUNDOS' : 'AGUARDANDO ACEITE';
+  }
+  function updateUrgency() {
+    var dw = $('dw'), urgent = state.secondsLeft < 30 && !state.outcome;
+    dw.classList.toggle('is-urgent', urgent);
+    dw.style.setProperty('--accent', accentOf());
+    var st = $('dw-status-txt'); if (st) st.textContent = statusLabel();
+    var sub = $('dw-subtle'); if (sub) sub.textContent = urgent ? 'O lava-rápido está prestes a responder' : 'O lava-rápido tem até 3 min pra aceitar';
+  }
+  function renderWaiting() {
+    var a = state.appt, dw = $('dw');
+    dw.style.setProperty('--accent', accentOf());
+    if (state.outcome) { renderResult(); return; }
+    var price = a.service && a.service.price != null ? 'R$ ' + money(a.service.price, 2) : null;
+    var dur = Number(a.service && a.service.duration) > 0 ? ' · ' + a.service.duration + ' min' : '';
+    $('dw-in').innerHTML =
+      '<div class="dw-head"><div class="dw-status"><span class="dw-dot"></span><span id="dw-status-txt">' + statusLabel() + '</span></div>' +
+        '<h2 class="dw-shop">' + esc(a.car_wash.name) + '</h2></div>' +
+      '<div class="dw-hero"><div class="dw-stage"><span class="dw-ring"></span><span class="dw-halo"></span>' +
+        '<span class="dw-count" id="dw-count" role="timer" aria-label="Tempo restante">' + mmss(state.secondsLeft) + '</span></div>' +
+        '<div class="dw-subtle" id="dw-subtle">O lava-rápido tem até 3 min pra aceitar</div></div>' +
+      '<div class="dw-card">' +
+        '<div class="dw-row"><span>Serviço</span><b>' + esc(a.service.title || '—') + '</b></div>' +
+        '<div class="dw-row"><span>Horário</span><b>' + fmtTime(a.slot) + dur + '</b></div>' +
+        (price ? '<div class="dw-row"><span>Na chegada</span><b style="color:var(--coral-500)">' + price + '</b></div>' : '') +
+        // Cancelar exige SEGURAR 2,5s: com um alvo voando pela tela, um toque
+        // perdido na caça ao passarinho não pode desfazer a reserva.
+        '<button type="button" class="dw-cancel" id="dw-cancel" aria-label="Cancelar reserva. Mantenha pressionado por dois segundos e meio">' +
+          '<i></i><span id="dw-cancel-txt">Segure para cancelar</span></button>' +
+      '</div>' +
+      '<p class="dw-reassure">Você não é cobrado se a reserva não for aceita</p>' +
+      '<div class="dw-game" id="dw-game"></div>';
+    bindCancel();
+    renderScore();
+    updateUrgency();
+  }
+  function renderResult() {
+    var o = state.outcome, name = (state.appt && state.appt.car_wash && state.appt.car_wash.name) || 'O lava-rápido';
+    var r = o === 'accepted'
+      ? { t: 'Reserva confirmada', s: 'Seu horário está garantido. É só chegar, e o pagamento é no local.', cta: 'Ir para agendamento', go: 'appt' }
+      : o === 'expired'
+      ? { t: 'Tempo esgotado', s: name + ' não respondeu dentro dos 3 minutos e o horário foi liberado. Você não foi cobrado.', cta: 'Buscar outro lava-rápido', go: 'list' }
+      : o === 'rejected'
+      ? { t: 'Reserva recusada', s: name + ' não pôde atender agora. Você não foi cobrado.', cta: 'Buscar outro lava-rápido', go: 'list' }
+      : { t: 'Reserva cancelada', s: 'O horário foi liberado e você não foi cobrado.', cta: 'Buscar outro lava-rápido', go: 'list' };
+    $('dw-in').innerHTML = '<div class="dw-result' + (o === 'accepted' ? ' is-ok' : '') + '">' +
+      (o === 'accepted' ? '<div class="dw-mark">' + icon('check', 20) + '</div>'
+        : '<img src="' + ILL + 'reserva-vazia.svg" alt="Ilustração de um carro parado com bolhas de espuma, um relógio e um passarinho pousado no teto">') +
+      '<h2>' + r.t + '</h2><p>' + esc(r.s) + '</p>' +
+      '<div><button type="button" class="dw-cta" data-result="' + r.go + '">' + r.cta + icon('arrow-right', 15) + '</button></div></div>';
+    var b = document.querySelector('.dw-cta'); if (b) b.focus();
+  }
+  function closeWaiting() {
+    stopPolling(); bird.stop();
+    state.appt = null; state.outcome = null;
+    $('dw').classList.remove('is-on', 'is-urgent');
+    document.documentElement.style.overflow = '';
+  }
+
+  // Segurar pra cancelar (mouse, toque e teclado).
+  function bindCancel() {
+    var btn = $('dw-cancel'), timer = null;
+    var start = function (e) {
+      if (e && e.type === 'keydown') { if (e.key !== ' ' && e.key !== 'Enter') return; if (e.repeat) return; e.preventDefault(); }
+      if (timer) return;
+      btn.classList.add('is-holding'); $('dw-cancel-txt').textContent = 'Solte para manter a reserva';
+      timer = setTimeout(function () { timer = null; giveUp(); }, 2500);
+    };
+    var stop = function (e) {
+      if (e && e.type === 'keyup' && e.key !== ' ' && e.key !== 'Enter') return;
+      if (!timer) return;
+      clearTimeout(timer); timer = null;
+      btn.classList.remove('is-holding'); $('dw-cancel-txt').textContent = 'Segure para cancelar';
+    };
+    btn.addEventListener('pointerdown', start);
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) { btn.addEventListener(ev, stop); });
+    btn.addEventListener('keydown', start); btn.addEventListener('keyup', stop);
+    btn.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  }
+  function giveUp() {
+    var id = state.appt && state.appt.id;
+    closeWaiting();
+    if (id) api('/disponivel/' + id + '/cancel', { method: 'PATCH' }).catch(function () {});
+    toast('Reserva desistida. Horário liberado.', 'error');
+    load(true);
+  }
+
+  // ── passarinho (porte do jogo do app) ────────────────────────────────────
+  // Entra por um canto, faz curvas, sai por outro e volta depois de uma pausa.
+  // Pegar sobe o nível: mais rápido, mais curvas, menos folga de mira.
+  var record = 0; try { record = Number(localStorage.getItem(RECORD_KEY)) || 0; } catch (e) {}
+  var level = 0;
+  function renderScore() {
+    var g = $('dw-game'); if (!g) return;
+    g.innerHTML = level === 0 ? '<span class="dw-tip">toque no passarinho</span>'
+      : '<span class="dw-score"><img src="' + ILL + 'voo-abertas.svg" alt="">' + level + (level >= record ? '<em>recorde</em>' : '') + '</span>';
+  }
+  function difficulty(n) {
+    var fall = function (from, floor, rate) { return floor + (from - floor) * Math.pow(rate, n); };
+    return { dur: fall(7200, 1750, .82), pause: fall(1900, 280, .80), turns: Math.min(6, 1 + Math.floor(n / 2.2)),
+      rough: Math.min(.55, .15 + n * .03), slack: Math.max(0, 16 - n * 2), trail: Math.max(.20, .5 - n * .03) };
+  }
+  function sampleRoute(pts, per) {
+    var n = pts.length - 1, segs = [];
+    var clip = function (b, vx, vy, cap, sign) { var m = Math.hypot(vx, vy), k = m > cap ? cap / m : 1; return { x: b.x + sign * vx * k, y: b.y + sign * vy * k }; };
+    for (var s = 0; s < n; s++) {
+      var prev = pts[Math.max(0, s - 1)], p0 = pts[s], p3 = pts[s + 1], next = pts[Math.min(n, s + 2)];
+      var cap = Math.hypot(p3.x - p0.x, p3.y - p0.y) / 3;
+      segs.push({ p0: p0, p3: p3, p1: clip(p0, (p3.x - prev.x) / 6, (p3.y - prev.y) / 6, cap, 1), p2: clip(p3, (next.x - p0.x) / 6, (next.y - p0.y) / 6, cap, -1) });
+    }
+    var x = [], y = [], ang = [];
+    var push = function (sg, u) {
+      var v = 1 - u, p0 = sg.p0, p1 = sg.p1, p2 = sg.p2, p3 = sg.p3;
+      x.push(v*v*v*p0.x + 3*v*v*u*p1.x + 3*v*u*u*p2.x + u*u*u*p3.x);
+      y.push(v*v*v*p0.y + 3*v*v*u*p1.y + 3*v*u*u*p2.y + u*u*u*p3.y);
+      var dx = 3*v*v*(p1.x-p0.x) + 6*v*u*(p2.x-p1.x) + 3*u*u*(p3.x-p2.x), dy = 3*v*v*(p1.y-p0.y) + 6*v*u*(p2.y-p1.y) + 3*u*u*(p3.y-p2.y);
+      ang.push(Math.hypot(dx, dy) < 1e-6 && ang.length ? ang[ang.length - 1] : Math.atan2(dy, dx) * 180 / Math.PI);
+    };
+    for (var i = 0; i < n; i++) for (var k = 0; k < per; k++) push(segs[i], k / per);
+    push(segs[n - 1], 1);
+    for (var j = 1; j < ang.length; j++) { while (ang[j] - ang[j-1] > 180) ang[j] -= 360; while (ang[j] - ang[j-1] < -180) ang[j] += 360; }
+    var acc = [0]; for (var q = 1; q < x.length; q++) acc.push(acc[q-1] + Math.max(Math.hypot(x[q]-x[q-1], y[q]-y[q-1]), 1e-4));
+    var tot = acc[acc.length - 1] || 1;
+    return { t: acc.map(function (v) { return v / tot; }), x: x, y: y, ang: ang };
+  }
+  function at(c, t) {
+    t = Math.min(1, Math.max(0, t)); var i = 0;
+    while (i < c.t.length - 2 && c.t[i + 1] < t) i++;
+    var f = (t - c.t[i]) / (c.t[i + 1] - c.t[i] || 1);
+    return { x: c.x[i] + (c.x[i+1] - c.x[i]) * f, y: c.y[i] + (c.y[i+1] - c.y[i]) * f, a: c.ang[i] + (c.ang[i+1] - c.ang[i]) * f };
+  }
+  var bird = (function () {
+    var W = 56, H = 92, raf = null, timer = null, el = null, imgs = null, route = null, t0 = 0, d = null, caught = false, running = false, trail = [];
+    function sky() { return $('dw-sky'); }
+    function rand(a, b) { return a + Math.random() * (b - a); }
+    function edge(w, h, which) {
+      return which === 0 ? { x: rand(.1, .8) * w, y: -H - 30 } : which === 1 ? { x: w + 30, y: rand(.15, .75) * h }
+        : which === 2 ? { x: rand(.1, .8) * w, y: h + 30 } : { x: -W - 30, y: rand(.15, .75) * h };
+    }
+    function newRoute(w, h, dd) {
+      var p0, pf, len, dx, dy;
+      for (var k = 0; k < 8; k++) {
+        p0 = edge(w, h, Math.floor(Math.random() * 4)); pf = edge(w, h, Math.floor(Math.random() * 4));
+        dx = pf.x - p0.x; dy = pf.y - p0.y; len = Math.hypot(dx, dy);
+        if (len > .5 * Math.max(w, h)) break;
+      }
+      len = len || 1;
+      var nx = -dy / len, ny = dx / len, pts = [p0], side = Math.random() < .5 ? 1 : -1, gap = len / (dd.turns + 1);
+      var room = function (b, ux, uy) {
+        var m = Infinity;
+        if (ux > 1e-6) m = Math.min(m, (w - 34 - b.x) / ux); else if (ux < -1e-6) m = Math.min(m, (b.x - 34) / -ux);
+        if (uy > 1e-6) m = Math.min(m, (h - 74 - b.y) / uy); else if (uy < -1e-6) m = Math.min(m, (b.y - 74) / -uy);
+        return Math.max(0, m);
+      };
+      for (var i = 1; i <= dd.turns; i++) {
+        var u = i / (dd.turns + 1), off = rand(-.28, .28) * gap;
+        var base = { x: p0.x + dx * u + (dx / len) * off, y: p0.y + dy * u + (dy / len) * off };
+        var amp = Math.min(rand(.5, 1) * dd.rough * gap, room(base, nx * side, ny * side));
+        pts.push({ x: base.x + nx * side * amp, y: base.y + ny * side * amp }); side = -side;
+      }
+      pts.push(pf);
+      var c = sampleRoute(pts, 10);
+      return { c: c, step: Math.max(2, Math.round(c.t.length / 14)) };
+    }
+    function ensureEl() {
+      if (el && el.isConnected) return;
+      el = document.createElement('button');
+      el.type = 'button'; el.className = 'dw-bird'; el.setAttribute('aria-label', 'Pegar o passarinho');
+      el.innerHTML = ['voo-abertas', 'voo-meio', 'voo-levantadas'].map(function (n) { return '<img src="' + ILL + n + '.svg" alt="">'; }).join('');
+      imgs = el.querySelectorAll('img');
+      el.addEventListener('pointerdown', function (e) { e.preventDefault(); catchIt(); });
+      el.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); catchIt(); } });
+      sky().appendChild(el);
+    }
+    function clearTrail() { trail.forEach(function (x) { x.el.remove(); }); trail = []; }
+    function trip() {
+      if (!running) return;
+      var s = sky(), w = s.clientWidth, h = s.clientHeight;
+      d = difficulty(level); route = newRoute(w, h, d); caught = false;
+      ensureEl(); clearTrail();
+      el.style.setProperty('--slack', d.slack + 'px');
+      el.style.width = (W + 2 * d.slack) + 'px'; el.style.height = (H + 2 * d.slack) + 'px';
+      route.c.t.forEach(function (tp, k) {
+        if (k % route.step !== 1 || k >= route.c.t.length - 1) return;
+        var dot = document.createElement('span'); dot.className = 'dw-trail';
+        dot.style.left = (route.c.x[k] + 20) + 'px'; dot.style.top = (route.c.y[k] + 44) + 'px';
+        dot.style.transform = 'rotate(' + route.c.ang[k].toFixed(1) + 'deg)';
+        s.insertBefore(dot, el); trail.push({ el: dot, tp: tp });
+      });
+      el.style.opacity = '1';
+      t0 = performance.now();
+      cancelAnimationFrame(raf); raf = requestAnimationFrame(frame);
+    }
+    function frame(now) {
+      if (!running || caught) return;
+      var t = (now - t0) / d.dur;
+      if (t >= 1) { el.style.opacity = '0'; clearTrail(); timer = setTimeout(trip, d.pause); return; }
+      var p = at(route.c, t);
+      el.style.transform = 'translate(' + (p.x - d.slack) + 'px,' + (p.y - d.slack) + 'px) rotate(' + p.a.toFixed(1) + 'deg)';
+      // Asas: abertas → meio → levantadas → meio, troca seca de quadro.
+      var period = Math.max(130, Math.min(300, d.dur / 26)) * 2, ph = ((now - t0) % period) / period;
+      var f = ph < .33 ? 0 : ph < .5 ? 1 : ph < .83 ? 2 : 1;
+      for (var i = 0; i < 3; i++) imgs[i].classList.toggle('on', i === f);
+      // Rastro tracejado: cada traço acende quando ele passa e apaga devagar.
+      trail.forEach(function (x) {
+        var o = t < x.tp ? 0 : t < x.tp + .02 ? .6 * (t - x.tp) / .02 : t < x.tp + d.trail ? .6 * (1 - (t - x.tp) / d.trail) : 0;
+        x.el.style.opacity = o.toFixed(3);
+      });
+      raf = requestAnimationFrame(frame);
+    }
+    function catchIt() {
+      if (!running || caught || !route) return;
+      caught = true; cancelAnimationFrame(raf);
+      var p = at(route.c, (performance.now() - t0) / d.dur);
+      puff(p.x + W / 2, p.y + H / 2);
+      el.style.opacity = '0';
+      trail.forEach(function (x) { x.el.style.transition = 'opacity .38s'; x.el.style.opacity = '0'; });
+      setTimeout(clearTrail, 400);
+      level += 1;
+      if (level > record) { record = level; try { localStorage.setItem(RECORD_KEY, String(record)); } catch (e) {} }
+      renderScore();
+      timer = setTimeout(trip, difficulty(level).pause * .55);
+    }
+    function puff(x, y) {
+      var s = sky(), ring = document.createElement('span');
+      ring.className = 'dw-puff-ring'; ring.style.left = (x - 34) + 'px'; ring.style.top = (y - 34) + 'px'; s.appendChild(ring);
+      [[-36, -24], [31, -32], [44, 9], [-41, 14], [-7, -46], [13, 40]].forEach(function (v) {
+        var f = document.createElement('span'); f.className = 'dw-feather';
+        f.style.left = x + 'px'; f.style.top = y + 'px'; f.style.setProperty('--fx', v[0] + 'px'); f.style.setProperty('--fy', v[1] + 'px');
+        s.appendChild(f); setTimeout(function () { f.remove(); }, 600);
+      });
+      setTimeout(function () { ring.remove(); }, 600);
+    }
+    return {
+      start: function () {
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        running = true; level = 0; renderScore(); timer = setTimeout(trip, 600);
+      },
+      stop: function () { running = false; cancelAnimationFrame(raf); clearTimeout(timer); clearTrail(); if (el) el.style.opacity = '0'; }
+    };
+  })();
+
+  // ── eventos ──────────────────────────────────────────────────────────────
+  document.addEventListener('click', function (e) {
+    var t;
+    if ((t = e.target.closest('[data-open]'))) { var it = state.items.find(function (x) { return String(x.car_wash.id) === t.dataset.open; }); if (it) openSheet(it); return; }
+    if ((t = e.target.closest('[data-sort]'))) { state.sortBy = t.dataset.sort; render(); return; }
+    if ((t = e.target.closest('[data-svc]'))) { state.selectedId = Number(t.dataset.svc); renderSheet(); return; }
+    if (e.target.closest('#dp-close')) { closeSheet(); return; }
+    if (e.target.id === 'dp-sheet-bg') { closeSheet(); return; }
+    if (e.target.closest('#dp-confirm')) { confirmReserve(); return; }
+    if (e.target.closest('#dp-retry')) { retryLocation(); return; }
+    if ((t = e.target.closest('[data-result]'))) {
+      if (t.dataset.result === 'appt') { location.href = '<%= appointments_path %>'; return; }
+      closeWaiting(); load(true);
+    }
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && state.target && !$('dp-sheet-bg').hidden) closeSheet(); });
+  // Contagem "em Xmin" dos cards se atualiza sozinha (como o app, a cada 15s).
+  setInterval(function () { if (!state.appt && !state.loading && state.loc === 'granted') render(); }, 15000);
+
+  function boot() { if (window.feather) feather.replace(); render(); initLocation(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
 </script>
