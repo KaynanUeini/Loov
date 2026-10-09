@@ -1,196 +1,193 @@
+<%#
+  Favoritos — porte da tela do app (LoovApp/src/screens/ClientFavoritosScreen.js),
+  com o mesmo JSON (Client::FavoritesController#serialize) embutido na página.
+
+  Cabeçalho SALVOS / Favoritos com a contagem; cartão com logo, nome, bairro,
+  coração pra tirar e a linha de dados (aberto/fechado, nota, horário de hoje,
+  nº de serviços). Tirar é otimista, como no app — e aqui ganha "Desfazer"
+  no aviso, porque um toque errado apagava a loja da lista sem volta.
+
+  Tela grande: os cartões viram grade.
+%>
+<script src="/vendor/feather-4.29.2.min.js"></script>
+<%= render "shared/loov_logos" %>
+
 <style>
-  .favs-page { max-width: 760px; margin: 0 auto; padding: 24px 20px 80px; }
+  .loov-nav { background: var(--cream) !important; }
+  .fv { background: var(--cream); color: var(--ink); min-height: 100vh; padding-top: 60px; }
+  .fv *, .fv *::before, .fv *::after { box-sizing: border-box; }
+  .fv button { font-family: inherit; line-height: normal; cursor: pointer; }
+  .fv svg.feather { display: block; }
+  .fv a { text-decoration: none; }
+  .fv-wrap { width: 100%; max-width: 1240px; margin: 0 auto; }
 
-  .favs-header { padding: 8px 0 20px; }
-  .favs-eyebrow {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; letter-spacing: 1.4px;
-    color: var(--ash); text-transform: uppercase;
-  }
-  .favs-title {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: clamp(28px, 5vw, 40px);
-    color: var(--ink); letter-spacing: -0.8px;
-    margin-top: 4px; font-weight: 700;
-  }
-  .favs-count {
-    font-size: 13.5px; color: var(--graphite);
-    margin-top: 6px;
-  }
+  .fv-head { display: flex; align-items: center; padding: 8px 16px; }
+  .fv-btn { flex: 0 0 40px; height: 40px; border-radius: 50%; border: 0; background: var(--sand); color: var(--ink) !important; display: flex; align-items: center; justify-content: center; transition: background .15s; }
+  a.fv-btn:hover { background: var(--stone); }
+  .fv-btn.is-ghost { background: transparent; }
+  .fv-hc { flex: 1; text-align: center; }
+  .fv-hc small { display: block; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; color: var(--coral-500); }
+  .fv-hc h1 { margin: 2px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 20px; letter-spacing: -0.3px; color: var(--ink) !important; }
+  .fv-count { flex: 0 0 auto; min-width: 40px; height: 40px; padding: 0 10px; border-radius: 20px; background: var(--coral-500); color: var(--cream); font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+  .fv-count.is-off { visibility: hidden; }
 
-  .favs-list { display: flex; flex-direction: column; gap: 12px; margin-top: 18px; }
+  .fv-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 16px 16px 48px; }
+  .fv-card { display: block; padding: 14px; background: var(--paper); border: 1px solid var(--stone); border-radius: 16px; color: var(--ink) !important; box-shadow: 0 2px 6px -4px rgba(40,35,28,.2); transition: border-color .15s, box-shadow .2s, transform .15s, opacity .25s; }
+  .fv-card:hover { border-color: var(--ink); box-shadow: 0 12px 28px -20px rgba(40,35,28,.55); }
+  .fv-card.is-leaving { opacity: 0; transform: scale(.97); }
+  .fv-top { display: flex; align-items: center; gap: 12px; }
+  .fv-logo { flex: 0 0 44px; height: 44px; }
+  .fv-logo svg { width: 100%; height: 100%; display: block; }
+  .fv-txt { flex: 1; min-width: 0; }
+  .fv-name { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fv-addr { margin-top: 2px; font-size: 12px; color: var(--graphite); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fv-heart { flex: 0 0 38px; height: 38px; border-radius: 50%; border: 1px solid var(--coral-100); background: var(--coral-50); color: var(--coral-500); display: flex; align-items: center; justify-content: center; transition: transform .15s, background .15s; }
+  .fv-heart svg { fill: currentColor; }
+  .fv-heart:hover { transform: scale(1.08); background: var(--coral-100); }
+  .fv-stats { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--stone); }
+  .fv-open { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 100px; border: 1px solid var(--stone); background: var(--sand); color: var(--graphite); font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1px; }
+  .fv-open i { width: 6px; height: 6px; border-radius: 50%; background: var(--ash); }
+  .fv-open.is-on { background: #d6ecde; border-color: #b5d8c1; color: #2d6b42; }
+  .fv-open.is-on i { background: var(--mint-500, #3fa66b); }
+  .fv-meta { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--graphite); }
+  .fv-meta small { margin-left: 4px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 400; color: var(--ash); }
+  .fv-meta.is-quiet { color: var(--ash); }
 
-  .fav-row {
-    display: flex; gap: 14px; align-items: stretch;
-    background: var(--paper); border: 1px solid var(--stone);
-    border-radius: 18px; overflow: hidden;
-    text-decoration: none; color: var(--ink);
-    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
-    position: relative;
-  }
-  .fav-row:hover {
-    transform: translateY(-2px);
-    border-color: var(--coral-100);
-    box-shadow: 0 10px 24px rgba(25,20,15,0.06);
-  }
-  .fav-row.is-closed { background: var(--sand); opacity: .8; }
+  .fv-empty { display: flex; flex-direction: column; align-items: center; padding: 60px 24px; text-align: center; }
+  .fv-empty-ic { width: 64px; height: 64px; margin-bottom: 14px; border-radius: 50%; background: var(--coral-50); border: 1px solid var(--coral-100); color: var(--coral-500); display: flex; align-items: center; justify-content: center; }
+  .fv-empty h2 { margin: 0 0 6px !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 18px; letter-spacing: -0.2px; color: var(--ink) !important; }
+  .fv-empty p { margin: 0 0 18px; max-width: 36ch; font-size: 13px; line-height: 18px; color: var(--ash); }
+  .fv-empty a { padding: 12px 22px; border-radius: 100px; background: var(--coral-500); color: var(--cream) !important; font-size: 11px; font-weight: 600; letter-spacing: .3px; }
 
-  .fav-photo {
-    width: 100px; flex-shrink: 0;
-    background: #e6ded0;
-    display: flex; align-items: center; justify-content: center;
-    color: var(--graphite); font-size: 30px; font-weight: 700;
-    font-family: 'Space Grotesk', sans-serif;
-  }
-  .fav-row.is-closed .fav-photo { background: #d8d3ca; color: var(--ash); }
+  .fv-toast { position: fixed; left: 16px; right: 16px; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); z-index: 70; max-width: 440px; margin: 0 auto; display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 16px; border-radius: 14px; background: var(--ink); color: var(--cream); font-size: 13px; box-shadow: 0 14px 36px -16px rgba(40,35,28,.6); transform: translateY(16px); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+  .fv-toast.is-on { opacity: 1; transform: none; pointer-events: auto; }
+  .fv-toast span { flex: 1; min-width: 0; }
+  .fv-toast button { border: 0; border-radius: 100px; padding: 9px 14px; background: rgba(255,255,255,.1); color: var(--coral-300, #f0a585); font-size: 13px; font-weight: 600; }
+  .fv-toast button:hover { background: rgba(255,255,255,.18); }
 
-  .fav-body { flex: 1; padding: 14px 16px; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
-  .fav-name { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .fav-addr { font-size: 12.5px; color: var(--graphite); display: flex; align-items: center; gap: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .fav-addr i { color: var(--coral-500); font-size: 10px; }
-  .fav-meta {
-    display: flex; align-items: center; gap: 8px;
-    margin-top: 8px; flex-wrap: wrap; font-size: 11.5px;
-  }
-  .fav-rating { display: inline-flex; align-items: center; gap: 4px; color: var(--graphite); font-weight: 600; }
-  .fav-rating i { color: var(--coral-500); font-size: 10px; }
-
-  .fav-unfav-btn {
-    position: absolute; top: 10px; right: 12px;
-    width: 32px; height: 32px; border-radius: 50%;
-    background: rgba(254,254,253,0.92);
-    border: 1px solid var(--coral-100);
-    color: var(--coral-500);
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; font-size: 13px;
-    transition: background .15s, color .15s;
-    z-index: 5;
-  }
-  .fav-unfav-btn:hover { background: var(--coral-500); color: var(--cream); border-color: var(--coral-500); }
-
-  .favs-empty {
-    text-align: center; padding: 60px 24px;
-    border: 1px solid var(--stone); border-radius: 20px;
-    background: var(--paper); margin-top: 18px;
-  }
-  .favs-empty-icon {
-    width: 64px; height: 64px; border-radius: 50%;
-    background: var(--coral-50); border: 1px solid var(--coral-100);
-    color: var(--coral-700);
-    display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 14px; font-size: 26px;
-  }
-  .favs-empty-title {
-    font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700; font-size: 22px;
-    color: var(--ink); margin-bottom: 8px;
-    letter-spacing: -0.3px;
-  }
-  .favs-empty-text {
-    font-size: 13.5px; color: var(--graphite);
-    margin-bottom: 18px; line-height: 1.55;
-    max-width: 380px; margin-left: auto; margin-right: auto;
+  @media (min-width: 720px) {
+    .fv-head { padding: 28px 32px 8px; }
+    .fv-hc h1 { font-size: 28px; letter-spacing: -0.6px; }
+    .fv-list { grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr)); gap: 14px; padding: 24px 32px 64px; }
+    .fv-card { padding: 18px; }
   }
 </style>
 
-<div class="favs-page">
-
-  <div class="favs-header">
-    <div class="favs-eyebrow">FAVORITOS</div>
-    <h1 class="favs-title">Lava-rápidos salvos</h1>
-    <% if @favorites_list.any? %>
-      <p class="favs-count"><%= @favorites_list.count %> <%= @favorites_list.count == 1 ? 'lava-rápido' : 'lava-rápidos' %> nos seus favoritos.</p>
-    <% end %>
+<div class="fv">
+  <div class="fv-wrap">
+    <div class="fv-head">
+      <a class="fv-btn" id="fv-back" href="/" aria-label="Voltar"><i data-feather="chevron-left" style="width:18px;height:18px"></i></a>
+      <div class="fv-hc"><small>SALVOS</small><h1>Favoritos</h1></div>
+      <span class="fv-count is-off" id="fv-count" aria-label="Quantidade de favoritos"></span>
+    </div>
+    <div id="fv-body"></div>
   </div>
-
-  <% if @favorites_list.any? %>
-    <div class="favs-list" id="favs-list">
-      <% @favorites_list.each do |fav| %>
-        <% cw         = fav.car_wash %>
-        <% rating     = @rating_map[cw.id] || { avg: 0, count: 0 } %>
-        <% today_oh   = cw.operating_hours.find { |oh| oh.day_of_week.to_i == @today_dow } %>
-        <% now_sp     = Time.current.in_time_zone("America/Sao_Paulo") %>
-        <% now_min    = now_sp.hour * 60 + now_sp.min %>
-        <% is_open    = false %>
-        <% if today_oh && today_oh.opens_at && today_oh.closes_at %>
-          <% opens  = today_oh.opens_at.hour  * 60 + today_oh.opens_at.min %>
-          <% closes = today_oh.closes_at.hour * 60 + today_oh.closes_at.min %>
-          <% is_open = now_min >= opens && now_min <= closes %>
-        <% end %>
-
-        <a href="<%= car_wash_path(cw) %>" class="fav-row <%= 'is-closed' unless is_open %>" data-cw-id="<%= cw.id %>">
-          <button type="button" class="fav-unfav-btn"
-                  onclick="event.preventDefault(); event.stopPropagation(); unfavorite(<%= cw.id %>, this);"
-                  aria-label="Remover dos favoritos">
-            <i class="fas fa-heart"></i>
-          </button>
-          <div class="fav-photo"><%= cw.name.first(2).upcase %></div>
-          <div class="fav-body">
-            <div class="fav-name"><%= cw.name %></div>
-            <div class="fav-addr">
-              <i class="fas fa-location-dot"></i>
-              <span><%= [cw.try(:bairro), cw.try(:cidade)].compact_blank.join(' · ').presence || cw.address.to_s %></span>
-            </div>
-            <div class="fav-meta">
-              <% if is_open %>
-                <span class="loov-pill loov-pill--success" style="font-size:9.5px;padding:2px 8px;">ABERTO</span>
-              <% elsif today_oh %>
-                <span class="loov-pill loov-pill--neutral" style="font-size:9.5px;padding:2px 8px;">ABRE <%= today_oh.opens_at.strftime("%H:%M") %></span>
-              <% else %>
-                <span class="loov-pill loov-pill--neutral" style="font-size:9.5px;padding:2px 8px;">FECHADO</span>
-              <% end %>
-              <% if rating[:count] > 0 %>
-                <span class="fav-rating"><i class="fas fa-star"></i><%= sprintf('%.1f', rating[:avg]) %> <span style="color:var(--ash);font-weight:500;">(<%= rating[:count] %>)</span></span>
-              <% end %>
-            </div>
-          </div>
-        </a>
-      <% end %>
-    </div>
-  <% else %>
-    <div class="favs-empty">
-      <div class="favs-empty-icon"><i class="fas fa-heart"></i></div>
-      <div class="favs-empty-title">Sem favoritos ainda</div>
-      <p class="favs-empty-text">
-        Toque no coração na página de um lava-rápido pra salvá-lo aqui.
-        Seus favoritos ficam acessíveis pra agendar de novo em segundos.
-      </p>
-      <a href="/" class="loov-btn-primary">
-        <i class="fas fa-magnifying-glass"></i> Explorar lava-rápidos
-      </a>
-    </div>
-  <% end %>
-
+  <%= render "shared/site_footer", audience: :client %>
+  <div class="fv-toast" id="fv-toast" role="status" aria-live="polite"><span id="fv-toast-t"></span><button type="button" id="fv-undo">Desfazer</button></div>
 </div>
 
 <script>
-function unfavorite(cwId, btn) {
-  if (btn.dataset.busy === '1') return;
-  btn.dataset.busy = '1';
-  const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
-  fetch('/client/favorites/' + cwId, {
-    method: 'DELETE',
-    headers: { 'X-CSRF-Token': csrf, 'Accept': 'application/json' }
-  })
-  .then(r => r.json())
-  .then(data => {
-    if (data.ok) {
-      const row = btn.closest('.fav-row');
-      if (row) {
-        row.style.transition = 'opacity .25s, transform .25s';
-        row.style.opacity = '0';
-        row.style.transform = 'translateX(20px)';
-        setTimeout(() => {
-          row.remove();
-          if (!document.querySelector('.fav-row')) {
-            window.location.reload();
-          }
-        }, 280);
-      }
-    } else {
-      btn.dataset.busy = '0';
-    }
-  })
-  .catch(() => { btn.dataset.busy = '0'; });
-}
+(function () {
+  var LIST = <%= raw json_escape(@payload.to_json) %>;
+  var CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content;
+  var QS = location.search;
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function icon(n, size, extra) { return window.feather && feather.icons[n] ? feather.icons[n].toSvg(Object.assign({ width: size, height: size }, extra || {})) : ''; }
+  // Horário de hoje compacto ("8–18h") ou "Fechado" — igual ao app.
+  function todayHours(list) {
+    if (!Array.isArray(list) || !list.length) return null;
+    var oh = list.filter(function (h) { return Number(h.day_of_week) === new Date().getDay(); })[0];
+    if (!oh || !oh.opens_at || !oh.closes_at) return 'Fechado';
+    function f(t) { var p = String(t).slice(0, 5).split(':'); var h = parseInt(p[0], 10); return p[1] === '00' ? String(h) : h + ':' + p[1]; }
+    return f(oh.opens_at) + '–' + f(oh.closes_at) + 'h';
+  }
+
+  function card(cw) {
+    var open = !!cw.open_now, n = Number(cw.reviews_count) || 0, avg = Number(cw.rating_avg) || 0;
+    var svcs = Array.isArray(cw.services) ? cw.services.length : 0, hrs = todayHours(cw.operating_hours);
+    var addr = [cw.bairro, cw.cidade].filter(Boolean).join(' · ') || cw.address || '—';
+    return '<a class="fv-card" href="/car_washes/' + cw.id + QS + '" data-card="' + cw.id + '">' +
+      '<div class="fv-top"><div class="fv-logo">' + LoovLogos.logoOf(cw) + '</div>' +
+        '<div class="fv-txt"><div class="fv-name">' + esc(cw.name) + '</div><div class="fv-addr">' + esc(addr) + '</div></div>' +
+        '<button type="button" class="fv-heart" data-remove="' + cw.id + '" aria-label="Tirar ' + esc(cw.name) + ' dos favoritos">' + icon('heart', 18) + '</button></div>' +
+      '<div class="fv-stats">' +
+        '<span class="fv-open' + (open ? ' is-on' : '') + '"><i></i>' + (open ? 'ABERTO' : 'FECHADO') + '</span>' +
+        (n > 0
+          ? '<span class="fv-meta">' + icon('star', 11, { color: 'var(--coral-500)' }) + avg.toFixed(1).replace('.', ',') + '<small>· ' + n + '</small></span>'
+          : '<span class="fv-meta is-quiet">' + icon('star', 11) + '—</span>') +
+        (hrs ? '<span class="fv-meta">' + icon('clock', 11) + hrs + '</span>' : '') +
+        (svcs ? '<span class="fv-meta">' + icon('grid', 11) + svcs + ' ' + (svcs === 1 ? 'serviço' : 'serviços') + '</span>' : '') +
+      '</div></a>';
+  }
+
+  function render() {
+    var c = $('fv-count');
+    c.textContent = LIST.length; c.classList.toggle('is-off', !LIST.length);
+    $('fv-body').innerHTML = LIST.length
+      ? '<div class="fv-list">' + LIST.map(card).join('') + '</div>'
+      : '<div class="fv-empty"><div class="fv-empty-ic">' + icon('heart', 28) + '</div><h2>Sem favoritos ainda</h2>' +
+        '<p>Abra um lava-rápido e toque no coração pra salvá-lo aqui — assim você agenda mais rápido na próxima.</p>' +
+        '<a href="/' + QS + '">EXPLORAR LAVA-RÁPIDOS</a></div>';
+  }
+
+  // Tirar: some na hora (otimista); se o servidor falhar, volta pro lugar.
+  // "Desfazer" refaz o favorito e devolve a loja na mesma posição.
+  var last = null, toastT = null;
+  function req(method, id) {
+    return fetch(method === 'DELETE' ? '/client/favorites/' + id : '/client/favorites', {
+      method: method, credentials: 'same-origin',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF },
+      body: method === 'POST' ? JSON.stringify({ car_wash_id: id }) : null
+    }).then(function (r) { if (!r.ok) throw 0; });
+  }
+  function toast(text, undo) {
+    $('fv-toast-t').textContent = text;
+    $('fv-undo').style.display = undo ? '' : 'none';
+    $('fv-toast').classList.add('is-on');
+    clearTimeout(toastT); toastT = setTimeout(function () { $('fv-toast').classList.remove('is-on'); last = null; }, 5000);
+  }
+  function remove(id) {
+    var idx = -1;
+    LIST.forEach(function (cw, i) { if (cw.id === id) idx = i; });
+    if (idx === -1) return;
+    var cw = LIST[idx], el = document.querySelector('[data-card="' + id + '"]');
+    last = { cw: cw, idx: idx };
+    if (el) el.classList.add('is-leaving');
+    setTimeout(function () {
+      LIST = LIST.filter(function (x) { return x.id !== id; }); render();
+      toast(cw.name + ' saiu dos favoritos', true);
+    }, el ? 200 : 0);
+    req('DELETE', id).catch(function () {
+      if (LIST.some(function (x) { return x.id === id; })) return;
+      LIST.splice(Math.min(idx, LIST.length), 0, cw); render();
+      toast('Não foi possível tirar dos favoritos.', false);
+    });
+  }
+  function undo() {
+    if (!last) return;
+    var l = last; last = null;
+    LIST.splice(Math.min(l.idx, LIST.length), 0, l.cw); render();
+    $('fv-toast').classList.remove('is-on');
+    req('POST', l.cw.id).catch(function () {
+      LIST = LIST.filter(function (x) { return x.id !== l.cw.id; }); render();
+      toast('Não foi possível desfazer.', false);
+    });
+  }
+
+  document.addEventListener('click', function (e) {
+    var t;
+    if ((t = e.target.closest('[data-remove]'))) { e.preventDefault(); e.stopPropagation(); remove(Number(t.dataset.remove)); return; }
+    if (e.target.closest('#fv-undo')) { undo(); return; }
+  });
+  // Voltar: se veio de dentro do site, volta de verdade; senão, home.
+  $('fv-back').href = '/' + QS;
+  $('fv-back').addEventListener('click', function (e) {
+    if (document.referrer && document.referrer.indexOf(location.origin) === 0 && history.length > 1) { e.preventDefault(); history.back(); }
+  });
+
+  if (window.feather) feather.replace();
+  render();
+})();
 </script>

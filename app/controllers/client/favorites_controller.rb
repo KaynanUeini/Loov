@@ -24,9 +24,13 @@ module Client
 
       @favorites_list = list
 
+      payload = list.map { |f| serialize(f.car_wash, @rating_map, @today_dow, now_min) }
+
       respond_to do |format|
-        format.html
-        format.json { render json: list.map { |f| serialize(f.car_wash, @rating_map, @today_dow, now_min) } }
+        # A página do site é o porte da tela Favoritos do app e lê o mesmo
+        # JSON, embutido nela.
+        format.html { @payload = payload }
+        format.json { render json: payload }
       end
     end
 
