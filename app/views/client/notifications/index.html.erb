@@ -1,215 +1,182 @@
+<%#
+  Notificações — porte da ClientNotificacoesScreen do app, com a mesma lista
+  (Client::NotificationsController#build_notifications) embutida na página.
+
+    · Cabeçalho CENTRAL / Notificações; a bolinha coral com o nº de não lidas
+      marca todas como lidas, e a faixa "N não lidas · MARCAR TODAS" também.
+    · Cartão: ícone e etiqueta pelo tipo (CONFIRMADA, RECUSADA, CANCELADA,
+      AVALIAR, MENSAGEM), tempo relativo, ponto coral se não lida; texto
+      longo abre em "VER DETALHES".
+    · Tocar marca como lida e leva pra Agenda; "Avalie seu atendimento" já
+      abre a tela de avaliação daquele atendimento (/appointments#avaliar-ID).
+%>
+<script src="/vendor/feather-4.29.2.min.js"></script>
+
 <style>
-  .notif-page { max-width: 760px; margin: 0 auto; padding: 24px 20px 80px; }
+  .loov-nav { background: var(--cream) !important; }
+  .nt { background: var(--cream); color: var(--ink); min-height: 100vh; padding-top: 60px; }
+  .nt *, .nt *::before, .nt *::after { box-sizing: border-box; }
+  .nt button { font-family: inherit; line-height: normal; cursor: pointer; }
+  .nt svg.feather { display: block; }
+  .nt a { text-decoration: none; }
+  .nt-wrap { width: 100%; max-width: 760px; margin: 0 auto; }
 
-  .notif-header { padding: 8px 0 20px; }
-  .notif-eyebrow {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; letter-spacing: 1.4px;
-    color: var(--ash); text-transform: uppercase;
-  }
-  .notif-title {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: clamp(28px, 5vw, 40px);
-    color: var(--ink); letter-spacing: -0.8px;
-    margin-top: 4px; font-weight: 700;
-  }
-  .notif-count {
-    font-size: 13.5px; color: var(--graphite);
-    margin-top: 6px;
-  }
-  .notif-actions {
-    display: flex; justify-content: flex-end;
-    margin-top: 12px;
-  }
-  .notif-mark-all {
-    background: transparent; border: none;
-    color: var(--coral-700);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; letter-spacing: 1.2px;
-    text-transform: uppercase; cursor: pointer;
-    padding: 6px 12px; border-radius: 100px;
-    transition: background .15s;
-  }
-  .notif-mark-all:hover { background: var(--coral-50); }
+  .nt-head { display: flex; align-items: center; padding: 8px 16px; }
+  .nt-btn { flex: 0 0 40px; height: 40px; border-radius: 50%; border: 0; background: var(--sand); color: var(--ink) !important; display: flex; align-items: center; justify-content: center; transition: background .15s; }
+  a.nt-btn:hover { background: var(--stone); }
+  .nt-hc { flex: 1; text-align: center; }
+  .nt-hc small { display: block; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; color: var(--coral-500); }
+  .nt-hc h1 { margin: 2px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 20px; letter-spacing: -0.3px; color: var(--ink) !important; }
+  .nt-count { flex: 0 0 auto; min-width: 40px; height: 40px; padding: 0 10px; border: 0; border-radius: 20px; background: var(--coral-500); color: var(--cream); font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; transition: transform .15s; }
+  .nt-count:hover { transform: scale(1.05); }
+  .nt-count.is-off { visibility: hidden; }
 
-  .notif-list { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+  .nt-strip { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 9px 16px; background: var(--coral-50); border-top: 1px solid var(--coral-100); border-bottom: 1px solid var(--coral-100); }
+  .nt-strip.is-off { display: none; }
+  .nt-strip i { width: 6px; height: 6px; border-radius: 50%; background: var(--coral-500); }
+  .nt-strip span { flex: 1; font-size: 12px; font-weight: 600; color: var(--coral-700); }
+  .nt-strip button { padding: 9px 12px; border: 1px solid var(--coral-500); border-radius: 100px; background: transparent; color: var(--coral-700); font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: .6px; transition: background .15s; }
+  .nt-strip button:hover { background: var(--coral-100); }
+  .nt-strip button[disabled] { opacity: .6; cursor: default; }
 
-  .notif-card {
-    display: flex; gap: 14px;
-    padding: 16px; background: var(--paper);
-    border: 1px solid var(--stone); border-radius: 16px;
-    transition: border-color .15s, transform .15s, box-shadow .15s;
-    position: relative;
-  }
-  .notif-card.unread { border-color: var(--coral-100); background: var(--coral-50); }
-  .notif-card.unread::before {
-    content: ''; position: absolute;
-    top: 14px; right: 14px;
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--coral-500);
-  }
+  .nt-list { display: grid; gap: 10px; padding: 16px 16px 48px; }
+  .nt-card { background: var(--paper); border: 1px solid var(--stone); border-radius: 16px; padding: 14px; box-shadow: 0 2px 6px -4px rgba(40,35,28,.2); transition: border-color .15s, box-shadow .2s; }
+  .nt-card:hover { border-color: var(--ink); box-shadow: 0 12px 28px -22px rgba(40,35,28,.55); }
+  .nt-card.is-unread { border-color: var(--coral-100); }
+  .nt-top { display: flex; align-items: flex-start; gap: 12px; width: 100%; padding: 0; border: 0; background: transparent; text-align: left; color: var(--ink); }
+  .nt-ic { flex: 0 0 36px; height: 36px; border-radius: 50%; border: 1px solid; display: flex; align-items: center; justify-content: center; }
+  .nt-body { flex: 1; min-width: 0; }
+  .nt-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+  .nt-tag { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1.2px; }
+  .nt-time { display: flex; align-items: center; gap: 6px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ash); white-space: nowrap; }
+  .nt-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--coral-500); }
+  .nt-title { margin-bottom: 2px; font-size: 14px; font-weight: 600; }
+  .nt-desc { font-size: 12px; line-height: 17px; color: var(--graphite); }
+  .nt-card:not(.is-open) .nt-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nt-card:not(.is-open) .nt-desc { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .nt-more { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin-top: 10px; padding: 9px 0 0; border: 0; border-top: 1px solid var(--stone); background: transparent; color: var(--coral-700); font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.2px; }
+  .nt-more:hover { color: var(--coral-500); }
 
-  .notif-icon {
-    width: 42px; height: 42px; flex-shrink: 0;
-    border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px;
-  }
-  .notif-icon.appt-confirmed { background: #dceaf3; color: #2a5f8a; border: 1px solid #b5cee0; }
-  .notif-icon.appt-rejected,
-  .notif-icon.appt-cancelled { background: #fdecec; color: var(--rose-500); border: 1px solid #f5cccc; }
-  .notif-icon.review-available { background: var(--coral-50); color: var(--coral-700); border: 1px solid var(--coral-100); }
-  .notif-icon.owner-message { background: #fbe2c0; color: #7a4814; border: 1px solid #f0d0a0; }
-  .notif-icon.default { background: var(--sand); color: var(--graphite); border: 1px solid var(--stone); }
+  .nt-empty { display: flex; flex-direction: column; align-items: center; padding: 60px 20px; text-align: center; }
+  .nt-empty-ic { width: 64px; height: 64px; margin-bottom: 14px; border-radius: 50%; background: var(--coral-50); border: 1px solid var(--coral-100); color: var(--coral-500); display: flex; align-items: center; justify-content: center; }
+  .nt-empty h2 { margin: 0 0 4px !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 18px; letter-spacing: -0.2px; color: var(--ink) !important; }
+  .nt-empty p { margin: 0; font-size: 13px; line-height: 18px; color: var(--ash); }
 
-  .notif-body { flex: 1; min-width: 0; padding-right: 16px; }
-  .notif-card-title {
-    font-family: 'Inter', sans-serif;
-    font-size: 14px; font-weight: 600;
-    color: var(--ink); margin-bottom: 3px;
-  }
-  .notif-desc {
-    font-size: 13px; color: var(--graphite);
-    line-height: 1.5;
-  }
-  .notif-when {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10.5px; letter-spacing: 0.4px;
-    color: var(--ash); margin-top: 6px;
-  }
-
-  .notif-empty {
-    text-align: center; padding: 60px 24px;
-    border: 1px solid var(--stone); border-radius: 20px;
-    background: var(--paper); margin-top: 18px;
-  }
-  .notif-empty-icon {
-    width: 64px; height: 64px; border-radius: 50%;
-    background: var(--coral-50); border: 1px solid var(--coral-100);
-    color: var(--coral-700);
-    display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 14px; font-size: 26px;
-  }
-  .notif-empty-title {
-    font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700; font-size: 22px;
-    color: var(--ink); margin-bottom: 8px;
-    letter-spacing: -0.3px;
-  }
-  .notif-empty-text {
-    font-size: 13.5px; color: var(--graphite);
-    line-height: 1.55;
-    max-width: 380px; margin-left: auto; margin-right: auto;
+  @media (min-width: 720px) {
+    .nt-head { padding: 28px 32px 8px; }
+    .nt-hc h1 { font-size: 28px; letter-spacing: -0.6px; }
+    .nt-strip { margin: 16px 32px 0; border: 1px solid var(--coral-100); border-radius: 14px; }
+    .nt-list { padding: 20px 32px 64px; gap: 12px; }
+    .nt-card { padding: 16px 18px; }
   }
 </style>
 
-<div class="notif-page">
-
-  <div class="notif-header">
-    <div class="notif-eyebrow">NOTIFICAÇÕES</div>
-    <h1 class="notif-title">Suas atualizações</h1>
-    <% unread_count = @notifications.count { |n| !n[:read] } %>
-    <% if @notifications.any? %>
-      <p class="notif-count">
-        <%= @notifications.count %> <%= @notifications.count == 1 ? 'notificação' : 'notificações' %><% if unread_count > 0 %> · <strong style="color:var(--coral-700);"><%= unread_count %> não <%= unread_count == 1 ? 'lida' : 'lidas' %></strong><% end %>.
-      </p>
-      <% if unread_count > 0 %>
-        <div class="notif-actions">
-          <button type="button" class="notif-mark-all" onclick="markAllRead(this)">
-            <i class="fas fa-check-double" style="margin-right:5px;"></i>MARCAR TODAS COMO LIDAS
-          </button>
-        </div>
-      <% end %>
-    <% end %>
+<div class="nt">
+  <div class="nt-wrap">
+    <div class="nt-head">
+      <a class="nt-btn" id="nt-back" href="/users/edit" aria-label="Voltar"><i data-feather="chevron-left" style="width:18px;height:18px"></i></a>
+      <div class="nt-hc"><small>CENTRAL</small><h1>Notificações</h1></div>
+      <button type="button" class="nt-count is-off" id="nt-count" data-markall aria-label="Marcar todas como lidas"></button>
+    </div>
+    <div class="nt-strip is-off" id="nt-strip"><i></i><span id="nt-strip-t"></span><button type="button" data-markall>MARCAR TODAS</button></div>
+    <div id="nt-body"></div>
   </div>
-
-  <% if @notifications.any? %>
-    <div class="notif-list" id="notif-list">
-      <% @notifications.each do |n| %>
-        <% icon_class = case n[:type]
-            when 'appointment_confirmed' then 'appt-confirmed'
-            when 'appointment_rejected'  then 'appt-rejected'
-            when 'appointment_cancelled' then 'appt-cancelled'
-            when 'review_available'      then 'review-available'
-            when 'owner_message'         then 'owner-message'
-            else 'default' end %>
-        <% icon_fa = case n[:type]
-            when 'appointment_confirmed' then 'fa-calendar-check'
-            when 'appointment_rejected'  then 'fa-calendar-xmark'
-            when 'appointment_cancelled' then 'fa-calendar-xmark'
-            when 'review_available'      then 'fa-star'
-            when 'owner_message'         then 'fa-message'
-            else 'fa-bell' end %>
-        <% time_str = begin
-            t = Time.iso8601(n[:created_at]).in_time_zone("America/Sao_Paulo")
-            diff = (Time.current - t).to_i
-            if diff < 60 then 'agora'
-            elsif diff < 3600 then "há #{diff / 60}min"
-            elsif diff < 86400 then "há #{diff / 3600}h"
-            elsif diff < 604800 then "há #{diff / 86400}d"
-            else t.strftime("%d/%m · %H:%M") end
-          rescue
-            ''
-          end %>
-
-        <div class="notif-card <%= 'unread' unless n[:read] %>" data-notif-id="<%= n[:id] %>">
-          <div class="notif-icon <%= icon_class %>">
-            <i class="fas <%= icon_fa %>"></i>
-          </div>
-          <div class="notif-body">
-            <div class="notif-card-title"><%= n[:title] %></div>
-            <div class="notif-desc"><%= n[:desc] %></div>
-            <% if time_str.present? %>
-              <div class="notif-when"><%= time_str %></div>
-            <% end %>
-          </div>
-        </div>
-      <% end %>
-    </div>
-  <% else %>
-    <div class="notif-empty">
-      <div class="notif-empty-icon"><i class="fas fa-bell"></i></div>
-      <div class="notif-empty-title">Tudo em dia</div>
-      <p class="notif-empty-text">
-        Você não tem notificações novas. Vamos te avisar aqui sobre confirmações,
-        cancelamentos, mensagens dos lava-rápidos e quando puder avaliar.
-      </p>
-    </div>
-  <% end %>
-
+  <%= render "shared/site_footer", audience: :client %>
 </div>
 
 <script>
-function markAllRead(btn) {
-  if (btn.dataset.busy === '1') return;
-  btn.dataset.busy = '1';
-  const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
-  fetch('/client/notifications/read_all', {
-    method: 'POST',
-    headers: { 'X-CSRF-Token': csrf, 'Accept': 'application/json' }
-  })
-  .then(r => r.json())
-  .then(() => {
-    document.querySelectorAll('.notif-card.unread').forEach(c => c.classList.remove('unread'));
-    btn.style.opacity = '0.4';
-    btn.disabled = true;
-  })
-  .catch(() => { btn.dataset.busy = '0'; });
-}
+(function () {
+  var LIST = <%= raw json_escape(@notifications.to_json) %>;
+  var CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content;
+  // Mesma tabela do app (TYPE_META).
+  var TYPE_META = {
+    appointment_confirmed: { icon: 'check-circle',   color: 'var(--mint-500, #3fa66b)', bg: '#d6ecde',        border: '#b5d8c1',          label: 'CONFIRMADA' },
+    appointment_rejected:  { icon: 'x-circle',       color: 'var(--rose-500, #c0392b)', bg: '#fdecec',        border: '#f5cccc',          label: 'RECUSADA' },
+    appointment_cancelled: { icon: 'x-circle',       color: 'var(--graphite)',          bg: 'var(--sand)',    border: 'var(--stone)',     label: 'CANCELADA' },
+    review_available:      { icon: 'star',           color: 'var(--coral-500)',         bg: 'var(--coral-50)', border: 'var(--coral-100)', label: 'AVALIAR' },
+    owner_message:         { icon: 'message-circle', color: 'var(--coral-500)',         bg: 'var(--coral-50)', border: 'var(--coral-100)', label: 'MENSAGEM' }
+  };
+  var FALLBACK = { icon: 'bell', color: 'var(--graphite)', bg: 'var(--sand)', border: 'var(--stone)', label: 'AVISO' };
+  var open = {}, marking = false;
 
-// Marca individual como lida ao clicar no card
-document.querySelectorAll('.notif-card').forEach(card => {
-  card.addEventListener('click', function() {
-    if (!this.classList.contains('unread')) return;
-    const id = this.dataset.notifId;
-    if (!id) return;
-    const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
-    fetch('/client/notifications/' + encodeURIComponent(id) + '/read', {
-      method: 'PATCH',
-      headers: { 'X-CSRF-Token': csrf, 'Accept': 'application/json' }
-    }).catch(() => {});
-    this.classList.remove('unread');
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function icon(n, size, extra) { return window.feather && feather.icons[n] ? feather.icons[n].toSvg(Object.assign({ width: size, height: size }, extra || {})) : ''; }
+  function relTime(iso) {
+    if (!iso) return '';
+    var t = new Date(iso), s = Math.floor((Date.now() - t.getTime()) / 1000);
+    if (s < 60) return 'agora';
+    if (s < 3600) return 'há ' + Math.floor(s / 60) + ' min';
+    if (s < 86400) return 'há ' + Math.floor(s / 3600) + 'h';
+    if (s < 604800) return 'há ' + Math.floor(s / 86400) + 'd';
+    return t.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  }
+  function post(url, method) {
+    return fetch(url, { method: method, credentials: 'same-origin', headers: { Accept: 'application/json', 'X-CSRF-Token': CSRF } });
+  }
+
+  function card(n) {
+    var m = TYPE_META[n.type] || FALLBACK, desc = n.desc || '', long = desc.length > 80, isOpen = !!open[n.id];
+    return '<article class="nt-card' + (n.read ? '' : ' is-unread') + (isOpen ? ' is-open' : '') + '">' +
+      '<button type="button" class="nt-top" data-tap="' + esc(n.id) + '">' +
+        '<span class="nt-ic" style="background:' + m.bg + ';border-color:' + m.border + ';color:' + m.color + '">' + icon(m.icon, 15) + '</span>' +
+        '<span class="nt-body"><span class="nt-meta"><span class="nt-tag" style="color:' + m.color + '">' + m.label + '</span>' +
+          '<span class="nt-time">' + relTime(n.created_at) + (n.read ? '' : '<span class="nt-dot" aria-label="não lida"></span>') + '</span></span>' +
+          '<span class="nt-title" style="display:block">' + esc(n.title) + '</span>' +
+          '<span class="nt-desc">' + esc(desc) + '</span></span>' +
+      '</button>' +
+      (long ? '<button type="button" class="nt-more" data-more="' + esc(n.id) + '" aria-expanded="' + isOpen + '">' + (isOpen ? 'OCULTAR DETALHES' : 'VER DETALHES') + icon(isOpen ? 'chevron-up' : 'chevron-down', 14) + '</button>' : '') +
+    '</article>';
+  }
+
+  function render() {
+    var unread = LIST.filter(function (n) { return !n.read; }).length;
+    var c = $('nt-count');
+    c.classList.toggle('is-off', !unread);
+    c.innerHTML = marking ? '…' : unread;
+    $('nt-strip').classList.toggle('is-off', !unread);
+    $('nt-strip-t').textContent = unread + (unread === 1 ? ' não lida' : ' não lidas');
+    $('nt-strip').querySelector('button').disabled = marking;
+    $('nt-body').innerHTML = LIST.length
+      ? '<div class="nt-list">' + LIST.map(card).join('') + '</div>'
+      : '<div class="nt-empty"><div class="nt-empty-ic">' + icon('bell-off', 28) + '</div><h2>Nada por aqui</h2><p>Você está em dia — sem notificações pendentes.</p></div>';
+  }
+
+  // Tocar: marca como lida (otimista) e leva pra Agenda — ou direto pra
+  // avaliação, quando é o aviso "Avalie seu atendimento".
+  function tap(id) {
+    var n = LIST.filter(function (x) { return x.id === id; })[0]; if (!n) return;
+    var go = null;
+    if (n.type === 'review_available') { var m = /-(\d+)$/.exec(n.id); go = '/appointments' + location.search + (m ? '#avaliar-' + m[1] : ''); }
+    else if (/^appointment_/.test(n.type || '')) go = '/appointments' + location.search;
+    if (!n.read) {
+      n.read = true; render();
+      var req = post('/client/notifications/' + encodeURIComponent(n.id) + '/read', 'PATCH').catch(function () {});
+      // Espera a marcação antes de sair, senão a página seguinte ainda a vê não lida.
+      if (go) { req.then(function () { location.href = go; }); return; }
+    }
+    if (go) location.href = go;
+  }
+  function markAll() {
+    if (marking || LIST.every(function (n) { return n.read; })) return;
+    marking = true; render();
+    post('/client/notifications/read_all', 'POST')
+      .then(function (r) { if (r.ok) LIST.forEach(function (n) { n.read = true; }); })
+      .catch(function () {})
+      .then(function () { marking = false; render(); });
+  }
+
+  document.addEventListener('click', function (e) {
+    var t;
+    if (e.target.closest('[data-markall]')) { markAll(); return; }
+    if ((t = e.target.closest('[data-more]'))) { var id = t.dataset.more; open[id] = !open[id]; render(); return; }
+    if ((t = e.target.closest('[data-tap]'))) { tap(t.dataset.tap); return; }
   });
-});
+  $('nt-back').addEventListener('click', function (e) {
+    if (document.referrer && document.referrer.indexOf(location.origin) === 0 && history.length > 1) { e.preventDefault(); history.back(); }
+  });
+
+  if (window.feather) feather.replace();
+  render();
+})();
 </script>

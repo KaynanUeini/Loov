@@ -249,7 +249,7 @@
           <div class="ac-formerr is-off" id="vh-err"></div>
         </div>
       </div>
-      <div class="sub-bar"><button type="button" class="ac-save" id="vh-save"><i data-feather="truck" style="width:17px;height:17px"></i>Salvar veículo</button></div>
+      <div class="sub-bar"><button type="button" class="ac-save" id="vh-save">Salvar veículo</button></div>
     </div>
   </section>
 
@@ -333,6 +333,13 @@
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function icon(n, size, extra) { return window.feather && feather.icons[n] ? feather.icons[n].toSvg(Object.assign({ width: size, height: size }, extra || {})) : ''; }
+  // Carro de frente, no traço dos ícones Feather — o Feather não tem carro
+  // (o "truck" lia como caminhão). Mesmo desenho do car-outline do app.
+  function carIcon(size) {
+    return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      '<path d="M5 11l1.6-4.2A2 2 0 0 1 8.5 5.5h7a2 2 0 0 1 1.9 1.3L19 11"/><rect x="3" y="11" width="18" height="6" rx="2"/>' +
+      '<path d="M5.5 17v2M18.5 17v2"/><circle cx="7.5" cy="14" r="1"/><circle cx="16.5" cy="14" r="1"/></svg>';
+  }
   function maskPhone(t) {
     var d = String(t || '').replace(/\D/g, '').slice(0, 11);
     if (d.length <= 2) return d.length ? '(' + d : '';
@@ -380,7 +387,7 @@
     $('ac-n-fav').textContent = f; $('ac-l-fav').textContent = f === 1 ? 'FAVORITO' : 'FAVORITOS';
     $('ac-fav-sub').textContent = f > 0 ? f + ' lava-rápido' + (f > 1 ? 's' : '') : 'Nenhum favorito';
     var p = A.vehicle_plate, m = A.vehicle_model;
-    $('ac-veh').innerHTML = '<span class="ac-veh-ic">' + icon('truck', 20) + '</span><span class="ac-veh-t">' +
+    $('ac-veh').innerHTML = '<span class="ac-veh-ic">' + carIcon(20) + '</span><span class="ac-veh-t">' +
       (p ? '<b class="is-plate">' + esc(fmtPlate(p)) + '</b><small>' + esc(m || 'Toque para completar o modelo') + '</small>'
          : '<b>' + esc(m || 'Nenhum veículo cadastrado') + '</b><small>' + (m ? 'Falta cadastrar a placa' : 'Toque para adicionar modelo e placa') + '</small>') +
       '</span><span class="ac-veh-go">' + icon(p ? 'chevron-right' : 'plus', p ? 18 : 16) + '</span>';
@@ -486,7 +493,7 @@
     else if (!PLATE_RE.test(vh.plate)) e.plate = 'Placa inválida (ex: ABC1D23 ou ABC-1234)';
     setVhErr(e); $('vh-err').classList.add('is-off');
     if (Object.keys(e).length) return;
-    var btn = $('vh-save'), label = icon('truck', 17) + 'Salvar veículo';
+    var btn = $('vh-save'), label = carIcon(17) + 'Salvar veículo';
     busy(btn, true);
     patchProfile({ full_name: A.full_name || '', phone: A.phone || '', cpf: A.cpf || '', vehicle_model: vh.model.trim(), vehicle_plate: vh.plate })
       .then(function (res) {
@@ -527,6 +534,7 @@
 
   if (window.feather) feather.replace();
   renderMain();
+  $('vh-save').innerHTML = carIcon(17) + 'Salvar veículo';
   loadExtras();
   var hash = location.hash.replace('#', '');
   // Senha errada: o Devise devolve a página no endereço do POST (/users), que
