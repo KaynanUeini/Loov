@@ -367,7 +367,7 @@
     loading: true, error: null,
     categories: [], filter: null,
     search: '', searchMode: false, searchConfirmed: false,
-    visible: 12,
+    visible: 0, // definido em boot() conforme a largura (pageSize)
     recents: readRecents()
   };
 
@@ -699,6 +699,7 @@
       '</div></a>';
   }
   var wideMQ = window.matchMedia('(min-width: 640px)');
+  function pageSize() { return wideMQ.matches ? 12 : 9; }
 
   // ── Render: lista ─────────────────────────────────────────────────────────
   function filteredShops() {
@@ -751,11 +752,16 @@
       return;
     }
     $('ch-count').textContent = list.length + (list.length === 1 ? ' lava-rápido' : ' lava-rápidos');
+    var shown = list.slice(0, state.visible), rest = list.length - shown.length;
+    var more = rest > 0
+      ? '<div class="ch-more"><button type="button" id="ch-more">Mostrar mais · ' + rest + (rest === 1 ? ' restante' : ' restantes') + '</button></div>'
+      : '<div style="height:32px"></div>';
+    // Celular: as linhas do app, também em lotes — com 90 lojas de uma vez o
+    // rodapé ficava a dezenas de telas de distância.
     if (!wideMQ.matches) {
-      el.innerHTML = '<div class="ch-grid">' + list.map(shopRow).join('') + '</div>';
+      el.innerHTML = '<div class="ch-grid">' + shown.map(shopRow).join('') + '</div>' + more;
       return;
     }
-    var shown = list.slice(0, state.visible), rest = list.length - shown.length;
     // Destaque só na lista "pura" do primeiro aberto mais perto: com ordem
     // por nota, o primeiro é o mais bem avaliado — o selo diz o que é.
     var first = shown[0], eyebrow = null;
@@ -763,7 +769,7 @@
       eyebrow = state.filter === 'melhores avaliados' ? 'Mais bem avaliado' : 'Aberto e mais perto';
     }
     el.innerHTML = '<div class="ch-cards">' + shown.map(function (cw, i) { return shopCard(cw, i === 0 && !!eyebrow, i === 0 ? eyebrow : null); }).join('') + '</div>' +
-      (rest > 0 ? '<div class="ch-more"><button type="button" id="ch-more">Mostrar mais · ' + rest + (rest === 1 ? ' restante' : ' restantes') + '</button></div>' : '<div style="height:32px"></div>');
+      more;
   }
 
   // ── Render: busca ─────────────────────────────────────────────────────────
@@ -860,14 +866,14 @@
     if ((t = e.target.closest('[data-cat]'))) {
       var k = t.dataset.cat, i = state.categories.indexOf(k);
       if (i === -1) state.categories.push(k); else state.categories.splice(i, 1);
-      state.visible = 12; renderCategories(); renderList(); return;
+      state.visible = pageSize(); renderCategories(); renderList(); return;
     }
-    if ((t = e.target.closest('[data-filter]'))) { state.filter = state.filter === t.dataset.filter ? null : t.dataset.filter; state.visible = 12; renderFilters(); renderList(); return; }
+    if ((t = e.target.closest('[data-filter]'))) { state.filter = state.filter === t.dataset.filter ? null : t.dataset.filter; state.visible = pageSize(); renderFilters(); renderList(); return; }
     if (e.target.closest('#ch-filter-clear')) { state.filter = null; renderFilters(); renderList(); return; }
     if (e.target.closest('#ch-cat-clear')) { state.categories = []; renderCategories(); renderList(); return; }
     if (e.target.closest('#ch-clear-all')) { state.categories = []; state.filter = null; renderCategories(); renderFilters(); renderList(); return; }
     if (e.target.closest('#ch-retry')) { load(); return; }
-    if (e.target.closest('#ch-more')) { state.visible += 12; renderList(); return; }
+    if (e.target.closest('#ch-more')) { state.visible += pageSize(); renderList(); return; }
     if (e.target.closest('#ch-lm-prev')) { pageShelf(-1); return; }
     if (e.target.closest('#ch-lm-next')) { pageShelf(1); return; }
   });
@@ -886,7 +892,7 @@
   $('ch-loc').addEventListener('click', function () { if (!state.coords && !state.locating) { state.locating = true; renderLoc(); initLocation(); } });
 
   window.addEventListener('resize', updateArrows, { passive: true });
-  wideMQ.addEventListener('change', function () { renderList(); if (state.searchMode) renderSearch(); });
+  wideMQ.addEventListener('change', function () { state.visible = Math.max(state.visible, pageSize()); renderList(); if (state.searchMode) renderSearch(); });
   // Contagem regressiva do Last minute: re-render a cada 15s (como o app).
   setInterval(function () { renderLastMinute(); renderGreeting(); }, 15000);
   // Voltar pra aba recarrega (o app recarrega ao ganhar foco).
@@ -894,6 +900,7 @@
 
   function boot() {
     if (window.feather) feather.replace({ 'stroke-width': 2 });
+    state.visible = pageSize();
     renderGreeting(); renderLoc(); renderCategories(); renderFilters(); renderList();
     initLocation();
   }
