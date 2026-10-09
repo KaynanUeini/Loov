@@ -8,8 +8,8 @@
       busca nunca some ao rolar).
     · Modo busca (Spotify): recentes guardados no navegador; ao vivo por
       nome/bairro, e por serviço só com 5+ letras ("lava" acharia todos).
-    · Last minute: vagas nos próximos 30 min, cards escuros com horário e
-      distância, contagem regressiva que se atualiza sozinha.
+    · Last minute: horário em comum numa pílula ao lado do título, legenda
+      "começa em X min · N vagas"; cards escuros com preço e distância.
     · Categorias com seleção múltipla (E, não OU) e filtros de ordem.
     · Perto de você: lista estilo Spotify, favoritar otimista com reversão.
 
@@ -78,6 +78,12 @@
   .ch-lm-name { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; line-height: 18px; letter-spacing: -0.3px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .ch-lm-sub { margin-top: 3px; font-size: 11px; color: rgba(250,250,246,.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ch-lm-cd { color: var(--coral-500); font-weight: 600; }
+  /* Horário em comum ao lado do título: o dado vira objeto que o olho acha
+     sozinho (Uber "chega às", Apple Wallet). O card fica com o que muda. */
+  .ch-lm-pill { display: inline-flex; align-items: center; gap: 5px; margin-left: 2px; padding: 4px 10px; border-radius: 999px; background: var(--coral-500); color: var(--cream); font-size: 14px; font-weight: 600; letter-spacing: -0.2px; }
+  .ch-lm-pill[hidden] { display: none; }
+  .ch-lm-helper-strong { color: var(--coral-500); font-weight: 600; }
+  .ch-lm-cur { font-size: 16px; line-height: 1; letter-spacing: 0; font-weight: 600; }
   .ch-lm-rate { position: absolute; top: 12px; right: 12px; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 100px; background: rgba(250,250,246,.08); font-size: 11px; font-weight: 600; }
   .ch-lm-rate.is-new { color: rgba(250,250,246,.55); font-weight: 400; letter-spacing: .3px; }
   .ch-shelf { position: relative; }
@@ -304,7 +310,7 @@
     <div id="ch-home-view" class="ch-home-view">
       <section id="ch-lm" class="is-off">
         <div class="ch-sec-head">
-          <h2 class="ch-sec-title"><i data-feather="zap" style="width:18px;height:18px;color:var(--coral-500)"></i>Last minute</h2>
+          <h2 class="ch-sec-title"><i data-feather="zap" style="width:18px;height:18px;color:var(--coral-500)"></i>Last minute<span class="ch-lm-pill" id="ch-lm-pill" hidden></span></h2>
           <div style="display:flex;align-items:center;gap:16px">
             <a href="/disponivel" class="ch-link" id="ch-lm-all">Ver todos →</a>
             <div class="ch-shelf-nav" id="ch-lm-nav">
@@ -313,7 +319,7 @@
             </div>
           </div>
         </div>
-        <p class="ch-helper">Vagas abertas nos próximos 30 min perto de você.</p>
+        <p class="ch-helper" id="ch-lm-helper">Vagas abertas nos próximos 30 min perto de você.</p>
         <div id="ch-lm-body"></div>
       </section>
 
@@ -496,12 +502,42 @@
       return t > now;
     });
   }
+  // Horário mais frequente entre as vagas — sobe pro cabeçalho. Card só repete
+  // horário quando foge dele (mesma regra da página Disponível e do app).
+  function commonSlot(list) {
+    var count = {}, best = null;
+    list.forEach(function (it) {
+      var k = it.slots && it.slots[0];
+      if (!k) return;
+      count[k] = (count[k] || 0) + 1;
+      if (!best || count[k] > count[best]) best = k;
+    });
+    return best;
+  }
+  function hm(d) { return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+  function lmPrice(it) {
+    var mp = Number(it.min_price);
+    var p = mp > 0 ? mp : Math.min.apply(null, (it.services || []).map(function (x) { return Number(x.price); }).filter(function (n) { return n > 0; }));
+    if (!isFinite(p)) return null;
+    return Math.round(p) === p ? String(p) : p.toFixed(2).replace('.', ',');
+  }
   function renderLastMinute() {
     var sec = $('ch-lm');
     sec.classList.toggle('is-off', !state.coords);
     if (!state.coords) return;
     $('ch-lm-all').href = '/disponivel' + qs();
     var list = vagasAgora(), body = $('ch-lm-body');
+    var comum = commonSlot(list), pill = $('ch-lm-pill'), helper = $('ch-lm-helper');
+    if (comum) {
+      pill.innerHTML = icon('clock', 12) + hm(new Date(comum));
+      pill.hidden = false;
+      var cm = Math.max(0, Math.ceil((new Date(comum).getTime() - Date.now()) / 60000));
+      helper.innerHTML = '<span class="ch-lm-helper-strong">' + (cm <= 0 ? 'Começa agora' : 'Começa em ' + cm + ' min') + '</span> · ' +
+        list.length + (list.length === 1 ? ' vaga' : ' vagas') + ' perto de você';
+    } else {
+      pill.hidden = true;
+      helper.textContent = 'Vagas abertas nos próximos 30 min perto de você.';
+    }
     var keepScroll = $('ch-lm-track') ? $('ch-lm-track').scrollLeft : 0;
     if (!list.length) {
       $('ch-lm-nav').style.visibility = 'hidden';
@@ -509,22 +545,21 @@
         '<p>Nenhum lava-rápido perto de você tem vaga livre nos próximos 30 minutos. Os que estão abertos continuam logo abaixo, com horário pra escolher.</p></div>';
       return;
     }
-    var now = Date.now();
     body.innerHTML = '<div class="ch-hscroll" id="ch-lm-track">' + list.map(function (it) {
       var cw = it.car_wash, slot = new Date(it.slots[0]);
-      var time = slot.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-      var mins = Math.ceil((slot.getTime() - now) / 60000);
+      var time = hm(slot), differs = it.slots[0] !== comum;
+      var price = lmPrice(it);
       var dist = fmtDistance(cw.distance_km);
       var reviews = Number(cw.reviews_count) || 0, rating = Number(cw.rating_avg) || 0;
       var street = cw.logradouro ? cw.logradouro + (cw.numero ? ', ' + cw.numero : '') : null;
       var href = '/disponivel?car_wash_id=' + cw.id + (state.coords ? '&latitude=' + state.coords.latitude + '&longitude=' + state.coords.longitude : '');
       return '<a class="ch-lm" href="' + href + '">' +
-        '<div class="ch-lm-stats"><div class="ch-lm-stat"><div class="ch-lm-val">' + esc(time || '—') + '</div><div class="ch-lm-lab">HORÁRIO</div></div>' +
+        '<div class="ch-lm-stats"><div class="ch-lm-stat"><div class="ch-lm-val">' + (price ? '<span class="ch-lm-cur">R$ </span>' + esc(price) : '—') + '</div><div class="ch-lm-lab">A PARTIR DE</div></div>' +
         '<div class="ch-lm-div"></div><div class="ch-lm-stat"><div class="ch-lm-val">' + esc(dist || '—') + '</div><div class="ch-lm-lab">DISTÂNCIA</div></div></div>' +
         '<div class="ch-lm-shop"><div class="ch-lm-logo">' + logoOf(cw) + '</div><div class="ch-lm-text">' +
           '<div class="ch-lm-name">' + esc(cw.name) + '</div>' +
           (street ? '<div class="ch-lm-sub">' + esc(street) + '</div>' : '') +
-          '<div class="ch-lm-sub">' + esc(cw.bairro || cw.cidade || '—') + (mins > 0 && mins < 1000 ? ' · <span class="ch-lm-cd">em ' + mins + 'min</span>' : '') + '</div>' +
+          '<div class="ch-lm-sub">' + esc(cw.bairro || cw.cidade || '—') + (differs ? ' · <span class="ch-lm-cd">às ' + time + '</span>' : '') + '</div>' +
         '</div></div>' +
         '<div class="ch-lm-rate' + (reviews ? '' : ' is-new') + '">' + icon('star', 10, { color: reviews ? 'var(--coral-500)' : 'rgba(250,250,246,.45)' }) +
           (reviews ? rating.toFixed(1).replace('.', ',') : 'Novo') + '</div>' +
