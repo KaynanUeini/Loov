@@ -13,6 +13,13 @@ module Client
     end
 
     def edit
+      # A página de perfil do site agora é a Conta (/users/edit, porte da tela
+      # do app). Aqui fica só o cartão — aberto por "Pagamentos" na Conta ou
+      # pelo checkout do Disponível (add_card).
+      if request.format.html? && !payment_tab?
+        redirect_to edit_user_registration_path(request.query_parameters.slice("latitude", "longitude")) and return
+      end
+
       if current_user.stripe_customer_id.present? || params[:add_card]
         customer = current_user.stripe_customer!
         @setup_intent = Stripe::SetupIntent.create(
@@ -45,7 +52,7 @@ module Client
     def update
       if current_user.update(profile_params)
         respond_to do |format|
-          format.html { redirect_to edit_client_profile_path, notice: "Perfil atualizado com sucesso." }
+          format.html { redirect_to edit_user_registration_path, notice: "Perfil atualizado com sucesso." }
           format.json { render json: { ok: true, profile: profile_payload } }
         end
       else
@@ -94,12 +101,17 @@ module Client
     def remove_payment_method
       current_user.detach_payment_method!
       respond_to do |format|
-        format.html { redirect_to edit_client_profile_path, notice: "Cartão removido." }
+        format.html { redirect_to edit_client_profile_path(tab: "pagamento"), notice: "Cartão removido." }
         format.json { render json: { ok: true } }
       end
     end
 
     private
+
+    def payment_tab?
+      params[:add_card].present? || params[:tab] == "pagamento"
+    end
+    helper_method :payment_tab?
 
     def ensure_client
       return if current_user&.client?

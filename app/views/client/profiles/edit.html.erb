@@ -173,10 +173,10 @@
   <% end %>
 
   <div class="pf-tabs">
-    <button class="pf-tab <%= params[:add_card] ? '' : 'active' %>" data-tab="perfil">
+    <button class="pf-tab <%= payment_tab? ? '' : 'active' %>" data-tab="perfil">
       <i class="fas fa-user"></i> PERFIL
     </button>
-    <button class="pf-tab <%= params[:add_card] ? 'active' : '' %>" data-tab="pagamento">
+    <button class="pf-tab <%= payment_tab? ? 'active' : '' %>" data-tab="pagamento">
       <i class="fas fa-credit-card"></i> PAGAMENTO
       <% unless current_user.has_payment_method? %>
         <span class="pf-dot"></span>
@@ -185,7 +185,7 @@
   </div>
 
   <!-- TAB: PERFIL -->
-  <div class="pf-tab-content <%= params[:add_card] ? '' : 'active' %>" id="pf-tab-perfil">
+  <div class="pf-tab-content <%= payment_tab? ? '' : 'active' %>" id="pf-tab-perfil">
     <div class="loov-card loov-card--lg" style="margin-bottom:18px;">
       <div class="pf-section-title-row">
         <i class="fas fa-user"></i>
@@ -240,7 +240,7 @@
   </div>
 
   <!-- TAB: PAGAMENTO -->
-  <div class="pf-tab-content <%= params[:add_card] ? 'active' : '' %>" id="pf-tab-pagamento">
+  <div class="pf-tab-content <%= payment_tab? ? 'active' : '' %>" id="pf-tab-pagamento">
     <div class="loov-card loov-card--lg">
       <div class="pf-section-title-row">
         <i class="fas fa-credit-card"></i>

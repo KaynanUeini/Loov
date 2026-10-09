@@ -374,7 +374,7 @@
         <span id="drawer-notif-badge" style="margin-left:auto;display:none;font-size:0.65rem;color:var(--coral-700);background:var(--coral-50);border:1px solid var(--coral-100);border-radius:100px;padding:2px 8px;font-family:'JetBrains Mono',monospace;font-weight:700;"></span>
       <% end %>
       <div class="drawer-sep"></div>
-      <%= link_to edit_client_profile_path, class: "#{current_user.profile_complete? ? '' : 'drawer-active'}" do %>
+      <%= link_to edit_user_registration_path, class: "#{current_user.profile_complete? ? '' : 'drawer-active'}" do %>
         <i class="fas fa-user"></i>
         Meu Perfil
         <% unless current_user.profile_complete? %>
@@ -455,7 +455,7 @@
         </li>
         <li>
           <div class="nav-avatar-wrap">
-            <%= link_to edit_client_profile_path, class: "nav-avatar #{current_user.profile_complete? ? '' : 'incomplete'}", title: current_user.profile_complete? ? current_user.display_name : "Complete seu perfil" do %>
+            <%= link_to edit_user_registration_path, class: "nav-avatar #{current_user.profile_complete? ? '' : 'incomplete'}", title: current_user.profile_complete? ? current_user.display_name : "Complete seu perfil" do %>
               <i class="fas fa-user" style="font-size:0.78rem;"></i>
             <% end %>
             <% unless current_user.profile_complete? %><span class="nav-avatar-dot"></span><% end %>
