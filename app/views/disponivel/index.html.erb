@@ -16,10 +16,17 @@
 %>
 <%= render "shared/loov_logos" %>
 <script src="/vendor/feather-4.29.2.min.js"></script>
+<%# Leaflet (BSD-2) hospedado aqui; mapa do OpenStreetMap, sem chave de API. %>
+<link rel="stylesheet" href="/vendor/leaflet-1.9.4/leaflet.css">
+<script src="/vendor/leaflet-1.9.4/leaflet.js"></script>
 
 <style>
   /* Menu do topo é translúcido; sobre o fundo escuro ele ficava cinza. */
   .loov-nav { background: var(--cream) !important; }
+  /* O CSS global põe overflow-x: hidden em html e body; isso transforma o
+     body em área de rolagem e desliga o position: sticky do mapa. clip corta
+     o excesso lateral do mesmo jeito, sem esse efeito. */
+  html, body { overflow-x: clip !important; }
   .dp { --pad: 20px; background: var(--obsidian); color: var(--cream); min-height: 100vh; padding-top: 60px; }
   .dp *, .dp *::before, .dp *::after { box-sizing: border-box; }
   .dp button { font-family: inherit; line-height: normal; cursor: pointer; }
@@ -47,6 +54,26 @@
   .dp-chip[aria-pressed="true"] { background: var(--cream); border-color: var(--cream); color: var(--obsidian); }
 
   .dp-list { display: grid; grid-template-columns: 1fr; gap: 14px; padding: 20px var(--pad) 80px; }
+  .dp-card.is-hot { box-shadow: 0 0 0 2px var(--coral-500), 0 18px 32px rgba(0,0,0,.35); }
+  .dp-stat b small { font-size: 15px; letter-spacing: 0; margin-right: 3px; font-weight: 600; }
+  .dp-when { color: var(--coral-500); font-weight: 600; }
+
+  /* Mapa: lista + mapa lado a lado no desktop (Uber/Airbnb); no celular,
+     alterna com o botão flutuante "Mapa"/"Lista". */
+  .dp-split { position: relative; }
+  .dp-mapcol { display: none; }
+  .dp-map { width: 100%; height: 100%; border-radius: 24px; overflow: hidden; background: #e9e5dc; }
+  .dp-map .leaflet-tile-pane { filter: grayscale(.85) sepia(.18) brightness(1.04) contrast(.92); }
+  .dp-map .leaflet-control-attribution { font-size: 10px; background: rgba(250,250,246,.85); }
+  .dp-pin { transform: translate(-50%, -100%); display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; padding: 6px 11px; border-radius: 99px; background: var(--paper); color: var(--ink); font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: -0.2px; box-shadow: 0 4px 14px rgba(26,22,18,.28); border: 1px solid rgba(26,22,18,.08); cursor: pointer; transition: transform .15s, background .15s, color .15s; }
+  .dp-pin::after { content: ""; position: absolute; left: 50%; bottom: -5px; width: 10px; height: 10px; background: inherit; transform: translateX(-50%) rotate(45deg); border-right: 1px solid rgba(26,22,18,.08); border-bottom: 1px solid rgba(26,22,18,.08); border-radius: 0 0 2px 0; }
+  .dp-pin.is-hot { background: var(--coral-500); color: var(--cream); transform: translate(-50%, -100%) scale(1.12); z-index: 1000; }
+  .dp-pin-wrap.is-hot { z-index: 1000 !important; }
+  .dp-me { width: 18px; height: 18px; border-radius: 50%; background: var(--pool-500); border: 3px solid #fff; box-shadow: 0 0 0 6px rgba(75,142,192,.25); }
+  .dp-maptoggle { position: fixed; left: 50%; bottom: 24px; z-index: 120; transform: translateX(-50%); display: none; align-items: center; gap: 8px; padding: 13px 20px; border: 0; border-radius: 99px; background: var(--cream); color: var(--obsidian); font-size: 14px; font-weight: 600; box-shadow: 0 10px 28px rgba(0,0,0,.4); }
+  .dp.has-items .dp-maptoggle { display: inline-flex; }
+  .dp.map-mode .dp-left { display: none; }
+  .dp.map-mode .dp-mapcol { display: block; height: calc(100vh - 140px); padding: 12px var(--pad) 90px; }
   .dp-card { position: relative; display: block; width: 100%; text-align: left; border: 0; padding: 0; border-radius: 22px; overflow: hidden; background: var(--ink); color: var(--cream); box-shadow: 0 6px 16px rgba(40,35,28,.15); transition: transform .2s ease, box-shadow .2s ease; }
   .dp-card:hover { transform: translateY(-3px); box-shadow: 0 18px 32px rgba(0,0,0,.35); }
   .dp-card:focus-visible { outline: 2px solid var(--coral-500); outline-offset: 3px; }
@@ -65,7 +92,7 @@
   .dp-fav { flex: 0 0 26px; height: 26px; border-radius: 50%; background: rgba(250,250,246,.08); display: flex; align-items: center; justify-content: center; color: rgba(250,250,246,.5); }
   .dp-chev { color: rgba(250,250,246,.35); transition: transform .2s; }
   .dp-card:hover .dp-chev { transform: translateX(3px); color: rgba(250,250,246,.6); }
-  .dp-rate { position: absolute; top: 14px; right: 14px; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 100px; background: rgba(250,250,246,.08); font-size: 11px; font-weight: 600; }
+  .dp-rate { flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 100px; background: rgba(250,250,246,.08); font-size: 11px; font-weight: 600; }
   .dp-rate.is-new { color: rgba(250,250,246,.55); font-weight: 400; letter-spacing: .3px; }
 
   .dp-state { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 56px var(--pad) 80px; }
@@ -177,6 +204,15 @@
   @media (min-width: 640px) {
     .dp-list { grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 18px; }
   }
+  @media (min-width: 1100px) {
+    .dp-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(380px, 44%); gap: 8px; align-items: start; }
+    /* Ao lado do mapa: uma coluna de cards largos até ~1500px; 2 colunas em
+       telas grandes. Em 2 colunas estreitas os nomes cortavam. */
+    .dp-left .dp-list { grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); padding-right: 12px; }
+    .dp-mapcol, .dp.map-mode .dp-mapcol { display: block; position: sticky; top: 76px; height: calc(100vh - 92px); padding: 20px var(--pad) 16px 0; }
+    .dp.map-mode .dp-left { display: block; }
+    .dp.has-items .dp-maptoggle { display: none; }
+  }
   @media (min-width: 900px) {
     .dp { --pad: 48px; }
     .dp-top { padding: 16px 40px 0; }
@@ -207,10 +243,16 @@
       <span class="dp-badge"><i data-feather="zap" style="width:12px;height:12px"></i>last minute</span>
       <h1 class="dp-title">Vagas <em>agora</em>, perto de você.</h1>
     </section>
-    <div id="dp-strip"></div>
-    <div class="dp-sort" id="dp-sort" role="group" aria-label="Ordenar"></div>
-    <div id="dp-body"></div>
+    <div class="dp-split">
+      <div class="dp-left">
+        <div id="dp-strip"></div>
+        <div class="dp-sort" id="dp-sort" role="group" aria-label="Ordenar"></div>
+        <div id="dp-body"></div>
+      </div>
+      <aside class="dp-mapcol" aria-label="Mapa das vagas"><div class="dp-map" id="dp-map"></div></aside>
+    </div>
   </main>
+  <button type="button" class="dp-maptoggle" id="dp-maptoggle"><span id="dp-maptoggle-ic"></span><span id="dp-maptoggle-txt">Mapa</span></button>
 
   <%= render "shared/site_footer", audience: (user_signed_in? ? :client : :visitor) %>
 </div>
@@ -322,28 +364,48 @@
   }
 
   // ── lista ────────────────────────────────────────────────────────────────
-  function card(it, now) {
+  // O horário das vagas é, quase sempre, o mesmo pra todas (a próxima marca
+  // de 30 min). Repetir "22:00" gigante em todo card não ajuda a escolher:
+  // ele sobe pro topo, uma vez, e o card destaca o que de fato diferencia —
+  // distância e preço. Card com horário diferente do comum avisa.
+  function commonSlot(list) {
+    var count = {}, best = null;
+    list.forEach(function (it) { var k = it.slots[0]; count[k] = (count[k] || 0) + 1; if (!best || count[k] > count[best]) best = k; });
+    return best;
+  }
+  function priceLabel(it) {
+    var p = itemMinPrice(it);
+    if (!isFinite(p)) return '—';
+    return '<small>R$</small>' + (Math.round(p) === p ? String(p) : money(p, 2));
+  }
+  function card(it, now, common) {
     var cw = it.car_wash, slot = new Date(it.slots[0]);
     var mins = Math.ceil((slot.getTime() - now) / 60000);
+    var differs = common && it.slots[0] !== common;
     var street = cw.logradouro ? cw.logradouro + (cw.numero ? ', ' + cw.numero : '') : null;
     var reviews = Number(cw.reviews_count) || 0, rating = Number(cw.rating_avg) || 0;
     var meta = [street, cw.bairro].filter(Boolean).join(' · ') || '—';
     return '<button type="button" class="dp-card" data-open="' + cw.id + '" aria-label="Reservar em ' + esc(cw.name) + ', ' + fmtTime(it.slots[0]) + '">' +
-      '<div class="dp-stats"><div class="dp-stat"><b>' + fmtTime(it.slots[0]) + '</b><span>HORÁRIO</span></div><div class="dp-div"></div>' +
-      '<div class="dp-stat"><b>' + esc(fmtDistance(cw.distance_km) || '—') + '</b><span>DISTÂNCIA</span></div></div>' +
+      '<div class="dp-stats"><div class="dp-stat"><b>' + esc(fmtDistance(cw.distance_km) || '—') + '</b><span>DISTÂNCIA</span></div><div class="dp-div"></div>' +
+      '<div class="dp-stat"><b>' + priceLabel(it) + '</b><span>A PARTIR DE</span></div></div>' +
       '<div class="dp-shop"><div class="dp-logo">' + LoovLogos.logoOf(cw) + '</div>' +
         '<div class="dp-shop-txt"><div class="dp-shop-name">' + esc(cw.name) + '</div>' +
-        '<div class="dp-shop-meta">' + esc(meta) + (mins > 0 && mins < 1000 ? ' · <span class="dp-cd">em ' + mins + 'min</span>' : '') + '</div></div>' +
+        '<div class="dp-shop-meta">' + esc(meta) + (differs ? ' · <span class="dp-when">às ' + fmtTime(it.slots[0]) + (mins > 0 && mins < 1000 ? ' (em ' + mins + 'min)' : '') + '</span>' : '') + '</div></div>' +
         (cw.favorited ? '<span class="dp-fav" title="Favorito">' + icon('heart', 13) + '</span>' : '') +
+        '<span class="dp-rate' + (reviews ? '' : ' is-new') + '">' + icon('star', 10, { color: reviews ? 'var(--coral-500)' : 'rgba(250,250,246,.45)' }) + (reviews ? rating.toFixed(1).replace('.', ',') : 'Novo') + '</span>' +
         '<span class="dp-chev">' + icon('chevron-right', 20) + '</span></div>' +
-      '<span class="dp-rate' + (reviews ? '' : ' is-new') + '">' + icon('star', 10, { color: reviews ? 'var(--coral-500)' : 'rgba(250,250,246,.45)' }) + (reviews ? rating.toFixed(1).replace('.', ',') : 'Novo') + '</span>' +
     '</button>';
   }
   function render() {
     var valid = validItems();
+    var common = valid.length ? commonSlot(valid) : null;
+    var allSame = valid.every(function (it) { return it.slots[0] === common; });
+    var cmins = common ? Math.ceil((new Date(common).getTime() - Date.now()) / 60000) : 0;
     $('dp-strip').innerHTML = valid.length
-      ? '<div class="dp-strip"><div class="dp-strip-ic">' + icon('map-pin', 18) + '</div><div><b>' + valid.length + (valid.length === 1 ? ' vaga disponível' : ' vagas disponíveis') + '</b><span>raio de 5 km · próximos 30 min</span></div></div>'
+      ? '<div class="dp-strip"><div class="dp-strip-ic">' + icon('clock', 18) + '</div><div><b>' + valid.length + (valid.length === 1 ? ' vaga' : ' vagas') +
+          (allSame ? ' às ' : ' a partir das ') + fmtTime(common) + '</b><span>' + (cmins > 0 ? 'começa em ' + cmins + ' min · ' : '') + 'raio de 5 km</span></div></div>'
       : '';
+    $('dp').classList.toggle('has-items', valid.length > 0 && state.loc === 'granted' && !state.loading);
     $('dp-sort').innerHTML = state.loc === 'granted' && !state.loading && valid.length > 1
       ? SORTS.map(function (o) { return '<button type="button" class="dp-chip" data-sort="' + o.key + '" aria-pressed="' + (state.sortBy === o.key) + '">' + icon(o.icon, 12) + o.label + '</button>'; }).join('')
       : '';
@@ -363,8 +425,67 @@
         '<a class="dp-btn" href="/">Ver lava-rápidos</a></div>';
     } else {
       var now = Date.now();
-      body.innerHTML = '<div class="dp-list">' + sortItems(valid, state.sortBy).map(function (it) { return card(it, now); }).join('') + '</div>';
+      body.innerHTML = '<div class="dp-list">' + sortItems(valid, state.sortBy).map(function (it) { return card(it, now, allSame ? null : common); }).join('') + '</div>';
     }
+    renderMap(valid);
+  }
+
+  // ── mapa ─────────────────────────────────────────────────────────────────
+  var map = null, pins = {}, meMarker = null, fitted = false;
+  var wideMap = window.matchMedia('(min-width: 1100px)');
+  function mapVisible() { return wideMap.matches || $('dp').classList.contains('map-mode'); }
+  function renderMap(valid) {
+    if (!window.L || !mapVisible()) return;
+    if (!map) {
+      map = L.map('dp-map', { zoomControl: true, attributionControl: true, scrollWheelZoom: true });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19, attribution: '&copy; OpenStreetMap'
+      }).addTo(map);
+    }
+    Object.keys(pins).forEach(function (k) { map.removeLayer(pins[k]); }); pins = {};
+    var pts = [];
+    valid.forEach(function (it) {
+      var cw = it.car_wash, lat = parseFloat(cw.latitude), lng = parseFloat(cw.longitude);
+      if (isNaN(lat) || isNaN(lng)) return;
+      var p = itemMinPrice(it);
+      var html = '<div class="dp-pin" data-pin="' + cw.id + '">' + (isFinite(p) ? 'R$ ' + (Math.round(p) === p ? p : money(p, 2)) : esc(cw.name)) + '</div>';
+      var m = L.marker([lat, lng], { icon: L.divIcon({ html: html, className: 'dp-pin-wrap', iconSize: null }), keyboard: true, title: cw.name, riseOnHover: true });
+      m.on('click', function () { openSheet(it); });
+      m.on('mouseover', function () { hot(cw.id, true); });
+      m.on('mouseout', function () { hot(cw.id, false); });
+      m.addTo(map); pins[cw.id] = m; pts.push([lat, lng]);
+    });
+    if (state.coords) {
+      var me = [state.coords.latitude, state.coords.longitude];
+      if (!meMarker) meMarker = L.marker(me, { icon: L.divIcon({ html: '<div class="dp-me"></div>', className: '', iconSize: [18, 18], iconAnchor: [9, 9] }), interactive: false, keyboard: false }).addTo(map);
+      else meMarker.setLatLng(me);
+      pts.push(me);
+    }
+    // Enquadra depois do mapa ter tamanho real — calculado com o container
+    // ainda sem layout, o zoom saía fechado e mostrava 2 de 20 pinos.
+    // Só conta como enquadrado com pinos: o primeiro desenho acontece ainda
+    // carregando, só com a posição do cliente.
+    if (!fitted && Object.keys(pins).length) {
+      fitted = true;
+      requestAnimationFrame(function () { map.invalidateSize(); map.fitBounds(pts, { padding: [56, 56], maxZoom: 15 }); });
+    } else {
+      setTimeout(function () { map.invalidateSize(); }, 50);
+    }
+  }
+  // Card ↔ pino: passar por um acende o outro.
+  function hot(id, on) {
+    var pin = document.querySelector('.dp-pin[data-pin="' + id + '"]');
+    if (pin) { pin.classList.toggle('is-hot', on); if (pin.parentElement) pin.parentElement.classList.toggle('is-hot', on); }
+    var c = document.querySelector('.dp-card[data-open="' + id + '"]'); if (c) c.classList.toggle('is-hot', on);
+  }
+  function toggleMapMode() {
+    var on = !$('dp').classList.contains('map-mode');
+    $('dp').classList.toggle('map-mode', on);
+    $('dp-maptoggle-txt').textContent = on ? 'Lista' : 'Mapa';
+    $('dp-maptoggle-ic').innerHTML = icon(on ? 'list' : 'map', 16);
+    window.scrollTo(0, 0);
+    fitted = false;
+    renderMap(validItems());
   }
 
   // ── folha "Reservar em" ──────────────────────────────────────────────────
@@ -735,10 +856,14 @@
     }
   });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && state.target && !$('dp-sheet-bg').hidden) closeSheet(); });
+  document.addEventListener('mouseover', function (e) { var c = e.target.closest('.dp-card'); if (c && !c.contains(e.relatedTarget)) hot(c.dataset.open, true); });
+  document.addEventListener('mouseout', function (e) { var c = e.target.closest('.dp-card'); if (c && !c.contains(e.relatedTarget)) hot(c.dataset.open, false); });
+  $('dp-maptoggle').addEventListener('click', toggleMapMode);
+  wideMap.addEventListener('change', function () { renderMap(validItems()); });
   // Contagem "em Xmin" dos cards se atualiza sozinha (como o app, a cada 15s).
   setInterval(function () { if (!state.appt && !state.loading && state.loc === 'granted') render(); }, 15000);
 
-  function boot() { if (window.feather) feather.replace(); render(); initLocation(); }
+  function boot() { if (window.feather) feather.replace(); $('dp-maptoggle-ic').innerHTML = icon('map', 16); render(); initLocation(); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
 </script>
