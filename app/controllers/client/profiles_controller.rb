@@ -20,6 +20,8 @@ module Client
         redirect_to edit_user_registration_path(request.query_parameters.slice("latitude", "longitude")) and return
       end
 
+      backfill_card_details if request.format.html?
+
       # Na página do cartão o SetupIntent é sempre preparado: serve pra
       # cadastrar o primeiro cartão e também pra trocar o atual.
       if request.format.html? || current_user.stripe_customer_id.present? || params[:add_card]
@@ -109,6 +111,21 @@ module Client
     end
 
     private
+
+    # Cartões salvos antes de guardarmos nome e validade: busca uma vez no
+    # Stripe pra tela mostrar os dados reais. Falhou? A tela usa o nome da conta.
+    def backfill_card_details
+      u = current_user
+      return unless u.stripe_payment_method_id.present? && u.stripe_card_exp_month.nil?
+      pm = Stripe::PaymentMethod.retrieve(u.stripe_payment_method_id)
+      u.update_columns(
+        stripe_card_holder:    pm.billing_details&.name.presence,
+        stripe_card_exp_month: pm.card&.exp_month,
+        stripe_card_exp_year:  pm.card&.exp_year
+      )
+    rescue Stripe::StripeError => e
+      Rails.logger.warn("[Pagamentos] backfill do cartão falhou: #{e.message}")
+    end
 
     def payment_tab?
       params[:add_card].present? || params[:tab] == "pagamento"

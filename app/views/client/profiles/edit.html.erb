@@ -18,6 +18,10 @@
   return_to  = session[:return_to_after_card].presence
   back_href  = return_to || edit_user_registration_path
   brand_key  = current_user.stripe_card_brand.to_s.downcase
+  holder     = current_user.stripe_card_holder.presence || current_user.display_name.to_s
+  exp_label  = if current_user.stripe_card_exp_month && current_user.stripe_card_exp_year
+                 format("%02d/%02d", current_user.stripe_card_exp_month, current_user.stripe_card_exp_year % 100)
+               end
 %>
 <script src="/vendor/feather-4.29.2.min.js"></script>
 
@@ -42,6 +46,7 @@
   .pg-req svg { flex-shrink: 0; margin-top: 1px; }
 
   .pg-grid { display: grid; gap: 28px; margin-top: 28px; }
+  .pg-grid.has-pill { gap: 64px; }
 
   /* ── O cartão ──────────────────────────────────────────────────────── */
   .cc-stage { perspective: 1400px; }
@@ -68,6 +73,11 @@
   .cc-brand-txt.is-visa { font-style: italic; font-size: 26px; letter-spacing: 0; }
   .cc-brand-in { animation: ccbrand .5s cubic-bezier(.2,1.3,.4,1) both; }
   @keyframes ccbrand { from { opacity: 0; transform: translateY(-8px) scale(.8); } }
+  .cc-mid { display: flex; align-items: center; gap: 10px; margin-top: 5%; }
+  .cc-nfc { width: 22px; height: 22px; opacity: .8; }
+  .cc-amexcvv { display: none; margin-left: auto; text-align: right; }
+  .cc-amexcvv b { display: block; margin-top: 2px; padding: 3px 8px; border-radius: 6px; background: rgba(255,255,255,.1); font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 13px; letter-spacing: 2px; }
+  .cc[data-brand="amex"] .cc-amexcvv { display: block; }
   .cc-num { margin-top: auto; display: flex; gap: 4%; font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: clamp(17px, 5.2vw, 24px); letter-spacing: 2px; }
   .cc-num span { opacity: .45; transition: opacity .3s; }
   .cc.n-typing .cc-num span, .cc.n-complete .cc-num span { opacity: 1; }
@@ -75,17 +85,23 @@
   .cc-ok { display: inline-flex; width: 18px; height: 18px; border-radius: 50%; background: #3fa66b; color: #fff; align-items: center; justify-content: center; transform: scale(0); transition: transform .35s cubic-bezier(.2,1.5,.4,1); }
   .cc-ok svg { width: 11px; height: 11px; }
   .cc.n-complete .cc-num .cc-ok, .cc.e-complete .cc-exp .cc-ok { transform: scale(1); }
-  .cc-bottom { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-top: 6%; }
+  .cc-bottom { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-top: 3%; min-height: 34px; }
+  .cc-exp { display: flex; align-items: center; gap: 8px; margin-top: 3%; }
+  .cc-exp .cc-lab { font-size: 8px; line-height: 1; white-space: nowrap; }
+  .cc-exp .v { font-family: 'JetBrains Mono', monospace; font-size: clamp(13px, 3.6vw, 16px); }
+  .cc-brand-top { margin-left: auto; }
+  .cc-brand-br { height: 30px; flex-shrink: 0; }
+  .cc-brand:empty { display: none; }
   .cc-lab { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1.4px; opacity: .6; text-transform: uppercase; }
   .cc-name { margin-top: 3px; max-width: 26ch; font-size: clamp(13px, 3.6vw, 16px); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 1.2em; }
   .cc-name .cc-ph { opacity: .45; }
   .cc-name .ch { display: inline-block; animation: ccch .25s ease both; }
   @keyframes ccch { from { opacity: 0; transform: translateY(6px); } }
-  .cc-exp { text-align: right; }
-  .cc-exp div:last-child { margin-top: 3px; display: inline-flex; align-items: center; gap: 6px; font-family: 'JetBrains Mono', monospace; font-size: clamp(13px, 3.6vw, 16px); }
   .cc-exp .v { opacity: .45; transition: opacity .3s; }
   .cc.e-typing .cc-exp .v, .cc.e-complete .cc-exp .v { opacity: 1; }
-  .cc-loov { position: absolute; left: 7.5%; top: 34%; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: -0.2px; opacity: .55; }
+  .cc-loov { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: -0.3px; opacity: .7; }
+  .cc-deco { position: absolute; inset: 0; pointer-events: none; }
+  .cc-deco svg { position: absolute; inset: 0; width: 100%; height: 100%; }
   /* Costas */
   .cc-stripe { position: absolute; left: 0; right: 0; top: 13%; height: 19%; background: #14100c; }
   .cc-sig { position: absolute; left: 7.5%; right: 7.5%; top: 42%; height: 17%; display: flex; align-items: center; justify-content: flex-end; padding: 0 12px; border-radius: 6px;
@@ -97,15 +113,34 @@
   /* Moldura de foco — anda até o campo sendo preenchido. */
   .cc-focus { position: absolute; z-index: 3; border-radius: 10px; border: 2px solid var(--coral-300, #e8a48a); box-shadow: 0 0 0 4px rgba(221,120,82,.18); pointer-events: none; opacity: 0; transition: all .45s cubic-bezier(.2,.9,.25,1); }
   .cc-focus.is-on { opacity: 1; }
-  .cc-saved-pill { position: absolute; z-index: 2; left: 50%; bottom: -14px; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 100px; background: var(--paper); border: 1px solid var(--stone); color: #2d6b42; font-size: 12px; font-weight: 600; box-shadow: 0 8px 20px -12px rgba(40,35,28,.5); white-space: nowrap; }
+  .cc-saved-pill { position: absolute; z-index: 2; left: 50%; top: calc(100% + 14px); transform: translateX(-50%); display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 100px; background: var(--paper); border: 1px solid var(--stone); color: #2d6b42; font-size: 12px; font-weight: 600; box-shadow: 0 8px 20px -12px rgba(40,35,28,.5); white-space: nowrap; }
   .cc-saved-pill i { width: 7px; height: 7px; border-radius: 50%; background: #3fa66b; }
 
   /* Temas por bandeira — a cor muda quando o Stripe reconhece o cartão. */
   .cc { --cc-bg: linear-gradient(135deg, #2a231c 0%, #1a1612 60%, #2f241b 100%); --cc-orb: radial-gradient(circle, #dd7852, transparent 65%); }
-  .cc[data-brand="visa"] { --cc-bg: linear-gradient(135deg, #1b3a8f 0%, #0f2160 55%, #1a2f7a 100%); --cc-orb: radial-gradient(circle, #4f8cff, transparent 65%); }
-  .cc[data-brand="mastercard"] { --cc-bg: linear-gradient(135deg, #2b2520 0%, #141110 60%, #2a1d16 100%); --cc-orb: radial-gradient(circle, #f79e1b, transparent 65%); }
-  .cc[data-brand="amex"] { --cc-bg: linear-gradient(135deg, #1d6f7a 0%, #0f4c56 60%, #17616b 100%); --cc-orb: radial-gradient(circle, #6fd3d8, transparent 65%); }
-  .cc[data-brand="elo"], .cc[data-brand="discover"], .cc[data-brand="diners"], .cc[data-brand="jcb"], .cc[data-brand="unionpay"] { --cc-bg: linear-gradient(135deg, #3a2a20 0%, #1d1510 60%, #3b2618 100%); --cc-orb: radial-gradient(circle, #f2b705, transparent 65%); }
+  .cc[data-brand="discover"], .cc[data-brand="diners"], .cc[data-brand="jcb"], .cc[data-brand="unionpay"] { --cc-bg: linear-gradient(135deg, #3a2a20 0%, #1d1510 60%, #3b2618 100%); --cc-orb: radial-gradient(circle, #f2b705, transparent 65%); }
+
+
+  /* ── Desenho por bandeira (inspirado nos cartões de verdade, sem copiar
+     arte de emissor): Amex preto metálico com borda guilhochê e medalhão;
+     Visa preto com feixes de luz; Mastercard grafite com arcos; Elo preto
+     com as três cores da marca. A bandeira só muda o "material". */
+  .cc[data-brand="amex"] { --cc-bg: linear-gradient(135deg, #3a3a3e 0%, #121214 38%, #1d1d20 62%, #2e2e33 100%); }
+  .cc[data-brand="amex"] .cc-face { color: #e4e4e8; }
+  .cc[data-brand="visa"] { --cc-bg: linear-gradient(160deg, #1a1a1c 0%, #08080a 55%, #141416 100%); }
+  .cc[data-brand="mastercard"] { --cc-bg: linear-gradient(135deg, #2a2a2e 0%, #121214 55%, #1f1c1a 100%); }
+  .cc[data-brand="elo"] { --cc-bg: linear-gradient(135deg, #161618 0%, #050506 60%, #121214 100%); }
+  .cc[data-brand="amex"] .cc-orb, .cc[data-brand="visa"] .cc-orb, .cc[data-brand="elo"] .cc-orb { display: none; }
+  .cc[data-brand="mastercard"] .cc-orb { background: radial-gradient(circle, #f79e1b, transparent 65%); opacity: .25; }
+  /* Chip prata nos cartões pretos; dourado no Loov e no Mastercard. */
+  .cc[data-brand="amex"] .cc-chip, .cc[data-brand="visa"] .cc-chip, .cc[data-brand="elo"] .cc-chip { background: linear-gradient(135deg, #f2f2f4, #a9a9b0 55%, #e6e6ea); }
+  .cc[data-brand="amex"] .cc-loov, .cc[data-brand="visa"] .cc-loov, .cc[data-brand="mastercard"] .cc-loov, .cc[data-brand="elo"] .cc-loov { opacity: .45; }
+  .cc[data-brand="amex"] .cc-brand-top { margin: 0 auto; }
+  .cc[data-brand="amex"] .cc-top .cc-loov { display: none; }
+  .cc-amexword { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: clamp(13px, 3.8vw, 19px); letter-spacing: .14em; background: linear-gradient(180deg, #ffffff, #b9b9c0); -webkit-background-clip: text; background-clip: text; color: transparent; white-space: nowrap; }
+  .cc-visaword { font-family: 'Space Grotesk', sans-serif; font-style: italic; font-weight: 700; font-size: 30px; letter-spacing: -0.5px; line-height: 1; color: #fff; }
+  .cc-eloword { display: inline-flex; align-items: center; gap: 3px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 26px; letter-spacing: -1px; line-height: 1; color: #fff; }
+  .cc-eloword i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
 
   /* ── Formulário ────────────────────────────────────────────────────── */
   .pg-form { padding: 22px; background: var(--paper); border: 1px solid var(--stone); border-radius: 24px; box-shadow: 0 14px 36px -28px rgba(40,35,28,.5); }
@@ -153,7 +188,22 @@
   .pg-toast { position: fixed; left: 20px; right: 20px; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); z-index: 70; max-width: 440px; margin: 0 auto; display: flex; align-items: center; gap: 10px; padding: 14px; border-radius: 14px; border: 1px solid var(--coral-100); background: var(--coral-50); color: var(--coral-700); font-size: 13px; font-weight: 600; box-shadow: 0 14px 36px -16px rgba(40,35,28,.45); transform: translateY(16px); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
   .pg-toast.is-on { opacity: 1; transform: none; }
 
+  /* Cartão estreito (celular): tudo um pouco menor pra caber sem cortar. */
+  @media (max-width: 480px) {
+    .cc-in { padding: 6% 6.5%; }
+    .cc-mid { margin-top: 3%; }
+    .cc-chip { width: 13%; }
+    .cc-nfc { width: 18px; height: 18px; }
+    .cc-num { font-size: 15px; letter-spacing: 1px; }
+    .cc-exp { margin-top: 2%; }
+    .cc-bottom { margin-top: 2%; min-height: 0; }
+    .cc-brand-br { height: 24px; }
+    .cc-visaword { font-size: 24px; }
+    .cc-eloword { font-size: 21px; }
+    .cc-amexcvv b { font-size: 11px; padding: 2px 6px; }
+  }
   @media (min-width: 960px) {
+    .pg-grid.has-pill { gap: 56px; }
     .pg-wrap { padding: 0 40px 80px; }
     .pg-head { padding-top: 28px; }
     .pg-grid { grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 56px; align-items: center; margin-top: 40px; }
@@ -178,20 +228,26 @@
       <% end %>
     </div>
 
-    <div class="pg-grid">
+    <div class="pg-grid<%= ' has-pill' if has_card %>">
       <div class="cc-stage">
         <div class="cc-tilt" id="cc-tilt">
           <div class="cc" id="cc" data-brand="<%= brand_key.presence || 'loov' %>" style="position:absolute;inset:0">
             <div class="cc-flip">
               <div class="cc-face cc-front" aria-hidden="true">
+                <div class="cc-deco" id="cc-deco"></div>
                 <div class="cc-orb"></div>
                 <div class="cc-in">
-                  <div class="cc-top"><div class="cc-chip"></div><div class="cc-brand" id="cc-brand"></div></div>
-                  <div class="cc-loov">loov</div>
-                  <div class="cc-num" id="cc-num"><span>••••</span><span>••••</span><span>••••</span><span class="cc-last"><span id="cc-last4"><%= has_card ? current_user.stripe_card_last4 : '••••' %></span><i class="cc-ok"><%= raw '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' %></i></span></div>
+                  <div class="cc-top"><span class="cc-loov">loov</span><div class="cc-brand cc-brand-top" id="cc-brand"></div></div>
+                  <div class="cc-mid">
+                    <div class="cc-chip"></div>
+                    <svg class="cc-nfc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8.5 8.5a5 5 0 0 1 0 7"/><path d="M12 6a8.5 8.5 0 0 1 0 12"/><path d="M15.5 3.5a12 12 0 0 1 0 17"/></svg>
+                    <div class="cc-amexcvv" id="cc-amexcvv"><span class="cc-lab">CVV</span><b id="cc-cvv-front">••••</b></div>
+                  </div>
+                  <div class="cc-num" id="cc-num"></div>
+                  <div class="cc-exp"><span class="cc-lab">Validade</span><span class="v" id="cc-exp">MM/AA</span><i class="cc-ok"><%= raw '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' %></i></div>
                   <div class="cc-bottom">
-                    <div style="min-width:0"><div class="cc-lab">Nome no cartão</div><div class="cc-name" id="cc-name"></div></div>
-                    <div class="cc-exp"><div class="cc-lab">Validade</div><div><span class="v" id="cc-exp">MM/AA</span><i class="cc-ok"><%= raw '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' %></i></div></div>
+                    <div style="min-width:0;flex:1"><div class="cc-name" id="cc-name"></div></div>
+                    <div class="cc-brand cc-brand-br" id="cc-brand-br"></div>
                   </div>
                 </div>
               </div>
@@ -232,7 +288,7 @@
           <h2><%= has_card ? "Novo cartão" : "Adicionar cartão" %></h2>
           <p>Crédito ou débito. A verificação é feita na hora pelo Stripe.</p>
           <div class="pg-f" id="f-number"><label>Número do cartão <b>✓ ok</b></label><div class="pg-in" id="el-number"></div></div>
-          <div class="pg-f" id="f-name"><label for="cc-name-in">Nome impresso no cartão <b>✓ ok</b></label><input class="pg-in" id="cc-name-in" autocomplete="cc-name" maxlength="26" placeholder="Como está no cartão" value="<%= current_user.full_name %>"></div>
+          <div class="pg-f" id="f-name"><label for="cc-name-in">Nome impresso no cartão <b>✓ ok</b></label><input class="pg-in" id="cc-name-in" autocomplete="cc-name" maxlength="26" placeholder="Como está no cartão" value="<%= current_user.stripe_card_holder.presence || current_user.full_name %>"></div>
           <div class="pg-row">
             <div class="pg-f" id="f-exp"><label>Validade <b>✓</b></label><div class="pg-in" id="el-exp"></div></div>
             <div class="pg-f" id="f-cvc"><label>CVV <b>✓</b></label><div class="pg-in" id="el-cvc"></div></div>
@@ -266,23 +322,70 @@
 
   var cc = $('cc');
   // ── Bandeira ─────────────────────────────────────────────────────────────
-  var BRAND_SVG = {
-    visa: '<span class="cc-brand-txt is-visa">VISA</span>',
-    mastercard: '<svg viewBox="0 0 48 30"><circle cx="17" cy="15" r="13" fill="#eb001b"/><circle cx="31" cy="15" r="13" fill="#f79e1b" fill-opacity=".92"/><path d="M24 4.2a13 13 0 0 1 0 21.6 13 13 0 0 1 0-21.6z" fill="#ff5f00"/></svg>',
-    amex: '<span class="cc-brand-txt" style="padding:2px 6px;border:2px solid currentColor;border-radius:4px;font-size:16px">AMEX</span>',
-    discover: '<span class="cc-brand-txt">Discover</span>',
-    diners: '<span class="cc-brand-txt">Diners</span>',
-    jcb: '<span class="cc-brand-txt">JCB</span>',
-    unionpay: '<span class="cc-brand-txt">UnionPay</span>',
-    elo: '<span class="cc-brand-txt">elo</span>'
+  // Marca de aceitação de cada bandeira e onde ela fica no cartão: Amex e
+  // Loov no alto; Visa, Mastercard e Elo embaixo à direita, como nos reais.
+  var BRAND_LOGO = {
+    amex: { slot: 'top', html: '<span class="cc-amexword">AMERICAN EXPRESS</span>' },
+    visa: { slot: 'br', html: '<span class="cc-visaword">VISA</span>' },
+    mastercard: { slot: 'br', html: '<svg viewBox="0 0 48 30" style="height:30px"><circle cx="17" cy="15" r="13" fill="#eb001b"/><circle cx="31" cy="15" r="13" fill="#f79e1b" fill-opacity=".95"/><path d="M24 4.2a13 13 0 0 1 0 21.6 13 13 0 0 1 0-21.6z" fill="#ff5f00"/></svg>' },
+    elo: { slot: 'br', html: '<span class="cc-eloword">elo<i style="background:#ffcb05"></i><i style="background:#00a4e0"></i><i style="background:#ef4123"></i></span>' },
+    discover: { slot: 'br', html: '<span class="cc-brand-txt">Discover</span>' },
+    diners: { slot: 'br', html: '<span class="cc-brand-txt">Diners</span>' },
+    jcb: { slot: 'br', html: '<span class="cc-brand-txt">JCB</span>' },
+    unionpay: { slot: 'br', html: '<span class="cc-brand-txt">UnionPay</span>' }
+  };
+  // Arte de fundo por bandeira — "material" do cartão, desenhado aqui.
+  var BRAND_DECO = {
+    // Preto metálico: borda guilhochê (ondas finas em volta) + medalhão
+    // central de anéis concêntricos e raios, em prata.
+    amex: (function () {
+      var rays = '';
+      for (var i = 0; i < 72; i++) { var a = i * 5 * Math.PI / 180; rays += '<line x1="' + (300 + Math.cos(a) * 40).toFixed(1) + '" y1="' + (150 + Math.sin(a) * 40).toFixed(1) + '" x2="' + (300 + Math.cos(a) * 54).toFixed(1) + '" y2="' + (150 + Math.sin(a) * 54).toFixed(1) + '"/>'; }
+      var wave = '';
+      for (var k = 0; k < 3; k++) wave += '<rect x="' + (14 + k * 4) + '" y="' + (14 + k * 4) + '" width="' + (572 - k * 8) + '" height="' + (350 - k * 8) + '" rx="' + (22 - k * 3) + '" fill="none" stroke="url(#amx-s)" stroke-width=".7" stroke-dasharray="' + (2 + k) + ' ' + (3 + k) + '"/>';
+      return '<svg viewBox="0 0 600 378" preserveAspectRatio="none"><defs>' +
+        '<linearGradient id="amx-s" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".5" stop-color="#fff" stop-opacity=".12"/><stop offset="1" stop-color="#fff" stop-opacity=".45"/></linearGradient>' +
+        '<radialGradient id="amx-m" cx=".45" cy=".35" r=".7"><stop offset="0" stop-color="#f4f4f6" stop-opacity=".35"/><stop offset="1" stop-color="#8a8a92" stop-opacity=".06"/></radialGradient></defs>' +
+        wave +
+        '<g stroke="#e8e8ec" stroke-opacity=".28" stroke-width=".8" fill="none">' + rays + '</g>' +
+        '<circle cx="300" cy="150" r="56" fill="none" stroke="#f0f0f3" stroke-opacity=".45" stroke-width="1.2"/>' +
+        '<circle cx="300" cy="150" r="38" fill="url(#amx-m)" stroke="#f0f0f3" stroke-opacity=".5" stroke-width="1"/>' +
+        '<circle cx="300" cy="150" r="31" fill="none" stroke="#f0f0f3" stroke-opacity=".25" stroke-width=".8"/></svg>';
+    })(),
+    // Preto com feixes de luz diagonais.
+    visa: '<svg viewBox="0 0 600 378" preserveAspectRatio="none"><defs>' +
+      '<linearGradient id="vs-a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".0"/><stop offset=".5" stop-color="#fff" stop-opacity=".22"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>' +
+      '<linearGradient id="vs-b" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".3"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>' +
+      '<polygon points="390,0 418,0 300,378 286,378" fill="url(#vs-a)"/>' +
+      '<polygon points="470,0 600,0 600,40 520,110" fill="url(#vs-b)" opacity=".7"/>' +
+      '<polygon points="600,150 600,170 330,300 318,296" fill="url(#vs-b)" opacity=".55"/></svg>',
+    // Grafite com arcos que saem do canto, num tom quente.
+    mastercard: '<svg viewBox="0 0 600 378" preserveAspectRatio="none"><g fill="none" stroke="#f79e1b" stroke-opacity=".14" stroke-width="1.2">' +
+      [90, 140, 190, 240, 290, 340].map(function (r) { return '<circle cx="600" cy="378" r="' + r + '"/>'; }).join('') + '</g></svg>',
+    // Preto com as três cores da Elo em arcos suaves.
+    elo: '<svg viewBox="0 0 600 378" preserveAspectRatio="none"><defs><filter id="el-b"><feGaussianBlur stdDeviation="18"/></filter></defs><g filter="url(#el-b)" opacity=".55">' +
+      '<circle cx="520" cy="60" r="70" fill="#ffcb05" opacity=".55"/><circle cx="600" cy="170" r="80" fill="#00a4e0" opacity=".5"/><circle cx="470" cy="300" r="70" fill="#ef4123" opacity=".45"/></g></svg>'
   };
   var currentBrand = null;
   function setBrand(b) {
-    b = BRAND_SVG[b] ? b : 'loov';
+    b = BRAND_LOGO[b] ? b : 'loov';
     if (b === currentBrand) return;
     currentBrand = b; cc.dataset.brand = b;
-    var html = b === 'loov' ? '' : '<span class="cc-brand-in" style="display:flex;height:100%;align-items:center">' + BRAND_SVG[b] + '</span>';
-    $('cc-brand').innerHTML = html; $('cc-brand-back').innerHTML = html;
+    var logo = BRAND_LOGO[b], wrap = function (h) { return '<span class="cc-brand-in" style="display:flex;height:100%;align-items:center">' + h + '</span>'; };
+    $('cc-brand').innerHTML = logo && logo.slot === 'top' ? wrap(logo.html) : '';
+    $('cc-brand-br').innerHTML = logo && logo.slot === 'br' ? wrap(logo.html) : '';
+    $('cc-brand-back').innerHTML = logo ? wrap(logo.html) : '';
+    $('cc-deco').innerHTML = BRAND_DECO[b] || '';
+    renderNumber();
+  }
+  // Amex tem 15 dígitos em 4-6-5; os outros, 4-4-4-4.
+  var last4 = null;
+  function renderNumber() {
+    var tail = last4 || '••••';
+    var groups = currentBrand === 'amex' ? ['••••', '••••••', '•' + tail] : ['••••', '••••', '••••', tail];
+    $('cc-num').innerHTML = groups.map(function (g, i) {
+      return i === groups.length - 1 ? '<span class="cc-last"><span>' + g + '</span><i class="cc-ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></i></span>' : '<span>' + g + '</span>';
+    }).join('');
   }
 
   // ── Nome: cada letra entra com um pequeno movimento ──────────────────────
@@ -299,13 +402,14 @@
   }
 
   // ── Moldura de foco e virada ─────────────────────────────────────────────
-  var AREAS = { number: '#cc-num', name: '.cc-bottom > div:first-child', exp: '.cc-exp' };
+  var AREAS = { number: '#cc-num', name: '.cc-bottom > div:first-child', exp: '.cc-exp', cvc: '#cc-amexcvv' };
   var focused = null;
   function moveFocus(which) {
     focused = which;
     var f = $('cc-focus');
-    cc.classList.toggle('is-back', which === 'cvc');
-    if (!which || which === 'cvc') { f.classList.remove('is-on'); return; }
+    var amex = currentBrand === 'amex';
+    cc.classList.toggle('is-back', which === 'cvc' && !amex);
+    if (!which || (which === 'cvc' && !amex)) { f.classList.remove('is-on'); return; }
     var target = cc.querySelector(AREAS[which]); if (!target) return;
     var box = cc.getBoundingClientRect(), r = target.getBoundingClientRect(), pad = 8;
     f.style.left = (r.left - box.left - pad) + 'px'; f.style.top = (r.top - box.top - pad) + 'px';
@@ -334,8 +438,8 @@
     $('f-' + key).classList.toggle('is-ok', !!ev.complete);
     st[key] = !!ev.complete;
     if (key === 'exp') $('cc-exp').textContent = ev.complete ? '••/••' : (ev.empty ? 'MM/AA' : '··/··');
-    if (key === 'cvc') $('cc-cvv').textContent = ev.complete ? '•••' : (ev.empty ? '•••' : '••');
-    if (key === 'number') setBrand(ev.brand);
+    if (key === 'cvc') { var d = ev.complete ? (currentBrand === 'amex' ? '••••' : '•••') : (ev.empty ? '•••' : '••'); $('cc-cvv').textContent = d; $('cc-cvv-front').textContent = ev.empty ? '••••' : d; }
+    if (key === 'number') { setBrand(ev.brand); if (focused === 'cvc' || focused === 'number') moveFocus(focused); }
     showErr(ev.error ? ev.error.message : null);
     refreshSave();
   }
@@ -408,7 +512,8 @@
     $('pg-new').classList.remove('pg-hidden');
     var pill = $('cc-saved-pill'); if (pill) pill.style.display = 'none';
     // O cartão "zera" pra acompanhar o novo preenchimento.
-    $('cc-last4').textContent = '••••'; setBrand('loov'); cc.classList.remove('n-complete');
+    last4 = null; setBrand('loov'); renderNumber(); cc.classList.remove('n-complete', 'e-complete');
+    $('cc-exp').textContent = 'MM/AA'; setName(nameIn.value);
     mountStripe();
     setTimeout(function () { els.number && els.number.focus(); }, 60);
   }
@@ -416,8 +521,7 @@
     $('pg-new').classList.add('pg-hidden');
     $('pg-saved').classList.remove('pg-hidden');
     var pill = $('cc-saved-pill'); if (pill) pill.style.display = '';
-    $('cc-last4').textContent = <%= raw json_escape(current_user.stripe_card_last4.to_s.to_json) %>;
-    setBrand(SAVED_BRAND); cc.classList.add('n-complete'); moveFocus(null);
+    showSaved(); moveFocus(null);
   }
 
   var toastT = null;
@@ -438,9 +542,16 @@
   });
 
   if (window.feather) feather.replace();
-  setName(HAS_CARD ? <%= raw json_escape(current_user.display_name.to_s.to_json) %> : nameIn.value);
-  if (HAS_CARD) { setBrand(SAVED_BRAND); cc.classList.add('n-complete'); $('cc-exp').textContent = '••/••'; }
-  else { setBrand('loov'); mountStripe(); }
+  // Cartão salvo: nome impresso e validade reais (guardados ao salvar).
+  function showSaved() {
+    last4 = <%= raw json_escape(current_user.stripe_card_last4.to_s.to_json) %>;
+    currentBrand = null; setBrand(SAVED_BRAND);
+    setName(<%= raw json_escape(holder.to_json) %>);
+    $('cc-exp').textContent = <%= raw json_escape((exp_label || "••/••").to_json) %>;
+    cc.classList.add('n-complete');
+  }
+  if (HAS_CARD) showSaved();
+  else { setBrand('loov'); setName(nameIn.value); mountStripe(); }
   var q = new URLSearchParams(location.search);
   if (q.get('salvo')) toast('Cartão salvo! Já pode reservar no Last Minute.');
   else if (q.get('removido')) toast('Cartão removido.');

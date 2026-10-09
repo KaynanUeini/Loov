@@ -114,7 +114,10 @@ class User < ApplicationRecord
     update!(
       stripe_payment_method_id: pm.id,
       stripe_card_last4:        pm.card&.last4,
-      stripe_card_brand:        pm.card&.brand&.capitalize
+      stripe_card_brand:        pm.card&.brand&.capitalize,
+      stripe_card_holder:       pm.billing_details&.name.presence,
+      stripe_card_exp_month:    pm.card&.exp_month,
+      stripe_card_exp_year:     pm.card&.exp_year
       )
     pm
   rescue Stripe::StripeError => e
@@ -126,7 +129,8 @@ class User < ApplicationRecord
   def detach_payment_method!
     return unless stripe_payment_method_id.present?
     Stripe::PaymentMethod.detach(stripe_payment_method_id) rescue nil
-    update!(stripe_payment_method_id: nil, stripe_card_last4: nil, stripe_card_brand: nil)
+    update!(stripe_payment_method_id: nil, stripe_card_last4: nil, stripe_card_brand: nil,
+            stripe_card_holder: nil, stripe_card_exp_month: nil, stripe_card_exp_year: nil)
   end
 
   # Card display string ex: "Visa •••• 4242"
