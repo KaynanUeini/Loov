@@ -139,6 +139,101 @@ class User < ApplicationRecord
             stripe_card_holder: nil, stripe_card_exp_month: nil, stripe_card_exp_year: nil)
   end
 
+  # ── Exclusão de conta ─────────────────────────────────────────────────────
+  # Domínio .invalid nunca recebe e-mail (RFC 2606): marca a conta excluída
+  # sem coluna nova e sem colidir com o e-mail de ninguém.
+  DOMINIO_EXCLUIDA = "conta-excluida.invalid".freeze
+
+  def conta_excluida?
+    email.to_s.end_with?("@#{DOMINIO_EXCLUIDA}")
+  end
+
+  # Devise consulta isto a cada login E a cada requisição com token do app:
+  # conta excluída ou bloqueada pelo admin deixa de entrar na hora, inclusive
+  # com um token antigo que ainda não venceu.
+  def active_for_authentication?
+    super && !conta_excluida? && !(has_attribute?(:blocked_at) && blocked_at.present?)
+  end
+
+  def inactive_message
+    conta_excluida? ? :conta_excluida : (has_attribute?(:blocked_at) && blocked_at.present? ? :conta_bloqueada : super)
+  end
+
+  # Cliente e funcionário: a conta vira anônima na hora. Não é um destroy:
+  # apagar a linha levaria junto os atendimentos do caixa e do financeiro do
+  # lava-rápido (e as avaliações), que são registro do negócio, não dado da
+  # pessoa. Sai tudo o que identifica alguém; fica o histórico sem dono.
+  #
+  # Dono: não exclui sozinho (há clientes com horário marcado, Last Minute
+  # pago e financeiro a fechar). Vira um chamado pra equipe concluir.
+  #
+  # Devolve :excluida ou :solicitada.
+  def excluir_conta!
+    return solicitar_exclusao! if owner?
+
+    agora = Time.current
+    transaction do
+      # Agendamentos futuros: o horário volta pro lava-rápido. Pedido de Last
+      # Minute ainda em aceite tem a reserva no cartão desfeita; o já aceito
+      # segue a regra de sempre (o cliente desistiu, não há reembolso).
+      appointments.where(status: %w[confirmed pending_acceptance awaiting_payment])
+                  .where("scheduled_at > ?", agora).find_each do |a|
+        if %w[pending_acceptance awaiting_payment].include?(a.status) && a.stripe_payment_intent_id.present?
+          StripeService.new.cancel(a.stripe_payment_intent_id) rescue nil
+        end
+        a.update_columns(status: "cancelled", cancelled_by_id: id, cancelled_by_role: role,
+                         cancellation_reason: "Conta do cliente excluída", updated_at: agora)
+      end
+
+      # Funcionário sai da equipe do lava-rápido.
+      AttendantInvitation.where(attendant_id: id).destroy_all if attendant?
+
+      push_tokens.destroy_all
+      favorite_car_washes.destroy_all
+      notification_reads.destroy_all
+
+      update_columns(
+        email:                 "excluida-#{id}-#{SecureRandom.hex(4)}@#{DOMINIO_EXCLUIDA}",
+        encrypted_password:    Devise::Encryptor.digest(self.class, SecureRandom.hex(32)),
+        full_name:             "Conta excluída",
+        phone: nil, cpf: nil, vehicle_model: nil, vehicle_plate: nil,
+        reset_password_token: nil, reset_password_sent_at: nil, remember_created_at: nil,
+        stripe_payment_method_id: nil, stripe_card_last4: nil, stripe_card_brand: nil,
+        stripe_card_holder: nil, stripe_card_exp_month: nil, stripe_card_exp_year: nil,
+        updated_at: agora
+      )
+    end
+
+    # Fora da transação: o cartão e o cadastro no Stripe saem por último e,
+    # se o Stripe falhar, a conta já está anônima do lado da Loov.
+    if stripe_customer_id.present?
+      Stripe::Customer.delete(stripe_customer_id) rescue Rails.logger.warn("[User##{id}] Stripe customer não removido")
+      update_column(:stripe_customer_id, nil)
+    end
+    :excluida
+  end
+
+  def solicitar_exclusao!
+    aberto = support_tickets.pending.where(category: "cadastro")
+                            .where("description LIKE ?", "Exclusão de conta%").first
+    return :solicitada if aberto
+
+    ticket = support_tickets.create!(
+      category: "cadastro", status: "open", car_wash: car_washes.first,
+      description: "Exclusão de conta solicitada pelo dono"
+    )
+    ticket.messages.create!(user: self, from_admin: false,
+                            body: "Quero excluir minha conta e o meu lava-rápido da Loov.")
+    ticket.messages.create!(
+      user:       User.find_by(role: "admin") || self,
+      from_admin: true,
+      body:       "Recebemos seu pedido de exclusão. Antes de concluir, a equipe Loov confere os " \
+                  "agendamentos marcados, os pagamentos do Last Minute e o financeiro, e te avisa por " \
+                  "aqui. Se mudar de ideia, é só responder nesta conversa."
+    )
+    :solicitada
+  end
+
   # Card display string ex: "Visa •••• 4242"
   def card_display
     return nil unless has_payment_method?

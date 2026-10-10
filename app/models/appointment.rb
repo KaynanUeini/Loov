@@ -243,6 +243,40 @@ class Appointment < ApplicationRecord
     false
   end
 
+  # Lava-rápido cancelou um Last Minute: o cliente recebe de volta o que pagou
+  # (ou a reserva no cartão é desfeita, se ainda não tinha virado cobrança).
+  # Quando é o CLIENTE que não vai, não há estorno: a vaga ficou presa pra ele.
+  # Devolve :ok, :none (não havia pagamento) ou :failed (estorno manual).
+  def estornar_prepagamento!
+    return :none unless disponivel? && stripe_payment_intent_id.present?
+    StripeService.new.refund(stripe_payment_intent_id)
+    :ok
+  rescue => e
+    Rails.logger.error("[Appointment##{id}] estorno do Last Minute falhou: #{e.class}: #{e.message}")
+    abrir_chamado_de_estorno_manual
+    :failed
+  end
+
+  # Estorno automático falhou: abre um chamado no nome do cliente, já com a
+  # explicação da Loov. Ele vê no Suporte que o caso está com a equipe, e o
+  # admin vê na fila de chamados o que precisa estornar à mão.
+  def abrir_chamado_de_estorno_manual
+    return unless user
+    codigo = "LV-#{id.to_s.rjust(4, '0')}"
+    ticket = user.support_tickets.create!(
+      category: "financeiro", status: "open", car_wash: car_wash,
+      description: "Estorno manual do Last Minute #{codigo}"
+    )
+    ticket.messages.create!(
+      user:       User.find_by(role: "admin") || user,
+      from_admin: true,
+      body:       "#{car_wash&.name || 'O lava-rápido'} cancelou sua reserva Last Minute #{codigo} e o estorno " \
+                  "automático não foi concluído. A equipe Loov vai fazer o estorno manualmente e te avisa por aqui."
+    )
+  rescue => e
+    Rails.logger.error("[Appointment##{id}] não abriu chamado de estorno manual: #{e.message}")
+  end
+
   # Dono rejeita → cancela o PaymentIntent (sem cobrança) e rejeita
   def reject!(stripe_service = nil)
     return false unless pending_acceptance? && disponivel?

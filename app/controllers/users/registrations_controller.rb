@@ -12,6 +12,19 @@ class Users::RegistrationsController < Devise::RegistrationsController
   # update: se trocar a senha falhar, o Devise renderiza o edit de novo.
   before_action :load_client_account, only: [:edit, :update]
 
+  # Excluir pelo site segue a mesma regra do app (User#excluir_conta!). O
+  # destroy padrão do Devise apagava a linha e, em cascata, os atendimentos
+  # do caixa do lava-rápido (cliente) ou o lava-rápido inteiro (dono).
+  def destroy
+    if resource.excluir_conta! == :solicitada
+      redirect_to edit_user_registration_path,
+                  notice: "Pedido de exclusão enviado. A equipe Loov confere os agendamentos e pagamentos e conclui; a conversa fica no Suporte."
+    else
+      Devise.sign_out_all_scopes ? sign_out : sign_out(resource_name)
+      redirect_to root_path, notice: "Sua conta foi excluída."
+    end
+  end
+
   protected
 
   # Depois de trocar e-mail/senha, fica na própria Conta com o aviso, em vez

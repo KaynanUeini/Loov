@@ -14,6 +14,8 @@ pt-BR:
       timeout: "Sua sessão expirou. Entre de novo para continuar."
       unauthenticated: "Entre ou cadastre-se para continuar."
       unconfirmed: "Confirme seu e-mail antes de continuar."
+      conta_excluida: "Esta conta foi excluída."
+      conta_bloqueada: "Esta conta está bloqueada. Fale com o suporte da Loov."
       user:
         already_authenticated: "Você já está logado. Faça logout para logar com outra conta."
     mailer:

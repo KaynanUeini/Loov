@@ -55,16 +55,36 @@
     <% end %>
   </div>
 
+  <%# Dono não exclui sozinho: vira pedido pra equipe (User#excluir_conta!).
+      Funcionário sai da equipe e a conta fica anônima. Confirmação em dois
+      passos na própria página: o data-confirm antigo dependia de um script
+      que o site não carrega, e o botão excluía no primeiro clique. %>
+  <% dono = resource.owner? %>
   <div class="loov-card" style="margin-top:24px;border-color:rgba(200,80,80,0.2);background:#fdf6f6;">
-    <h3 class="loov-card-title" style="color:#c85050;">Cancelar minha conta</h3>
+    <h3 class="loov-card-title" style="color:#c85050;"><%= dono ? "Excluir minha conta e o lava-rápido" : "Excluir minha conta" %></h3>
     <p class="loov-card-text" style="margin-bottom:16px;">
-      Esta ação é permanente. Todos os seus dados serão removidos.
+      <% if dono %>
+        Como há clientes com horário marcado e pagamentos do Last Minute, a exclusão é feita pela equipe Loov.
+        Ao pedir, abrimos uma conversa no Suporte e avisamos quando estiver concluída.
+      <% else %>
+        Seus dados pessoais são apagados e você sai da equipe do lava-rápido. Não dá pra desfazer.
+      <% end %>
     </p>
-    <%= button_to "Cancelar minha conta", registration_path(resource_name),
-        data: { confirm: "Tem certeza? Esta ação não pode ser desfeita.",
-                turbo_confirm: "Tem certeza? Esta ação não pode ser desfeita." },
-        method: :delete,
-        class: "loov-btn-secondary",
-        style: "border-color:rgba(200,80,80,0.3);color:#c85050;" %>
+    <button type="button" class="loov-btn-secondary" id="del-ask" style="border-color:rgba(200,80,80,0.3);color:#c85050;">
+      <%= dono ? "Pedir exclusão da conta" : "Excluir minha conta" %>
+    </button>
+    <div id="del-confirm" hidden style="margin-top:12px">
+      <%= button_to (dono ? "Sim, pedir a exclusão" : "Sim, excluir de vez"), registration_path(resource_name),
+          method: :delete, class: "loov-btn-secondary",
+          style: "background:#c85050;border-color:#c85050;color:#fff;" %>
+      <button type="button" class="loov-btn-secondary" id="del-no" style="margin-top:8px">Manter minha conta</button>
+    </div>
   </div>
+  <script nonce="<%= csp_nonce %>">
+    (function () {
+      var ask = document.getElementById('del-ask'), box = document.getElementById('del-confirm');
+      ask.addEventListener('click', function () { box.hidden = false; ask.hidden = true; });
+      document.getElementById('del-no').addEventListener('click', function () { box.hidden = true; ask.hidden = false; });
+    })();
+  </script>
 </div>

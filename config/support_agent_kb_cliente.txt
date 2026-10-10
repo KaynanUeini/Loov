@@ -37,8 +37,9 @@ O mesmo login funciona no app e no site da Loov.
   link vale por 6 horas.
 - Não chegou? Confira a caixa de spam e se o e-mail foi digitado certo. Se mesmo
   assim não chegar, a equipe Loov ajuda por aqui no suporte (ESCALE).
-- Trocar a senha estando logado: hoje o caminho é sair da conta e usar
-  "Esqueci minha senha" na tela de entrar.
+- Trocar a senha estando logado: no app, hoje o caminho é sair da conta e usar
+  "Esqueci minha senha" na tela de entrar. No site, dá pra trocar em Meu perfil →
+  Privacidade e segurança.
 
 ## TELA INICIAL (HOME)
 De cima pra baixo:
@@ -143,9 +144,14 @@ Sobre a "cobrança" que aparece antes do aceite: enquanto o lava-rápido decide,
 valor fica apenas RESERVADO no cartão (alguns bancos mostram como compra
 pendente). Se não houver aceite, a reserva é desfeita; o prazo pra sumir do
 extrato depende do banco.
-Depois de confirmada, a reserva Last Minute não pode ser cancelada pelo app. Se
-houver algum imprevisto, o cliente deve falar com a equipe pelo suporte
-(ESCALE — não prometa devolução).
+Regra de reembolso do Last Minute (aparece pro cliente antes de reservar):
+- Depois que o lava-rápido aceita, a reserva não pode ser cancelada pelo app e
+  NÃO há reembolso se o cliente não for: o valor pago garantiu a vaga, que ficou
+  presa pra ele. Explique com gentileza e não ofereça exceção.
+- Se o LAVA-RÁPIDO cancelar uma reserva Last Minute já aceita (inclusive por
+  fechamento, feriado ou manutenção), o valor pago no app é estornado no cartão
+  automaticamente. O prazo pra aparecer no extrato depende do banco. Se o
+  cliente disser que o estorno não apareceu depois de alguns dias, ESCALE.
 
 ## AGENDA (MEUS AGENDAMENTOS)
 Duas abas:
@@ -170,10 +176,11 @@ A aba atualiza sozinha e ao puxar pra baixo.
 - Precisa cancelar depois do prazo? Avise o lava-rápido diretamente, se puder,
   e fale com a equipe pelo suporte (ESCALE).
 - Last Minute: antes do aceite, use "Segure para cancelar" na tela de espera.
-  Depois de confirmada, não cancela pelo app (ESCALE).
+  Depois de confirmada, não cancela pelo app e não há reembolso se você não for.
 - Se o LAVA-RÁPIDO cancelar o seu agendamento (por imprevisto, feriado, férias
   ou manutenção), você recebe uma notificação no app e pode receber um e-mail,
-  às vezes com o motivo. É só escolher outro horário.
+  às vezes com o motivo. É só escolher outro horário. Se era Last Minute, o
+  valor pago no app volta pro cartão.
 
 ## AVALIAR O ATENDIMENTO
 - Depois que o lava-rápido registra que você foi atendido, o card em Anteriores
@@ -206,8 +213,12 @@ A aba atualiza sozinha e ao puxar pra baixo.
   próxima visita.
 - Veículo: toque no card do carro pra cadastrar modelo e placa (placa antiga
   ABC-1234 ou Mercosul ABC1D23).
-- Dados pessoais: nome, telefone e CPF. O e-mail não pode ser trocado pelo app
-  (é o seu login) — se precisar, ESCALE.
+- Dados pessoais: nome, telefone e CPF.
+- Privacidade e segurança: trocar o e-mail de login (pede a senha atual) e
+  excluir a conta. Na exclusão, os dados pessoais, o cartão e os favoritos são
+  apagados e os agendamentos futuros são cancelados; não dá pra desfazer e uma
+  reserva Last Minute já aceita não é reembolsada. No site, fica em Meu perfil →
+  Privacidade e segurança.
 - Favoritos, Notificações, Pagamentos e Suporte: atalhos pras telas.
 - Sair da conta: no fim da lista. Pra voltar é só entrar com e-mail e senha;
   favoritos, cartão e agendamentos continuam salvos.
@@ -262,14 +273,19 @@ horário.
   hoje. Os horários da semana estão na aba Sobre.
 
 ## QUANDO ESCALAR PRA EQUIPE (should_escalate = true)
-- Cobrança, estorno, valor no extrato, disputa de pagamento ou pedido de
-  devolução de qualquer valor.
-- Reserva Last Minute confirmada que o cliente não pode mais usar.
+- Cobrança que o cliente não reconhece, valor diferente do combinado, cobrança
+  em dobro ou disputa de pagamento.
+- Pedido de devolução de Last Minute em que o cliente não foi: explique a regra
+  (sem reembolso) uma vez; se ele insistir ou disser que houve problema do
+  lava-rápido, ESCALE.
+- Estorno de Last Minute cancelado pelo lava-rápido que não apareceu no extrato
+  depois de alguns dias.
 - Reclamação sobre um lava-rápido: serviço mal feito, dano ao veículo, objeto
   perdido, atendimento, preço diferente do anunciado, lava-rápido fechado no
   horário agendado.
 - Cancelamento fora do prazo, agendamento que sumiu ou status errado.
-- Trocar e-mail, excluir a conta ou pedidos sobre dados pessoais (LGPD).
+- Não consegue trocar o e-mail ou excluir a conta pelo app, ou outros pedidos
+  sobre dados pessoais (LGPD).
 - Cartão adicionado/trocado sem o cliente saber, suspeita de acesso indevido.
 - E-mail de recuperação de senha que não chega.
 - Qualquer coisa que dependa de olhar dados da conta que você não tem, ou cuja

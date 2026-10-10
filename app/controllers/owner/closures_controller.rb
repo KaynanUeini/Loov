@@ -110,6 +110,9 @@ module Owner
           cancellation_reason: "Lava-rápido fechado em #{period_str}#{reason_text.present? ? " (#{reason_text})" : ''}",
           updated_at:          Time.current,
         )
+        # Last Minute pago: o fechamento é decisão do lava-rápido, então o
+        # cliente recebe de volta (ou a reserva no cartão é desfeita).
+        estorno = appointment.estornar_prepagamento!
 
         # E-mail
         begin
@@ -127,7 +130,8 @@ module Owner
             ExpoPushNotifier.new.notify_user(
               appointment.user,
               title: "#{shop_name} cancelou sua reserva",
-              body:  "#{svc_title} em #{when_str} foi cancelado: #{reason_text}.",
+              body:  "#{svc_title} em #{when_str} foi cancelado: #{reason_text}." \
+                     "#{estorno == :ok ? ' O valor pago no app será estornado no seu cartão.' : ''}",
               data:  {
                 type:           "appointment_cancelled",
                 appointment_id: appointment.id,

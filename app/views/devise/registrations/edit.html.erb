@@ -86,8 +86,13 @@
   .ac-badge.is-off { display: none; }
   .ac-item .ac-chev { color: var(--ash); }
 
-  .ac-logout { display: flex; align-items: center; justify-content: center; gap: 8px; width: calc(100% - 40px); margin: 4px 20px 0; padding: 14px; border: 0; border-radius: 14px; background: #f6d4d4; color: var(--rose-500, #c0392b); font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: .8px; transition: background .15s; }
-  .ac-logout:hover { background: #f0c4c4; }
+  /* Sair: grupo próprio no fim da lista, mesma linha dos itens, em vermelho
+     (Ajustes do iOS, Spotify). Era um bloco rosa em caixa alta que gritava
+     mais que tudo na tela pra ação menos usada. Igual ao app. */
+  .ac-logout { border-bottom: 0; }
+  .ac-logout .ac-item-ic { background: rgba(200,80,80,.10); color: var(--rose-500, #c85050); }
+  .ac-logout:hover .ac-item-ic { background: rgba(200,80,80,.18); }
+  .ac-logout .ac-item-t b { color: var(--rose-500, #c85050); }
   .ac-version { margin: 18px 0 40px; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ash); }
 
   /* Folhas (dados pessoais, sair) */
@@ -173,6 +178,7 @@
     .ac-split .ac-loyal { padding-left: 0; padding-right: 0; }
     .ac-right { padding-top: 24px; }
     .ac-list { margin-top: 0; padding: 4px 20px; background: var(--paper); border: 1px solid var(--stone); border-radius: 20px; }
+    .ac-list + .ac-list { margin-top: 16px; }
   }
 </style>
 
@@ -225,7 +231,12 @@
             <i data-feather="chevron-right" class="ac-chev" style="width:16px;height:16px"></i>
           </a>
         </div>
-        <button type="button" class="ac-logout" data-sheet="sair"><i data-feather="log-out" style="width:15px;height:15px"></i>ENCERRAR SESSÃO</button>
+        <div class="ac-list">
+          <button type="button" class="ac-item ac-logout" data-sheet="sair">
+            <span class="ac-item-ic"><i data-feather="log-out" style="width:17px;height:17px"></i></span>
+            <span class="ac-item-t"><b>Sair da conta</b><small><%= @account[:email] %></small></span>
+          </button>
+        </div>
         <div class="ac-version">LOOV · v1.0.0</div>
       </div>
     </div>
@@ -278,7 +289,7 @@
 
         <div class="sec-danger" id="sec-danger">
           <h2>Excluir minha conta</h2>
-          <p>Seus dados, agendamentos e favoritos são apagados. Não dá pra desfazer.</p>
+          <p>Seus dados pessoais, cartão e favoritos são apagados e os agendamentos futuros são cancelados. Não dá pra desfazer.</p>
           <button type="button" class="sec-danger-btn" id="sec-danger-ask">Excluir minha conta</button>
           <div class="sec-danger-confirm">
             <%= button_to "Sim, excluir de vez", registration_path(resource_name), method: :delete, class: "ac-danger", form: { data: { turbo: false } } %>
@@ -310,10 +321,10 @@
       <div class="ac-handle"></div>
       <div class="ac-confirm">
         <div class="ac-confirm-ic"><i data-feather="log-out" style="width:22px;height:22px"></i></div>
-        <h2 id="sh-sair-t">Encerrar sessão?</h2>
-        <p>Você precisará fazer login novamente.</p>
+        <h2 id="sh-sair-t">Sair da conta?</h2>
+        <p>Pra voltar, é só entrar de novo com seu e-mail e senha. Seus favoritos, cartão e agendamentos continuam salvos.</p>
         <%= button_to "Sair", destroy_user_session_path, method: :delete, class: "ac-danger", form: { data: { turbo: false } } %>
-        <button type="button" class="ac-ghost" data-close>Cancelar</button>
+        <button type="button" class="ac-ghost" data-close>Continuar conectado</button>
       </div>
     </div>
   </div>

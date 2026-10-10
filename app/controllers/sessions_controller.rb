@@ -41,6 +41,10 @@ class SessionsController < Devise::SessionsController
         render json: { error: 'E-mail ou senha inválidos.' }, status: :unauthorized and return
       end
 
+      unless user.active_for_authentication?
+        render json: { error: I18n.t("devise.failure.#{user.inactive_message}") }, status: :unauthorized and return
+      end
+
       Rails.logger.info("[Sessions] login OK (user_id=#{user.id} email=#{email.inspect} role=#{user.role})")
     end
 

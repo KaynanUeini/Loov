@@ -219,11 +219,6 @@ module Owner
     def cancel
       reason = params[:reason].to_s.strip.presence
 
-      if @appointment.disponivel?
-        render json: { error: "Agendamentos Disponível não podem ser cancelados por aqui. Entre em contato com o suporte." }, status: :unprocessable_entity
-        return
-      end
-
       # Walk-ins nascem com status "attended" (a cobrança/lavagem foi
       # registrada na hora). Permitimos cancelar walk-in caso o dono
       # tenha registrado errado. Para appointments regulares "attended"
@@ -246,6 +241,10 @@ module Owner
         updated_at:           Time.current
       )
 
+      # Last Minute cancelado pelo lava-rápido: o cliente pagou pra garantir a
+      # vaga e o lava-rápido não cumpriu, então o valor volta pro cartão.
+      estorno = @appointment.estornar_prepagamento!
+
       # Notificação in-app automática (updated_at atualizado acima)
       # Email + push apenas se o agendamento tiver usuário cadastrado
       if @appointment.user.present?
@@ -262,6 +261,7 @@ module Owner
 
           body  = "#{svc} em #{when_str}."
           body << " #{reason}." if reason.present?
+          body << " O valor pago no app será estornado no seu cartão." if estorno == :ok
           body << " Abra o app para escolher um novo horário."
 
           ExpoPushNotifier.new.notify_user(
@@ -278,7 +278,7 @@ module Owner
         end
       end
 
-      render json: { ok: true }
+      render json: { ok: true, refund: estorno }
     rescue => e
       render json: { error: e.message }, status: :unprocessable_entity
     end

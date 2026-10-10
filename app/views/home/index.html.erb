@@ -915,6 +915,7 @@
     </div>
     <div class="owner-dash-sheet-sub" id="od-cancel-sub"></div>
     <div class="owner-dash-cancel-body">Essa ação libera o slot na agenda. Não dá pra desfazer.</div>
+    <div class="owner-dash-cancel-body" id="od-cancel-lm" hidden></div>
     <input class="owner-dash-cancel-input" id="od-cancel-reason" placeholder="Motivo do cancelamento (opcional)" />
     <div class="owner-dash-error" id="od-cancel-error"></div>
     <button class="owner-dash-btn-danger" id="od-cancel-confirm">
@@ -1695,6 +1696,13 @@
     cancelTarget = appt;
     document.getElementById('od-cancel-sub').textContent =
       `${appt.client} · ${appt.service} · ${appt.time}`;
+    // Last Minute pago: o dono precisa saber que cancelar devolve o valor.
+    const lm = document.getElementById('od-cancel-lm');
+    lm.hidden = !appt.is_disponivel;
+    if (appt.is_disponivel) {
+      lm.textContent = 'É uma reserva Last Minute: o cliente recebe de volta no cartão os R$ ' +
+        Number(appt.prepayment_amount || 0).toFixed(2).replace('.', ',') + ' que pagou no app.';
+    }
     document.getElementById('od-cancel-reason').value = '';
     document.getElementById('od-cancel-error').style.display = 'none';
     const btn = document.getElementById('od-cancel-confirm');

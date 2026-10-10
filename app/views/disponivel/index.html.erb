@@ -555,7 +555,8 @@
         '<p>' + esc(svc.description && svc.description.trim() ? svc.description : 'Este lava-rápido não cadastrou uma descrição detalhada. Confirme os itens incluídos ao chegar.') + '</p></div>' : '') +
       payBlock(svc, cw) +
       '<p class="dp-hint">Os ' + PCT_LABEL + ' ficam reservados no cartão e só são cobrados se o lava-rápido aceitar em até 3 min. ' +
-        'Se ele recusar ou o tempo acabar, o valor é liberado.</p>' +
+        'Se ele recusar ou o tempo acabar, o valor é liberado. Depois de aceita, não há reembolso se você não for; ' +
+        'se o lava-rápido cancelar, você recebe de volta.</p>' +
       '<button type="button" class="dp-confirm" id="dp-confirm"' + (state.reserving || !svc ? ' disabled' : '') + '>' +
         (state.reserving ? '<span class="dp-spin"></span>'
           : (SIGNED_IN && !HAS_CARD) ? icon('credit-card', 16) + ' Cadastrar cartão para reservar'

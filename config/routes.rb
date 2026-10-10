@@ -53,6 +53,11 @@ Rails.application.routes.draw do
   get    'push_tokens/diagnostic', to: 'push_tokens#diagnostic'
   delete 'push_tokens/:token',     to: 'push_tokens#destroy', constraints: { token: /[^\/]+/ }
 
+  # Conta de login (qualquer papel) pelo app: trocar e-mail e excluir.
+  get    'account',       to: 'accounts#show'
+  patch  'account/email', to: 'accounts#update_email'
+  delete 'account',       to: 'accounts#destroy'
+
   namespace :client do
     resource :profile, only: [:show, :edit, :update] do
       collection do
