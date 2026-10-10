@@ -1,931 +1,1218 @@
-<% Rails.logger.info("Iniciando renderização do template car_washes/manage.html.erb") %>
+<%#
+  Gerenciar lava-rápido — porte do OwnerGerenciarScreen do app.
+
+  Mesmo modelo de estado do app: tudo é editado localmente e vai de uma vez
+  em "Salvar alterações" (fechamentos são a exceção: valem na hora, porque
+  cancelam agendamentos e o dono precisa ver isso acontecer).
+
+  No desktop a largura sobra, então as quatro seções viram um índice à
+  esquerda e um painel à direita — o padrão dos Ajustes do macOS. O índice
+  mostra o resumo de cada seção (endereço, dias, serviços), então dá pra ler
+  o estado da loja sem abrir nada. No celular volta a ser a lista de cartões
+  recolhíveis do app.
+%>
+<script src="/vendor/feather-4.29.2.min.js" nonce="<%= csp_nonce %>"></script>
 
 <style>
-  .mng-section {
-    background: var(--paper); border: 1px solid var(--stone);
-    border-radius: 20px; margin-bottom: 14px; overflow: hidden;
-    position: relative;
-    box-shadow: 0 2px 6px rgba(25,20,15,0.04);
+  .loov-nav { background: var(--cream) !important; }
+  .gm { background: var(--cream); color: var(--ink); min-height: 100vh; padding-top: 60px; }
+  .gm *, .gm *::before, .gm *::after { box-sizing: border-box; }
+  .gm button { font-family: inherit; }
+  .gm-wrap { width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 20px 120px; }
+  .gm-mono {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    letter-spacing: 1.6px; text-transform: uppercase; color: var(--ash);
   }
-
-  .section-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 18px 24px;
-    cursor: pointer; user-select: none;
-    transition: background .15s ease;
-  }
-  .section-header:hover { background: var(--sand); }
-
-  .section-header-left {
-    display: flex; align-items: center; gap: 10px;
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 17px; font-weight: 700;
-    color: var(--ink); letter-spacing: -0.2px;
-  }
-  .section-header-left i { color: var(--coral-500); font-size: 14px; }
-
-  .section-chevron { color: var(--ash); font-size: 13px; transition: transform .25s ease; }
-  .section-chevron.open { transform: rotate(180deg); }
-
-  .section-body { max-height: 0; overflow: hidden; transition: max-height .35s ease; }
-  .section-body.open { max-height: 2000px; }
-  .section-body-inner { padding: 0 24px 24px; }
-
-  .form-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
-  .form-field:last-child { margin-bottom: 0; }
-
-  .form-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; font-weight: 600; letter-spacing: 1.4px;
-    color: var(--graphite); text-transform: uppercase;
-  }
-
-  .form-input, .form-select, .form-textarea {
-    background: var(--paper) !important;
-    border: 1px solid var(--stone) !important;
-    border-radius: 12px !important;
-    padding: 12px 16px !important;
-    font-family: 'Inter', sans-serif !important;
-    font-size: 14.5px !important;
+  .gm-head { padding: 28px 0 24px; }
+  .gm-head .gm-mono { color: var(--coral-500); }
+  .gm-head h1 {
+    margin: 6px 0 0 !important;
+    font-family: 'Space Grotesk', sans-serif !important; font-weight: 700;
+    font-size: clamp(40px, 6vw, 72px); line-height: .95; letter-spacing: -0.045em;
     color: var(--ink) !important;
-    outline: none;
+  }
+  .gm-head p { margin: 12px 0 0; color: var(--graphite); font-size: 15px; }
+  .gm-head p strong { color: var(--ink); font-weight: 600; }
+
+  .gm-banner {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 14px 16px; border-radius: 16px; margin-bottom: 18px;
+    font-size: 13.5px; line-height: 1.5;
+  }
+  .gm-banner svg { flex-shrink: 0; margin-top: 2px; }
+  .gm-banner.warn { background: #fbf3dd; border: 1px solid #ecdba3; color: #7a5f14; }
+  .gm-banner.info { background: var(--sand); border: 1px solid var(--stone); color: var(--graphite); }
+
+  .gm .feather-loader { animation: gmspin 1s linear infinite; }
+  @keyframes gmspin { to { transform: rotate(360deg); } }
+
+  /* ── Layout ── */
+  .gm-grid { display: block; }
+  .gm-rail { display: none; }
+
+  /* ── Seção (cartão) ── */
+  .gm-sec {
+    background: var(--paper); border: 1px solid var(--stone);
+    border-radius: 20px; margin-bottom: 12px; overflow: hidden;
+    box-shadow: 0 2px 8px rgba(25,20,15,.04);
+    scroll-margin-top: 90px;
+  }
+  .gm-sec-head {
+    width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 18px; background: none; border: none; cursor: pointer; text-align: left;
+    transition: background .15s;
+  }
+  .gm-sec-head:hover { background: var(--sand); }
+  .gm-sec-head-l { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .gm-sec-head-l > svg { color: var(--graphite); flex-shrink: 0; }
+  .gm-sec-title {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+    font-size: 16px; letter-spacing: -.2px; color: var(--ink);
+  }
+  .gm-sec-sum { font-size: 12.5px; color: var(--ash); margin-top: 2px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .gm-sec-chev { color: var(--ash); transition: transform .2s; flex-shrink: 0; }
+  .gm-sec.open .gm-sec-chev { transform: rotate(180deg); }
+  .gm-sec-body { display: none; padding: 4px 18px 18px; }
+  .gm-sec.open .gm-sec-body { display: block; }
+  .gm-sec-h2 { display: none; }
+
+  /* ── Campos ── */
+  .gm-label {
+    display: block; margin: 14px 0 6px;
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--ash);
+  }
+  .gm-input, .gm-select {
+    width: 100%; box-sizing: border-box;
+    background: var(--cream) !important; border: 1px solid var(--stone) !important;
+    border-radius: 12px !important; padding: 12px 14px !important;
+    font-family: 'Inter', sans-serif !important; font-size: 14px !important;
+    color: var(--ink) !important; outline: none; box-shadow: none !important;
     transition: border-color .15s, box-shadow .15s;
-    width: 100%;
   }
-  .form-input::placeholder, .form-textarea::placeholder { color: var(--ash) !important; }
-  .form-input:focus, .form-select:focus, .form-textarea:focus {
+  .gm-input::placeholder { color: var(--ash) !important; }
+  .gm-input:focus, .gm-select:focus {
     border-color: var(--coral-500) !important;
-    box-shadow: 0 0 0 3px rgba(220,120,82,0.08) !important;
+    box-shadow: 0 0 0 3px rgba(220,120,82,.10) !important;
   }
-  .form-select {
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23ada699' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: right 14px center;
-    cursor: pointer;
-    padding-right: 36px !important;
+  .gm-select {
+    appearance: none; -webkit-appearance: none; cursor: pointer; padding-right: 36px !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23ada699' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important; background-position: right 12px center !important;
   }
-  .form-textarea { resize: vertical; min-height: 80px; }
-  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .gm-row { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+  .gm-row.addr  { grid-template-columns: 1fr 1.4fr .6fr; }
+  .gm-row.state { grid-template-columns: .6fr 1.4fr; }
+  .gm-field { min-width: 0; position: relative; }
+  .gm-spin { position: absolute; right: 12px; bottom: 13px; color: var(--coral-500); }
+  .gm-hint { color: var(--graphite); font-size: 11.5px; line-height: 1.45; margin-top: 6px; }
+  .gm-help { color: var(--graphite); font-size: 13px; line-height: 1.55; margin: 0 0 14px; }
 
-  .item-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
-  .item-row {
-    background: var(--sand); border: 1px solid var(--stone);
-    border-radius: 14px; padding: 14px 18px;
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 14px; transition: border-color .18s ease;
-    position: relative; overflow: hidden;
+  /* ── Capacidade ── */
+  .gm-cap {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--cream); border: 1px solid var(--stone);
+    border-radius: 14px; padding: 14px; margin-top: 4px;
   }
-  .item-row::before {
-    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
-    width: 3px; background: var(--coral-500); opacity: 0;
-    transition: opacity .18s ease;
+  .gm-cap-t { color: var(--ink); font-size: 14.5px; font-weight: 600; }
+  .gm-cap .gm-hint { margin-top: 3px; }
+  .gm-step {
+    display: flex; align-items: center; flex-shrink: 0;
+    background: var(--paper); border: 1px solid var(--stone); border-radius: 999px; padding: 0 4px;
   }
-  .item-row:hover { border-color: var(--coral-300); }
-  .item-row:hover::before { opacity: 1; }
+  .gm-step button {
+    width: 40px; height: 40px; border-radius: 50%; border: none; background: none;
+    display: flex; align-items: center; justify-content: center; color: var(--ink); cursor: pointer;
+  }
+  .gm-step button:hover:not(:disabled) { background: var(--sand); }
+  .gm-step button:disabled { color: var(--stone); cursor: default; }
+  .gm-step input {
+    width: 36px; border: none !important; background: none !important; text-align: center;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 18px; color: var(--ink);
+    padding: 0 !important; outline: none; box-shadow: none !important;
+  }
+  .gm-rule { height: 1px; background: var(--stone); margin: 16px 0 14px; }
 
-  .item-info { flex: 1; }
-  .item-title {
-    font-size: 15px; font-weight: 600;
-    color: var(--ink); margin-bottom: 3px;
+  /* ── Linhas de item ── */
+  .gm-item {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--cream); border: 1px solid var(--stone); border-radius: 14px;
+    padding: 12px 14px; margin-bottom: 8px;
   }
-  .item-sub {
-    font-size: 13px; color: var(--graphite);
+  .gm-item.editing { border-color: var(--coral-300); }
+  .gm-item-info { flex: 1; min-width: 0; }
+  .gm-item-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .gm-item-t { color: var(--ink); font-size: 14px; font-weight: 600; }
+  .gm-item-s { color: var(--graphite); font-size: 12px; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .gm-badge {
+    background: var(--coral-50); border: 1px solid var(--coral-100); color: var(--coral-700);
+    border-radius: 100px; padding: 2px 9px;
+    font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: .8px;
   }
-
-  .item-badge {
-    display: inline-flex; align-items: center;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
-    background: var(--coral-50); color: var(--coral-700);
-    border: 1px solid var(--coral-100);
-    padding: 3px 8px; border-radius: 100px;
-    margin-left: 8px; text-transform: uppercase;
-  }
-
-  .item-actions-wrap { display: flex; gap: 8px; flex-shrink: 0; }
-
-  .edit-panel {
-    display: none; background: var(--paper);
-    border: 1px solid var(--coral-100); border-radius: 14px;
-    padding: 18px; margin-top: 6px;
-    box-shadow: 0 2px 6px rgba(25,20,15,0.04);
-  }
-  .edit-panel.open { display: block; }
-  .edit-panel-actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
-
-  .add-panel {
-    display: none; background: var(--sand);
-    border: 1px dashed var(--coral-300); border-radius: 14px;
-    padding: 18px; margin-top: 8px;
-  }
-  .add-panel.open { display: block; }
-  .add-panel-actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
-
-  .day-buttons {
-    display: grid; grid-template-columns: repeat(7, 1fr);
-    gap: 8px; margin-bottom: 14px;
-  }
-  .day-btn {
-    background: var(--paper); border: 1px solid var(--stone);
-    border-radius: 10px; padding: 10px 4px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; font-weight: 700; letter-spacing: 1.2px;
-    color: var(--graphite); cursor: pointer; transition: all .18s ease;
-    text-align: center; text-transform: uppercase; user-select: none;
-  }
-  .day-btn:hover { border-color: var(--coral-300); color: var(--coral-700); }
-  .day-btn.active { background: var(--coral-50); border-color: var(--coral-500); color: var(--coral-700); }
-
-  .time-row {
-    display: flex; align-items: center; gap: 12px;
-    background: var(--paper); border: 1px solid var(--stone);
-    border-radius: 12px; padding: 12px 14px; margin-bottom: 8px;
-  }
-  .time-day-label {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 15px; font-weight: 700;
-    color: var(--coral-500); min-width: 40px; letter-spacing: -0.2px;
-  }
-  .time-select-wrap { display: flex; align-items: center; gap: 7px; flex: 1; }
-  .time-label-small {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; font-weight: 600; letter-spacing: 1.4px;
-    color: var(--graphite); text-transform: uppercase; white-space: nowrap;
-  }
-  .time-sep {
-    font-family: 'Space Grotesk', sans-serif; font-size: 16px;
-    color: var(--ash);
-  }
-  .time-select {
-    background: var(--paper); border: 1px solid var(--stone);
-    border-radius: 8px; padding: 7px 10px;
-    font-family: 'Inter', sans-serif; font-size: 13.5px;
-    color: var(--ink); outline: none; cursor: pointer;
-    appearance: none; text-align: center;
-    transition: border-color .15s;
-  }
-  .time-select:focus { border-color: var(--coral-500); }
-
-  .btn-icon {
-    display: inline-flex; align-items: center; justify-content: center;
+  .gm-acts { display: flex; gap: 8px; flex-shrink: 0; }
+  .gm-ibtn {
     width: 34px; height: 34px; border-radius: 10px;
     border: 1px solid var(--stone); background: var(--paper);
-    color: var(--graphite); cursor: pointer;
-    transition: all .15s ease; font-size: 12px;
-  }
-  .btn-icon:hover { border-color: var(--coral-500); color: var(--coral-700); }
-  .btn-icon.danger:hover { border-color: var(--rose-500); color: var(--rose-500); }
-
-  .btn-add-row {
-    display: inline-flex; align-items: center; gap: 8px;
-    background: transparent; color: var(--coral-700);
-    border: 1px dashed var(--coral-300); border-radius: 12px;
-    padding: 12px 16px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; font-weight: 600; letter-spacing: 1.4px;
-    cursor: pointer; transition: all .18s ease;
-    width: 100%; justify-content: center; margin-top: 8px;
-    text-transform: uppercase;
-  }
-  .btn-add-row:hover { border-color: var(--coral-500); background: var(--coral-50); }
-
-  .btn-mng-confirm {
-    display: inline-flex; align-items: center; gap: 7px;
-    background: var(--coral-500); color: var(--cream);
-    border: none; border-radius: 100px;
-    padding: 10px 20px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; font-weight: 600; letter-spacing: 1.4px;
-    cursor: pointer; transition: all .18s ease;
-    text-transform: uppercase;
-  }
-  .btn-mng-confirm:hover { background: var(--coral-700); }
-
-  .btn-mng-cancel {
-    display: inline-flex; align-items: center; gap: 7px;
-    background: transparent; color: var(--graphite);
-    border: 1px solid var(--stone); border-radius: 100px;
-    padding: 10px 20px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; font-weight: 600; letter-spacing: 1.4px;
-    cursor: pointer; transition: all .18s ease;
-    text-transform: uppercase;
-  }
-  .btn-mng-cancel:hover { border-color: var(--coral-500); color: var(--coral-700); }
-
-  .form-actions {
-    display: flex; gap: 12px; margin-top: 22px; flex-wrap: wrap;
-  }
-
-  .field-error {
-    font-size: 12px; color: var(--rose-500); margin-top: 4px;
-    display: none; font-weight: 500;
-  }
-  .field-error.visible { display: block; }
-
-  .loading-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(40,35,28,0.55); backdrop-filter: blur(6px);
-    display: none; flex-direction: column;
-    justify-content: center; align-items: center; z-index: 9999;
-  }
-  .loading-spinner {
-    width: 44px; height: 44px;
-    border: 3px solid rgba(220,120,82,0.25);
-    border-top-color: var(--coral-500); border-radius: 50%;
-    animation: spinAnim .8s linear infinite;
-  }
-  .loading-text {
-    color: var(--cream);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; letter-spacing: 1.6px;
-    margin-top: 14px; text-transform: uppercase;
-  }
-
-  .flash-wrap { margin-bottom: 22px; }
-  .flash-msg {
-    display: flex; align-items: center; gap: 10px;
-    padding: 14px 18px; border-radius: 14px;
-    font-size: 14px; margin-bottom: 8px;
-  }
-  .flash-msg.error {
-    background: #fdecec; border: 1px solid #f5cccc;
-    color: var(--rose-500);
-  }
-  .flash-msg.success {
-    background: #d6ecde; border: 1px solid #b5d8c1;
-    color: #2d6b42;
-  }
-  .flash-msg.warning {
-    background: #fbf3dd; border: 1px solid #ecdba3;
-    color: #8a6d1f;
-  }
-
-  .form-errors {
-    background: #fdecec; border: 1px solid #f5cccc;
-    border-radius: 14px; padding: 16px 20px; margin-bottom: 22px;
-  }
-  .form-errors h2 {
-    font-family: 'JetBrains Mono', monospace !important;
-    font-size: 11px; letter-spacing: 1.4px;
-    color: var(--rose-500) !important;
-    margin: 0 0 8px 0; text-transform: uppercase;
-    display: flex; align-items: center; gap: 8px;
-    font-weight: 700;
-  }
-  .form-errors ul { list-style: none; margin: 0; padding: 0; }
-  .form-errors ul li { font-size: 13.5px; color: var(--rose-500); padding: 3px 0; }
-  .form-errors ul li::before { content: '· '; }
-
-  .closure-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
-  .closure-item {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 12px 16px;
-    background: var(--sand); border: 1px solid var(--stone);
-    border-radius: 12px; gap: 14px;
-  }
-  .closure-item-info { flex: 1; min-width: 0; }
-  .closure-item-period {
-    font-size: 14px; font-weight: 600; color: var(--ink);
-  }
-  .closure-item-reason {
-    font-size: 12.5px; color: var(--graphite); margin-top: 3px;
-  }
-  .closure-remove {
-    background: var(--paper); border: 1px solid #f5cccc;
-    border-radius: 10px; width: 32px; height: 32px;
     display: flex; align-items: center; justify-content: center;
-    color: var(--rose-500); font-size: 12px; cursor: pointer;
-    transition: all .15s ease; flex-shrink: 0;
+    color: var(--coral-500); cursor: pointer; transition: border-color .15s, background .15s;
   }
-  .closure-remove:hover { background: #fdecec; border-color: var(--rose-500); }
-  .closure-empty {
-    font-size: 13px; color: var(--ash); padding: 8px 0;
-  }
-  .closure-add-panel {
-    background: var(--sand); border: 1px dashed var(--coral-300);
-    border-radius: 14px; padding: 18px; margin-top: 10px;
-    display: none;
-  }
-  .closure-add-panel.open { display: block; }
-  .closure-form-row {
-    display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px;
-  }
-  .closure-form-row .form-field { flex: 1; min-width: 140px; }
+  .gm-ibtn:hover { border-color: var(--coral-300); }
+  .gm-ibtn.danger { color: var(--rose-500); border-color: #f8717133; }
+  .gm-ibtn.danger:hover { background: #fdecec; border-color: var(--rose-500); }
+  .gm-ibtn:disabled { opacity: .5; cursor: wait; }
+  .gm-empty { color: var(--ash); font-size: 13px; margin: 4px 0 10px; }
 
-  @keyframes spinAnim { to { transform: rotate(360deg); } }
+  .gm-add {
+    width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
+    border: 1.5px dashed rgba(220,120,82,.28); border-radius: 14px; padding: 13px;
+    background: rgba(220,120,82,.03); color: var(--coral-500);
+    font-size: 12.5px; font-weight: 600; cursor: pointer; margin-top: 6px;
+    transition: background .15s, border-color .15s;
+  }
+  .gm-add:hover { background: var(--coral-50); border-color: var(--coral-300); }
 
-  @media (max-width: 540px) {
-    .form-row { grid-template-columns: 1fr; }
-    .day-buttons { grid-template-columns: repeat(4, 1fr); }
-    .time-row { flex-direction: column; align-items: flex-start; }
-    .time-select-wrap { width: 100%; }
+  /* ── Formulário inline ── */
+  .gm-form {
+    background: var(--paper); border: 1px solid rgba(220,120,82,.22);
+    border-radius: 14px; padding: 4px 14px 14px; margin-bottom: 8px;
+  }
+  .gm-form.sand { background: var(--sand); border-style: dashed; }
+  .gm-form-acts { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+  .gm-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    border-radius: 100px; padding: 11px 18px; font-size: 12.5px; font-weight: 600;
+    cursor: pointer; transition: background .15s, border-color .15s, opacity .15s;
+  }
+  .gm-btn.primary { background: var(--coral-500) !important; color: var(--cream) !important; border: none !important; }
+  .gm-btn.primary:hover:not(:disabled) { background: var(--coral-700) !important; }
+  .gm-btn.ghost { background: transparent; color: var(--graphite); border: 1px solid var(--stone); }
+  .gm-btn.ghost:hover:not(:disabled) { border-color: var(--graphite); color: var(--ink); }
+  .gm-btn.danger { background: var(--rose-500) !important; color: #fff !important; border: none !important; }
+  .gm-btn:disabled { opacity: .5; cursor: default; }
+
+  .gm-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .gm-day {
+    padding: 12px 0; border-radius: 100px; border: 1px solid var(--stone);
+    background: var(--cream); color: var(--ash); cursor: pointer;
+    font-size: 11px; font-weight: 600; letter-spacing: .4px; transition: all .15s;
+  }
+  .gm-day:hover:not(:disabled) { border-color: var(--coral-300); color: var(--coral-700); }
+  .gm-day.on { border-color: var(--coral-500); background: var(--coral-50); color: var(--coral-500); }
+  .gm-day:disabled { opacity: .35; cursor: not-allowed; }
+
+  /* ── Fechamentos ── */
+  .gm-clos {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--sand); border: 1px solid var(--stone); border-radius: 12px;
+    padding: 12px; margin-bottom: 8px;
+  }
+  .gm-clos-p { color: var(--ink); font-size: 13.5px; font-weight: 600; }
+  .gm-clos-r { color: var(--ash); font-size: 12px; margin-top: 3px; }
+  .gm-clos .gm-ibtn { border-radius: 50%; width: 32px; height: 32px; background: #fdecec80; }
+
+  /* ── Barra de salvar ──
+     Fixa no rodapé: o botão é a única ação da tela e não pode sumir rolando
+     uma lista de serviços. O texto à esquerda diz se há algo pendente — o
+     mesmo sinal discreto do "Alterações não salvas" do Figma e do macOS. */
+  .gm-bar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 90;
+    background: rgba(250,250,246,.92); backdrop-filter: saturate(1.4) blur(14px);
+    -webkit-backdrop-filter: saturate(1.4) blur(14px);
+    border-top: 1px solid var(--stone);
+  }
+  .gm-bar-in {
+    max-width: 1180px; margin: 0 auto; padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
+    display: flex; align-items: center; gap: 12px;
+  }
+  .gm-bar-state { flex: 1; display: flex; align-items: center; gap: 8px; color: var(--ash); font-size: 13px; min-width: 0; }
+  .gm-bar-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--stone); flex-shrink: 0; }
+  .gm-bar.dirty .gm-bar-dot { background: var(--coral-500); }
+  .gm-bar.dirty .gm-bar-state { color: var(--ink); font-weight: 600; }
+  #gm-discard[hidden] { display: none !important; }
+  .gm-save { min-width: 200px; padding: 14px 22px; font-size: 13.5px;
+    box-shadow: 0 4px 12px rgba(220,120,82,.18); }
+  .gm-save:disabled { box-shadow: none; }
+
+  /* ── Toast ── */
+  .gm-toast {
+    position: fixed; left: 50%; bottom: 92px; transform: translate(-50%, 12px);
+    z-index: 1200; max-width: min(460px, calc(100vw - 32px));
+    display: flex; align-items: center; gap: 10px;
+    border: 1px solid; border-radius: 14px; padding: 12px 14px;
+    font-size: 13px; font-weight: 600; line-height: 1.4;
+    box-shadow: 0 12px 32px rgba(25,20,15,.14);
+    opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
+  }
+  .gm-toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .gm-toast.success { background: var(--coral-50); border-color: var(--coral-100); color: var(--coral-700); }
+  .gm-toast.error   { background: #fdecec; border-color: #f5cccc; color: var(--rose-500); }
+  .gm-toast.info    { background: var(--sand); border-color: var(--stone); color: var(--graphite); }
+
+  /* ── Modais (confirmação + conflito de capacidade) ── */
+  .gm-ov {
+    position: fixed; inset: 0; z-index: 1100; background: rgba(25,20,15,.5);
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .gm-ov[hidden] { display: none !important; }
+  .gm-modal {
+    background: var(--paper); border-radius: 24px; width: 100%; max-width: 420px;
+    padding: 22px; box-shadow: 0 24px 60px rgba(25,20,15,.25);
+  }
+  .gm-modal h3 { margin: 0 !important; font-family: 'Space Grotesk', sans-serif !important;
+    font-size: 19px !important; letter-spacing: -.3px; color: var(--ink) !important; }
+  .gm-modal p { margin: 8px 0 0; color: var(--graphite); font-size: 13.5px; line-height: 1.5; }
+  .gm-modal .gm-form-acts { justify-content: flex-end; margin-top: 20px; }
+  .gm-modal.wide { max-width: 560px; max-height: calc(100vh - 40px); overflow-y: auto; }
+  .gm-cf-banner {
+    display: flex; gap: 12px; align-items: flex-start; margin-top: 14px;
+    background: var(--coral-50); border: 1px solid var(--coral-100); border-radius: 16px; padding: 14px;
+  }
+  .gm-cf-banner svg { color: var(--coral-500); flex-shrink: 0; margin-top: 1px; }
+  .gm-cf-banner b { color: var(--ink); font-size: 14px; }
+  .gm-cf-banner div div { color: var(--graphite); font-size: 12.5px; margin-top: 4px; line-height: 1.45; }
+  .gm-cf-win { border: 1px solid var(--stone); border-radius: 14px; padding: 14px; margin-top: 10px; }
+  .gm-cf-wh { display: flex; align-items: center; gap: 10px; }
+  .gm-cf-wt { flex: 1; color: var(--ink); font-size: 14px; font-weight: 600; }
+  .gm-cf-ws { color: var(--ash); font-size: 11.5px; margin-top: 2px; font-weight: 400; }
+  .gm-cf-x {
+    background: #fdecec; border: 1px solid #f5cccc; color: var(--rose-500); border-radius: 6px;
+    padding: 3px 8px; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: .8px;
+  }
+  .gm-cf-appt {
+    display: flex; align-items: center; gap: 10px; margin-top: 8px;
+    background: var(--sand); border: 1px solid var(--stone); border-radius: 10px; padding: 10px 12px;
+  }
+  .gm-cf-appt b { display: block; color: var(--ink); font-size: 13px; }
+  .gm-cf-appt span { color: var(--graphite); font-size: 11.5px; }
+  .gm-cf-cancel {
+    margin-left: auto; min-width: 86px; padding: 9px 12px; border-radius: 8px; cursor: pointer;
+    background: #fdecec; border: 1px solid #f5a3a3; color: var(--rose-500); font-size: 12px; font-weight: 600;
+  }
+  .gm-cf-ok {
+    display: flex; align-items: center; gap: 10px; margin-top: 12px;
+    background: var(--coral-50); border: 1px solid var(--coral-100); border-radius: 12px; padding: 12px 14px;
+    color: var(--ink); font-size: 13px; font-weight: 600;
+  }
+  .gm-cf-ok svg { color: var(--coral-500); }
+  .gm-cf-discard {
+    display: block; width: 100%; margin-top: 6px; padding: 12px; background: none; border: none;
+    color: var(--graphite); font-size: 12.5px; font-weight: 600; text-decoration: underline; cursor: pointer;
+  }
+
+  /* ── Desktop: índice + painel ── */
+  @media (min-width: 1000px) {
+    .gm-wrap { padding: 0 32px 120px; }
+    .gm-grid { display: grid; grid-template-columns: 300px 1fr; gap: 32px; align-items: start; }
+    .gm-rail { display: block; position: sticky; top: 88px; }
+    .gm-rail-btn {
+      width: 100%; display: flex; align-items: center; gap: 12px; text-align: left;
+      padding: 14px 14px; margin-bottom: 4px; border-radius: 14px;
+      background: none; border: 1px solid transparent; cursor: pointer;
+      transition: background .15s, border-color .15s;
+    }
+    .gm-rail-btn:hover { background: var(--sand); }
+    .gm-rail-btn.on { background: var(--paper); border-color: var(--stone); box-shadow: 0 2px 8px rgba(25,20,15,.04); }
+    .gm-rail-btn > svg { color: var(--graphite); flex-shrink: 0; }
+    .gm-rail-btn.on > svg { color: var(--coral-500); }
+    .gm-rail-txt { min-width: 0; flex: 1; }
+    .gm-rail-btn .gm-sec-title { font-size: 15px; }
+    .gm-rail-btn .gm-sec-sum { white-space: normal; }
+
+    .gm-sec { display: none; margin-bottom: 0; }
+    .gm-sec.active { display: block; }
+    .gm-sec-head { display: none; }
+    .gm-sec .gm-sec-body { display: block; padding: 26px 28px 28px; }
+    .gm-sec-h2 {
+      display: block; margin: 0 0 6px !important;
+      font-family: 'Space Grotesk', sans-serif !important; font-weight: 700;
+      font-size: 28px !important; letter-spacing: -.8px; color: var(--ink) !important;
+    }
+    .gm-sec-lead { color: var(--graphite); font-size: 13.5px; margin: 0 0 8px; }
+    .gm-bar-in { padding-left: 32px; padding-right: 32px; }
+  }
+  @media (max-width: 999px) { .gm-sec-lead { display: none; } }
+  @media (max-width: 560px) {
+    .gm-row, .gm-row.addr, .gm-row.state { grid-template-columns: 1fr 1fr; }
+    .gm-row.addr .gm-field:first-child { grid-column: 1 / -1; }
+    .gm-days { grid-template-columns: repeat(4, 1fr); }
+    .gm-save { min-width: 0; flex: 1; }
+    .gm-bar-state span.long { display: none; }
   }
 </style>
 
-<div class="loading-overlay" id="loading-overlay">
-  <div class="loading-spinner"></div>
-  <p class="loading-text">Salvando...</p>
+<div class="gm">
+  <div class="gm-wrap">
+    <div class="gm-head">
+      <div class="gm-mono">Configuração</div>
+      <h1>Gerenciar</h1>
+      <p>Endereço, horários, serviços e fechamentos de <strong><%= @car_wash.name %></strong>.</p>
+    </div>
+
+    <% if @is_attendant %>
+    <div class="gm-banner info">
+      <i data-ic="info"></i>
+      <span>Você está como atendente: o que salvar aqui vai para aprovação do dono antes de valer.</span>
+    </div>
+    <% end %>
+    <div class="gm-banner warn" id="gm-coords-warn" hidden>
+      <i data-ic="map-pin"></i>
+      <span>Não conseguimos localizar este endereço no mapa, então a loja não aparece em
+        buscas por proximidade nem no Last Minute. Confira o endereço em
+        Informações básicas e salve de novo.</span>
+    </div>
+
+    <div class="gm-grid">
+      <nav class="gm-rail" id="gm-rail" aria-label="Seções"></nav>
+      <div id="gm-sections"></div>
+    </div>
+  </div>
 </div>
 
-<div class="loov-page loov-page--narrow">
-
-  <div class="loov-hero loov-hero--left">
-    <div class="loov-eyebrow"><span class="dot"></span>GERENCIAR</div>
-    <h1 class="loov-h1"><%= @car_wash.name.split(' ').first %><span class="accent">.</span></h1>
-    <p class="loov-lead">Edite informações, horários, serviços e fechamentos. Suas alterações são aplicadas ao painel público.</p>
+<div class="gm-bar" id="gm-bar">
+  <div class="gm-bar-in">
+    <div class="gm-bar-state"><span class="gm-bar-dot"></span><span id="gm-bar-txt">Tudo salvo</span></div>
+    <button type="button" class="gm-btn ghost" id="gm-discard" hidden>Descartar</button>
+    <button type="button" class="gm-btn primary gm-save" id="gm-save" disabled></button>
   </div>
-
-  <% unless @car_wash.has_valid_coordinates? %>
-  <div class="flash-msg warning" style="margin-bottom: 22px;">
-    <i class="fas fa-location-dot"></i>
-    <span>
-      Não conseguimos localizar este endereço no mapa, então você não
-      aparece em buscas por proximidade nem no Last Minute. Abra
-      "Informações básicas" e edite o campo "Endereço para mapa" --
-      mudar o texto (mesmo que pouco) faz a gente tentar de novo.
-    </span>
-  </div>
-  <% end %>
-
-  <div id="flash-messages" class="flash-wrap">
-    <% if flash[:alert] %>
-    <div class="flash-msg error"><i class="fas fa-circle-exclamation"></i><span><%= flash[:alert] %></span></div>
-    <% end %>
-    <% if flash[:notice] %>
-    <div class="flash-msg success" id="success-message"><i class="fas fa-circle-check"></i><span><%= flash[:notice] %></span></div>
-    <% flash.discard(:notice) %>
-    <% end %>
-  </div>
-
-  <%= form_with model: @car_wash, url: car_wash_path(@car_wash), method: :patch, local: true, id: "car-wash-form" do |form| %>
-
-    <% if @car_wash.errors.any? %>
-    <div class="form-errors">
-      <h2><i class="fas fa-circle-exclamation"></i> Corrija os erros abaixo</h2>
-      <ul>
-        <% @car_wash.errors.full_messages.each do |message| %>
-        <li><%= message %></li>
-        <% end %>
-      </ul>
-    </div>
-    <% end %>
-
-    <div class="mng-section">
-      <div class="section-header" onclick="toggleSection(this)">
-        <div class="section-header-left"><i class="fas fa-store"></i> Informações básicas</div>
-        <i class="fas fa-chevron-down section-chevron open"></i>
-      </div>
-      <div class="section-body open">
-        <div class="section-body-inner">
-          <div class="form-field">
-            <%= form.label :name, "Nome", class: "form-label" %>
-            <%= form.text_field :name, class: "form-input", placeholder: "Ex.: Meu Lava-Rápido" %>
-          </div>
-          <div class="form-row" style="grid-template-columns: 160px 1fr;">
-            <div class="form-field">
-              <%= form.label :cep, "CEP", class: "form-label" %>
-              <div style="position: relative;">
-                <%= form.text_field :cep, class: "form-input", placeholder: "00000-000", id: "cep_field", maxlength: 9, style: "padding-right: 2.5rem;" %>
-                <div id="cep-spinner" style="display: none; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--coral-500);">
-                  <i class="fas fa-circle-notch fa-spin"></i>
-                </div>
-              </div>
-            </div>
-            <div class="form-field">
-              <%= form.label :logradouro, "Logradouro", class: "form-label" %>
-              <%= form.text_field :logradouro, class: "form-input", placeholder: "Rua / Avenida / número", id: "logradouro_field" %>
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-field">
-              <%= form.label :bairro, "Bairro", class: "form-label" %>
-              <%= form.text_field :bairro, class: "form-input", placeholder: "Bairro", id: "bairro_field" %>
-            </div>
-            <div class="form-field">
-              <%= form.label :cidade, "Cidade", class: "form-label" %>
-              <%= form.text_field :cidade, class: "form-input", placeholder: "Cidade", id: "cidade_field" %>
-            </div>
-          </div>
-          <div class="form-row" style="grid-template-columns: 80px 1fr;">
-            <div class="form-field">
-              <%= form.label :uf, "UF", class: "form-label" %>
-              <%= form.text_field :uf, class: "form-input", placeholder: "SP", id: "uf_field", maxlength: 2 %>
-            </div>
-            <div class="form-field">
-              <%= form.label :address, "Endereço para mapa", class: "form-label" %>
-              <%= form.text_field :address, class: "form-input", placeholder: "Preenchido automaticamente pelo CEP", id: "address_field" %>
-            </div>
-          </div>
-          <div id="cep-error" style="display: none; font-size: 12.5px; color: var(--rose-500); margin-top: -8px;">
-            CEP não encontrado. Preencha o endereço manualmente.
-          </div>
-          <div class="form-field" style="margin-top: 14px;">
-            <%= form.label :capacity_per_slot, "Capacidade por janela", class: "form-label" %>
-            <%= form.number_field :capacity_per_slot, class: "form-input", min: 1, placeholder: "Ex.: 2" %>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="mng-section">
-      <div class="section-header" onclick="toggleSection(this)">
-        <div class="section-header-left"><i class="fas fa-clock"></i> Horários de funcionamento</div>
-        <i class="fas fa-chevron-down section-chevron"></i>
-      </div>
-      <div class="section-body">
-        <div class="section-body-inner">
-          <div class="item-list" id="operating_hours">
-            <%= form.fields_for :operating_hours do |oh_form| %>
-            <div class="item-row" data-id="<%= oh_form.object.id %>">
-              <div class="item-info">
-                <div class="item-title"><%= oh_form.object.day_of_week_name %></div>
-                <div class="item-sub view-times"><%= oh_form.object.opens_at&.strftime("%H:%M") %> — <%= oh_form.object.closes_at&.strftime("%H:%M") %></div>
-              </div>
-              <div class="item-actions-wrap">
-                <%= oh_form.hidden_field :id %>
-                <%= oh_form.hidden_field :day_of_week %>
-                <%= oh_form.hidden_field :opens_at, class: "hidden-opens-at" %>
-                <%= oh_form.hidden_field :closes_at, class: "hidden-closes-at" %>
-                <%= oh_form.check_box :_destroy, class: "remove-checkbox", style: "display:none" %>
-                <button type="button" class="btn-icon edit-hour" title="Editar"><i class="fas fa-pen"></i></button>
-                <button type="button" class="btn-icon danger remove-hour" title="Remover"><i class="fas fa-trash-can"></i></button>
-              </div>
-            </div>
-            <div class="edit-panel" id="edit-hour-<%= oh_form.object.id %>">
-              <div class="form-row">
-                <div class="form-field">
-                  <label class="form-label">Abre às</label>
-                  <input type="time" class="form-input edit-opens-at" value="<%= oh_form.object.opens_at&.strftime("%H:%M") %>">
-                </div>
-                <div class="form-field">
-                  <label class="form-label">Fecha às</label>
-                  <input type="time" class="form-input edit-closes-at" value="<%= oh_form.object.closes_at&.strftime("%H:%M") %>">
-                </div>
-              </div>
-              <div class="edit-panel-actions">
-                <button type="button" class="btn-mng-confirm confirm-edit-hour"><i class="fas fa-check"></i> Confirmar</button>
-                <button type="button" class="btn-mng-cancel cancel-edit-hour"><i class="fas fa-times"></i> Cancelar</button>
-              </div>
-            </div>
-            <% end %>
-          </div>
-
-          <button type="button" class="btn-add-row" id="toggle-add-hour">
-            <i class="fas fa-plus"></i> Adicionar horário
-          </button>
-          <div class="add-panel" id="add-hour-panel">
-            <div class="day-buttons" id="add-hour-days">
-              <% [["Dom",0],["Seg",1],["Ter",2],["Qua",3],["Qui",4],["Sex",5],["Sáb",6]].each do |label, val| %>
-              <div class="day-btn" data-day="<%= val %>" onclick="toggleAddDay(<%= val %>, '<%= label %>')"><%= label %></div>
-              <% end %>
-            </div>
-            <div id="add-hour-times"></div>
-            <div id="add-hour-error" class="field-error"></div>
-            <div class="add-panel-actions">
-              <button type="button" class="btn-mng-confirm" id="confirm-add-hour"><i class="fas fa-check"></i> Confirmar</button>
-              <button type="button" class="btn-mng-cancel" id="cancel-add-hour"><i class="fas fa-times"></i> Cancelar</button>
-            </div>
-          </div>
-          <div id="new-hour-hidden-inputs"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="mng-section">
-      <div class="section-header" onclick="toggleSection(this)">
-        <div class="section-header-left"><i class="fas fa-spray-can-sparkles"></i> Serviços</div>
-        <i class="fas fa-chevron-down section-chevron"></i>
-      </div>
-      <div class="section-body">
-        <div class="section-body-inner">
-          <div class="item-list" id="services">
-            <%= form.fields_for :services do |service_form| %>
-            <div class="item-row" data-id="<%= service_form.object.id %>">
-              <div class="item-info">
-                <div class="item-title">
-                  <%= service_form.object.title %>
-                  <% if service_form.object.category.present? %>
-                  <span class="item-badge"><%= service_form.object.category %></span>
-                  <% end %>
-                </div>
-                <div class="item-sub">R$ <%= service_form.object.price %> · <%= service_form.object.duration %> min<% if service_form.object.description.present? %> · <%= service_form.object.description.truncate(40) %><% end %></div>
-              </div>
-              <div class="item-actions-wrap">
-                <%= service_form.hidden_field :id %>
-                <%= service_form.hidden_field :title, class: "hidden-title" %>
-                <%= service_form.hidden_field :category, class: "hidden-category" %>
-                <%= service_form.hidden_field :description, class: "hidden-description" %>
-                <%= service_form.hidden_field :price, class: "hidden-price" %>
-                <%= service_form.hidden_field :duration, class: "hidden-duration" %>
-                <%= service_form.check_box :_destroy, class: "remove-checkbox", style: "display:none" %>
-                <button type="button" class="btn-icon edit-service-btn" title="Editar"><i class="fas fa-pen"></i></button>
-                <button type="button" class="btn-icon danger remove-service" title="Remover"><i class="fas fa-trash-can"></i></button>
-              </div>
-            </div>
-            <div class="edit-panel" id="edit-service-<%= service_form.object.id %>">
-              <div class="form-row" style="margin-bottom: 14px;">
-                <div class="form-field">
-                  <label class="form-label">Categoria</label>
-                  <select class="form-select edit-category">
-                    <% Service::CATEGORIES.each do |cat| %>
-                    <option value="<%= cat %>" <%= 'selected' if service_form.object.category == cat %>><%= cat %></option>
-                    <% end %>
-                  </select>
-                </div>
-                <div class="form-field">
-                  <label class="form-label">Serviço</label>
-                  <input type="text" class="form-input edit-title" value="<%= service_form.object.title %>" placeholder="Ex.: Lavagem Completa">
-                </div>
-              </div>
-              <div class="form-field">
-                <label class="form-label">Descrição (opcional)</label>
-                <input type="text" class="form-input edit-description" value="<%= service_form.object.description %>" placeholder="Ex.: Inclui aspiração e perfume">
-              </div>
-              <div class="form-row">
-                <div class="form-field">
-                  <label class="form-label">Preço (R$)</label>
-                  <input type="number" step="0.01" min="0" class="form-input edit-price" value="<%= service_form.object.price %>">
-                </div>
-                <div class="form-field">
-                  <label class="form-label">Duração (min)</label>
-                  <input type="number" min="1" class="form-input edit-duration" value="<%= service_form.object.duration %>">
-                </div>
-              </div>
-              <div class="edit-panel-actions">
-                <button type="button" class="btn-mng-confirm confirm-edit-service"><i class="fas fa-check"></i> Confirmar</button>
-                <button type="button" class="btn-mng-cancel cancel-edit-service"><i class="fas fa-times"></i> Cancelar</button>
-              </div>
-            </div>
-            <% end %>
-          </div>
-
-          <button type="button" class="btn-add-row" id="toggle-add-service">
-            <i class="fas fa-plus"></i> Adicionar serviço
-          </button>
-          <div class="add-panel" id="add-service-panel">
-            <div class="form-row" style="margin-bottom: 14px;">
-              <div class="form-field">
-                <label class="form-label">Categoria</label>
-                <select class="form-select" id="new-service-category">
-                  <option value="">Selecione uma categoria</option>
-                  <% Service::CATEGORIES.each do |cat| %>
-                  <option value="<%= cat %>"><%= cat %></option>
-                  <% end %>
-                </select>
-                <span class="field-error" id="new-service-category-error"></span>
-              </div>
-              <div class="form-field">
-                <label class="form-label">Serviço</label>
-                <input type="text" class="form-input" id="new-service-title" placeholder="Ex.: Lavagem Completa">
-                <span class="field-error" id="new-service-title-error"></span>
-              </div>
-            </div>
-            <div class="form-field">
-              <label class="form-label">Descrição (opcional)</label>
-              <input type="text" class="form-input" id="new-service-description" placeholder="Ex.: Inclui aspiração e perfume">
-            </div>
-            <div class="form-row">
-              <div class="form-field">
-                <label class="form-label">Preço (R$)</label>
-                <input type="number" step="0.01" min="0" class="form-input" id="new-service-price" placeholder="0,00">
-                <span class="field-error" id="new-service-price-error"></span>
-              </div>
-              <div class="form-field">
-                <label class="form-label">Duração (min)</label>
-                <input type="number" min="1" class="form-input" id="new-service-duration" placeholder="60">
-                <span class="field-error" id="new-service-duration-error"></span>
-              </div>
-            </div>
-            <div class="add-panel-actions">
-              <button type="button" class="btn-mng-confirm" id="confirm-add-service"><i class="fas fa-check"></i> Confirmar</button>
-              <button type="button" class="btn-mng-cancel" id="cancel-add-service"><i class="fas fa-times"></i> Cancelar</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="mng-section">
-      <div class="section-header" onclick="toggleSection(this)">
-        <div class="section-header-left"><i class="fas fa-calendar-xmark"></i> Fechamentos</div>
-        <i class="fas fa-chevron-down section-chevron"></i>
-      </div>
-      <div class="section-body">
-        <div class="section-body-inner">
-          <p style="font-size: 13px; color: var(--graphite); margin-bottom: 14px; line-height: 1.6;">
-            Bloqueie datas em que o estabelecimento estará fechado. Nenhum agendamento será aceito nesses períodos.
-          </p>
-
-          <div class="closure-list" id="closure-list">
-            <% if @car_wash.car_wash_closures.upcoming_or_active.any? %>
-              <% @car_wash.car_wash_closures.upcoming_or_active.each do |c| %>
-                <div class="closure-item" id="closure-<%= c.id %>">
-                  <div class="closure-item-info">
-                    <div class="closure-item-period">
-                      <i class="fas fa-ban" style="color: var(--rose-500); font-size: 11px; margin-right: 6px;"></i>
-                      <%= c.display_period %>
-                    </div>
-                    <% if c.reason.present? %>
-                      <div class="closure-item-reason"><%= c.reason %></div>
-                    <% end %>
-                  </div>
-                  <button type="button" class="closure-remove" onclick="removeClosure(<%= c.id %>, this)" title="Remover fechamento">
-                    <i class="fas fa-trash-can"></i>
-                  </button>
-                </div>
-              <% end %>
-            <% else %>
-              <div class="closure-empty" id="closure-empty">Nenhum fechamento programado.</div>
-            <% end %>
-          </div>
-
-          <button type="button" class="btn-add-row" id="toggle-add-closure">
-            <i class="fas fa-plus"></i> Adicionar fechamento
-          </button>
-
-          <div class="closure-add-panel" id="closure-add-panel">
-            <div class="closure-form-row">
-              <div class="form-field">
-                <label class="form-label">Data de início</label>
-                <input type="date" class="form-input" id="closure-start" min="<%= Date.current.strftime('%Y-%m-%d') %>">
-              </div>
-              <div class="form-field">
-                <label class="form-label">Data de fim</label>
-                <input type="date" class="form-input" id="closure-end" min="<%= Date.current.strftime('%Y-%m-%d') %>">
-              </div>
-            </div>
-            <div class="form-field" style="margin-bottom: 12px;">
-              <label class="form-label">Motivo (opcional)</label>
-              <input type="text" class="form-input" id="closure-reason" placeholder="Ex.: Férias, Reforma, Feriado local">
-            </div>
-            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-              <button type="button" class="btn-mng-confirm" id="confirm-add-closure"><i class="fas fa-check"></i> Confirmar</button>
-              <button type="button" class="btn-mng-cancel" id="cancel-add-closure"><i class="fas fa-times"></i> Cancelar</button>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </div>
-
-    <div class="form-actions">
-      <%= link_to root_path, class: "loov-btn-secondary", id: "cancel-button" do %>
-        <i class="fas fa-arrow-left"></i> Cancelar
-      <% end %>
-      <%= form.submit "Salvar alterações", class: "loov-btn-primary", style: "flex: 1;", data: { disable_with: "Salvando..." } %>
-    </div>
-
-  <% end %>
 </div>
 
-<script>
-var formChanged  = false;
-var hourIndex    = Date.now();
-var serviceIndex = Date.now();
-var addDayTimes  = {};
+<div class="gm-toast" id="gm-toast" role="status" aria-live="polite"></div>
 
-var ALL_CATEGORIES = [
-  'Lavagem','Polimento','Higienização','Cristalização','Vitrificação',
-  'Enceramento','Hidratação de Couro','Limpeza de Motor',
-  'Revitalização de Plásticos','Polimento de Faróis',
-  'Impermeabilização','Oxi-sanitização','Outros'
-];
+<div class="gm-ov" id="gm-confirm" hidden>
+  <div class="gm-modal" role="dialog" aria-modal="true" aria-labelledby="gm-confirm-t">
+    <h3 id="gm-confirm-t"></h3>
+    <p id="gm-confirm-b"></p>
+    <div class="gm-form-acts">
+      <button type="button" class="gm-btn ghost" id="gm-confirm-no">Cancelar</button>
+      <button type="button" class="gm-btn danger" id="gm-confirm-yes">Remover</button>
+    </div>
+  </div>
+</div>
 
-function toggleSection(header){
-  var body=header.nextElementSibling,chevron=header.querySelector('.section-chevron'),isOpen=body.classList.contains('open');
-  body.classList.toggle('open');chevron.classList.toggle('open',!isOpen);
-}
+<div class="gm-ov" id="gm-conflict" hidden>
+  <div class="gm-modal wide" role="dialog" aria-modal="true" aria-labelledby="gm-cf-title">
+    <h3 id="gm-cf-title">Reduzir capacidade</h3>
+    <div id="gm-cf-body"></div>
+  </div>
+</div>
 
-function showFlash(type,message){
-  var container=document.getElementById('flash-messages'),div=document.createElement('div');
-  div.className='flash-msg '+type;
-  div.innerHTML='<i class="fas fa-'+(type==='error'?'circle-exclamation':'circle-check')+'"></i><span>'+message+'</span>';
-  container.appendChild(div);
-  setTimeout(function(){div.style.transition='opacity .5s ease';div.style.opacity='0';setTimeout(function(){div.remove();},500);},5000);
-}
+<script nonce="<%= csp_nonce %>">
+(function () {
+  const INITIAL      = <%= raw @manage_data.to_json %>;
+  const CLOSURES     = <%= raw @closures.to_json %>;
+  const IS_ATTENDANT = <%= @is_attendant ? 'true' : 'false' %>;
+  // Conflito de capacidade e cancelamento usam os endpoints do app, que operam
+  // no lava-rápido vinculado. Se a URL é de outra loja do mesmo dono, não dá
+  // pra checar com segurança — salva sem a checagem.
+  const CAN_CHECK    = <%= (current_car_wash&.id == @car_wash.id) ? 'true' : 'false' %>;
+  const UPDATE_URL   = <%= raw car_wash_path(@car_wash).to_json %>;
+  const CW_ID        = <%= @car_wash.id %>;
+  const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
-function showFieldError(id,msg){var el=document.getElementById(id+'-error');if(!el)return;el.textContent=msg;el.classList.add('visible');setTimeout(function(){el.classList.remove('visible');},5000);}
+  const DAY_NAMES = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  const DAY_SHORT = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  const CATEGORIES = <%= raw Service::CATEGORIES.to_json %>;
 
-document.addEventListener('DOMContentLoaded',function(){
+  const ic = (name, size = 16) => window.feather?.icons[name]
+    ? feather.icons[name].toSvg({ width: size, height: size, 'stroke-width': 2 }) : '';
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  const money = n => 'R$ ' + (parseFloat(n) || 0).toFixed(2).replace('.', ',');
+  let localSeq = 0;
+  const lid = () => `_l${++localSeq}`;
 
-  var cepField=document.getElementById('cep_field');
-  if(cepField){
-    cepField.addEventListener('input',function(){var raw=this.value.replace(/\D/g,'');this.value=raw.length>5?raw.slice(0,5)+'-'+raw.slice(5,8):raw;});
-    cepField.addEventListener('blur',function(){
-      var cep=this.value.replace(/\D/g,'');if(cep.length!==8)return;
-      document.getElementById('cep-spinner').style.display='block';
-      document.getElementById('cep-error').style.display='none';
-      fetch('https://viacep.com.br/ws/'+cep+'/json/').then(function(r){return r.json();}).then(function(data){
-        document.getElementById('cep-spinner').style.display='none';
-        if(data.erro){document.getElementById('cep-error').style.display='block';return;}
-        document.getElementById('logradouro_field').value=data.logradouro||'';
-        document.getElementById('bairro_field').value=data.bairro||'';
-        document.getElementById('cidade_field').value=data.localidade||'';
-        document.getElementById('uf_field').value=data.uf||'';
-        var full=[data.logradouro,data.bairro,data.localidade,data.uf].filter(Boolean).join(', ');
-        document.getElementById('address_field').value=full;
-      }).catch(function(){document.getElementById('cep-spinner').style.display='none';document.getElementById('cep-error').style.display='block';});
-    });
+  function formatTime(v) {
+    const d = String(v).replace(/\D/g, '').slice(0, 4);
+    return d.length <= 2 ? d : `${d.slice(0, 2)}:${d.slice(2)}`;
+  }
+  function validTime(t) {
+    if (!/^\d{2}:\d{2}$/.test(t)) return false;
+    const [h, m] = t.split(':').map(Number);
+    return h <= 23 && m <= 59;
+  }
+  // Vazio vira null (herda o padrão); nunca 0, que travaria a agenda do dia.
+  function parseCap(t) {
+    const n = parseInt(t, 10);
+    return Number.isFinite(n) && n > 0 ? Math.min(99, n) : null;
   }
 
-  document.querySelectorAll('#operating_hours .item-row').forEach(function(row){attachHourEvents(row);});
-
-  function attachHourEvents(row){
-    var editBtn=row.querySelector('.edit-hour'),removeBtn=row.querySelector('.remove-hour'),panel=row.nextElementSibling;
-    if(editBtn)editBtn.onclick=function(){document.querySelectorAll('.edit-panel.open').forEach(function(p){p.classList.remove('open');});panel.classList.add('open');};
-    if(removeBtn)removeBtn.onclick=function(){if(!confirm('Remover este horário?'))return;var cb=row.querySelector('.remove-checkbox');if(cb)cb.checked=true;row.style.opacity='0';row.style.transition='opacity .3s ease';setTimeout(function(){row.style.display='none';if(panel)panel.style.display='none';},300);showFlash('success','Horário marcado para remoção. Clique em Salvar para confirmar.');formChanged=true;};
-    var confirmBtn=panel?panel.querySelector('.confirm-edit-hour'):null,cancelBtn=panel?panel.querySelector('.cancel-edit-hour'):null;
-    if(confirmBtn)confirmBtn.onclick=function(){var opensAt=panel.querySelector('.edit-opens-at').value,closesAt=panel.querySelector('.edit-closes-at').value;if(!opensAt||!closesAt){showFlash('error','Preencha os dois horários.');return;}row.querySelector('.hidden-opens-at').value=opensAt;row.querySelector('.hidden-closes-at').value=closesAt;row.querySelector('.view-times').textContent=opensAt+' — '+closesAt;panel.classList.remove('open');showFlash('success','Horário atualizado. Clique em Salvar para confirmar.');formChanged=true;};
-    if(cancelBtn)cancelBtn.onclick=function(){panel.classList.remove('open');};
+  // ── Estado ────────────────────────────────────────────────────────────
+  function fromServer(d) {
+    return {
+      name: d.name || '', cep: d.cep || '', logradouro: d.logradouro || '', numero: d.numero || '',
+      bairro: d.bairro || '', cidade: d.cidade || '', uf: d.uf || '', address: d.address || '',
+      capacity: String(d.capacity_per_slot ?? 1),
+      hours: (d.operating_hours || []).map(h => ({
+        _l: lid(), id: h.id, day_of_week: h.day_of_week,
+        opens_at: h.opens_at || '08:00', closes_at: h.closes_at || '18:00',
+        capacity: h.capacity ?? null, _destroy: false,
+      })),
+      services: (d.services || []).map(s => ({
+        _l: lid(), id: s.id, title: s.title || '', category: s.category || '',
+        description: s.description || '', price: String(s.price ?? ''), duration: String(s.duration ?? ''),
+        _destroy: false,
+      })),
+    };
   }
 
-  document.getElementById('toggle-add-hour').onclick=function(){document.getElementById('add-hour-panel').classList.toggle('open');};
-  document.getElementById('cancel-add-hour').onclick=function(){document.getElementById('add-hour-panel').classList.remove('open');resetAddHour();};
+  let server   = INITIAL;
+  let st       = fromServer(server);
+  let original = JSON.stringify(strip(st));
+  let closures = CLOSURES.slice();
+  const ui = {
+    active: 'info',                       // painel do desktop
+    open: new Set(),                      // acordeões do celular (todos fechados, como no app)
+    editHour: null, addHour: false, addDays: new Set(),
+    editSvc: null, addSvc: false,
+    addClosure: false, savingClosure: false, removingClosure: null,
+    saving: false, checking: false, cep: false,
+  };
 
-  function buildHourOptions(sel){var s='';for(var h=0;h<24;h++){var v=(h<10?'0':'')+h;s+='<option value="'+v+'"'+(v===sel?' selected':'')+'>'+v+'</option>';}return s;}
-  function buildMinOptions(sel){var s='';['00','15','30','45'].forEach(function(m){s+='<option value="'+m+'"'+(m===sel?' selected':'')+'>'+m+'</option>';});return s;}
+  // Ids locais mudam a cada load; comparar sem eles é o que diz se algo mudou.
+  function strip(s) {
+    return { ...s,
+      hours: s.hours.map(({ _l, ...h }) => h),
+      services: s.services.map(({ _l, ...x }) => x) };
+  }
+  const isDirty = () => JSON.stringify(strip(st)) !== original;
+  const activeHours = () => st.hours.filter(h => !h._destroy);
+  const activeSvcs  = () => st.services.filter(s => !s._destroy);
+  const defCap = () => parseInt(st.capacity, 10) || 1;
 
-  window.toggleAddDay=function(day,label){
-    var btn=document.querySelector('#add-hour-days .day-btn[data-day="'+day+'"]'),timesContainer=document.getElementById('add-hour-times');
-    if(addDayTimes[day]){delete addDayTimes[day];btn.classList.remove('active');var row=document.getElementById('add-time-row-'+day);if(row)row.remove();}
-    else{addDayTimes[day]={h:'08',m:'00',ch:'18',cm:'00'};btn.classList.add('active');
-      var html='<div class="time-row" id="add-time-row-'+day+'"><div class="time-day-label">'+label+'</div><div class="time-select-wrap"><span class="time-label-small">Abre</span><select class="time-select" onchange="updateAddDay('+day+',\'h\',this.value)">'+buildHourOptions('08')+'</select><span class="time-sep">:</span><select class="time-select" onchange="updateAddDay('+day+',\'m\',this.value)">'+buildMinOptions('00')+'</select></div><div class="time-select-wrap"><span class="time-label-small">Fecha</span><select class="time-select" onchange="updateAddDay('+day+',\'ch\',this.value)">'+buildHourOptions('18')+'</select><span class="time-sep">:</span><select class="time-select" onchange="updateAddDay('+day+',\'cm\',this.value)">'+buildMinOptions('00')+'</select></div></div>';
-      var existing=timesContainer.querySelectorAll('.time-row'),inserted=false;
-      for(var i=0;i<existing.length;i++){if(day<parseInt(existing[i].id.replace('add-time-row-',''))){existing[i].insertAdjacentHTML('beforebegin',html);inserted=true;break;}}
-      if(!inserted)timesContainer.insertAdjacentHTML('beforeend',html);
+  // ── Resumos (índice do desktop e cabeçalho fechado do celular) ───────
+  function summary(key) {
+    if (key === 'info') {
+      const rua = [st.logradouro, st.numero].filter(Boolean).join(', ');
+      return [rua, st.bairro].filter(Boolean).join(' · ') || 'Endereço incompleto';
     }
-  };
-
-  window.updateAddDay=function(day,key,val){if(addDayTimes[day])addDayTimes[day][key]=val;};
-
-  function getExistingDays(){return Array.from(document.querySelectorAll('#operating_hours input[name*="[day_of_week]"]')).map(function(i){return i.value;}).filter(function(v){return v!=='';});}
-
-  document.getElementById('confirm-add-hour').onclick=function(){
-    var days=Object.keys(addDayTimes);if(days.length===0){showFlash('error','Selecione pelo menos um dia.');return;}
-    var existing=getExistingDays(),duplicate=days.find(function(d){return existing.includes(d);});if(duplicate){showFlash('error','Um dos dias selecionados já existe.');return;}
-    var container=document.getElementById('operating_hours'),fullNames=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
-    days.sort(function(a,b){return a-b;}).forEach(function(day){
-      var d=addDayTimes[day],opens=d.h+':'+d.m+':00',closes=d.ch+':'+d.cm+':00',idx=hourIndex++;
-      var row=document.createElement('div');row.className='item-row';
-      row.innerHTML='<div class="item-info"><div class="item-title">'+fullNames[day]+'</div><div class="item-sub view-times">'+d.h+':'+d.m+' — '+d.ch+':'+d.cm+'</div></div><div class="item-actions-wrap"><input type="hidden" name="car_wash[operating_hours_attributes]['+idx+'][day_of_week]" value="'+day+'"><input type="hidden" name="car_wash[operating_hours_attributes]['+idx+'][opens_at]" class="hidden-opens-at" value="'+opens+'"><input type="hidden" name="car_wash[operating_hours_attributes]['+idx+'][closes_at]" class="hidden-closes-at" value="'+closes+'"><input type="checkbox" name="car_wash[operating_hours_attributes]['+idx+'][_destroy]" class="remove-checkbox" style="display:none"><button type="button" class="btn-icon edit-hour"><i class="fas fa-pen"></i></button><button type="button" class="btn-icon danger remove-hour"><i class="fas fa-trash-can"></i></button></div>';
-      var panel=document.createElement('div');panel.className='edit-panel';panel.innerHTML='<div class="form-row"><div class="form-field"><label class="form-label">Abre às</label><input type="time" class="form-input edit-opens-at" value="'+d.h+':'+d.m+'"></div><div class="form-field"><label class="form-label">Fecha às</label><input type="time" class="form-input edit-closes-at" value="'+d.ch+':'+d.cm+'"></div></div><div class="edit-panel-actions"><button type="button" class="btn-mng-confirm confirm-edit-hour"><i class="fas fa-check"></i> Confirmar</button><button type="button" class="btn-mng-cancel cancel-edit-hour"><i class="fas fa-times"></i> Cancelar</button></div>';
-      container.appendChild(row);container.appendChild(panel);attachHourEvents(row);
-    });
-    document.getElementById('add-hour-panel').classList.remove('open');resetAddHour();showFlash('success','Horário(s) adicionado(s). Clique em Salvar para confirmar.');formChanged=true;
-  };
-
-  function resetAddHour(){addDayTimes={};document.querySelectorAll('#add-hour-days .day-btn').forEach(function(b){b.classList.remove('active');});document.getElementById('add-hour-times').innerHTML='';}
-
-  document.querySelectorAll('#services .item-row').forEach(function(row){attachServiceEvents(row);});
-
-  function attachServiceEvents(row){
-    var editBtn=row.querySelector('.edit-service-btn'),removeBtn=row.querySelector('.remove-service'),panel=row.nextElementSibling;
-    if(editBtn)editBtn.onclick=function(){document.querySelectorAll('.edit-panel.open').forEach(function(p){p.classList.remove('open');});panel.classList.add('open');};
-    if(removeBtn)removeBtn.onclick=function(){if(!confirm('Remover este serviço?'))return;var cb=row.querySelector('.remove-checkbox');if(cb)cb.checked=true;row.style.opacity='0';row.style.transition='opacity .3s ease';setTimeout(function(){row.style.display='none';if(panel)panel.style.display='none';},300);showFlash('success','Serviço marcado para remoção. Clique em Salvar para confirmar.');formChanged=true;};
-    var confirmBtn=panel?panel.querySelector('.confirm-edit-service'):null,cancelBtn=panel?panel.querySelector('.cancel-edit-service'):null;
-    if(confirmBtn)confirmBtn.onclick=function(){var category=panel.querySelector('.edit-category').value,title=panel.querySelector('.edit-title').value.trim(),description=panel.querySelector('.edit-description').value,price=panel.querySelector('.edit-price').value,duration=panel.querySelector('.edit-duration').value;if(!category){showFlash('error','Selecione uma categoria.');return;}if(!title){showFlash('error','Informe o nome do serviço.');return;}if(!price||parseFloat(price)<0){showFlash('error','Preço inválido.');return;}if(!duration||parseInt(duration)<1){showFlash('error','Duração inválida.');return;}row.querySelector('.hidden-title').value=title;row.querySelector('.hidden-category').value=category;row.querySelector('.hidden-description').value=description;row.querySelector('.hidden-price').value=price;row.querySelector('.hidden-duration').value=duration;var titleEl=row.querySelector('.item-title');titleEl.innerHTML=title+'<span class="item-badge">'+category+'</span>';row.querySelector('.item-sub').textContent='R$ '+parseFloat(price).toFixed(2)+' · '+duration+' min'+(description?' · '+description.substring(0,40):'');panel.classList.remove('open');showFlash('success','Serviço atualizado. Clique em Salvar para confirmar.');formChanged=true;};
-    if(cancelBtn)cancelBtn.onclick=function(){panel.classList.remove('open');};
+    if (key === 'hours') {
+      const n = activeHours().length;
+      if (!n) return 'Nenhum horário cadastrado';
+      return `${n} ${n === 1 ? 'dia' : 'dias'} · ${defCap()} ao mesmo tempo`;
+    }
+    if (key === 'services') {
+      const n = activeSvcs().length;
+      return n ? `${n} ${n === 1 ? 'serviço' : 'serviços'}` : 'Nenhum serviço cadastrado';
+    }
+    const n = closures.length;
+    return n ? `${n} ${n === 1 ? 'programado' : 'programados'}` : 'Nenhum programado';
   }
 
-  document.getElementById('toggle-add-service').onclick=function(){document.getElementById('add-service-panel').classList.toggle('open');};
-  document.getElementById('cancel-add-service').onclick=function(){document.getElementById('add-service-panel').classList.remove('open');resetAddService();};
+  // Ícones distintos de propósito (loja, relógio, ferramenta, calendário):
+  // lista fechada se varre pela forma antes de se ler.
+  const SECTIONS = [
+    { key: 'info',     title: 'Informações básicas',   icon: 'home',     lead: 'Nome e endereço que o cliente vê e que posiciona a loja no mapa.' },
+    { key: 'hours',    title: 'Horários e capacidade', icon: 'clock',    lead: 'Quando a loja abre e quantos carros atende ao mesmo tempo.' },
+    { key: 'services', title: 'Serviços',              icon: 'tool',     lead: 'O que o cliente pode agendar, com preço e duração.' },
+    { key: 'closures', title: 'Fechamentos',           icon: 'calendar', lead: '' },
+  ];
 
-  document.getElementById('confirm-add-service').onclick=function(){
-    var category=document.getElementById('new-service-category').value,title=document.getElementById('new-service-title').value.trim(),description=document.getElementById('new-service-description').value,price=document.getElementById('new-service-price').value,duration=document.getElementById('new-service-duration').value;
-    if(!category){showFieldError('new-service-category','Selecione uma categoria.');return;}if(!title){showFieldError('new-service-title','Informe o nome do serviço.');return;}if(!price||parseFloat(price)<0){showFieldError('new-service-price','Preço inválido.');return;}if(!duration||parseInt(duration)<1){showFieldError('new-service-duration','Duração inválida.');return;}
-    var idx=serviceIndex++,container=document.getElementById('services'),row=document.createElement('div');row.className='item-row';
-    row.innerHTML='<div class="item-info"><div class="item-title">'+title+'<span class="item-badge">'+category+'</span></div><div class="item-sub">R$ '+parseFloat(price).toFixed(2)+' · '+duration+' min'+(description?' · '+description.substring(0,40):'')+' </div></div><div class="item-actions-wrap"><input type="hidden" name="car_wash[services_attributes]['+idx+'][title]" class="hidden-title" value="'+title+'"><input type="hidden" name="car_wash[services_attributes]['+idx+'][category]" class="hidden-category" value="'+category+'"><input type="hidden" name="car_wash[services_attributes]['+idx+'][description]" class="hidden-description" value="'+description+'"><input type="hidden" name="car_wash[services_attributes]['+idx+'][price]" class="hidden-price" value="'+price+'"><input type="hidden" name="car_wash[services_attributes]['+idx+'][duration]" class="hidden-duration" value="'+duration+'"><input type="checkbox" name="car_wash[services_attributes]['+idx+'][_destroy]" class="remove-checkbox" style="display:none"><button type="button" class="btn-icon edit-service-btn"><i class="fas fa-pen"></i></button><button type="button" class="btn-icon danger remove-service"><i class="fas fa-trash-can"></i></button></div>';
-    var panel=document.createElement('div');panel.className='edit-panel';panel.innerHTML='<div class="form-row" style="margin-bottom:14px;"><div class="form-field"><label class="form-label">Categoria</label><select class="form-select edit-category">'+ALL_CATEGORIES.map(function(c){return'<option value="'+c+'"'+(c===category?' selected':'')+'>'+c+'</option>';}).join('')+'</select></div><div class="form-field"><label class="form-label">Serviço</label><input type="text" class="form-input edit-title" value="'+title+'" placeholder="Ex.: Lavagem Completa"></div></div><div class="form-field"><label class="form-label">Descrição (opcional)</label><input type="text" class="form-input edit-description" value="'+description+'" placeholder="Ex.: Inclui aspiração e perfume"></div><div class="form-row"><div class="form-field"><label class="form-label">Preço (R$)</label><input type="number" step="0.01" min="0" class="form-input edit-price" value="'+price+'"></div><div class="form-field"><label class="form-label">Duração (min)</label><input type="number" min="1" class="form-input edit-duration" value="'+duration+'"></div></div><div class="edit-panel-actions"><button type="button" class="btn-mng-confirm confirm-edit-service"><i class="fas fa-check"></i> Confirmar</button><button type="button" class="btn-mng-cancel cancel-edit-service"><i class="fas fa-times"></i> Cancelar</button></div>';
-    container.appendChild(row);container.appendChild(panel);attachServiceEvents(row);document.getElementById('add-service-panel').classList.remove('open');resetAddService();showFlash('success','Serviço adicionado. Clique em Salvar para confirmar.');formChanged=true;
-  };
+  // ── Render ────────────────────────────────────────────────────────────
+  function render() {
+    const keepFocus = document.activeElement?.dataset?.f;
+    const keepSel = keepFocus && document.activeElement.selectionStart;
 
-  function resetAddService(){document.getElementById('new-service-category').value='';document.getElementById('new-service-title').value='';document.getElementById('new-service-description').value='';document.getElementById('new-service-price').value='';document.getElementById('new-service-duration').value='';}
+    document.getElementById('gm-rail').innerHTML = SECTIONS.map(s => `
+      <button type="button" class="gm-rail-btn${ui.active === s.key ? ' on' : ''}" data-rail="${s.key}"
+              aria-current="${ui.active === s.key ? 'true' : 'false'}">
+        ${ic(s.icon, 18)}
+        <span class="gm-rail-txt">
+          <div class="gm-sec-title">${s.title}</div>
+          <div class="gm-sec-sum">${esc(summary(s.key))}</div>
+        </span>
+      </button>`).join('');
 
-  var CSRF = document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').content : '';
+    document.getElementById('gm-sections').innerHTML = SECTIONS.map(s => `
+      <section class="gm-sec${ui.open.has(s.key) ? ' open' : ''}${ui.active === s.key ? ' active' : ''}" id="sec-${s.key}">
+        <button type="button" class="gm-sec-head" data-toggle="${s.key}" aria-expanded="${ui.open.has(s.key)}">
+          <span class="gm-sec-head-l">${ic(s.icon, 16)}
+            <span style="min-width:0"><div class="gm-sec-title">${s.title}</div>
+            ${ui.open.has(s.key) ? '' : `<div class="gm-sec-sum">${esc(summary(s.key))}</div>`}</span>
+          </span>
+          <span class="gm-sec-chev">${ic('chevron-down', 16)}</span>
+        </button>
+        <div class="gm-sec-body">
+          <h2 class="gm-sec-h2">${s.title}</h2>
+          ${s.lead ? `<p class="gm-sec-lead">${s.lead}</p>` : ''}
+          ${BODY[s.key]()}
+        </div>
+      </section>`).join('');
 
-  document.getElementById('toggle-add-closure').onclick = function() {
-    document.getElementById('closure-add-panel').classList.toggle('open');
-  };
+    document.getElementById('gm-coords-warn').hidden = !!server.has_coordinates;
+    renderBar();
 
-  document.getElementById('cancel-add-closure').onclick = function() {
-    resetClosureForm();
-    document.getElementById('closure-add-panel').classList.remove('open');
-  };
+    if (keepFocus) {
+      const el = document.querySelector(`[data-f="${keepFocus}"]`);
+      if (el) { el.focus(); try { el.setSelectionRange(keepSel, keepSel); } catch {} }
+    }
+  }
 
-  document.getElementById('confirm-add-closure').onclick = function() {
-    var start  = document.getElementById('closure-start').value;
-    var end    = document.getElementById('closure-end').value;
-    var reason = document.getElementById('closure-reason').value.trim();
+  function renderBar() {
+    const dirty = isDirty();
+    const bar = document.getElementById('gm-bar');
+    bar.classList.toggle('dirty', dirty);
+    document.getElementById('gm-bar-txt').innerHTML = dirty
+      ? 'Alterações não salvas'
+      : 'Tudo salvo <span class="long">· fechamentos valem na hora</span>';
+    document.getElementById('gm-discard').hidden = !dirty || ui.saving || ui.checking;
+    const save = document.getElementById('gm-save');
+    save.disabled = !dirty || ui.saving || ui.checking;
+    save.innerHTML = ui.checking ? `${ic('loader', 16)} Verificando agendamentos…`
+      : ui.saving ? `${ic('loader', 16)} Salvando…`
+      : `${ic('save', 16)} ${IS_ATTENDANT ? 'Enviar para aprovação' : 'Salvar alterações'}`;
+  }
 
-    if (!start) { showFlash('error', 'Informe a data de início.'); return; }
-    if (!end)   { showFlash('error', 'Informe a data de fim.'); return; }
-    if (end < start) { showFlash('error', 'A data de fim deve ser igual ou posterior ao início.'); return; }
+  const field = (label, f, val, attrs = '') => `
+    <div class="gm-field"><label class="gm-label" for="f-${f}">${label}</label>
+      <input class="gm-input" id="f-${f}" data-f="${f}" value="${esc(val)}" ${attrs}></div>`;
 
-    var btn = document.getElementById('confirm-add-closure');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
+  const BODY = {
+    info() {
+      return `
+        ${field('Nome', 'name', st.name, 'placeholder="Ex.: Meu Lava-Rápido" autocomplete="organization"')}
+        <div class="gm-row addr">
+          <div class="gm-field"><label class="gm-label" for="f-cep">CEP</label>
+            <input class="gm-input" id="f-cep" data-f="cep" value="${esc(st.cep)}" placeholder="00000-000" inputmode="numeric" maxlength="9">
+            ${ui.cep ? `<span class="gm-spin">${ic('loader', 14)}</span>` : ''}</div>
+          ${field('Logradouro', 'logradouro', st.logradouro, 'placeholder="Rua / Avenida"')}
+          ${field('Nº', 'numero', st.numero, 'placeholder="123" inputmode="numeric" maxlength="6"')}
+        </div>
+        <div class="gm-row">
+          ${field('Bairro', 'bairro', st.bairro, 'placeholder="Bairro"')}
+          ${field('Cidade', 'cidade', st.cidade, 'placeholder="Cidade"')}
+        </div>
+        <div class="gm-row state">
+          ${field('UF', 'uf', st.uf, 'placeholder="SP" maxlength="2" style="text-transform:uppercase"')}
+          ${field('Endereço (mapa)', 'address', st.address, 'placeholder="Preenchido pelo CEP"')}
+        </div>
+        <div class="gm-hint">O CEP preenche o resto. O endereço do mapa é o que usamos para localizar a loja.</div>`;
+    },
 
-    fetch('/owner/closures', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF },
-      body: JSON.stringify({ closure: { car_wash_id: <%= @car_wash.id %>, start_date: start, end_date: end, reason: reason } })
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-check"></i> Confirmar';
-      if (data.ok) {
-        appendClosure(data.id, data.period, data.reason);
-        resetClosureForm();
-        document.getElementById('closure-add-panel').classList.remove('open');
-        showFlash('success', 'Fechamento adicionado com sucesso.');
-        document.getElementById('flash-messages').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    hours() {
+      const hrs = activeHours();
+      const taken = hrs.map(h => h.day_of_week);
+      let html = `
+        <div class="gm-cap">
+          <div style="flex:1;min-width:0">
+            <div class="gm-cap-t">Atendimentos ao mesmo tempo</div>
+            <div class="gm-hint">Quantos veículos você atende simultaneamente. Vale como padrão
+              para todos os dias, e você pode ajustar cada dia na lista abaixo.</div>
+          </div>
+          <div class="gm-step">
+            <button type="button" data-step="-1" ${defCap() <= 1 ? 'disabled' : ''} aria-label="Diminuir em um">${ic('minus', 16)}</button>
+            <input data-f="capacity" value="${esc(st.capacity)}" inputmode="numeric" maxlength="2"
+                   aria-label="Atendimentos ao mesmo tempo, padrão para todos os dias">
+            <button type="button" data-step="1" ${defCap() >= 99 ? 'disabled' : ''} aria-label="Aumentar em um">${ic('plus', 16)}</button>
+          </div>
+        </div>
+        <div class="gm-rule"></div>`;
+      if (!hrs.length) html += `<div class="gm-empty">Nenhum horário cadastrado.</div>`;
+      hrs.forEach(h => {
+        const capTxt = h.capacity != null
+          ? `${h.capacity} ${h.capacity === 1 ? 'carro' : 'carros'}` : `${defCap()} (padrão)`;
+        html += `
+          <div class="gm-item${ui.editHour === h._l ? ' editing' : ''}">
+            <div class="gm-item-info">
+              <div class="gm-item-t">${DAY_NAMES[h.day_of_week]}</div>
+              <div class="gm-item-s">${esc(h.opens_at)} — ${esc(h.closes_at)} &nbsp;·&nbsp; ${capTxt}</div>
+            </div>
+            <div class="gm-acts">
+              <button type="button" class="gm-ibtn" data-edit-hour="${h._l}" title="Editar" aria-label="Editar ${DAY_NAMES[h.day_of_week]}">${ic('edit-2', 14)}</button>
+              <button type="button" class="gm-ibtn danger" data-del-hour="${h._l}" title="Remover" aria-label="Remover ${DAY_NAMES[h.day_of_week]}">${ic('trash-2', 14)}</button>
+            </div>
+          </div>
+          ${ui.editHour === h._l ? hourForm(h) : ''}`;
+      });
+      if (ui.addHour) html += hourForm(null, taken);
+      else if (taken.length < 7) html += `<button type="button" class="gm-add" data-add="hour">${ic('plus', 14)} Adicionar horário</button>`;
+      return html;
+    },
+
+    services() {
+      const svcs = activeSvcs();
+      let html = svcs.length ? '' : `<div class="gm-empty">Nenhum serviço cadastrado.</div>`;
+      svcs.forEach(s => {
+        const desc = s.description ? ` · ${esc(s.description.slice(0, 40))}` : '';
+        html += `
+          <div class="gm-item${ui.editSvc === s._l ? ' editing' : ''}">
+            <div class="gm-item-info">
+              <div class="gm-item-top"><span class="gm-item-t">${esc(s.title)}</span>
+                ${s.category ? `<span class="gm-badge">${esc(s.category)}</span>` : ''}</div>
+              <div class="gm-item-s">${money(s.price)} · ${esc(s.duration)} min${desc}</div>
+            </div>
+            <div class="gm-acts">
+              <button type="button" class="gm-ibtn" data-edit-svc="${s._l}" title="Editar" aria-label="Editar ${esc(s.title)}">${ic('edit-2', 14)}</button>
+              <button type="button" class="gm-ibtn danger" data-del-svc="${s._l}" title="Remover" aria-label="Remover ${esc(s.title)}">${ic('trash-2', 14)}</button>
+            </div>
+          </div>
+          ${ui.editSvc === s._l ? svcForm(s) : ''}`;
+      });
+      html += ui.addSvc ? svcForm(null)
+        : `<button type="button" class="gm-add" data-add="svc">${ic('plus', 14)} Adicionar serviço</button>`;
+      return html;
+    },
+
+    closures() {
+      let html = `<p class="gm-help">Marque períodos em que o lava-rápido vai ficar fechado (férias,
+        feriados, manutenção). Agendamentos no período são cancelados automaticamente e o cliente é avisado.
+        Isto vale na hora, sem precisar salvar.</p>`;
+      if (!closures.length && !ui.addClosure) html += `<div class="gm-empty"><em>Nenhum fechamento cadastrado.</em></div>`;
+      closures.forEach(c => {
+        html += `
+          <div class="gm-clos">
+            <div style="flex:1;min-width:0">
+              <div class="gm-clos-p">${esc(c.period)}</div>
+              ${c.reason && c.reason !== 'Fechamento' ? `<div class="gm-clos-r">${esc(c.reason)}</div>` : ''}
+            </div>
+            ${IS_ATTENDANT ? '' : `<button type="button" class="gm-ibtn danger" data-del-clos="${c.id}"
+                ${ui.removingClosure === c.id ? 'disabled' : ''} title="Remover fechamento" aria-label="Remover fechamento ${esc(c.period)}">
+                ${ic(ui.removingClosure === c.id ? 'loader' : 'trash-2', 14)}</button>`}
+          </div>`;
+      });
+      if (IS_ATTENDANT) {
+        html += `<div class="gm-hint">Só o dono pode criar ou remover fechamentos.</div>`;
+      } else if (ui.addClosure) {
+        const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+        html += `
+          <div class="gm-form sand">
+            <div class="gm-row">
+              <div class="gm-field"><label class="gm-label" for="c-start">Data início</label>
+                <input type="date" class="gm-input" id="c-start" min="${today}"></div>
+              <div class="gm-field"><label class="gm-label" for="c-end">Data fim</label>
+                <input type="date" class="gm-input" id="c-end" min="${today}"></div>
+            </div>
+            <label class="gm-label" for="c-reason">Motivo (opcional)</label>
+            <input class="gm-input" id="c-reason" maxlength="120" placeholder="Ex.: Férias, manutenção">
+            <div class="gm-form-acts">
+              <button type="button" class="gm-btn primary" data-clos="create" ${ui.savingClosure ? 'disabled' : ''}>
+                ${ic(ui.savingClosure ? 'loader' : 'check', 14)} Criar</button>
+              <button type="button" class="gm-btn ghost" data-clos="cancel" ${ui.savingClosure ? 'disabled' : ''}>Cancelar</button>
+            </div>
+          </div>`;
       } else {
-        showFlash('error', (data.errors || ['Erro ao salvar.']).join(', '));
+        html += `<button type="button" class="gm-add" data-add="closure">${ic('plus', 14)} Adicionar fechamento</button>`;
       }
-    })
-    .catch(function() {
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-check"></i> Confirmar';
-      showFlash('error', 'Erro de conexão. Tente novamente.');
-    });
+      return html;
+    },
   };
 
-  window.removeClosure = function(id, btn) {
-    if (!confirm('Remover este fechamento?')) return;
-    btn.disabled = true;
+  // O formulário de dia aceita vários dias de uma vez: no site é comum
+  // configurar a semana inteira numa sentada, e repetir "Seg… Ter… Qua…"
+  // com o mesmo horário era trabalho de digitação, não de decisão.
+  function hourForm(h, taken = []) {
+    const isNew = !h;
+    const cap = h && h.capacity != null ? String(h.capacity) : '';
+    return `
+      <div class="gm-form" data-hour-form="${isNew ? 'new' : h._l}">
+        ${isNew ? `
+          <label class="gm-label">Dias da semana</label>
+          <div class="gm-days">${DAY_SHORT.map((d, i) => `
+            <button type="button" class="gm-day${ui.addDays.has(i) ? ' on' : ''}" data-day="${i}"
+              ${taken.includes(i) ? 'disabled title="Já cadastrado"' : ''} aria-pressed="${ui.addDays.has(i)}">${d}</button>`).join('')}
+          </div>` : ''}
+        <div class="gm-row">
+          <div class="gm-field"><label class="gm-label">Abre às</label>
+            <input class="gm-input" data-time="opens" value="${esc(h ? h.opens_at : '')}" placeholder="08:00" inputmode="numeric" maxlength="5"></div>
+          <div class="gm-field"><label class="gm-label">Fecha às</label>
+            <input class="gm-input" data-time="closes" value="${esc(h ? h.closes_at : '')}" placeholder="18:00" inputmode="numeric" maxlength="5"></div>
+        </div>
+        <label class="gm-label">Carros ao mesmo tempo neste dia</label>
+        <input class="gm-input" data-time="cap" value="${esc(cap)}" placeholder="Padrão: ${defCap()}" inputmode="numeric" maxlength="2">
+        <div class="gm-hint">Deixe vazio pra usar o padrão do lava-rápido (${defCap()}).</div>
+        <div class="gm-form-acts">
+          <button type="button" class="gm-btn primary" data-hour-ok>${ic('check', 14)} Confirmar</button>
+          <button type="button" class="gm-btn ghost" data-hour-cancel>Cancelar</button>
+        </div>
+      </div>`;
+  }
 
-    fetch('/owner/closures/' + id, {
-      method: 'DELETE',
-      headers: { 'X-CSRF-Token': CSRF }
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data.ok) {
-        var el = document.getElementById('closure-' + id);
-        if (el) {
-          el.style.transition = 'opacity .3s ease';
-          el.style.opacity = '0';
-          setTimeout(function() {
-            el.remove();
-            if (!document.querySelector('.closure-item')) {
-              var list = document.getElementById('closure-list');
-              var empty = document.createElement('div');
-              empty.className = 'closure-empty';
-              empty.id = 'closure-empty';
-              empty.textContent = 'Nenhum fechamento programado.';
-              list.appendChild(empty);
-            }
-          }, 300);
+  function svcForm(s) {
+    const v = s || { title: '', category: '', description: '', price: '', duration: '' };
+    const price = v.price !== '' ? String(v.price).replace('.', ',') : '';
+    return `
+      <div class="gm-form" data-svc-form="${s ? s._l : 'new'}">
+        <div class="gm-row">
+          <div class="gm-field"><label class="gm-label">Categoria</label>
+            <select class="gm-select" data-s="category">
+              <option value="">Selecionar…</option>
+              ${CATEGORIES.map(c => `<option value="${esc(c)}"${c === v.category ? ' selected' : ''}>${esc(c)}</option>`).join('')}
+            </select></div>
+          <div class="gm-field"><label class="gm-label">Serviço</label>
+            <input class="gm-input" data-s="title" value="${esc(v.title)}" placeholder="Ex.: Lavagem Simples"></div>
+        </div>
+        <label class="gm-label">Descrição (opcional)</label>
+        <input class="gm-input" data-s="description" value="${esc(v.description)}" placeholder="Ex.: Inclui aspiração e perfume">
+        <div class="gm-row">
+          <div class="gm-field"><label class="gm-label">Preço (R$)</label>
+            <input class="gm-input" data-s="price" value="${esc(price)}" placeholder="50,00" inputmode="decimal"></div>
+          <div class="gm-field"><label class="gm-label">Duração (min)</label>
+            <input class="gm-input" data-s="duration" value="${esc(v.duration)}" placeholder="60" inputmode="numeric"></div>
+        </div>
+        <div class="gm-form-acts">
+          <button type="button" class="gm-btn primary" data-svc-ok>${ic('check', 14)} Confirmar</button>
+          <button type="button" class="gm-btn ghost" data-svc-cancel>Cancelar</button>
+        </div>
+      </div>`;
+  }
+
+  // ── Toast / confirmação ──────────────────────────────────────────────
+  let toastTimer;
+  function toast(type, text, ms = 3000) {
+    const t = document.getElementById('gm-toast');
+    t.className = `gm-toast ${type}`;
+    t.innerHTML = `${ic(type === 'error' ? 'x-circle' : type === 'info' ? 'info' : 'check-circle', 15)}<span>${esc(text)}</span>`;
+    requestAnimationFrame(() => t.classList.add('show'));
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), ms);
+  }
+
+  function ask(title, body, yes = 'Remover') {
+    return new Promise(resolve => {
+      const ov = document.getElementById('gm-confirm');
+      document.getElementById('gm-confirm-t').textContent = title;
+      document.getElementById('gm-confirm-b').textContent = body;
+      const y = document.getElementById('gm-confirm-yes');
+      const n = document.getElementById('gm-confirm-no');
+      y.textContent = yes;
+      ov.hidden = false; n.focus();
+      const done = v => { ov.hidden = true; y.onclick = n.onclick = ov.onclick = document.onkeydown = null; resolve(v); };
+      y.onclick = () => done(true);
+      n.onclick = () => done(false);
+      ov.onclick = e => { if (e.target === ov) done(false); };
+      document.onkeydown = e => { if (e.key === 'Escape') done(false); };
+    });
+  }
+
+  // ── Eventos ───────────────────────────────────────────────────────────
+  const root = document.querySelector('.gm');
+
+  root.addEventListener('input', e => {
+    const f = e.target.dataset.f;
+    if (f) {
+      let v = e.target.value;
+      if (f === 'cep') {
+        v = v.replace(/\D/g, '').slice(0, 8).replace(/^(\d{5})(\d)/, '$1-$2');
+        e.target.value = v;
+        st.cep = v;
+        if (v.replace(/\D/g, '').length === 8) lookupCep(v);
+      } else if (f === 'uf') {
+        v = v.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 2); e.target.value = v; st.uf = v;
+      } else if (f === 'capacity') {
+        v = v.replace(/\D/g, '').slice(0, 2); e.target.value = v; st.capacity = v;
+        refreshLight(); return;
+      } else {
+        st[f] = v;
+      }
+      refreshLight();
+      return;
+    }
+    const t = e.target.dataset.time;
+    if (t === 'opens' || t === 'closes') e.target.value = formatTime(e.target.value);
+    if (t === 'cap') e.target.value = e.target.value.replace(/\D/g, '').slice(0, 2);
+  });
+
+  // Digitar não re-renderiza a tela (perderia o cursor); só atualiza o que
+  // depende do texto: resumos e a barra.
+  function refreshLight() {
+    document.querySelectorAll('[data-rail]').forEach(b => {
+      b.querySelector('.gm-sec-sum').textContent = summary(b.dataset.rail);
+    });
+    renderBar();
+  }
+
+  root.addEventListener('focusout', e => {
+    // Capacidade vazia ao sair do campo volta pra 1 — o backend exige > 0.
+    if (e.target.dataset.f === 'capacity') {
+      st.capacity = String(Math.min(99, Math.max(1, parseInt(st.capacity, 10) || 1)));
+      // Sem re-render aqui: trocar o DOM no meio do clique engoliria o
+      // clique no botão que tirou o foco (o "+" do stepper, por exemplo).
+      e.target.value = st.capacity;
+      refreshLight();
+    }
+  });
+
+  root.addEventListener('click', async e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    const d = b.dataset;
+
+    if (d.rail) {
+      ui.active = d.rail; render();
+      history.replaceState(null, '', `#${d.rail}`);
+      return;
+    }
+    if (d.toggle) {
+      ui.open.has(d.toggle) ? ui.open.delete(d.toggle) : ui.open.add(d.toggle);
+      ui.active = d.toggle;
+      render(); return;
+    }
+    if (d.step) {
+      st.capacity = String(Math.min(99, Math.max(1, defCap() + Number(d.step))));
+      render(); return;
+    }
+
+    // Horários
+    if (d.add === 'hour')  { ui.addHour = true; ui.editHour = null; ui.addDays.clear(); render(); return; }
+    if (d.editHour)        { ui.addHour = false; ui.editHour = ui.editHour === d.editHour ? null : d.editHour; render(); return; }
+    if (d.day !== undefined) {
+      const i = Number(d.day);
+      ui.addDays.has(i) ? ui.addDays.delete(i) : ui.addDays.add(i);
+      b.classList.toggle('on'); b.setAttribute('aria-pressed', ui.addDays.has(i));
+      return;
+    }
+    if ('hourCancel' in d) { ui.addHour = false; ui.editHour = null; render(); return; }
+    if ('hourOk' in d)     { return confirmHour(b.closest('[data-hour-form]')); }
+    if (d.delHour) {
+      const h = st.hours.find(x => x._l === d.delHour);
+      if (await ask('Remover horário?', `${DAY_NAMES[h.day_of_week]} sai da agenda quando você salvar.`)) {
+        h._destroy = true; if (ui.editHour === h._l) ui.editHour = null; render();
+      }
+      return;
+    }
+
+    // Serviços
+    if (d.add === 'svc')   { ui.addSvc = true; ui.editSvc = null; render(); return; }
+    if (d.editSvc)         { ui.addSvc = false; ui.editSvc = ui.editSvc === d.editSvc ? null : d.editSvc; render(); return; }
+    if ('svcCancel' in d)  { ui.addSvc = false; ui.editSvc = null; render(); return; }
+    if ('svcOk' in d)      { return confirmSvc(b.closest('[data-svc-form]')); }
+    if (d.delSvc) {
+      const s = st.services.find(x => x._l === d.delSvc);
+      if (await ask('Remover serviço?', `"${s.title}" deixa de aparecer para os clientes quando você salvar.`)) {
+        s._destroy = true; if (ui.editSvc === s._l) ui.editSvc = null; render();
+      }
+      return;
+    }
+
+    // Fechamentos
+    if (d.add === 'closure') { ui.addClosure = true; render(); document.getElementById('c-start')?.focus(); return; }
+    if (d.clos === 'cancel') { ui.addClosure = false; render(); return; }
+    if (d.clos === 'create') { return createClosure(); }
+    if (d.delClos)           { return deleteClosure(Number(d.delClos)); }
+  });
+
+  root.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' || e.target.tagName !== 'INPUT') return;
+    const hf = e.target.closest('[data-hour-form]'); if (hf) { e.preventDefault(); return confirmHour(hf); }
+    const sf = e.target.closest('[data-svc-form]');  if (sf) { e.preventDefault(); return confirmSvc(sf); }
+  });
+
+  function confirmHour(form) {
+    const opens  = form.querySelector('[data-time=opens]').value;
+    const closes = form.querySelector('[data-time=closes]').value;
+    const cap    = parseCap(form.querySelector('[data-time=cap]').value);
+    const isNew  = form.dataset.hourForm === 'new';
+    if (isNew && !ui.addDays.size) return toast('error', 'Selecione pelo menos um dia da semana.');
+    if (!validTime(opens))  return toast('error', 'Horário de abertura inválido (use HH:MM).');
+    if (!validTime(closes)) return toast('error', 'Horário de fechamento inválido (use HH:MM).');
+    if (opens >= closes)    return toast('error', 'Abertura deve ser anterior ao fechamento.');
+    if (isNew) {
+      [...ui.addDays].forEach(day => st.hours.push({
+        _l: lid(), id: null, day_of_week: day, opens_at: opens, closes_at: closes, capacity: cap, _destroy: false,
+      }));
+      st.hours.sort((a, b) => a.day_of_week - b.day_of_week);
+      ui.addHour = false; ui.addDays.clear();
+    } else {
+      Object.assign(st.hours.find(h => h._l === form.dataset.hourForm), { opens_at: opens, closes_at: closes, capacity: cap });
+      ui.editHour = null;
+    }
+    render();
+  }
+
+  function confirmSvc(form) {
+    const g = k => form.querySelector(`[data-s=${k}]`).value;
+    const category = g('category'), title = g('title').trim(), description = g('description').trim();
+    const p = parseFloat(g('price').replace(/\./g, '').replace(',', '.'));
+    const dur = parseInt(g('duration'), 10);
+    if (!category)              return toast('error', 'Selecione uma categoria.');
+    if (!title)                 return toast('error', 'Informe o nome do serviço.');
+    if (isNaN(p) || p < 0)      return toast('error', 'Informe um preço válido.');
+    if (isNaN(dur) || dur < 1)  return toast('error', 'Informe uma duração válida em minutos.');
+    const data = { title, category, description, price: p.toFixed(2), duration: String(dur) };
+    if (form.dataset.svcForm === 'new') {
+      st.services.push({ _l: lid(), id: null, _destroy: false, ...data });
+      ui.addSvc = false;
+    } else {
+      Object.assign(st.services.find(s => s._l === form.dataset.svcForm), data);
+      ui.editSvc = null;
+    }
+    render();
+  }
+
+  // ── CEP ───────────────────────────────────────────────────────────────
+  let cepSeq = 0;
+  async function lookupCep(cep) {
+    const my = ++cepSeq;
+    ui.cep = true; render();
+    try {
+      const r = await fetch(`https://viacep.com.br/ws/${cep.replace(/\D/g, '')}/json/`);
+      const data = await r.json();
+      if (my !== cepSeq) return;
+      if (data.erro) { toast('error', 'CEP não encontrado. Preencha o endereço manualmente.'); return; }
+      st.logradouro = data.logradouro || ''; st.bairro = data.bairro || '';
+      st.cidade = data.localidade || ''; st.uf = data.uf || '';
+      st.address = [data.logradouro, data.bairro, data.localidade, data.uf].filter(Boolean).join(', ');
+    } catch {
+      if (my === cepSeq) toast('error', 'Não foi possível consultar o CEP. Preencha manualmente.');
+    } finally {
+      if (my === cepSeq) { ui.cep = false; render(); document.querySelector('[data-f=numero]')?.focus(); }
+    }
+  }
+
+  // ── Fechamentos (valem na hora) ──────────────────────────────────────
+  async function createClosure() {
+    const start = document.getElementById('c-start').value;
+    const end   = document.getElementById('c-end').value;
+    const reason = document.getElementById('c-reason').value.trim();
+    if (!start || !end) return toast('error', 'Preencha as duas datas.');
+    if (end < start)    return toast('error', 'A data fim deve ser igual ou posterior à inicial.');
+    ui.savingClosure = true; render();
+    // Re-render apaga os campos; devolve o que foi digitado enquanto envia.
+    document.getElementById('c-start').value = start;
+    document.getElementById('c-end').value = end;
+    document.getElementById('c-reason').value = reason;
+    try {
+      const r = await fetch('/owner/closures', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-Token': CSRF },
+        body: JSON.stringify({ closure: { car_wash_id: CW_ID, start_date: start, end_date: end, reason } }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (r.ok && data.ok) {
+        closures.push({ id: data.id, period: data.period, reason: data.reason });
+        const n = data.cancelled_count || 0;
+        toast('success', `Fechamento criado.${n ? ` ${n} agendamento${n === 1 ? '' : 's'} cancelado${n === 1 ? '' : 's'}.` : ''}`, 3500);
+        ui.addClosure = false;
+      } else {
+        toast('error', (data.errors && data.errors.join(', ')) || data.error || 'Erro ao criar fechamento.', 3500);
+      }
+    } catch {
+      toast('error', 'Falha de conexão.');
+    } finally {
+      ui.savingClosure = false;
+      const keep = ui.addClosure;
+      render();
+      if (keep) {
+        document.getElementById('c-start').value = start;
+        document.getElementById('c-end').value = end;
+        document.getElementById('c-reason').value = reason;
+      }
+    }
+  }
+
+  async function deleteClosure(id) {
+    const c = closures.find(x => x.id === id);
+    if (!await ask('Remover fechamento?', `Período: ${c.period}. Os agendamentos já cancelados não serão restaurados.`)) return;
+    ui.removingClosure = id; render();
+    try {
+      const r = await fetch(`/owner/closures/${id}`, { method: 'DELETE', headers: { Accept: 'application/json', 'X-CSRF-Token': CSRF } });
+      const data = await r.json().catch(() => ({}));
+      if (r.ok && data.ok) { closures = closures.filter(x => x.id !== id); toast('success', 'Fechamento removido.'); }
+      else toast('error', data.error || 'Erro ao remover.');
+    } catch { toast('error', 'Falha de conexão.'); }
+    finally { ui.removingClosure = null; render(); }
+  }
+
+  // ── Salvar ────────────────────────────────────────────────────────────
+  function effectiveByWday() {
+    const fallback = defCap(), map = {};
+    activeHours().forEach(h => { map[h.day_of_week] = h.capacity != null ? h.capacity : fallback; });
+    return { map, fallback };
+  }
+  function originalEffective() {
+    const map = {};
+    (server.operating_hours || []).forEach(h => { map[h.day_of_week] = h.effective_capacity ?? server.capacity_per_slot; });
+    return map;
+  }
+
+  async function findConflicts() {
+    const { map, fallback } = effectiveByWday();
+    try {
+      const r = await fetch('/owner/car_wash_appointments?days=30', { headers: { Accept: 'application/json' } });
+      if (!r.ok) return null;
+      const data = await r.json();
+      const now = Date.now(), byWin = new Map();
+      (data.groups || []).forEach(g => (g.appointments || []).forEach(a => {
+        if (!['confirmed', 'pending_acceptance'].includes(a.status)) return;
+        const at = new Date(a.scheduled_at).getTime();
+        if (!isFinite(at) || at < now) return;
+        if (!byWin.has(a.scheduled_at)) byWin.set(a.scheduled_at, { key: a.scheduled_at, dateLabel: g.label, time: a.time, scheduled_at: a.scheduled_at, appointments: [] });
+        byWin.get(a.scheduled_at).appointments.push(a);
+      }));
+      // Cada janela contra a capacidade do SEU dia — reduzir só o sábado
+      // passaria batido num limite único.
+      const out = [];
+      byWin.forEach(w => {
+        const cap = map[new Date(w.scheduled_at).getDay()] ?? fallback;
+        if (w.appointments.length > cap) out.push({ ...w, cap });
+      });
+      return out.sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
+    } catch { return null; }
+  }
+
+  function openSectionFor(key) {
+    ui.active = key; ui.open.add(key); render();
+    document.getElementById(`sec-${key}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  async function handleSave() {
+    if (!st.name.trim())   { openSectionFor('info'); document.querySelector('[data-f=name]')?.focus(); return toast('error', 'Informe o nome do lava-rápido.'); }
+    if (!st.numero.trim()) { openSectionFor('info'); document.querySelector('[data-f=numero]')?.focus(); return toast('error', 'Informe o número do endereço.'); }
+
+    const newCap = defCap();
+    const before = originalEffective();
+    const { map, fallback } = effectiveByWday();
+    const decreased = newCap < (server.capacity_per_slot || 1) ||
+      Object.keys(before).some(w => (map[w] ?? fallback) < before[w]);
+
+    if (decreased && CAN_CHECK && !IS_ATTENDANT) {
+      ui.checking = true; renderBar();
+      const conflicts = await findConflicts();
+      ui.checking = false; renderBar();
+      if (conflicts === null) return toast('error', 'Não foi possível verificar os agendamentos. Tente novamente.');
+      if (conflicts.length) return openConflicts(conflicts, newCap);
+    }
+    await persist();
+  }
+
+  async function persist() {
+    ui.saving = true; renderBar(); renderConflict();
+    const hours = {}, svcs = {};
+    st.hours.forEach((h, i) => {
+      if (!h.id && h._destroy) return;
+      const a = { day_of_week: h.day_of_week, opens_at: `${h.opens_at}:00`, closes_at: `${h.closes_at}:00`, capacity: h.capacity ?? '' };
+      if (h.id) a.id = h.id;
+      if (h._destroy) a._destroy = '1';
+      hours[i] = a;
+    });
+    st.services.forEach((s, i) => {
+      if (!s.id && s._destroy) return;
+      const a = { title: s.title, category: s.category, description: s.description, price: parseFloat(s.price), duration: parseInt(s.duration, 10) };
+      if (s.id) a.id = s.id;
+      if (s._destroy) a._destroy = '1';
+      svcs[i] = a;
+    });
+    const payload = { car_wash: {
+      name: st.name.trim(), cep: st.cep.replace(/\D/g, ''), logradouro: st.logradouro, numero: st.numero,
+      bairro: st.bairro, cidade: st.cidade, uf: st.uf, address: st.address,
+      capacity_per_slot: defCap(), operating_hours_attributes: hours, services_attributes: svcs,
+    } };
+    try {
+      const r = await fetch(UPDATE_URL, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-Token': CSRF },
+        body: JSON.stringify(payload),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (r.ok && data.ok) {
+        closeConflict(true);
+        if (data.pending) {
+          // Nada mudou de fato até o dono aprovar: a tela volta ao que vale hoje.
+          st = fromServer(server);
+          toast('success', data.message || 'Alterações enviadas para aprovação do dono.', 3500);
+        } else {
+          server = data.car_wash; st = fromServer(server);
+          toast('success', 'Alterações salvas com sucesso.');
         }
-        showFlash('success', 'Fechamento removido.');
+        original = JSON.stringify(strip(st));
+        ui.editHour = ui.editSvc = null; ui.addHour = ui.addSvc = false;
       } else {
-        btn.disabled = false;
-        showFlash('error', 'Erro ao remover.');
+        toast('error', data.error || 'Não foi possível salvar. Tente novamente.', 4000);
       }
-    })
-    .catch(function() {
-      btn.disabled = false;
-      showFlash('error', 'Erro de conexão.');
-    });
-  };
-
-  function appendClosure(id, period, reason) {
-    var empty = document.getElementById('closure-empty');
-    if (empty) empty.remove();
-    var list = document.getElementById('closure-list');
-    var item = document.createElement('div');
-    item.className = 'closure-item';
-    item.id = 'closure-' + id;
-    item.innerHTML =
-      '<div class="closure-item-info">' +
-        '<div class="closure-item-period"><i class="fas fa-ban" style="color: var(--rose-500); font-size: 11px; margin-right: 6px;"></i>' + period + '</div>' +
-        (reason && reason !== 'Fechamento' ? '<div class="closure-item-reason">' + reason + '</div>' : '') +
-      '</div>' +
-      '<button type="button" class="closure-remove" onclick="removeClosure(' + id + ', this)" title="Remover fechamento">' +
-        '<i class="fas fa-trash-can"></i>' +
-      '</button>';
-    list.appendChild(item);
+    } catch {
+      toast('error', 'Falha de conexão. Tente novamente.', 3500);
+    } finally {
+      ui.saving = false; render(); renderConflict();
+    }
   }
 
-  function resetClosureForm() {
-    document.getElementById('closure-start').value  = '';
-    document.getElementById('closure-end').value    = '';
-    document.getElementById('closure-reason').value = '';
+  document.getElementById('gm-save').addEventListener('click', handleSave);
+  document.getElementById('gm-discard').addEventListener('click', async () => {
+    if (!await ask('Descartar alterações?', 'Tudo o que você mudou desde o último salvamento volta ao que estava.', 'Descartar')) return;
+    st = fromServer(server);
+    ui.editHour = ui.editSvc = null; ui.addHour = ui.addSvc = false;
+    render();
+  });
+  window.addEventListener('beforeunload', e => { if (isDirty()) { e.preventDefault(); e.returnValue = ''; } });
+
+  // ── Conflito de capacidade ───────────────────────────────────────────
+  const cf = { windows: [], newCap: 1, cancelling: null, open: false };
+  function openConflicts(windows, newCap) {
+    Object.assign(cf, { windows, newCap, open: true });
+    document.getElementById('gm-conflict').hidden = false;
+    renderConflict();
   }
-
-  var form=document.getElementById('car-wash-form');
-  if(form){
-    form.addEventListener('input',function(){formChanged=true;});
-    form.addEventListener('submit',function(){document.getElementById('loading-overlay').style.display='flex';});
+  function closeConflict(force) {
+    if (!force && (ui.saving || cf.cancelling)) return;
+    cf.open = false; cf.windows = [];
+    document.getElementById('gm-conflict').hidden = true;
   }
+  function renderConflict() {
+    if (!cf.open) return;
+    const excess = cf.windows.reduce((n, w) => n + Math.max(0, w.appointments.length - w.cap), 0);
+    const resolved = !cf.windows.length;
+    const orig = server.capacity_per_slot || 1;
+    document.getElementById('gm-cf-body').innerHTML = `
+      <div class="gm-cf-banner">${ic('alert-triangle', 18)}
+        <div><b>${cf.newCap !== orig ? `Capacidade ${orig} → ${cf.newCap}` : 'Capacidade reduzida em algum dia'}</b>
+          <div>${resolved ? 'Todos os conflitos foram resolvidos. Confirme a redução para salvar.'
+            : `Existem janelas com mais agendamentos do que a nova capacidade permite. Cancele ${excess} agendamento(s) para prosseguir.`}</div></div>
+      </div>
+      ${cf.windows.map(w => {
+        const x = Math.max(0, w.appointments.length - w.cap);
+        return `<div class="gm-cf-win">
+          <div class="gm-cf-wh"><div class="gm-cf-wt">${esc(w.dateLabel)} · ${esc(w.time)}
+            <div class="gm-cf-ws">${w.appointments.length} agendamento(s) · limite ${w.cap}</div></div>
+            <span class="gm-cf-x">${x} EXCEDENTE${x === 1 ? '' : 'S'}</span></div>
+          ${w.appointments.map(a => `<div class="gm-cf-appt">
+            <div style="min-width:0"><b>${esc(a.client_name || 'Cliente')}${a.walk_in ? ' · avulso' : ''}</b>
+              <span>${esc(a.service_title || 'Serviço')}${a.service_duration ? ` · ${a.service_duration} min` : ''}</span></div>
+            <button type="button" class="gm-cf-cancel" data-cf-cancel="${a.id}" ${cf.cancelling || ui.saving ? 'disabled' : ''}>
+              ${cf.cancelling === a.id ? ic('loader', 14) : 'Cancelar'}</button></div>`).join('')}
+        </div>`;
+      }).join('')}
+      ${resolved ? `<div class="gm-cf-ok">${ic('check-circle', 18)} Nenhum conflito restante.</div>` : ''}
+      <button type="button" class="gm-btn primary" data-cf-save style="width:100%;margin-top:14px;padding:14px"
+        ${!resolved || ui.saving || cf.cancelling ? 'disabled' : ''}>
+        ${ui.saving ? ic('loader', 16) : ic('save', 16)} ${resolved ? 'Confirmar nova capacidade' : 'Resolva os conflitos para salvar'}</button>
+      <button type="button" class="gm-cf-discard" data-cf-close>Descartar alteração de capacidade</button>`;
+  }
+  document.getElementById('gm-conflict').addEventListener('click', async e => {
+    if (e.target.id === 'gm-conflict') return closeConflict();
+    const b = e.target.closest('button'); if (!b) return;
+    if ('cfClose' in b.dataset) return closeConflict();
+    if ('cfSave' in b.dataset) return persist();
+    if (b.dataset.cfCancel) {
+      const id = Number(b.dataset.cfCancel);
+      const a = cf.windows.flatMap(w => w.appointments).find(x => x.id === id);
+      document.getElementById('gm-conflict').hidden = true;
+      const ok = await ask('Cancelar agendamento?', `${a.client_name || 'Cliente'} · ${a.service_title || 'serviço'} · ${a.time || ''}. O cliente é avisado.`, 'Cancelar agendamento');
+      document.getElementById('gm-conflict').hidden = false;
+      if (!ok) return;
+      cf.cancelling = id; renderConflict();
+      try {
+        const r = await fetch(`/owner/checkins/${id}/cancel`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-Token': CSRF },
+          body: JSON.stringify({ reason: 'A capacidade de atendimento desta janela foi reduzida' }),
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) toast('error', data.error || 'Não foi possível cancelar.');
+        else cf.windows = cf.windows
+          .map(w => ({ ...w, appointments: w.appointments.filter(x => x.id !== id) }))
+          .filter(w => w.appointments.length > w.cap);
+      } catch { toast('error', 'Falha de conexão. Tente novamente.'); }
+      finally { cf.cancelling = null; renderConflict(); }
+    }
+  });
 
-  document.getElementById('cancel-button').addEventListener('click',function(e){if(formChanged&&!confirm('Tem certeza? As alterações não salvas serão perdidas.'))e.preventDefault();});
-
-  var successMsg=document.getElementById('success-message');
-  if(successMsg){setTimeout(function(){successMsg.style.transition='opacity .5s ease';successMsg.style.opacity='0';setTimeout(function(){successMsg.remove();},500);},8000);}
-});
+  // ── Início ────────────────────────────────────────────────────────────
+  // O checklist do painel manda pra #hours / #services: abre direto ali.
+  const hash = location.hash.replace('#', '');
+  if (SECTIONS.some(s => s.key === hash)) { ui.active = hash; ui.open.add(hash); }
+  document.querySelectorAll('[data-ic]').forEach(el => { el.outerHTML = ic(el.dataset.ic, 16); });
+  render();
+  if (ui.open.size && window.innerWidth < 1000) {
+    document.getElementById(`sec-${hash}`)?.scrollIntoView({ block: 'start' });
+  }
+})();
 </script>
-
-<% Rails.logger.info("Template car_washes/manage.html.erb renderizado com sucesso") %>

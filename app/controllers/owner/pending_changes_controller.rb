@@ -56,14 +56,13 @@ module Owner
               if attrs["_destroy"] == "1"
                 change.car_wash.operating_hours.find_by(id: attrs["id"])&.destroy
               elsif attrs["id"].present?
+                # slice: pedido antigo sem "capacity" não zera a do dia.
                 change.car_wash.operating_hours.find_by(id: attrs["id"])&.update(
-                  opens_at: attrs["opens_at"], closes_at: attrs["closes_at"]
+                  attrs.slice("opens_at", "closes_at", "capacity")
                   )
               else
                 change.car_wash.operating_hours.create(
-                  day_of_week: attrs["day_of_week"],
-                  opens_at:    attrs["opens_at"],
-                  closes_at:   attrs["closes_at"]
+                  attrs.slice("day_of_week", "opens_at", "closes_at", "capacity")
                   )
               end
             end

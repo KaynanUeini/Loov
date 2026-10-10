@@ -281,35 +281,29 @@ class CarWashesController < ApplicationController
     end
   end
 
+  # A tela Gerenciar fala JSON (mesmo modelo de estado do app: edita tudo
+  # localmente e salva de uma vez). O HTML continua respondendo pra quem
+  # chegar por um form antigo.
   def update
-    if current_user.attendant?
-      raw = params.require(:car_wash).permit(
-        :name, :address, :cep, :logradouro, :bairro, :cidade, :uf,
-        :latitude, :longitude, :capacity_per_slot,
-        operating_hours_attributes: [:id, :day_of_week, :opens_at, :closes_at, :_destroy],
-        services_attributes: [:id, :title, :description, :price, :duration, :category, :_destroy]
-        ).to_h
+    update_params = car_wash_params
 
+    if current_user.attendant?
       PendingChange.create!(
         car_wash:    @car_wash,
         attendant:   current_user,
         change_type: "manage_car_wash",
         status:      "pending",
         description: "Alterações no gerenciamento do lava-rápido",
-        payload:     { car_wash_params: raw }.to_json
+        payload:     { car_wash_params: update_params.to_h }.to_json
         )
 
-      redirect_to manage_car_wash_path(@car_wash),
-      notice: "✅ Alterações enviadas para aprovação do proprietário."
+      message = "Alterações enviadas para aprovação do proprietário."
+      respond_to do |format|
+        format.html { redirect_to manage_car_wash_path(@car_wash), notice: "✅ #{message}" }
+        format.json { render json: { ok: true, pending: true, message: message } }
+      end
       return
     end
-
-    update_params = params.require(:car_wash).permit(
-      :name, :address, :cep, :logradouro, :bairro, :cidade, :uf,
-      :latitude, :longitude, :capacity_per_slot,
-      operating_hours_attributes: [:id, :day_of_week, :opens_at, :closes_at, :_destroy],
-      services_attributes: [:id, :title, :description, :price, :duration, :category, :_destroy]
-      )
 
     if update_params[:operating_hours_attributes].present?
       seen_days = []
@@ -318,18 +312,30 @@ class CarWashesController < ApplicationController
         day = attrs[:day_of_week].to_i
         if seen_days.include?(day)
           @car_wash.errors.add(:base, "Dia da semana já adicionado: #{OperatingHour.new(day_of_week: day).day_of_week_name}")
-          render :manage, status: :unprocessable_entity and return
+          respond_to do |format|
+            format.html { render :manage, status: :unprocessable_entity }
+            format.json { render json: { error: @car_wash.errors.full_messages.join(", ") }, status: :unprocessable_entity }
+          end
+          return
         end
         seen_days << day
       end
     end
 
     if @car_wash.update(update_params)
-      redirect_to manage_car_wash_path(@car_wash), notice: "Lava-rápido atualizado com sucesso!"
+      respond_to do |format|
+        format.html { redirect_to manage_car_wash_path(@car_wash), notice: "Lava-rápido atualizado com sucesso!" }
+        format.json { render json: { ok: true, car_wash: manage_payload(@car_wash.reload) } }
+      end
     else
-      @car_wash.operating_hours.build if @car_wash.operating_hours.empty?
-      @car_wash.services.build if @car_wash.services.empty?
-      render :manage, status: :unprocessable_entity
+      respond_to do |format|
+        format.html do
+          @car_wash.operating_hours.build if @car_wash.operating_hours.empty?
+          @car_wash.services.build if @car_wash.services.empty?
+          render :manage, status: :unprocessable_entity
+        end
+        format.json { render json: { error: @car_wash.errors.full_messages.join(", ") }, status: :unprocessable_entity }
+      end
     end
   end
 
@@ -339,10 +345,9 @@ class CarWashesController < ApplicationController
   end
 
   def manage
-    @is_attendant    = current_user.attendant?
-    @pending_changes = @car_wash.pending_changes.pending if current_user.owner?
-    @car_wash.operating_hours.build if @car_wash.operating_hours.empty?
-    @car_wash.services.build if @car_wash.services.empty?
+    @is_attendant = current_user.attendant?
+    @manage_data  = manage_payload(@car_wash)
+    @closures     = @car_wash.car_wash_closures.upcoming_or_active.map { |c| closure_payload(c) }
   end
 
   def available_times
@@ -554,10 +559,58 @@ class CarWashesController < ApplicationController
       nil
     end
 
+    # Atendente só passa pro lava-rápido ao qual está vinculado — antes passava
+    # pra qualquer id e conseguia abrir pedido de alteração em loja alheia.
     def ensure_owner
-      unless current_user.owner? && @car_wash.user == current_user
-        redirect_to root_path, alert: "Acesso não autorizado." unless current_user.attendant?
+      return if current_user.owner? && @car_wash.user == current_user
+      return if current_user.attendant? && current_car_wash&.id == @car_wash.id
+      respond_to do |format|
+        format.html { redirect_to root_path, alert: "Acesso não autorizado." }
+        format.json { render json: { error: "Acesso não autorizado." }, status: :forbidden }
       end
+    end
+
+    # Mesmo formato do GET /owner/car_wash do app, mas do lava-rápido da URL
+    # (o endpoint do app usa o vinculado, e dono com mais de uma loja edita
+    # pela URL aqui no site).
+    def manage_payload(cw)
+      {
+        id:                cw.id,
+        name:              cw.name,
+        cep:               cw.cep,
+        logradouro:        cw.logradouro,
+        numero:            cw.numero,
+        bairro:            cw.bairro,
+        cidade:            cw.cidade,
+        uf:                cw.uf,
+        address:           cw.address,
+        capacity_per_slot: cw.capacity_per_slot,
+        has_coordinates:   cw.has_valid_coordinates?,
+        operating_hours:   cw.operating_hours.order(:day_of_week).map { |oh|
+          {
+            id:                 oh.id,
+            day_of_week:        oh.day_of_week,
+            opens_at:           oh.opens_at&.strftime("%H:%M"),
+            closes_at:          oh.closes_at&.strftime("%H:%M"),
+            capacity:           oh.capacity,
+            effective_capacity: oh.effective_capacity,
+          }
+        },
+        services: cw.services.order(:title).map { |sv|
+          {
+            id:          sv.id,
+            title:       sv.title,
+            category:    sv.category,
+            description: sv.description,
+            price:       sv.price.to_f,
+            duration:    sv.duration,
+          }
+        },
+      }
+    end
+
+    def closure_payload(c)
+      { id: c.id, period: c.display_period, reason: c.reason.to_s }
     end
 
     def ensure_owner_or_attendant
@@ -572,9 +625,9 @@ class CarWashesController < ApplicationController
 
     def car_wash_params
       params.require(:car_wash).permit(
-        :name, :address, :cep, :logradouro, :bairro, :cidade, :uf,
+        :name, :address, :cep, :logradouro, :numero, :bairro, :cidade, :uf,
         :latitude, :longitude, :capacity_per_slot,
-        operating_hours_attributes: [:id, :day_of_week, :opens_at, :closes_at, :_destroy],
+        operating_hours_attributes: [:id, :day_of_week, :opens_at, :closes_at, :capacity, :_destroy],
         services_attributes: [:id, :title, :description, :price, :duration, :category, :_destroy]
         )
     end
