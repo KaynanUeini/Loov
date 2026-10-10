@@ -72,6 +72,13 @@ Rails.application.routes.draw do
         post :read_all
       end
     end
+
+    resources :support_tickets, only: [:index, :create] do
+      member do
+        post  :message
+        patch :close
+      end
+    end
   end
 
   namespace :owner do

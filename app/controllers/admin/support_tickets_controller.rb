@@ -25,6 +25,7 @@ module Admin
           updated_at:       t.updated_at.strftime("%d/%m/%Y %H:%M"),
           owner_email:      user&.email,
           owner_name:       user&.email&.split("@")&.first&.capitalize,
+          user_role:        user&.role,
           car_wash_name:    car_wash&.name,
           messages:         messages,
           message_count:    messages.count,
@@ -39,6 +40,7 @@ module Admin
       ticket = SupportTicket.find(params[:id])
       ticket.messages.create!(user: current_user, body: params[:body], from_admin: true)
       ticket.update_columns(status: "in_progress", updated_at: Time.current)
+      ticket.notify_reply!(params[:body])
       render json: { ok: true }
     rescue => e
       render json: { error: e.message }, status: :unprocessable_entity
@@ -61,6 +63,7 @@ module Admin
       custom_body = params[:body].presence
       service     = SupportAgentService.new(ticket)
       success     = service.approve_and_send!(current_user, custom_body)
+      ticket.notify_reply!(custom_body.presence || ticket.agent_draft) if success
       if success
         render json: { ok: true, message: "Rascunho enviado como resposta oficial." }
       else

@@ -7,6 +7,8 @@ class SupportAgentService
   end
 
   def run
+    return atender_cliente if @ticket.user.client?
+
     result = try_autonomous_action
     return result if result[:autonomous]
     draft_result = generate_draft
@@ -91,6 +93,22 @@ class SupportAgentService
   end
 
   private
+
+  # ── CLIENTE ────────────────────────────────────────────────────────────────
+  # A base de conhecimento e as ações automáticas são do painel do dono
+  # (caixa, atendentes, cancelar Last Minute do lava-rápido). Respondendo
+  # cliente com elas, a IA ensinaria caminhos que ele nem vê no app. Então o
+  # chamado de cliente vai direto pra equipe: só uma confirmação de que a
+  # mensagem chegou, uma vez, e a resposta é humana pelo painel admin.
+  def atender_cliente
+    unless @ticket.messages.where(from_admin: true).exists?
+      post_agent_message(
+        "Oi! Recebemos sua mensagem e alguém da equipe Loov vai te responder por aqui mesmo. " \
+        "Você recebe uma notificação quando a resposta chegar."
+      )
+    end
+    { autonomous: false, human_only: true }
+  end
 
   # ── AÇÕES AUTÔNOMAS ────────────────────────────────────────────────────────
   def try_autonomous_action
