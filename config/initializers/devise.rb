@@ -191,7 +191,9 @@ Devise.setup do |config|
 
   # ==> Configuration for :validatable
   # Range for password length.
-  config.password_length = 6..128
+  # 8 no mínimo (era 6). Vale pra contas novas e trocas de senha; senhas
+  # atuais continuam funcionando até o cliente trocar.
+  config.password_length = 8..128
 
   # Email regex used to validate email formats. It simply asserts that
   # one (and only one) @ exists in the given string. This is mainly

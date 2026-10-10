@@ -23,7 +23,7 @@
                  format("%02d/%02d", current_user.stripe_card_exp_month, current_user.stripe_card_exp_year % 100)
                end
 %>
-<script src="/vendor/feather-4.29.2.min.js"></script>
+<script src="/vendor/feather-4.29.2.min.js" nonce="<%= csp_nonce %>"></script>
 
 <style>
   .loov-nav { background: var(--cream) !important; }
@@ -305,7 +305,7 @@
   <div class="pg-toast" id="pg-toast" role="status" aria-live="polite"></div>
 </div>
 
-<script>
+<script nonce="<%= csp_nonce %>">
 (function () {
   var STRIPE_PK = <%= raw json_escape(ENV['STRIPE_PUBLISHABLE_KEY'].to_s.to_json) %>;
   var SETUP_SECRET = <%= raw json_escape(@setup_client_secret.to_s.to_json) %>;

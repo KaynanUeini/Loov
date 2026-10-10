@@ -530,7 +530,7 @@
   </button>
 </nav>
 
-<script>
+<script nonce="<%= csp_nonce %>">
 (function() {
   const CSRF = document.querySelector('meta[name="csrf-token"]')?.content;
 
@@ -618,7 +618,7 @@
           </div>
         </a>`;
       }).join('') + (hasMore
-        ? `<button onclick="expandNotifs()" style="width:100%;padding:.7rem;background:var(--cream);border:none;border-top:1px solid var(--stone);color:var(--coral-700);font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.1em;cursor:pointer;transition:color .15s;">VER MAIS ${items.length - limit}</button>`
+        ? `<button type="button" data-notif-more style="width:100%;padding:.7rem;background:var(--cream);border:none;border-top:1px solid var(--stone);color:var(--coral-700);font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.1em;cursor:pointer;transition:color .15s;">VER MAIS ${items.length - limit}</button>`
         : '');
     }
 
@@ -633,6 +633,8 @@
     });
 
     window.expandNotifs = function() { renderNotifications(allNotifs, allNotifs.length); };
+    // Listener em vez de onclick embutido: a página de cartão bloqueia eventos inline.
+    notifList.addEventListener('click', function (e) { if (e.target.closest('[data-notif-more]')) { e.stopPropagation(); expandNotifs(); } });
 
     function pollBadge() {
       if (dropdown.classList.contains('open')) return;

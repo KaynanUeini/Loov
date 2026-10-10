@@ -20,7 +20,10 @@ module Client
         redirect_to edit_user_registration_path(request.query_parameters.slice("latitude", "longitude")) and return
       end
 
-      backfill_card_details if request.format.html?
+      if request.format.html?
+        strict_csp!
+        backfill_card_details
+      end
 
       # Na página do cartão o SetupIntent é sempre preparado: serve pra
       # cadastrar o primeiro cartão e também pra trocar o atual.
@@ -88,7 +91,9 @@ module Client
         return
       end
 
+      had_card = current_user.has_payment_method?
       current_user.attach_payment_method!(payment_method_id)
+      notify_card_change(had_card ? :replaced : :added, current_user.card_display)
 
       return_to = session.delete(:return_to_after_card)
 
@@ -103,7 +108,9 @@ module Client
 
     # DELETE /client/profile/remove_payment_method
     def remove_payment_method
+      removed = current_user.card_display
       current_user.detach_payment_method!
+      notify_card_change(:removed, removed) if removed
       respond_to do |format|
         format.html { redirect_to edit_client_profile_path(tab: "pagamento"), notice: "Cartão removido." }
         format.json { render json: { ok: true } }
@@ -125,6 +132,13 @@ module Client
       )
     rescue Stripe::StripeError => e
       Rails.logger.warn("[Pagamentos] backfill do cartão falhou: #{e.message}")
+    end
+
+    # E-mail de segurança. Falha no envio não pode desfazer a mudança do cartão.
+    def notify_card_change(action, card_display)
+      AccountMailer.card_changed(current_user, action, card_display).deliver_now
+    rescue => e
+      Rails.logger.error("[Pagamentos] aviso de cartão (#{action}) não enviado: #{e.message}")
     end
 
     def payment_tab?

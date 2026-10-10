@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Ícone da aba: a pill da Loov reduzida ao símbolo (os dois anéis). A
+       pill inteira com "loov" não se lê em 16px; o símbolo sim. -->
+  <rect width="64" height="64" rx="18" fill="#28231c"/>
+  <circle cx="26" cy="32" r="13.5" fill="none" stroke="#fafaf6" stroke-width="4.5"/>
+  <circle cx="38" cy="32" r="13.5" fill="none" stroke="#dd7852" stroke-width="4.5"/>
+  <circle cx="40.5" cy="33" r="4.5" fill="#dd7852"/>
+</svg>

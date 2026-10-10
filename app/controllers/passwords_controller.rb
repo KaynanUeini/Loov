@@ -53,9 +53,9 @@ class PasswordsController < ApplicationController
     password     = params[:password].to_s
     confirmation = params[:password_confirmation].to_s
 
-    if password.length < 6
+    if password.length < Devise.password_length.min
       @reset_token = token
-      @error = "A senha precisa de ao menos 6 caracteres."
+      @error = "A senha precisa de ao menos #{Devise.password_length.min} caracteres."
       @user = User.with_reset_password_token(token)
       render :edit, status: :unprocessable_entity and return
     end

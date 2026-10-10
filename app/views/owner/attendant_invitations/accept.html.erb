@@ -38,7 +38,7 @@
         </div>
         <div class="loov-field">
           <label class="loov-label">Senha</label>
-          <%= password_field_tag :password, nil, class: "loov-input", placeholder: "Mínimo 6 caracteres", required: true %>
+          <%= password_field_tag :password, nil, class: "loov-input", placeholder: "Mínimo #{Devise.password_length.min} caracteres", required: true %>
         </div>
         <div class="loov-field">
           <label class="loov-label">Confirmar senha</label>

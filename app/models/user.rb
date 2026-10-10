@@ -108,6 +108,7 @@ class User < ApplicationRecord
 
   # Salva um PaymentMethod no cliente e o define como padrão
   def attach_payment_method!(payment_method_id)
+    previous = stripe_payment_method_id
     customer = stripe_customer!
     pm = Stripe::PaymentMethod.attach(payment_method_id, { customer: customer.id })
     Stripe::Customer.update(customer.id, { invoice_settings: { default_payment_method: pm.id } })
@@ -119,6 +120,11 @@ class User < ApplicationRecord
       stripe_card_exp_month:    pm.card&.exp_month,
       stripe_card_exp_year:     pm.card&.exp_year
       )
+    # Trocou de cartão: o antigo sai do Stripe também. Cartão que a Loov não
+    # usa mais não deve continuar disponível pra cobrança.
+    if previous.present? && previous != pm.id
+      Stripe::PaymentMethod.detach(previous) rescue nil
+    end
     pm
   rescue Stripe::StripeError => e
     Rails.logger.error("User#attach_payment_method! error: #{e.message}")

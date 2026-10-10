@@ -14,4 +14,6 @@ Rails.application.config.assets.paths << Rails.root.join('vendor', 'javascript')
 Rails.application.config.assets.precompile += %w( tailwind.css custom.css *.png *.jpg *.jpeg *.gif )
 
 # Enable dynamic compilation in development
-Rails.application.config.assets.compile = true
+# Montar CSS na hora só em desenvolvimento. Em produção os arquivos vêm do
+# assets:precompile do deploy; montar na hora travava a primeira visita.
+Rails.application.config.assets.compile = !Rails.env.production?

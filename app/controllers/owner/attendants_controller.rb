@@ -125,7 +125,7 @@ module Owner
 
       return render json: { error: "Informe um e-mail válido." }, status: :unprocessable_entity if email.empty? || !email.include?("@")
       return render json: { error: "Informe o nome do atendente." }, status: :unprocessable_entity if full_name.empty?
-      return render json: { error: "Senha precisa de ao menos 6 caracteres." }, status: :unprocessable_entity if password.length < 6
+      return render json: { error: "Senha precisa de ao menos #{Devise.password_length.min} caracteres." }, status: :unprocessable_entity if password.length < Devise.password_length.min
       return render json: { error: "Esse e-mail já tem conta no Loov." }, status: :unprocessable_entity if User.exists?(email: email)
 
       begin

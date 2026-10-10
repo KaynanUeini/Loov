@@ -1,0 +1,14 @@
+<% content_for :preheader, "#{@action[:eyebrow]}: #{@card}, em #{@when}. Não foi você? Veja o que fazer." %>
+<% content_for :footer, "Aviso de segurança enviado para #{@user.email} sempre que o cartão da conta muda." %>
+
+<%= render "emails/heading", eyebrow: @action[:eyebrow], title: @action[:title] %>
+<%= render "emails/paragraph", text: "Oi, #{@user.greeting_name || "tudo bem"}! Este é um aviso automático de segurança da sua conta Loov." %>
+<%= render "emails/details", rows: [
+      ["Cartão", @card],
+      ["Quando", @when]
+    ] %>
+<% if @kind == :removed %>
+  <%= render "emails/paragraph", text: "Sem cartão, as reservas Last Minute ficam indisponíveis. Agendamentos comuns continuam funcionando.", muted: true %>
+<% end %>
+<%= render "emails/button", url: @url, label: "Ver meus pagamentos", top: 16 %>
+<%= render "emails/callout", title: "Não foi você?", text: "Troque sua senha agora (em Conta → Privacidade e segurança) e responda este e-mail ou escreva para suporte@loov.app. A Loov nunca vê o número do seu cartão — ele fica guardado com o Stripe." %>
