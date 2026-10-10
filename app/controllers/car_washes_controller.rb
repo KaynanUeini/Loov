@@ -90,6 +90,15 @@ class CarWashesController < ApplicationController
           Set.new
         end
 
+        # Fechamentos que cobrem hoje, de todas as lojas numa consulta só. Antes
+        # era cw.closed_on? por loja aberta — dezenas de idas ao banco (no Neon,
+        # ~15 ms cada) a cada carregamento do "Perto de você".
+        today = Date.current
+        closed_today_ids = CarWashClosure
+          .where(car_wash_id: cw_ids)
+          .where("start_date <= ? AND end_date >= ?", today, today)
+          .distinct.pluck(:car_wash_id).to_set
+
         render json: collection.map { |cw|
           # Hora de hoje do lava-rápido (pode não existir se fechado no dia)
           today_oh = cw.operating_hours.find { |oh| oh.day_of_week.to_i == today_dow }
@@ -101,7 +110,7 @@ class CarWashesController < ApplicationController
             open_now   = now_seconds >= opens_sec && now_seconds <= closes_sec
           end
           # CarWashClosure ativo bate hoje? Marca como fechado.
-          open_now = false if open_now && cw.closed_on?(Date.current)
+          open_now = false if open_now && closed_today_ids.include?(cw.id)
 
           rating_info = rating_map[cw.id] || { avg: 0.0, count: 0 }
 
