@@ -1,13 +1,27 @@
 class SupportAgentService
-  KB_PATH = Rails.root.join("config", "support_agent_kb.txt")
+  KB_PATH         = Rails.root.join("config", "support_agent_kb.txt")
+  # Cliente tem material próprio: o do dono explica painel, caixa e atendentes,
+  # caminhos que quem agenda nem vê no app.
+  KB_CLIENTE_PATH = Rails.root.join("config", "support_agent_kb_cliente.txt")
+  STATUS_CLIENTE  = {
+    "confirmed" => "confirmado", "attended" => "atendido", "no_show" => "não compareceu",
+    "cancelled" => "cancelado", "rejected" => "recusado pelo lava-rápido",
+    "pending_acceptance" => "aguardando aceite", "awaiting_payment" => "aguardando confirmação do banco"
+  }.freeze
 
   def initialize(ticket)
     @ticket   = ticket
     @car_wash = ticket.user.car_washes.first
+    @cliente  = ticket.user.client?
   end
 
   def run
-    return atender_cliente if @ticket.user.client?
+    # Cliente não tem ação automática (as que existem mexem na agenda do
+    # lava-rápido): só resposta pelo material dele, ou escalação pra equipe.
+    if @cliente
+      draft_result = generate_draft
+      return { autonomous: false }.merge(draft_result || { error: true })
+    end
 
     result = try_autonomous_action
     return result if result[:autonomous]
@@ -93,22 +107,6 @@ class SupportAgentService
   end
 
   private
-
-  # ── CLIENTE ────────────────────────────────────────────────────────────────
-  # A base de conhecimento e as ações automáticas são do painel do dono
-  # (caixa, atendentes, cancelar Last Minute do lava-rápido). Respondendo
-  # cliente com elas, a IA ensinaria caminhos que ele nem vê no app. Então o
-  # chamado de cliente vai direto pra equipe: só uma confirmação de que a
-  # mensagem chegou, uma vez, e a resposta é humana pelo painel admin.
-  def atender_cliente
-    unless @ticket.messages.where(from_admin: true).exists?
-      post_agent_message(
-        "Oi! Recebemos sua mensagem e alguém da equipe Loov vai te responder por aqui mesmo. " \
-        "Você recebe uma notificação quando a resposta chegar."
-      )
-    end
-    { autonomous: false, human_only: true }
-  end
 
   # ── AÇÕES AUTÔNOMAS ────────────────────────────────────────────────────────
   def try_autonomous_action
@@ -395,7 +393,7 @@ class SupportAgentService
 
   def build_thread_context
     messages = @ticket.messages.chronological.map do |m|
-      role = m.from_admin? ? "Suporte Loov" : "Proprietário"
+      role = m.from_admin? ? "Suporte Loov" : (@cliente ? "Cliente" : "Proprietário")
       "[#{role} — #{m.created_at.strftime('%d/%m %H:%M')}]: #{m.body}"
     end
     {
@@ -410,13 +408,15 @@ class SupportAgentService
   end
 
   def load_knowledge_base
-    File.read(KB_PATH)
+    File.read(@cliente ? KB_CLIENTE_PATH : KB_PATH)
   rescue => e
     Rails.logger.warn("[SupportAgent] KB não encontrada: #{e.message}")
     "Base de conhecimento não disponível."
   end
 
   def build_prompt(ctx, kb)
+    return build_prompt_cliente(ctx, kb) if @cliente
+
     last_owner_question = @ticket.messages.where(from_admin: false).order(:created_at).last&.body || ""
     <<~PROMPT
       Você é o suporte da Loov, um marketplace de agendamento de lava-rápidos no Brasil.
@@ -479,6 +479,80 @@ class SupportAgentService
         "reason": "motivo curto",
         "draft": null
       }
+    PROMPT
+  end
+
+  # Agendamentos recentes do cliente, sem dado pessoal: o agente consegue dizer
+  # "seu agendamento LV-0123 de ontem foi cancelado pelo lava-rápido" em vez de
+  # pedir pra pessoa descrever o que o sistema já sabe.
+  def resumo_agendamentos_cliente
+    @ticket.user.appointments.includes(:car_wash, :service)
+      .where("scheduled_at > ?", 60.days.ago).order(scheduled_at: :desc).limit(8)
+      .map { |a|
+        quando = a.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%d/%m %H:%M")
+        tipo   = a.appointment_type == "disponivel" ? "Last Minute" : "Agendamento"
+        "LV-#{a.id.to_s.rjust(4, '0')} · #{tipo} · #{a.car_wash&.name} · #{a.service&.title} · " \
+          "#{quando} · #{STATUS_CLIENTE[a.status] || a.status}"
+      }.join("\n").presence || "nenhum nos últimos 60 dias"
+  rescue => e
+    Rails.logger.warn("[SupportAgent] resumo de agendamentos falhou: #{e.message}")
+    "indisponível"
+  end
+
+  def build_prompt_cliente(ctx, kb)
+    ultima = @ticket.messages.where(from_admin: false).order(:created_at).last&.body || ""
+    <<~PROMPT
+      Você é o suporte da Loov, um app brasileiro pra agendar lavagens em lava-rápidos.
+      Quem escreve é um CLIENTE (pessoa que agenda lavagens), não um dono de lava-rápido.
+      Responda sempre em português, com tom cordial, simples e direto.
+      Explique exatamente onde tocar no app, passo a passo, usando os nomes que aparecem na tela.
+
+      MATERIAL DE APOIO (a única fonte de verdade sobre o app):
+      #{kb}
+
+      CHAMADO ##{ctx[:ticket_id]}:
+      - Categoria escolhida: #{ctx[:category]}
+      - Referência interna: #{ctx[:owner_ref]}
+      - Aberto em: #{ctx[:opened_at]}
+
+      AGENDAMENTOS RECENTES DESTE CLIENTE (do mais novo pro mais antigo):
+      #{resumo_agendamentos_cliente}
+
+      CONVERSA ATÉ AGORA:
+      #{ctx[:messages]}
+
+      ÚLTIMA MENSAGEM DO CLIENTE:
+      "#{ultima}"
+
+      DECISÃO:
+
+      A) RESPONDA (should_escalate=false) quando a dúvida é sobre como usar o app e a
+         resposta está no material. Também quando a pergunta é totalmente fora do
+         assunto Loov: diga com gentileza que você ajuda só com o app da Loov.
+
+      B) ESCALE (should_escalate=true) em tudo que a seção "QUANDO ESCALAR PRA EQUIPE"
+         lista, e sempre que a resposta não estiver no material.
+
+      REGRAS QUE NÃO PODEM SER QUEBRADAS:
+      1. Nunca prometa estorno, devolução, desconto, crédito, cancelamento fora do prazo
+         ou qualquer exceção. Quem decide isso é a equipe.
+      2. Nunca invente regra, prazo, valor ou função que não esteja no material.
+      3. Nunca explique como funcionam por dentro a conferência de chegada, a cobrança,
+         os prazos ou a agenda do lava-rápido além do que o material diz, nem sugira
+         formas de contornar regras.
+      4. Nunca peça nem repita senha, número completo de cartão ou código de segurança.
+      5. Não fale pelo lava-rápido nem culpe o lava-rápido; descreva o que o app mostra.
+      6. Pode citar os agendamentos recentes acima pelo código LV-0000 quando ajudar.
+
+      FORMATO:
+      - Responda só à última mensagem do cliente.
+      - No máximo 4 parágrafos curtos, texto limpo, sem markdown nem asteriscos.
+      - Termine oferecendo ajuda ("Se precisar de mais alguma coisa, é só chamar.").
+
+      RESPONDA APENAS EM JSON VÁLIDO, sem texto antes ou depois:
+      {"should_escalate": false, "reason": null, "draft": "texto da resposta"}
+      ou, se for caso B:
+      {"should_escalate": true, "reason": "motivo curto", "draft": null}
     PROMPT
   end
 

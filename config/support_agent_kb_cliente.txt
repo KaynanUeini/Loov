@@ -1,0 +1,276 @@
+# BASE DE CONHECIMENTO — SUPORTE LOOV PARA CLIENTES
+# Usada pelo agente de suporte quando quem abre o chamado é CLIENTE (quem agenda
+# lavagens). O material do dono fica em support_agent_kb.txt e NÃO vale aqui.
+#
+# Regra de redação: só entra o que o cliente vê e faz no app. Nada de regra
+# interna, cálculo do lava-rápido, comissão da Loov, como funciona por dentro a
+# conferência de chegada, nem brecha de uso. Na dúvida, fica de fora e o
+# chamado vai pra equipe.
+# Atualize sempre que o app do cliente mudar.
+# ─────────────────────────────────────────────────────────────────────────────
+
+## O QUE É A LOOV
+A Loov é um app pra encontrar lava-rápidos perto de você e agendar lavagens e
+outros serviços automotivos (polimento, higienização, cristalização etc.).
+Existem dois jeitos de reservar:
+- Agendamento: você escolhe o dia e o horário com antecedência. Paga tudo no
+  lava-rápido, na hora do serviço.
+- Last Minute: vagas de lavagem que começam nos próximos 30 minutos, em
+  lava-rápidos a até 5 km de você. Uma parte (35%) é paga no cartão pelo app e
+  o restante no lava-rápido.
+O mesmo login funciona no app e no site da Loov.
+
+## CRIAR CONTA E ENTRAR
+- Na primeira tela toque em criar conta e escolha "Quero lavar meu carro".
+- Preencha nome, e-mail, telefone, senha (mínimo 8 caracteres) e, se quiser,
+  CPF (opcional). Aceite os termos e toque em "Criar conta".
+- Telefone é obrigatório pro cliente: o lava-rápido usa pra confirmar que é você
+  na chegada.
+- Entrar: e-mail e senha na tela inicial.
+- "Continuar com Apple" e "Continuar com Google" ainda não estão disponíveis
+  (o app avisa "Em breve"). Use e-mail e senha.
+
+## ESQUECI MINHA SENHA
+- Na tela de entrar, toque em "Esqueci minha senha", informe o e-mail e toque
+  em "Enviar link".
+- Se o e-mail estiver cadastrado, chega um link pra criar uma senha nova. O
+  link vale por 6 horas.
+- Não chegou? Confira a caixa de spam e se o e-mail foi digitado certo. Se mesmo
+  assim não chegar, a equipe Loov ajuda por aqui no suporte (ESCALE).
+- Trocar a senha estando logado: hoje o caminho é sair da conta e usar
+  "Esqueci minha senha" na tela de entrar.
+
+## TELA INICIAL (HOME)
+De cima pra baixo:
+- Localização: mostra "Sua região" quando o app sabe onde você está. Se aparecer
+  "Ativar localização", toque pra tentar de novo (e permita a localização nas
+  configurações do celular, se tiver negado).
+- Busca: "Buscar lava-rápido ou serviço". Procura pelo nome do lava-rápido, pelo
+  bairro e pelo nome do serviço (pra serviço, digite pelo menos 5 letras, ex.:
+  "polim"). Sem texto, mostra as "Buscas recentes" (os lava-rápidos que você
+  abriu pela busca); o X tira um item da lista. "Cancelar" sai da busca.
+- Last minute: vagas que começam nos próximos 30 minutos perto de você, com
+  preço "a partir de" e distância. Tocar num card abre a reserva desse
+  lava-rápido. "Ver todos →" abre a aba Last minute. Se não houver vaga agora, a
+  Home avisa e os lava-rápidos abertos continuam na lista de baixo pra agendar.
+- Categorias: Lavagem, Polimento, Higienização, Cristalização, Vitrificação,
+  Enceramento, Hidratação de couro, Motor, Plásticos, Faróis,
+  Impermeabilização, Oxi-sanitização e Outros. Dá pra marcar várias: a lista
+  mostra só lava-rápidos que fazem TODAS as marcadas. "Limpar filtro" desfaz.
+- Perto de você: a lista de lava-rápidos, com logo, nome, bairro, distância,
+  nota e coração de favorito. Os abertos aparecem primeiro; os fechados ficam
+  apagados com "FECHADO".
+  Filtros: "Aberto agora", "Perto de mim" (ordena por distância) e "Melhores
+  avaliados". "Limpar" tira o filtro.
+- Puxar a tela pra baixo atualiza tudo.
+- Sem localização a lista ainda aparece, só que sem distância e sem o Last
+  Minute.
+
+## PÁGINA DO LAVA-RÁPIDO
+Abre ao tocar num lava-rápido. Mostra logo, nome, bairro, se está Aberto ou
+Fechado, nota e número de avaliações, horário de hoje e o preço mínimo.
+O coração no canto de cima salva nos Favoritos.
+Três abas:
+- Serviços: cada serviço com descrição, duração e preço. Toque num serviço pra
+  agendar.
+- Reviews: avaliações de outros clientes (nota, comentário, etiquetas).
+- Sobre: horários da semana inteira (hoje em destaque), endereço completo com
+  distância e botão "Abrir no mapa", e informações do local (quantos carros
+  atende por horário e se aceita Last Minute).
+Se o lava-rápido não tiver serviços cadastrados, aparece "Este lava-rápido ainda
+não cadastrou serviços" e não dá pra agendar nele por enquanto.
+
+## AGENDAR UM HORÁRIO (AGENDAMENTO COMUM)
+1. Na página do lava-rápido, aba Serviços, toque no serviço.
+2. Escolha o dia (até 15 dias à frente). Dias em que o lava-rápido não abre
+   aparecem apagados e o app avisa "O lava-rápido não atende [dia]".
+3. Escolha o horário e toque em "Continuar".
+4. Confira o resumo e toque em "Confirmar". Pagamento: "No lava-rápido"
+   (dinheiro, PIX ou cartão, direto no local). Nada é cobrado pelo app.
+5. Pronto: aparece "Agendado." e o agendamento vai pra aba Agenda.
+Pontos importantes:
+- Horários com um raio (⚡) no meio da grade começam muito em breve e só podem
+  ser reservados pelo Last Minute. Tocar neles leva direto pra reserva Last
+  Minute daquele lava-rápido.
+- Se o horário some ou aparece "Horário indisponível. Escolha outro.", outra
+  pessoa reservou antes: escolha outro horário.
+- "Sem horários disponíveis nesse dia": o dia está cheio ou já passou do
+  horário de funcionamento. Tente outro dia.
+- "O lava-rápido pausou os agendamentos até HH:MM": o lava-rápido está
+  temporariamente sem receber reservas. Escolha um horário depois do indicado
+  ou outro lava-rápido.
+- O horário de chegada é o horário do agendamento. Chegue alguns minutos antes.
+
+## LAST MINUTE (ABA ⚡)
+O que é: vagas de LAVAGEM que começam nos próximos 30 minutos em lava-rápidos
+abertos a até 5 km de você. Serviços de outras categorias (polimento,
+higienização etc.) não entram no Last Minute; pra eles, use o agendamento comum.
+Precisa:
+- Localização ligada (sem ela a aba mostra "Localização necessária" e o botão
+  "Tentar de novo").
+- Um cartão cadastrado (veja PAGAMENTOS E CARTÃO).
+A tela:
+- Mostra quantas vagas há e o horário (normalmente o mesmo pra todas, na próxima
+  meia hora cheia), quanto falta pra começar e o raio de 5 km.
+- Ordenar por "Relevância", "Mais perto" ou "Menor preço".
+- Botão de mapa alterna entre lista e mapa.
+- "Sem vaga por agora": nenhum lava-rápido a até 5 km tem vaga nos próximos 30
+  minutos. A janela muda sozinha; vale tentar daqui a pouco ou agendar um
+  horário na Home.
+Como reservar:
+1. Toque no lava-rápido. Abre a folha "RESERVAR EM", com horário e distância.
+2. Escolha a lavagem (quando houver mais de uma) e leia a descrição.
+3. Confira a divisão do pagamento: "Agora, no cartão 35%" e "Na chegada, no
+   lava-rápido 65%", em reais, e o cartão que será usado ("Trocar" muda).
+4. Toque em "Reservar e pagar R$ X".
+5. Alguns bancos pedem uma confirmação extra (no app do banco ou numa tela do
+   banco). Confirme pra seguir. Se cancelar ou o banco negar, a reserva não
+   acontece e nada é cobrado.
+6. A tela "AGUARDANDO ACEITE" mostra um contador de 3 minutos: o lava-rápido tem
+   esse tempo pra aceitar. Enquanto espera dá pra caçar o passarinho que voa
+   pela tela ou jogar o joguinho de carro; o aceite chega do mesmo jeito.
+Os resultados possíveis:
+- Reserva confirmada: o horário está garantido. Os 35% são cobrados no cartão e
+  o restante você paga no lava-rápido. "Ir para agendamento" leva pra Agenda.
+- Reserva recusada: o lava-rápido não pôde atender agora. O valor reservado no
+  cartão é liberado e você NÃO é cobrado.
+- Tempo esgotado: o lava-rápido não respondeu em 3 minutos. O valor é liberado e
+  você NÃO é cobrado.
+- Desistir antes do aceite: segure o botão "Segure para cancelar" por alguns
+  segundos (um toque rápido não cancela, de propósito). O horário e o valor são
+  liberados e nada é cobrado.
+Sobre a "cobrança" que aparece antes do aceite: enquanto o lava-rápido decide, o
+valor fica apenas RESERVADO no cartão (alguns bancos mostram como compra
+pendente). Se não houver aceite, a reserva é desfeita; o prazo pra sumir do
+extrato depende do banco.
+Depois de confirmada, a reserva Last Minute não pode ser cancelada pelo app. Se
+houver algum imprevisto, o cliente deve falar com a equipe pelo suporte
+(ESCALE — não prometa devolução).
+
+## AGENDA (MEUS AGENDAMENTOS)
+Duas abas:
+- Próximos: agendamentos confirmados que ainda não aconteceram, agrupados por
+  dia (HOJE, AMANHÃ, data). O de hoje fica destacado em escuro. Reservas Last
+  Minute têm o selo "LAST MINUTE".
+- Anteriores: atendimentos concluídos (e os confirmados cujo horário já passou).
+Cada card mostra horário, duração, lava-rápido, serviço, preço e um código de
+referência no formato LV-0000 (útil pra informar ao suporte).
+Código de chegada: os cards de agendamentos ativos mostram uma pílula com 4
+números ("Código de chegada"; no dia, "Passe na chegada"). Ao chegar, informe
+esse código ao lava-rápido pra confirmar que a reserva é sua.
+Rota: o botão "Rota" abre o app de mapas com o caminho até o lava-rápido.
+A aba atualiza sozinha e ao puxar pra baixo.
+
+## CANCELAR UM AGENDAMENTO
+- Agendamento comum: no card, em Próximos, toque em "Cancelar agendamento" e
+  confirme. O horário é liberado.
+- Prazo: só dá pra cancelar pelo app até 2 horas antes do horário. Depois disso
+  o link some do card e, se tentar, aparece "Prazo de cancelamento encerrou às
+  HH:MM de DD/MM".
+- Precisa cancelar depois do prazo? Avise o lava-rápido diretamente, se puder,
+  e fale com a equipe pelo suporte (ESCALE).
+- Last Minute: antes do aceite, use "Segure para cancelar" na tela de espera.
+  Depois de confirmada, não cancela pelo app (ESCALE).
+- Se o LAVA-RÁPIDO cancelar o seu agendamento (por imprevisto, feriado, férias
+  ou manutenção), você recebe uma notificação no app e pode receber um e-mail,
+  às vezes com o motivo. É só escolher outro horário.
+
+## AVALIAR O ATENDIMENTO
+- Depois que o lava-rápido registra que você foi atendido, o card em Anteriores
+  mostra "Como foi?" com 5 estrelas. Também chega uma notificação "Avalie seu
+  atendimento".
+- Toque na nota, escolha até 3 etiquetas (mudam conforme a nota, ex.:
+  "Rápido", "Bem atendido", "Demorou muito"), escreva um comentário se quiser
+  (até 500 caracteres) e toque em "Enviar avaliação".
+- Cada atendimento pode ser avaliado uma vez. A avaliação aparece na aba Reviews
+  do lava-rápido com o seu nome.
+- Ainda não dá pra editar ou apagar uma avaliação pelo app (ESCALE se o cliente
+  pedir).
+- Só aparece a opção de avaliar depois que o lava-rápido registra o
+  atendimento. Se você foi atendido e ela não apareceu, o lava-rápido pode ainda
+  não ter registrado (ESCALE se já passou bastante tempo).
+
+## FAVORITOS
+- Toque no coração na lista da Home ou na página do lava-rápido pra salvar.
+- Perfil → Favoritos mostra os salvos com aberto/fechado, nota e horário de
+  hoje. Tocar abre a página do lava-rápido.
+- O coração cheio nos Favoritos tira o lava-rápido da lista; aparece
+  "Desfazer" por alguns segundos caso tenha sido sem querer.
+
+## PERFIL
+- No topo: seu nome e os números de lavagens feitas e de favoritos.
+- Cartão fidelidade: aparece quando você já foi atendido num lava-rápido que tem
+  programa de fidelidade. Mostra os carimbos (visitas) e o prêmio. Cada
+  atendimento concluído nesse lava-rápido conta uma visita. O prêmio é
+  combinado e entregue pelo próprio lava-rápido; ao completar, avise na sua
+  próxima visita.
+- Veículo: toque no card do carro pra cadastrar modelo e placa (placa antiga
+  ABC-1234 ou Mercosul ABC1D23).
+- Dados pessoais: nome, telefone e CPF. O e-mail não pode ser trocado pelo app
+  (é o seu login) — se precisar, ESCALE.
+- Favoritos, Notificações, Pagamentos e Suporte: atalhos pras telas.
+- Sair da conta: no fim da lista. Pra voltar é só entrar com e-mail e senha;
+  favoritos, cartão e agendamentos continuam salvos.
+
+## NOTIFICAÇÕES
+Perfil → Notificações mostra os avisos dos últimos dias:
+- Reserva confirmada / Reserva recusada (Last Minute).
+- Agendamento cancelado pelo lava-rápido (com motivo, quando informado).
+- Avalie seu atendimento.
+- Mensagens enviadas pelo lava-rápido.
+As respostas do suporte chegam como notificação no celular e ficam na conversa
+em Perfil → Suporte.
+"MARCAR TODAS" marca tudo como lido. As notificações no celular dependem de
+permitir notificações pra Loov nas configurações do aparelho.
+Lembrete: na véspera de um agendamento você pode receber um e-mail lembrando o
+horário.
+
+## PAGAMENTOS E CARTÃO
+- Perfil → Pagamentos. O cartão só é usado no Last Minute; agendamentos comuns
+  são pagos no lava-rápido.
+- Cadastrar: preencha o nome impresso no cartão e os dados (número, validade e
+  CVC) e toque em "Salvar cartão". O desenho do cartão muda conforme a bandeira.
+  Alguns bancos pedem confirmação no cadastro.
+- Os dados do cartão são processados pela Stripe, empresa de pagamentos. A Loov
+  não guarda o número completo do cartão.
+- Trocar cartão: "Trocar cartão". Remover: "Remover cartão" (sem cartão não dá
+  pra reservar no Last Minute; agendamentos comuns continuam funcionando).
+- Fica salvo um cartão por vez.
+- Por segurança, você recebe um e-mail quando um cartão é adicionado, trocado ou
+  removido. Se recebeu esse aviso e não foi você, troque sua senha e fale com a
+  equipe (ESCALE com prioridade).
+- "O cartão não foi aceito": confira os dados, o limite e se o cartão está
+  liberado pra compras online, ou tente outro cartão.
+
+## SUPORTE (ESTE CHAT)
+- Perfil → Suporte. O "+" abre um chamado: escolha a categoria (Agendamento,
+  Last minute, Pagamento, Cancelamento, Minha conta, Problema no app, Outro) e
+  descreva o que aconteceu.
+- A conversa fica salva; quando a equipe responde, chega uma notificação.
+- "Encerrar chamado" fecha quando o problema estiver resolvido.
+- Informar o código LV-0000 do agendamento ajuda a resolver mais rápido.
+
+## PROBLEMAS COMUNS
+- "Localizando..." não sai / lista sem distância: permita a localização pra
+  Loov nas configurações do celular e ligue o GPS. Depois puxe a tela pra baixo.
+- Não aparece nenhum lava-rápido no Last Minute: só aparecem lavagens com vaga
+  nos próximos 30 minutos a até 5 km. Fora disso, use o agendamento comum.
+- "Não foi possível conectar ao servidor" / "Erro de conexão": verifique a
+  internet e tente de novo em alguns instantes.
+- O app parece desatualizado: feche e abra de novo; puxe as listas pra baixo.
+- O lava-rápido aparece "Fechado": está fora do horário de funcionamento de
+  hoje. Os horários da semana estão na aba Sobre.
+
+## QUANDO ESCALAR PRA EQUIPE (should_escalate = true)
+- Cobrança, estorno, valor no extrato, disputa de pagamento ou pedido de
+  devolução de qualquer valor.
+- Reserva Last Minute confirmada que o cliente não pode mais usar.
+- Reclamação sobre um lava-rápido: serviço mal feito, dano ao veículo, objeto
+  perdido, atendimento, preço diferente do anunciado, lava-rápido fechado no
+  horário agendado.
+- Cancelamento fora do prazo, agendamento que sumiu ou status errado.
+- Trocar e-mail, excluir a conta ou pedidos sobre dados pessoais (LGPD).
+- Cartão adicionado/trocado sem o cliente saber, suspeita de acesso indevido.
+- E-mail de recuperação de senha que não chega.
+- Qualquer coisa que dependa de olhar dados da conta que você não tem, ou cuja
+  resposta não esteja neste material.
