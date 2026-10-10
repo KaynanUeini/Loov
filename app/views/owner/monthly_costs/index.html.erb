@@ -44,8 +44,6 @@
 
   /* Lucro — o número que importa, sozinho no escuro. */
   .fn-hero { position: relative; overflow: hidden; isolation: isolate; padding: 26px; border-radius: 24px; background: var(--obsidian); color: var(--cream); }
-  .fn-hero::before { content: ''; position: absolute; z-index: -1; width: 420px; height: 420px; right: -140px; top: -160px; border-radius: 50%; background: radial-gradient(closest-side, rgba(221,120,82,.35), transparent 70%); }
-  .fn-hero.is-neg::before { background: radial-gradient(closest-side, rgba(200,80,80,.32), transparent 70%); }
   .fn-hero-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
   .fn-hero-top .fn-mono { color: #9e9688; }
   .fn-margin { display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px; border-radius: 100px; background: rgba(221,120,82,.16); border: 1px solid rgba(221,120,82,.35); color: var(--coral-300); font-size: 12px; font-weight: 600; }
@@ -72,15 +70,17 @@
   .fn-trail-t b { display: block; margin-top: 6px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -0.3px; }
   .fn-trail-t small { display: block; margin-top: 4px; font-size: 13px; color: var(--graphite); }
   .fn-trail-t small strong { color: var(--ink); }
-  .fn-cost-tot { margin-top: 6px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 26px; letter-spacing: -0.5px; }
-  .fn-cost-bar { height: 8px; margin-top: 12px; border-radius: 4px; background: var(--stone); overflow: hidden; }
-  .fn-cost-bar i { display: block; height: 100%; background: var(--graphite); }
-  .fn-cost-leg { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; font-size: 13px; color: var(--graphite); }
-  .fn-cost-leg span { display: inline-flex; align-items: center; gap: 6px; }
-  .fn-cost-leg i { width: 9px; height: 9px; border-radius: 3px; background: var(--stone); }
-  .fn-cost-leg i.is-fx { background: var(--graphite); }
-  .fn-cost-leg b { color: var(--ink); font-weight: 600; }
-  .fn-cost-hint { margin: 10px 0 0; font-size: 12.5px; color: var(--coral-700); }
+  .fn-op-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 10px 0 2px; }
+  .fn-op-row b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 26px; letter-spacing: -0.5px; }
+  .fn-op-row span { display: block; margin-top: 2px; font-size: 13px; color: var(--graphite); }
+  .fn-op-line { display: flex; align-items: center; gap: 12px; padding: 12px 0 0; margin-top: 12px; border-top: 1px solid var(--stone); }
+  .fn-op-ic { flex: 0 0 34px; height: 34px; border-radius: 10px; background: var(--sand); color: var(--graphite); display: flex; align-items: center; justify-content: center; }
+  .fn-op-ic.is-lm { background: var(--coral-50); color: var(--coral-500); }
+  .fn-op-line > span:nth-child(2) { flex: 1; min-width: 0; }
+  .fn-op-line small { display: block; font-size: 12px; color: var(--graphite); }
+  .fn-op-line strong { display: block; font-size: 14.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fn-op-line em { font-style: normal; text-align: right; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 16px; white-space: nowrap; }
+  .fn-op-line em small { display: block; font-family: 'Inter', sans-serif; font-weight: 500; font-size: 11.5px; color: var(--ash); }
   .fn-spark { display: flex; align-items: flex-end; gap: 3px; height: 40px; }
   .fn-spark i { width: 6px; border-radius: 2px 2px 0 0; background: var(--coral-500); }
   .fn-spark i.is-neg { background: var(--rose-500, #c85050); }
@@ -96,6 +96,11 @@
   .fn-legend i.is-line { width: 16px; height: 2px; border-radius: 0; background: var(--ink); position: relative; }
   .fn-legend i.is-line::after { content: ''; position: absolute; left: 4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; border: 2px solid var(--ink); background: var(--paper); box-sizing: border-box; }
   .fn-detail { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 28px; margin: 16px 0 10px; padding: 14px 16px; border-radius: 14px; background: var(--sand); }
+  .fn-detail.is-total { background: var(--ink); color: var(--cream); }
+  .fn-detail.is-total .fn-detail-l, .fn-detail.is-total .fn-detail-i small { color: #9e9688; }
+  .fn-detail.is-total .fn-detail-l em { color: var(--coral-300); }
+  .fn-detail.is-total .fn-detail-i b.is-neg { color: #e88b8b; }
+  .fn-detail.is-total .fn-detail-i i[style*="#28231c"] { background: var(--cream) !important; }
   .fn-detail-l { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.4px; color: var(--graphite); }
   .fn-detail-l em { font-style: normal; margin-left: 8px; color: var(--coral-700); letter-spacing: 0; font-family: 'Inter', sans-serif; font-weight: 600; font-size: 12px; }
   .fn-detail-i { display: flex; align-items: center; gap: 8px; }
@@ -152,7 +157,7 @@
   @keyframes fnspin { to { transform: rotate(360deg); } }
 
   /* Folhas (custos, exportar, intervalo) */
-  .fn-sheet-bg { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; background: rgba(25,20,15,.5); opacity: 0; pointer-events: none; transition: opacity .2s; }
+  .fn-sheet-bg { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: flex-end; justify-content: center; background: rgba(25,20,15,.5); opacity: 0; pointer-events: none; transition: opacity .2s; }
   .fn-sheet-bg.is-on { opacity: 1; pointer-events: auto; }
   .fn-sheet { width: 100%; max-width: 560px; max-height: 92vh; display: flex; flex-direction: column; background: var(--cream); border-radius: 26px 26px 0 0; padding: 10px 22px calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateY(24px); transition: transform .25s; }
   .fn-sheet-bg.is-on .fn-sheet { transform: none; }
@@ -204,7 +209,7 @@
     .fn-handle { display: none; }
   }
   @media (min-width: 1000px) {
-    .fn-grid { grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); }
+    .fn-grid { grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); align-items: start; }
     .fn-hero { padding: 34px 36px; }
     .fn-row-main { display: grid; grid-template-columns: minmax(150px, 1.3fr) repeat(4, minmax(0, 1fr)) 24px; align-items: center; }
     .fn-row-t small { display: none; }
@@ -335,11 +340,17 @@
   function sideHtml(d) {
     var k = d.kpis, out = '', open = Number(k.open_revenue) || 0, t = d.trailing_12m, c = k.costs || {};
     var ct = Number(c.total) || 0, fx = Number(c.fixed) || 0, vr = Number(c.variable) || 0;
-    out += '<div class="fn-card"><div class="fn-mono">Custos do período</div>' +
-      '<div class="fn-cost-tot">' + moneyC(ct) + '</div>' +
-      (ct > 0 ? '<div class="fn-cost-bar"><i style="width:' + (fx / ct * 100).toFixed(1) + '%"></i></div>' : '') +
-      '<div class="fn-cost-leg"><span><i class="is-fx"></i>Fixos <b>' + moneyC(fx) + '</b></span><span><i></i>Variáveis <b>' + moneyC(vr) + '</b></span></div>' +
-      (ct === 0 ? '<p class="fn-cost-hint">Sem custos lançados — o lucro aparece maior do que é.</p>' : '') + '</div>';
+    // O que não aparece em outro lugar da tela: volume, ticket, o serviço que
+    // mais rende e o peso do Last Minute no faturamento.
+    var op = d.operation || {};
+    if (op.attended) {
+      var top = op.top_service, lm = op.last_minute || {};
+      out += '<div class="fn-card"><div class="fn-mono">Como o dinheiro entrou</div>' +
+        '<div class="fn-op-row"><div><b>' + op.attended + '</b><span>' + (op.attended === 1 ? 'atendimento' : 'atendimentos') + '</span></div><div><b>' + moneyC(op.avg_ticket) + '</b><span>ticket médio</span></div></div>' +
+        (top ? '<div class="fn-op-line"><span class="fn-op-ic">' + icon('award', 15) + '</span><span><small>Serviço que mais rende</small><strong>' + esc(top.title) + '</strong></span><em>' + moneyC(top.revenue) + (top.share != null ? '<small>' + Number(top.share).toFixed(0) + '% do total</small>' : '') + '</em></div>' : '') +
+        '<div class="fn-op-line"><span class="fn-op-ic is-lm">' + icon('zap', 15) + '</span><span><small>Last Minute</small><strong>' + (lm.count ? lm.count + (lm.count === 1 ? ' vaga vendida' : ' vagas vendidas') : 'Nenhuma vaga vendida') + '</strong></span><em>' + moneyC(lm.revenue) + (lm.share != null && lm.count ? '<small>' + Number(lm.share).toFixed(0) + '% do total</small>' : '') + '</em></div>' +
+      '</div>';
+    }
     if (open > 0) out += '<div class="fn-card fn-open"><span class="fn-open-ic">' + icon('calendar', 16) + '</span><div><div class="fn-mono">Em aberto</div><p>Serviços já confirmados que ainda vão acontecer. Entram no lucro quando forem atendidos.</p></div><b>' + moneyC(open) + '</b></div>';
     if (t) {
       var sp = t.sparkline || [], max = Math.max.apply(null, [1].concat(sp.map(function (v) { return Math.abs(v || 0); })));
@@ -354,7 +365,7 @@
   function chartHtml(d) {
     var data = d.chart || [];
     if (!data.length) return '<div class="fn-chart"><div class="fn-empty-chart">Sem dados no período.</div></div>';
-    if (st.sel == null || st.sel >= data.length) st.sel = data.length - 1;
+    if (st.sel != null && st.sel >= data.length) st.sel = null;
     // Cada dia/mês ocupa no mínimo 54px; havendo espaço, as barras se espalham pela largura toda.
     var avail = Math.max(300, ($('fn-chartbox') ? $('fn-chartbox').clientWidth : 900) - 42);
     var BW = Math.max(54, Math.floor(avail / data.length)), H = 190, TOP = 16, plot = H - TOP, W = data.length * BW;
@@ -363,20 +374,23 @@
     var span = (max - minP) || 1, y = function (v) { return TOP + (max - (v || 0)) / span * plot; }, base = y(0);
     var bars = '', pts = [], bw = Math.min(26, Math.max(12, Math.floor(BW * 0.26)));
     data.forEach(function (x, i) {
-      var cx = i * BW + BW / 2, rh = (x.revenue || 0) / span * plot, ch = (x.cost || 0) / span * plot, on = i === st.sel, dim = !on ? ' opacity="0.35"' : '';
+      var cx = i * BW + BW / 2, rh = (x.revenue || 0) / span * plot, ch = (x.cost || 0) / span * plot, on = i === st.sel, dim = st.sel != null && !on ? ' opacity="0.35"' : '';
       bars += '<g class="bk" data-i="' + i + '"><rect class="hl" x="' + (i * BW + 3) + '" y="0" width="' + (BW - 6) + '" height="' + (H + 22) + '" rx="10" fill="' + C.sand + '" opacity="' + (on ? 1 : 0) + '"/>' +
         '<rect x="' + (cx - bw - 1) + '" y="' + (base - Math.max(2, rh)) + '" width="' + bw + '" height="' + Math.max(2, rh) + '" rx="3" fill="' + C.coral500 + '"' + dim + '/>' +
-        '<rect x="' + (cx + 1) + '" y="' + (base - Math.max(2, ch)) + '" width="' + bw + '" height="' + Math.max(2, ch) + '" rx="3" fill="' + C.graphite + '"' + (on ? ' opacity="0.85"' : ' opacity="0.3"') + '/>' +
+        '<rect x="' + (cx + 1) + '" y="' + (base - Math.max(2, ch)) + '" width="' + bw + '" height="' + Math.max(2, ch) + '" rx="3" fill="' + C.graphite + '"' + (st.sel != null && !on ? ' opacity="0.3"' : ' opacity="0.85"') + '/>' +
         '<text x="' + cx + '" y="' + (H + 16) + '" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="' + (on ? C.ink : C.ash) + '"' + (on ? ' font-weight="700"' : '') + '>' + esc(x.label) + '</text></g>';
       pts.push([cx, y(x.profit)]);
     });
     var line = '<polyline fill="none" stroke="' + C.ink + '" stroke-width="2" stroke-linejoin="round" points="' + pts.map(function (p) { return p.join(','); }).join(' ') + '"/>' +
       pts.map(function (p, i) { var on = i === st.sel; return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + (on ? 6 : 4) + '" fill="' + (on ? C.ink : C.cream) + '" stroke="' + C.ink + '" stroke-width="2" pointer-events="none"/>'; }).join('');
     var zero = minP < 0 ? '<line x1="0" x2="' + W + '" y1="' + base + '" y2="' + base + '" stroke="' + C.stone + '" stroke-dasharray="4 4"/>' : '';
-    var s = data[st.sel], m = (s.revenue || 0) > 0 ? (s.profit || 0) / s.revenue * 100 : null, neg = Number(s.profit) < 0;
+    // Sem nada apontado, o quadro mostra o período inteiro (o que está
+    // selecionado lá em cima); apontar um dia/mês troca pelos números dele.
+    var k = d.kpis || {}, total = { label: (d.period_label || '') + ' · total', revenue: k.revenue, cost: (k.costs || {}).total, profit: k.profit };
+    var s = st.sel != null ? data[st.sel] : total, m = (s.revenue || 0) > 0 ? (s.profit || 0) / s.revenue * 100 : null, neg = Number(s.profit) < 0;
     return '<div class="fn-chart">' +
       '<div class="fn-legend"><span><i style="background:' + C.coral500 + '"></i>Faturamento</span><span><i style="background:' + C.graphite + '"></i>Custos</span><span><i class="is-line"></i>Lucro</span></div>' +
-      '<div class="fn-detail"><span class="fn-detail-l">' + esc(String(s.label).toUpperCase()) + (m != null ? '<em>' + m.toFixed(1).replace('.', ',') + '% margem</em>' : '') + '</span>' +
+      '<div class="fn-detail' + (st.sel == null ? ' is-total' : '') + '"><span class="fn-detail-l">' + esc(String(s.label).toUpperCase()) + (m != null ? '<em>' + m.toFixed(1).replace('.', ',') + '% margem</em>' : '') + '</span>' +
         '<span class="fn-detail-i"><i style="background:' + C.coral500 + '"></i><span><small>Faturamento</small><b>' + moneyC(s.revenue) + '</b></span></span>' +
         '<span class="fn-detail-i"><i style="background:' + C.graphite + '"></i><span><small>Custos</small><b>' + moneyC(s.cost) + '</b></span></span>' +
         '<span class="fn-detail-i"><i style="background:' + C.ink + '"></i><span><small>Lucro</small><b class="' + (neg ? 'is-neg' : '') + '">' + moneyC(s.profit) + '</b></span></span></div>' +
@@ -623,7 +637,7 @@
     if ((t = e.target.closest('[data-toggle]'))) { st.open = st.open === t.dataset.toggle ? null : t.dataset.toggle; render(); return; }
     if (e.target.closest('#fn-add-now')) { var n = new Date(); openCosts(n.getFullYear(), n.getMonth() + 1); return; }
     if (e.target.closest('#fn-export')) { if (!st.data) return; $('sh-exp-m').textContent = st.data.period_label || ''; xerr(''); setBusy(null); openSheet('sh-exp'); return; }
-    if ((t = e.target.closest('.bk'))) { st.sel = Number(t.dataset.i); renderChart(); return; }
+    if ((t = e.target.closest('.bk'))) { var bi = Number(t.dataset.i); st.sel = st.sel === bi ? null : bi; renderChart(); return; }
     if (e.target.closest('[data-close]') || e.target.classList.contains('fn-sheet-bg')) { closeAll(); }
   });
   // Passar o mouse num dia do gráfico também mostra os números dele.
@@ -631,6 +645,11 @@
     var t = e.target.closest && e.target.closest('.bk'); if (!t) return;
     var i = Number(t.dataset.i); if (i === st.sel) return;
     st.sel = i; renderChart();
+  });
+  // Tirou o mouse do gráfico: volta a mostrar o total do período.
+  document.addEventListener('mouseout', function (e) {
+    var plot = $('fn-plot'); if (!plot || st.sel == null) return;
+    if (plot.contains(e.target) && !plot.contains(e.relatedTarget)) { st.sel = null; renderChart(); }
   });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') closeAll();

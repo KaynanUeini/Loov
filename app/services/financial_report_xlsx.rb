@@ -189,7 +189,7 @@ class FinancialReportXlsx
       card_row(sh, [
         ["ATENDIMENTOS",  s[:attended_count], :int, "Concluídos no período"],
         ["TICKET MÉDIO",  s[:avg_ticket], :money, "Por atendimento"],
-        ["COMISSÃO LOOV", s[:commission], :money, "Só vagas Disponível"],
+        ["COMISSÃO LOOV", s[:commission], :money, "Só vagas Last Minute"],
         ["EM ABERTO",     s[:open_revenue], :money, "Agendado, a receber"]
       ])
       blank(sh, 9, height: 28)

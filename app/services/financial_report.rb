@@ -23,8 +23,9 @@ class FinancialReport
   ].freeze
 
   CHANNELS = {
-    "app"        => "Agendamento pelo app",
-    "disponivel" => "Disponível (última hora)",
+    # Mesmos nomes que o dono vê no app e no site: "Agendamento" e "Last Minute".
+    "app"        => "Agendamento",
+    "disponivel" => "Last Minute",
     "walk_in"    => "Balcão"
   }.freeze
 

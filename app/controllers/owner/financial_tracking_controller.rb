@@ -361,9 +361,40 @@ module Owner
           margin:       margin
         },
         previous:      previous,
+        operation:     build_operation(car_wash),
         chart:         chart,
         monthly_dre:   monthly_dre,
         trailing_12m:  trailing
+      }
+    end
+
+    # Como o dinheiro do período entrou — o que a tela não mostra em outro
+    # lugar: quantos atendimentos, ticket médio, o serviço que mais rende e
+    # quanto veio do Last Minute. Três consultas sobre os atendimentos feitos.
+    def build_operation(car_wash)
+      base = car_wash.appointments
+        .where(status: "attended")
+        .where(scheduled_at: @start_date.beginning_of_day..@end_date.end_of_day)
+        .joins(:service)
+      count   = base.count
+      revenue = count.zero? ? 0.0 : base.sum(Appointment::NET_REVENUE_SQL).to_f
+      top     = count.zero? ? nil : base.group("services.title").sum(Appointment::NET_REVENUE_SQL).max_by { |_, v| v.to_f }
+      lm      = base.where(appointment_type: "disponivel")
+      lm_count = count.zero? ? 0 : lm.count
+      lm_rev   = lm_count.zero? ? 0.0 : lm.sum(Appointment::NET_REVENUE_SQL).to_f
+      {
+        attended:   count,
+        avg_ticket: count.positive? ? (revenue / count).round(2) : nil,
+        top_service: top && {
+          title:   top[0],
+          revenue: top[1].to_f.round(2),
+          share:   revenue.positive? ? (top[1].to_f / revenue * 100).round(1) : nil
+        },
+        last_minute: {
+          count:   lm_count,
+          revenue: lm_rev.round(2),
+          share:   revenue.positive? ? (lm_rev / revenue * 100).round(1) : nil
+        }
       }
     end
 

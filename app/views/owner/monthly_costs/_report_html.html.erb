@@ -36,8 +36,8 @@ function rp_esc(s) {
 }
 
 var RP_CHANNEL = {
-  app:        'App',
-  disponivel: 'Disponível',
+  app:        'Agendamento',
+  disponivel: 'Last Minute',
   walk_in:    'Balcão',
 };
 
@@ -90,7 +90,7 @@ function rp_revenueSection(r) {
   const composition = Number(s.commission) > 0 ? `
     <div class="ledger">
       <div class="ledger-row"><span>Faturamento bruto</span><span>${rp_money(s.gross_revenue)}</span></div>
-      <div class="ledger-row neg"><span>Comissão Loov (Disponível)</span><span>${rp_money(-s.commission)}</span></div>
+      <div class="ledger-row neg"><span>Comissão Loov (Last Minute)</span><span>${rp_money(-s.commission)}</span></div>
       <div class="ledger-row total"><span>Faturamento líquido</span><span>${rp_money(s.revenue)}</span></div>
     </div>` : '';
 
