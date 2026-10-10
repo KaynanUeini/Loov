@@ -7,6 +7,10 @@ module Owner
 
     def index
       @car_wash = current_car_wash
+      # A página (porte da tela Financeiro do app) busca tudo em
+      # /owner/financial_tracking.json, como o app; o DRE abaixo só serve o JSON.
+      return render(:index) if request.format.html?
+
       @costs    = @car_wash.monthly_costs.order(year: :desc, month: :desc)
 
       @dre = (0..11).map do |i|

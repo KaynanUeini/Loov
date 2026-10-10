@@ -1,661 +1,646 @@
+<%#
+  Financeiro do dono — porte da OwnerFinanceiroScreen do app, com os mesmos
+  dados (/owner/financial_tracking.json) e as mesmas ações:
+
+    · Período: Hoje · Semana · Mês · Ano · Intervalo.
+    · Lucro primeiro, grande e sozinho, com a conta que o produz
+      (Realizado − Custos) e a variação contra o período anterior.
+    · "Em aberto" fora do lucro, dizendo por quê.
+    · Gráfico combinado (faturamento, custos, linha de lucro) — tocar/passar
+      o mouse num dia mostra os números dele.
+    · Últimos 12 meses (margem média + mini-barras) e DRE mensal expansível,
+      com "Lançar custos" em cada mês (mesma folha do app: fixos, variáveis,
+      linhas próprias, observações; valor digitado como caixa registradora).
+    · Exportar: PDF (o mesmo documento do app, gerado pelo navegador em
+      "Salvar como PDF") e Planilha Excel (a mesma do app, pronta do servidor).
+
+  Tela grande: tipo editorial grande e respiro (wiemer), um cartão escuro
+  com o número que importa (Spotify), o resto em cartões claros (Apple).
+%>
+<script src="/vendor/feather-4.29.2.min.js" nonce="<%= csp_nonce %>"></script>
 <style>
-  /* ── Hero card de lucro (escuro, ink) ───────────── */
-  .hero-profit-card {
-    background: var(--ink);
-    border-radius: 22px;
-    padding: 28px 30px;
-    margin-bottom: 22px;
-    color: var(--cream);
-    position: relative; overflow: hidden;
-  }
-  .hero-profit-card::after {
-    content: ''; position: absolute;
-    right: -120px; top: -80px;
-    width: 320px; height: 320px;
-    background: radial-gradient(circle, var(--coral-500) 0%, transparent 65%);
-    opacity: 0.18; pointer-events: none;
-  }
-  .hero-profit-top {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 12px; gap: 10px; flex-wrap: wrap;
-  }
-  .hero-profit-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10.5px; letter-spacing: 1.6px;
-    color: var(--ash); text-transform: uppercase; font-weight: 600;
-  }
-  .hero-profit-value {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: clamp(36px, 5vw, 48px);
-    font-weight: 700; letter-spacing: -1.2px;
-    color: var(--cream); line-height: 1;
-  }
-  .hero-profit-value.negative { color: #f4a8a8; }
-  .hero-margin-badge {
-    display: inline-flex; align-items: center; gap: 5px;
-    background: rgba(220, 120, 82, 0.18);
-    border: 1px solid rgba(220, 120, 82, 0.42);
-    color: #f1c0a8;
-    border-radius: 100px; padding: 5px 12px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; font-weight: 700; letter-spacing: 1.1px;
-    text-transform: uppercase;
-  }
-  .hero-margin-badge.negative {
-    background: rgba(200, 80, 80, 0.15);
-    border-color: rgba(200, 80, 80, 0.45);
-    color: #f4a8a8;
-  }
+  .loov-nav { background: var(--cream) !important; }
+  .fn { background: var(--cream); color: var(--ink); min-height: 100vh; padding-top: 60px; }
+  .fn *, .fn *::before, .fn *::after { box-sizing: border-box; }
+  .fn button { font-family: inherit; cursor: pointer; }
+  .fn svg.feather { display: block; }
+  .fn-wrap { width: 100%; max-width: 1240px; margin: 0 auto; padding: 0 20px 64px; }
+  .fn-mono { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--ash); }
 
-  /* ── KPI mini grid ──────────────────────────────── */
-  .kpi-mini-grid {
-    display: grid; grid-template-columns: repeat(4, 1fr);
-    gap: 12px; margin-bottom: 22px;
-  }
-  .kpi-mini {
-    background: var(--paper); border: 1px solid var(--stone);
-    border-radius: 14px; padding: 14px;
-    box-shadow: 0 2px 6px rgba(25,20,15,0.04);
-  }
-  .kpi-mini-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9.5px; letter-spacing: 1.2px;
-    color: var(--ash); text-transform: uppercase;
-    font-weight: 600; margin-bottom: 6px;
-    display: flex; align-items: center; gap: 5px;
-  }
-  .kpi-mini-label i { color: var(--coral-500); font-size: 10px; }
-  .kpi-mini-value {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 18px; font-weight: 700;
-    color: var(--ink); letter-spacing: -0.4px;
-    line-height: 1;
-  }
-  .kpi-mini-value.coral { color: var(--coral-500); }
-  .kpi-mini-value.warn  { color: #7a4814; }
-  .kpi-mini-value.muted { color: var(--ash); }
-  .kpi-mini-value.danger{ color: var(--rose-500); }
+  .fn-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 18px; padding: 28px 0 22px; }
+  .fn-head h1 { margin: 6px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: clamp(40px, 6vw, 76px); line-height: .95; letter-spacing: -0.045em; color: var(--ink) !important; }
+  .fn-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+  .fn-seg { display: flex; gap: 4px; padding: 4px; background: var(--sand); border-radius: 100px; overflow-x: auto; scrollbar-width: none; }
+  .fn-seg::-webkit-scrollbar { display: none; }
+  .fn-seg button { flex-shrink: 0; height: 38px; padding: 0 16px; border: 0; border-radius: 100px; background: transparent; color: var(--graphite); font-size: 13.5px; font-weight: 600; transition: background .15s, color .15s; }
+  .fn-seg button:hover { color: var(--ink); }
+  .fn-seg button[aria-pressed="true"] { background: var(--ink); color: var(--cream); }
+  .fn-export { display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 18px; border-radius: 100px; border: 1px solid var(--stone); background: var(--paper); color: var(--ink); font-size: 14px; font-weight: 600; transition: border-color .15s, transform .15s; }
+  .fn-export:hover { border-color: var(--ink); transform: translateY(-1px); }
+  .fn-export[disabled] { opacity: .45; cursor: default; transform: none; }
 
-  /* ── Section header (eyebrow estilo app) ────────── */
-  .section-eyebrow {
-    display: flex; align-items: center; justify-content: space-between;
-    margin: 22px 0 10px; gap: 10px; flex-wrap: wrap;
-  }
-  .section-eyebrow-title {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px; letter-spacing: 1.6px;
-    color: var(--ink); text-transform: uppercase; font-weight: 700;
-  }
-  .section-eyebrow-meta {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10.5px; letter-spacing: 1.2px;
-    color: var(--ash); text-transform: uppercase;
-  }
+  .fn-grid { display: grid; gap: 14px; }
+  .fn-side { display: grid; gap: 14px; align-content: start; }
 
-  /* ── Lançar custos primary CTA ──────────────────── */
-  .launch-cta {
-    display: flex; align-items: center; justify-content: center;
-    gap: 10px; width: 100%;
-    background: var(--coral-500); color: var(--cream) !important;
-    border: none; border-radius: 16px;
-    padding: 16px 24px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px; font-weight: 700; letter-spacing: 1.6px;
-    text-transform: uppercase;
-    cursor: pointer; text-decoration: none;
-    box-shadow: 0 8px 22px rgba(220,120,82,0.22);
-    transition: all .2s ease;
-    margin-bottom: 14px;
-  }
-  .launch-cta:hover {
-    background: var(--coral-700);
-    transform: translateY(-2px);
-    box-shadow: 0 12px 28px rgba(156,73,48,0.28);
-    color: var(--cream) !important;
-  }
+  /* Lucro — o número que importa, sozinho no escuro. */
+  .fn-hero { position: relative; overflow: hidden; isolation: isolate; padding: 26px; border-radius: 24px; background: var(--obsidian); color: var(--cream); }
+  .fn-hero::before { content: ''; position: absolute; z-index: -1; width: 420px; height: 420px; right: -140px; top: -160px; border-radius: 50%; background: radial-gradient(closest-side, rgba(221,120,82,.35), transparent 70%); }
+  .fn-hero.is-neg::before { background: radial-gradient(closest-side, rgba(200,80,80,.32), transparent 70%); }
+  .fn-hero-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .fn-hero-top .fn-mono { color: #9e9688; }
+  .fn-margin { display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px; border-radius: 100px; background: rgba(221,120,82,.16); border: 1px solid rgba(221,120,82,.35); color: var(--coral-300); font-size: 12px; font-weight: 600; }
+  .fn-hero.is-neg .fn-margin { background: rgba(200,80,80,.14); border-color: rgba(200,80,80,.35); color: #e88b8b; }
+  .fn-profit { margin-top: 14px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: clamp(44px, 6.4vw, 84px); line-height: 1; letter-spacing: -0.04em; white-space: nowrap; }
+  .fn-hero.is-neg .fn-profit { color: #e88b8b; }
+  .fn-delta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 12px; font-size: 14px; color: #cfc8bb; }
+  .fn-delta b { font-weight: 600; }
+  .fn-delta.is-up b, .fn-delta.is-up svg { color: var(--mint-500); }
+  .fn-delta.is-down b, .fn-delta.is-down svg { color: #e88b8b; }
+  .fn-rule { height: 1px; background: rgba(255,255,255,.1); margin: 22px 0 18px; }
+  .fn-calc { display: flex; align-items: center; gap: 18px; }
+  .fn-calc div small { display: block; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 1.4px; color: #9e9688; }
+  .fn-calc div b { display: block; margin-top: 4px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.4px; }
+  .fn-calc > span { font-family: 'Space Grotesk', sans-serif; font-size: 26px; color: #6f685d; }
 
-  /* ── Chart card (combo) ─────────────────────────── */
-  .chart-card {
-    background: var(--paper); border: 1px solid var(--stone);
-    border-radius: 18px; padding: 18px 20px 14px;
-    margin-bottom: 16px;
-    box-shadow: 0 2px 6px rgba(25,20,15,0.04);
-  }
-  .chart-card-title {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 16px; font-weight: 700;
-    color: var(--ink); letter-spacing: -0.2px;
-    margin-bottom: 12px;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .chart-card-title i { color: var(--coral-500); font-size: 13px; }
-  .chart-legend-row {
-    display: flex; gap: 14px; flex-wrap: wrap;
-    margin-bottom: 8px;
-  }
-  .chart-legend-item {
-    display: flex; align-items: center; gap: 6px;
-    font-size: 11.5px; color: var(--graphite);
-  }
-  .chart-legend-swatch {
-    width: 12px; height: 8px; border-radius: 2px;
-  }
-  .chart-legend-line-wrap {
-    width: 18px; height: 8px; position: relative;
-  }
-  .chart-legend-line {
-    position: absolute; left: 0; right: 0; top: 50%;
-    height: 2px; transform: translateY(-50%);
-  }
-  .chart-legend-line-dot {
-    position: absolute; left: 5px; top: 0;
-    width: 8px; height: 8px; border-radius: 50%;
-    border: 2px solid var(--ink);
-    background: var(--cream);
-  }
-  .chart-inner { position: relative; height: 280px; }
+  .fn-card { padding: 20px; border-radius: 20px; background: var(--paper); border: 1px solid var(--stone); }
+  .fn-open { display: flex; align-items: flex-start; gap: 14px; }
+  .fn-open-ic { flex: 0 0 38px; height: 38px; border-radius: 12px; background: var(--sand); color: var(--graphite); display: flex; align-items: center; justify-content: center; }
+  .fn-open p { margin: 4px 0 0; font-size: 13px; line-height: 1.45; color: var(--graphite); }
+  .fn-open b { margin-left: auto; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 20px; white-space: nowrap; }
+  .fn-trail { display: flex; align-items: center; gap: 16px; }
+  .fn-trail-t { flex: 1; min-width: 0; }
+  .fn-trail-t b { display: block; margin-top: 6px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -0.3px; }
+  .fn-trail-t small { display: block; margin-top: 4px; font-size: 13px; color: var(--graphite); }
+  .fn-trail-t small strong { color: var(--ink); }
+  .fn-cost-tot { margin-top: 6px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 26px; letter-spacing: -0.5px; }
+  .fn-cost-bar { height: 8px; margin-top: 12px; border-radius: 4px; background: var(--stone); overflow: hidden; }
+  .fn-cost-bar i { display: block; height: 100%; background: var(--graphite); }
+  .fn-cost-leg { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; font-size: 13px; color: var(--graphite); }
+  .fn-cost-leg span { display: inline-flex; align-items: center; gap: 6px; }
+  .fn-cost-leg i { width: 9px; height: 9px; border-radius: 3px; background: var(--stone); }
+  .fn-cost-leg i.is-fx { background: var(--graphite); }
+  .fn-cost-leg b { color: var(--ink); font-weight: 600; }
+  .fn-cost-hint { margin: 10px 0 0; font-size: 12.5px; color: var(--coral-700); }
+  .fn-spark { display: flex; align-items: flex-end; gap: 3px; height: 40px; }
+  .fn-spark i { width: 6px; border-radius: 2px 2px 0 0; background: var(--coral-500); }
+  .fn-spark i.is-neg { background: var(--rose-500, #c85050); }
 
-  /* ── DRE list expansível ────────────────────────── */
-  .dre-list { display: flex; flex-direction: column; gap: 10px; }
+  .fn-sec { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin: 34px 0 12px; }
+  .fn-sec h2 { margin: 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 26px; letter-spacing: -0.6px; color: var(--ink) !important; }
 
-  .dre-row {
-    background: var(--paper); border: 1px solid var(--stone);
-    border-radius: 16px; overflow: hidden;
-    transition: border-color .15s ease;
-  }
-  .dre-row.is-current {
-    border-color: var(--coral-100);
-    background: var(--paper);
-  }
-  .dre-row.has-pending-revenue {
-    background: linear-gradient(0deg, rgba(216,178,74,0.04), rgba(216,178,74,0.04)), var(--paper);
-  }
+  /* Gráfico */
+  .fn-chart { padding: 20px; border-radius: 20px; background: var(--paper); border: 1px solid var(--stone); }
+  .fn-legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 12.5px; color: var(--graphite); }
+  .fn-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .fn-legend i { width: 10px; height: 10px; border-radius: 3px; }
+  .fn-legend i.is-line { width: 16px; height: 2px; border-radius: 0; background: var(--ink); position: relative; }
+  .fn-legend i.is-line::after { content: ''; position: absolute; left: 4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; border: 2px solid var(--ink); background: var(--paper); box-sizing: border-box; }
+  .fn-detail { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 28px; margin: 16px 0 10px; padding: 14px 16px; border-radius: 14px; background: var(--sand); }
+  .fn-detail-l { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.4px; color: var(--graphite); }
+  .fn-detail-l em { font-style: normal; margin-left: 8px; color: var(--coral-700); letter-spacing: 0; font-family: 'Inter', sans-serif; font-weight: 600; font-size: 12px; }
+  .fn-detail-i { display: flex; align-items: center; gap: 8px; }
+  .fn-detail-i i { width: 9px; height: 9px; border-radius: 50%; }
+  .fn-detail-i small { display: block; font-size: 11.5px; color: var(--graphite); }
+  .fn-detail-i b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 16px; }
+  .fn-detail-i b.is-neg { color: var(--rose-500, #c85050); }
+  .fn-plot { overflow-x: auto; scrollbar-width: thin; }
+  .fn-plot svg { display: block; }
+  .fn-plot .bk { cursor: pointer; }
+  .fn-plot .bk:hover .hl { opacity: 1; }
+  .fn-empty-chart { padding: 40px 0; text-align: center; color: var(--graphite); font-size: 14px; }
 
-  .dre-row-header {
-    display: flex; align-items: center; gap: 12px;
-    padding: 14px 18px;
-    cursor: pointer; user-select: none;
-    transition: background .15s ease;
-  }
-  .dre-row-header:hover { background: var(--sand); }
+  /* DRE */
+  .fn-add { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 18px; border: 0; border-radius: 100px; background: var(--coral-500); color: var(--cream); font-size: 13.5px; font-weight: 600; box-shadow: 0 10px 22px -12px rgba(221,120,82,.8); transition: transform .15s; }
+  .fn-add:hover { transform: translateY(-1px); }
+  .fn-dre { display: grid; gap: 8px; }
+  .fn-row { border-radius: 18px; background: var(--paper); border: 1px solid var(--stone); overflow: hidden; transition: border-color .15s; }
+  .fn-row.is-open { border-color: var(--ink); }
+  .fn-row-h { display: flex; align-items: center; gap: 8px; padding-right: 14px; }
+  .fn-row-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 16px 4px 16px 18px; border: 0; background: transparent; text-align: left; color: var(--ink); }
+  .fn-row-h:hover { background: var(--cream); }
+  .fn-row-t { flex: 1; min-width: 0; }
+  .fn-row-t b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 16px; }
+  .fn-row-t small { display: block; margin-top: 2px; font-size: 13px; color: var(--graphite); }
+  .fn-row-t small strong { color: var(--ink); font-weight: 600; }
+  .fn-row-t small strong.is-neg { color: var(--rose-500, #c85050); }
+  .fn-row-plus { flex: 0 0 32px; height: 32px; border-radius: 50%; border: 0; background: var(--coral-50); color: var(--coral-700); display: flex; align-items: center; justify-content: center; transition: background .15s; }
+  .fn-row-plus:hover { background: var(--coral-100); }
+  .fn-row-chev { color: var(--graphite); transition: transform .2s; justify-self: end; }
+  .fn-cols { display: none; }
+  .fn-row.is-open .fn-row-chev { transform: rotate(180deg); }
+  .fn-row-b { display: none; padding: 4px 18px 18px; }
+  .fn-row.is-open .fn-row-b { display: block; }
+  .fn-line { display: flex; justify-content: space-between; padding: 7px 0; font-size: 14px; }
+  .fn-line span { color: var(--graphite); }
+  .fn-line b { font-weight: 500; }
+  .fn-line.is-muted span, .fn-line.is-muted b { color: var(--ash); }
+  .fn-line.is-neg b { color: var(--rose-500, #c85050); }
+  .fn-line.is-bold b, .fn-line.is-bold span { font-weight: 600; color: var(--ink); }
+  .fn-line.is-big b { font-family: 'Space Grotesk', sans-serif; font-size: 18px; }
+  .fn-div { height: 1px; background: var(--stone); margin: 6px 0; }
+  .fn-pill { display: inline-block; margin-top: 6px; padding: 4px 10px; border-radius: 100px; background: var(--coral-50); color: var(--coral-700); font-size: 12px; font-weight: 600; }
+  .fn-row-cta { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; padding: 10px 14px; border-radius: 100px; border: 1px dashed var(--coral-300); background: transparent; color: var(--coral-700); font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px; }
 
-  .dre-row-main { flex: 1; min-width: 0; }
-  .dre-row-month {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 15px; font-weight: 700;
-    color: var(--ink); letter-spacing: -0.2px;
-    margin-bottom: 3px;
-  }
-  .dre-row-month .current-dot {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9.5px; letter-spacing: 1.2px;
-    color: var(--coral-500); margin-left: 8px;
-    text-transform: uppercase;
-  }
-  .dre-row-summary {
-    font-size: 12px; color: var(--graphite);
-  }
-  .dre-row-summary strong {
-    color: var(--ink); font-weight: 600;
-    font-family: 'JetBrains Mono', monospace;
-  }
-  .dre-row-summary strong.profit-neg { color: var(--rose-500); }
+  .fn-empty { padding: 26px; border-radius: 20px; background: var(--paper); border: 1px dashed var(--stone); }
+  .fn-empty-ic { width: 44px; height: 44px; border-radius: 14px; background: var(--coral-50); color: var(--coral-500); display: flex; align-items: center; justify-content: center; }
+  .fn-empty h3 { margin: 14px 0 6px !important; font-family: 'Space Grotesk', sans-serif !important; font-size: 20px; color: var(--ink) !important; }
+  .fn-empty p { margin: 0; max-width: 56ch; font-size: 14px; line-height: 1.5; color: var(--graphite); }
+  .fn-loading { display: flex; justify-content: center; padding: 80px 0; }
+  .fn-spin { width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--coral-100); border-top-color: var(--coral-500); animation: fnspin .8s linear infinite; }
+  .fn-spin.is-sm { width: 18px; height: 18px; border-width: 2.5px; }
+  .fn-spin.is-light { border-color: rgba(250,250,246,.35); border-top-color: var(--cream); }
+  @keyframes fnspin { to { transform: rotate(360deg); } }
 
-  .dre-row-add {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 30px; height: 30px; border-radius: 100px;
-    background: var(--coral-50); border: 1px solid var(--coral-100);
-    color: var(--coral-700); cursor: pointer;
-    text-decoration: none; transition: all .15s ease;
-    flex-shrink: 0;
-  }
-  .dre-row-add:hover {
-    background: var(--coral-500); color: var(--cream);
-    border-color: var(--coral-500);
-  }
-  .dre-row-chevron {
-    color: var(--graphite); font-size: 12px;
-    transition: transform .25s ease;
-    flex-shrink: 0;
-  }
-  .dre-row-chevron.open { transform: rotate(180deg); }
+  /* Folhas (custos, exportar, intervalo) */
+  .fn-sheet-bg { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; background: rgba(25,20,15,.5); opacity: 0; pointer-events: none; transition: opacity .2s; }
+  .fn-sheet-bg.is-on { opacity: 1; pointer-events: auto; }
+  .fn-sheet { width: 100%; max-width: 560px; max-height: 92vh; display: flex; flex-direction: column; background: var(--cream); border-radius: 26px 26px 0 0; padding: 10px 22px calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateY(24px); transition: transform .25s; }
+  .fn-sheet-bg.is-on .fn-sheet { transform: none; }
+  .fn-handle { width: 42px; height: 4px; margin: 0 auto 16px; border-radius: 2px; background: var(--stone); }
+  .fn-sheet-h { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 14px; }
+  .fn-sheet-h b { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 1.6px; }
+  .fn-sheet-h span { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -0.3px; }
+  .fn-sheet-body { overflow-y: auto; margin: 0 -4px; padding: 0 4px; }
+  .fn-banner { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding: 12px 14px; border-radius: 12px; font-size: 13px; font-weight: 600; }
+  .fn-banner.is-success { background: var(--coral-50); color: var(--coral-700); }
+  .fn-banner.is-error { background: #f6d4d4; color: var(--rose-500, #c85050); }
+  .fn-banner.is-info { background: var(--sand); color: var(--graphite); }
+  .fn-glab { margin: 6px 0 8px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 1.6px; color: var(--ash); }
+  .fn-money { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
+  .fn-money label { flex: 1; font-size: 14.5px; font-weight: 500; }
+  .fn-money .fn-pend { display: block; margin-top: 2px; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1px; color: var(--amber-500, #c98a1a); }
+  .fn-mwrap { display: flex; align-items: center; gap: 6px; width: 170px; height: 46px; padding: 0 14px; border-radius: 12px; background: var(--paper); border: 1px solid var(--stone); transition: border-color .15s, box-shadow .15s; }
+  .fn-mwrap:focus-within { border-color: var(--coral-500); box-shadow: 0 0 0 4px rgba(221,120,82,.14); }
+  .fn-mwrap.is-pend { border-color: var(--amber-500, #d6b14a); background: #fdf8ea; }
+  .fn-mwrap small { font-size: 13px; color: var(--ash); }
+  .fn-mwrap input { flex: 1; min-width: 0; height: 100%; padding: 0 !important; border: 0 !important; background: transparent !important; box-shadow: none !important; outline: none; text-align: right; font: inherit; font-size: 15px; font-weight: 600; color: var(--ink); }
+  .fn-cline { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
+  .fn-cline > input { flex: 1; min-width: 0; height: 46px; padding: 0 14px !important; border-radius: 12px !important; border: 1px solid var(--stone) !important; background: var(--paper) !important; font-size: 14.5px; }
+  .fn-cline .fn-mwrap { width: 150px; }
+  .fn-cline button { flex: 0 0 34px; height: 34px; border-radius: 50%; border: 0; background: transparent; color: var(--graphite); display: flex; align-items: center; justify-content: center; }
+  .fn-cline button:hover { background: var(--sand); color: var(--rose-500, #c85050); }
+  .fn-addline { display: inline-flex; align-items: center; gap: 6px; margin: 4px 0 8px; padding: 9px 4px; border: 0; background: transparent; color: var(--coral-700); font-size: 13.5px; font-weight: 600; }
+  .fn-notes { width: 100%; min-height: 70px; padding: 12px 14px !important; border-radius: 12px !important; border: 1px solid var(--stone) !important; background: var(--paper) !important; font: inherit; font-size: 14px; resize: vertical; }
+  .fn-btns { display: flex; gap: 10px; margin-top: 16px; }
+  .fn-btns button { flex: 1; height: 52px; border-radius: 100px; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .fn-cancel { border: 1px solid var(--stone); background: var(--paper); color: var(--ink); }
+  .fn-cancel:hover { background: var(--sand); }
+  .fn-confirm { border: 0; background: var(--coral-500); color: var(--cream); }
+  .fn-confirm[disabled] { opacity: .6; cursor: default; }
+  .fn-xrow { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 72px; margin-bottom: 8px; padding: 14px 16px; border-radius: 18px; border: 1px solid var(--stone); background: var(--paper); text-align: left; color: var(--ink); transition: border-color .15s, transform .15s; }
+  .fn-xrow:hover:not([disabled]) { border-color: var(--ink); transform: translateY(-1px); }
+  .fn-xrow[disabled] { opacity: .45; cursor: default; }
+  .fn-xic { flex: 0 0 44px; height: 44px; border-radius: 14px; background: var(--sand); display: flex; align-items: center; justify-content: center; }
+  .fn-xrow b { display: block; font-size: 15.5px; font-weight: 600; }
+  .fn-xrow small { display: block; margin-top: 2px; font-size: 13px; color: var(--graphite); }
+  .fn-xrow .fn-xgo { margin-left: auto; color: var(--ash); }
+  .fn-xcap { margin: -4px 0 14px; font-size: 13.5px; color: var(--graphite); }
+  .fn-date { width: 100%; height: 50px; padding: 0 14px !important; border-radius: 12px !important; border: 1px solid var(--stone) !important; background: var(--paper) !important; font: inherit; font-size: 15px; margin-bottom: 10px; }
 
-  .dre-row-body {
-    max-height: 0; overflow: hidden;
-    transition: max-height .35s ease;
-    border-top: 1px solid transparent;
+  @media (min-width: 720px) {
+    .fn-wrap { padding: 0 32px 80px; }
+    .fn-sheet-bg { align-items: center; }
+    .fn-sheet { border-radius: 26px; padding-top: 22px; }
+    .fn-handle { display: none; }
   }
-  .dre-row-body.open {
-    max-height: 600px;
-    border-top-color: var(--stone);
+  @media (min-width: 1000px) {
+    .fn-grid { grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); }
+    .fn-hero { padding: 34px 36px; }
+    .fn-row-main { display: grid; grid-template-columns: minmax(150px, 1.3fr) repeat(4, minmax(0, 1fr)) 24px; align-items: center; }
+    .fn-row-t small { display: none; }
+    .fn-cols { display: contents; }
+    .fn-cols span { display: block; text-align: right; font-size: 14.5px; font-weight: 500; }
+    .fn-cols span small { display: block; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 1.2px; color: var(--ash); font-weight: 400; }
+    .fn-cols span.is-neg { color: var(--rose-500, #c85050); }
+    .fn-row-b { padding-left: 18px; max-width: 560px; }
   }
-  .dre-row-body-inner { padding: 12px 18px 16px; }
-
-  .dre-line {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 5px 0; gap: 10px;
+  @media (max-width: 720px) {
+    .fn-tools { width: 100%; }
+    .fn-seg { width: 100%; }
+    .fn-seg button { flex: 1; padding: 0 6px; font-size: 13px; }
   }
-  .dre-line-label {
-    font-size: 13px; color: var(--graphite);
-  }
-  .dre-line-amount {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px; color: var(--ink);
-  }
-  .dre-line.muted .dre-line-label,
-  .dre-line.muted .dre-line-amount { color: var(--ash); }
-  .dre-line.bold .dre-line-amount { font-weight: 700; }
-  .dre-line.big .dre-line-amount  { font-size: 15px; }
-  .dre-line.negative .dre-line-amount { color: var(--rose-500); }
-  .dre-divider {
-    height: 1px; background: var(--stone);
-    margin: 6px 0;
-  }
-  .dre-margin-pill-wrap {
-    display: flex; justify-content: flex-end; margin-top: 8px;
-  }
-  .dre-margin-pill {
-    display: inline-flex; align-items: center;
-    background: var(--coral-50); border: 1px solid var(--coral-100);
-    color: var(--coral-700);
-    border-radius: 100px; padding: 4px 11px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10.5px; font-weight: 700; letter-spacing: 1px;
-    text-transform: uppercase;
-  }
-  .dre-margin-pill.negative {
-    background: #fdecec; border-color: #f5cccc;
-    color: var(--rose-500);
-  }
-
-  .dre-add-cost-inline {
-    display: flex; align-items: center; justify-content: center;
-    gap: 8px;
-    background: var(--coral-50); color: var(--coral-700);
-    border: 1px dashed var(--coral-100); border-radius: 12px;
-    padding: 11px 14px; margin-top: 10px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10.5px; font-weight: 700; letter-spacing: 1.2px;
-    text-decoration: none; text-transform: uppercase;
-    transition: all .15s ease;
-  }
-  .dre-add-cost-inline:hover {
-    background: var(--coral-500); color: var(--cream);
-    border-color: var(--coral-500); border-style: solid;
-  }
-
-  .dre-row-actions {
-    display: flex; gap: 6px; margin-top: 12px;
-    padding-top: 10px; border-top: 1px solid var(--stone);
-  }
-  .dre-action-btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 6px 12px; border-radius: 100px;
-    background: var(--paper); border: 1px solid var(--stone);
-    color: var(--graphite); cursor: pointer;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; font-weight: 700; letter-spacing: 1px;
-    text-transform: uppercase; text-decoration: none;
-    transition: all .15s ease;
-  }
-  .dre-action-btn:hover {
-    border-color: var(--coral-500); color: var(--coral-700);
-  }
-  .dre-action-btn.danger:hover {
-    border-color: var(--rose-500); color: var(--rose-500);
-  }
-
-  /* ── Flash messages ─────────────────────────────── */
-  .flash-msg {
-    display: flex; align-items: center; gap: 10px;
-    padding: 12px 18px; border-radius: 12px;
-    font-size: 14px; margin-bottom: 22px;
-  }
-  .flash-success { background: #d6ecde; border: 1px solid #b5d8c1; color: #2d6b42; }
-  .flash-error   { background: #fdecec; border: 1px solid #f5cccc; color: var(--rose-500); }
-
-  @media (max-width: 768px) {
-    .kpi-mini-grid { grid-template-columns: repeat(2, 1fr); }
-    .hero-profit-card { padding: 22px 20px; }
+  @media (max-width: 560px) {
+    .fn-money .fn-mwrap { width: 140px; }
+    .fn-cline .fn-mwrap { width: 120px; }
+    .fn-calc { gap: 12px; }
   }
 </style>
 
-<div class="loov-page loov-page--wide">
-
-  <div class="loov-hero loov-hero--left">
-    <div class="loov-eyebrow"><span class="dot"></span>Financeiro</div>
-    <h1 class="loov-h1">
-      Faturamento <span class="accent">do mês</span>.
-    </h1>
-    <p class="loov-lead" style="margin-bottom: 24px;">
-      Acompanhe receita, custos e lucro do seu lava-rápido — DRE atualizada automaticamente.
-    </p>
-  </div>
-
-  <% if flash[:notice] %>
-    <div class="flash-msg flash-success"><i class="fas fa-circle-check"></i> <%= flash[:notice] %></div>
-  <% end %>
-  <% if flash[:alert] %>
-    <div class="flash-msg flash-error"><i class="fas fa-circle-exclamation"></i> <%= flash[:alert] %></div>
-  <% end %>
-
-  <%
-    current_dre      = @dre.last
-    avg_margin       = @dre.select { |d| d[:margem] }.map { |d| d[:margem] }.then { |ms| ms.any? ? (ms.sum.to_f / ms.size).round(1) : nil }
-    months_with_cost = @dre.count { |d| d[:tem_custo] }
-    total_revenue_12m = @dre.sum { |d| d[:faturamento].to_f }
-    total_cost_12m    = @dre.sum { |d| d[:custos].to_f }
-    total_profit_12m  = @dre.sum { |d| d[:lucro].to_f }
-    current_pending   = current_dre&.dig(:receita_aberto).to_f
-    current_revenue   = current_dre&.dig(:faturamento).to_f
-    current_profit    = current_dre&.dig(:lucro).to_f
-    current_margin    = current_dre&.dig(:margem)
-    current_negative  = current_profit < 0
-  %>
-
-  <!-- ─── HERO LUCRO (mês atual) ──────────────────── -->
-  <div class="hero-profit-card">
-    <div class="hero-profit-top">
-      <span class="hero-profit-label">
-        Lucro · <%= current_dre ? "#{current_dre[:mes_label]} #{current_dre[:ano]}" : "—" %>
-      </span>
-      <% if current_dre && current_dre[:tem_custo] && current_margin %>
-        <span class="hero-margin-badge <%= 'negative' if current_negative %>">
-          <i class="fas fa-<%= current_negative ? 'arrow-trend-down' : 'arrow-trend-up' %>"></i>
-          <%= current_margin %>% margem
-        </span>
-      <% end %>
-    </div>
-    <% if current_dre && current_dre[:tem_custo] %>
-      <div class="hero-profit-value <%= 'negative' if current_negative %>">
-        R$ <%= number_with_precision(current_profit.abs, precision: 2, delimiter: '.', separator: ',') %>
-      </div>
-    <% else %>
-      <div class="hero-profit-value" style="color: var(--ash);">—</div>
-      <div style="font-size: 13px; color: var(--ash); margin-top: 8px;">
-        Lance os custos do mês para ver o lucro líquido.
-      </div>
-    <% end %>
-  </div>
-
-  <!-- ─── KPI mini grid (Realizado / Em aberto / Custos / Margem média) ─── -->
-  <div class="kpi-mini-grid">
-    <div class="kpi-mini">
-      <div class="kpi-mini-label"><i class="fas fa-circle-check"></i>Realizado</div>
-      <div class="kpi-mini-value coral">
-        R$ <%= number_with_precision(current_revenue, precision: 0, delimiter: '.') %>
-      </div>
-    </div>
-    <div class="kpi-mini">
-      <div class="kpi-mini-label"><i class="fas fa-clock"></i>Em aberto</div>
-      <div class="kpi-mini-value <%= current_pending > 0 ? 'warn' : 'muted' %>">
-        R$ <%= number_with_precision(current_pending, precision: 0, delimiter: '.') %>
-      </div>
-    </div>
-    <div class="kpi-mini">
-      <div class="kpi-mini-label"><i class="fas fa-circle-minus"></i>Custos</div>
-      <div class="kpi-mini-value">
-        R$ <%= number_with_precision(current_dre&.dig(:custos).to_f, precision: 0, delimiter: '.') %>
-      </div>
-    </div>
-    <div class="kpi-mini">
-      <div class="kpi-mini-label"><i class="fas fa-chart-line"></i>Margem 12m</div>
-      <% if avg_margin %>
-        <div class="kpi-mini-value <%= avg_margin >= 20 ? 'coral' : avg_margin >= 0 ? '' : 'danger' %>">
-          <%= avg_margin %>%
+<div class="fn">
+  <div class="fn-wrap">
+    <div class="fn-head">
+      <div><div class="fn-mono">Visão geral</div><h1>Financeiro</h1></div>
+      <div class="fn-tools">
+        <div class="fn-seg" role="group" aria-label="Período">
+          <button type="button" data-period="day">Hoje</button>
+          <button type="button" data-period="week">Semana</button>
+          <button type="button" data-period="month" aria-pressed="true">Mês</button>
+          <button type="button" data-period="year">Ano</button>
+          <button type="button" data-period="custom">Intervalo</button>
         </div>
-      <% else %>
-        <div class="kpi-mini-value muted">—</div>
-      <% end %>
-    </div>
-  </div>
-
-  <!-- ─── COMBO CHART (Faturamento + Custos + Lucro) ─── -->
-  <% if months_with_cost > 0 %>
-    <div class="section-eyebrow">
-      <span class="section-eyebrow-title">Evolução · Últimos 12 meses</span>
-    </div>
-    <div class="chart-card">
-      <div class="chart-card-title"><i class="fas fa-chart-column"></i> Faturamento vs Custos vs Lucro</div>
-      <div class="chart-legend-row">
-        <div class="chart-legend-item">
-          <div class="chart-legend-swatch" style="background: #dd7852;"></div>Faturamento
-        </div>
-        <div class="chart-legend-item">
-          <div class="chart-legend-swatch" style="background: #ada699;"></div>Custos
-        </div>
-        <div class="chart-legend-item">
-          <div class="chart-legend-line-wrap">
-            <div class="chart-legend-line" style="background: #28231c;"></div>
-            <div class="chart-legend-line-dot"></div>
-          </div>Lucro
-        </div>
+        <button type="button" class="fn-export" id="fn-export" disabled><i data-feather="share" style="width:16px;height:16px"></i>Exportar</button>
       </div>
-      <div class="chart-inner"><canvas id="dreChart"></canvas></div>
     </div>
-  <% end %>
-
-  <!-- ─── DRE MENSAL EXPANSÍVEL ────────────────────── -->
-  <div class="section-eyebrow">
-    <span class="section-eyebrow-title">DRE mensal</span>
-    <span class="section-eyebrow-meta">últimos 12 meses</span>
+    <div id="fn-body"><div class="fn-loading"><span class="fn-spin"></span></div></div>
   </div>
-
-  <%= link_to edit_owner_monthly_costs_path(year: Date.current.year, month: Date.current.month), class: "launch-cta", id: "btn-lancar-custos" do %>
-    <i class="fas fa-plus"></i> Lançar custos do mês atual
-  <% end %>
-
-  <div class="dre-list">
-    <% @dre.reverse.each_with_index do |d, idx|
-      is_current   = d[:ano] == Date.current.year && d[:mes_num] == Date.current.month
-      negative     = d[:lucro].to_f < 0
-      has_cost     = d[:tem_custo]
-      has_pending  = d[:receita_aberto].to_f > 0
-      cost_record  = (@car_wash || current_user.linked_car_wash)&.monthly_costs&.find_by(year: d[:ano], month: d[:mes_num])
-      row_id       = "dre-row-#{d[:ano]}-#{d[:mes_num]}"
-    %>
-      <div class="dre-row <%= 'is-current' if is_current %> <%= 'has-pending-revenue' if is_current && has_pending %>"
-           data-month-key="<%= d[:ano] %>-<%= d[:mes_num] %>">
-        <div class="dre-row-header" onclick="toggleDreRow('<%= row_id %>')">
-          <div class="dre-row-main">
-            <div class="dre-row-month">
-              <%= d[:mes_label] %> <%= d[:ano] %>
-              <% if is_current %><span class="current-dot">● atual</span><% end %>
-            </div>
-            <div class="dre-row-summary">
-              <% if has_cost %>
-                Lucro
-                <strong class="<%= 'profit-neg' if negative %>">
-                  <%= negative ? '-' : '' %>R$ <%= number_with_precision(d[:lucro].abs, precision: 0, delimiter: '.') %>
-                </strong>
-                <% if d[:margem] %>
-                  &nbsp;·&nbsp; <%= d[:margem] %>% margem
-                <% end %>
-              <% else %>
-                <span style="color: var(--ash);">Custos não lançados</span>
-                &nbsp;·&nbsp; Faturamento
-                <strong>R$ <%= number_with_precision(d[:faturamento], precision: 0, delimiter: '.') %></strong>
-              <% end %>
-            </div>
-          </div>
-          <%= link_to edit_owner_monthly_costs_path(year: d[:ano], month: d[:mes_num]),
-              class: "dre-row-add", title: "Lançar custos",
-              onclick: "event.stopPropagation();" do %>
-            <i class="fas fa-plus" style="font-size: 11px;"></i>
-          <% end %>
-          <i class="fas fa-chevron-down dre-row-chevron" id="<%= row_id %>-chev"></i>
-        </div>
-
-        <div class="dre-row-body" id="<%= row_id %>">
-          <div class="dre-row-body-inner">
-            <div class="dre-line">
-              <span class="dre-line-label">Faturamento real</span>
-              <span class="dre-line-amount">R$ <%= number_with_precision(d[:faturamento], precision: 2) %></span>
-            </div>
-            <div class="dre-line muted">
-              <span class="dre-line-label">Em aberto</span>
-              <span class="dre-line-amount">R$ <%= number_with_precision(d[:receita_aberto], precision: 2) %></span>
-            </div>
-            <div class="dre-divider"></div>
-
-            <% if has_cost && cost_record %>
-              <div class="dre-line negative">
-                <span class="dre-line-label">Custos fixos</span>
-                <span class="dre-line-amount">- R$ <%= number_with_precision(cost_record.total_fixed.to_f, precision: 2) %></span>
-              </div>
-              <div class="dre-line negative">
-                <span class="dre-line-label">Custos variáveis</span>
-                <span class="dre-line-amount">- R$ <%= number_with_precision(cost_record.total_variable.to_f, precision: 2) %></span>
-              </div>
-              <div class="dre-line negative bold">
-                <span class="dre-line-label" style="color: var(--ink);">Total custos</span>
-                <span class="dre-line-amount">- R$ <%= number_with_precision(d[:custos], precision: 2) %></span>
-              </div>
-              <div class="dre-divider"></div>
-              <div class="dre-line bold big <%= 'negative' if negative %>">
-                <span class="dre-line-label" style="color: var(--ink); font-weight: 600;">Lucro líquido</span>
-                <span class="dre-line-amount">
-                  <%= negative ? '-' : '' %>R$ <%= number_with_precision(d[:lucro].abs, precision: 2) %>
-                </span>
-              </div>
-              <% if d[:margem] %>
-                <div class="dre-margin-pill-wrap">
-                  <span class="dre-margin-pill <%= 'negative' if d[:margem].to_f < 0 %>">
-                    Margem <%= d[:margem] %>%
-                  </span>
-                </div>
-              <% end %>
-              <div class="dre-row-actions">
-                <%= link_to edit_owner_monthly_costs_path(year: d[:ano], month: d[:mes_num]), class: "dre-action-btn" do %>
-                  <i class="fas fa-pen"></i> Editar
-                <% end %>
-                <% if cost_record %>
-                  <%= button_to owner_monthly_cost_path(cost_record),
-                      method: :delete,
-                      form: { style: "display:inline;" },
-                      data: { confirm: "Remover custos de #{d[:mes_label]} #{d[:ano]}?" },
-                      class: "dre-action-btn danger" do %>
-                    <i class="fas fa-trash-can"></i> Remover
-                  <% end %>
-                <% end %>
-              </div>
-            <% else %>
-              <%= link_to edit_owner_monthly_costs_path(year: d[:ano], month: d[:mes_num]), class: "dre-add-cost-inline" do %>
-                <i class="fas fa-plus"></i> Lançar custos deste mês
-              <% end %>
-            <% end %>
-          </div>
-        </div>
-      </div>
-    <% end %>
-  </div>
-
-  <div style="margin-top: 32px; display: flex; gap: 10px; flex-wrap: wrap;">
-    <%= link_to owner_financial_tracking_path, class: "loov-btn-secondary" do %>
-      <i class="fas fa-chart-line"></i> Ver análise completa
-    <% end %>
-    <%= link_to owner_car_wash_appointments_path, class: "loov-btn-ghost" do %>
-      <i class="fas fa-arrow-left"></i> Voltar
-    <% end %>
-  </div>
-
+  <%= render "shared/site_footer", audience: :client %>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-// ─── DRE row toggle (acordeão) ───────────────────────
-function toggleDreRow(rowId) {
-  var body = document.getElementById(rowId);
-  var chev = document.getElementById(rowId + '-chev');
-  if (!body) return;
-  body.classList.toggle('open');
-  if (chev) chev.classList.toggle('open');
-}
+<%# Folha: lançar custos %>
+<div class="fn-sheet-bg" id="sh-cost" aria-hidden="true">
+  <div class="fn-sheet" role="dialog" aria-modal="true" aria-labelledby="sh-cost-t">
+    <div class="fn-handle"></div>
+    <div class="fn-sheet-h"><b id="sh-cost-t">LANÇAR CUSTOS</b><span id="sh-cost-m"></span></div>
+    <div id="sh-cost-banner"></div>
+    <div class="fn-sheet-body" id="sh-cost-body"></div>
+    <div class="fn-btns"><button type="button" class="fn-cancel" data-close>Cancelar</button><button type="button" class="fn-confirm" id="sh-cost-save">Salvar</button></div>
+  </div>
+</div>
 
-// ─── Combo chart (Faturamento + Custos + Lucro) ──────
-document.addEventListener('DOMContentLoaded', function() {
-  var dreCtx = document.getElementById('dreChart');
-  if (!dreCtx) return;
+<%# Folha: exportar %>
+<div class="fn-sheet-bg" id="sh-exp" aria-hidden="true">
+  <div class="fn-sheet" role="dialog" aria-modal="true" aria-labelledby="sh-exp-t">
+    <div class="fn-handle"></div>
+    <div class="fn-sheet-h"><b id="sh-exp-t">EXPORTAR RELATÓRIO</b><span id="sh-exp-m"></span></div>
+    <p class="fn-xcap">Cada serviço e cada custo do período, discriminados.</p>
+    <button type="button" class="fn-xrow" data-export="pdf"><span class="fn-xic"><i data-feather="file-text" style="width:20px;height:20px"></i></span><span><b>PDF</b><small data-desc>Para ler, imprimir ou mandar pro sócio</small></span><i data-feather="chevron-right" class="fn-xgo" style="width:18px;height:18px"></i></button>
+    <button type="button" class="fn-xrow" data-export="xlsx"><span class="fn-xic"><i data-feather="grid" style="width:20px;height:20px"></i></span><span><b>Planilha Excel</b><small data-desc>Para o contador — com fórmulas e cada atendimento</small></span><i data-feather="chevron-right" class="fn-xgo" style="width:18px;height:18px"></i></button>
+    <div id="sh-exp-err"></div>
+    <div class="fn-btns"><button type="button" class="fn-cancel" data-close>Cancelar</button></div>
+  </div>
+</div>
 
-  var labels = <%= raw @dre.map { |d| d[:mes] }.to_json %>;
-  var fat    = <%= raw @dre.map { |d| d[:faturamento] }.to_json %>;
-  var costs  = <%= raw @dre.map { |d| d[:custos] }.to_json %>;
-  var profit = <%= raw @dre.map { |d| d[:lucro] }.to_json %>;
+<%# Folha: intervalo %>
+<div class="fn-sheet-bg" id="sh-range" aria-hidden="true">
+  <div class="fn-sheet" role="dialog" aria-modal="true" aria-labelledby="sh-range-t" style="max-width:440px">
+    <div class="fn-handle"></div>
+    <div class="fn-sheet-h"><b id="sh-range-t">INTERVALO PERSONALIZADO</b></div>
+    <div class="fn-glab">INÍCIO</div><input type="date" class="fn-date" id="rg-start">
+    <div class="fn-glab">FIM</div><input type="date" class="fn-date" id="rg-end">
+    <div id="rg-err"></div>
+    <div class="fn-btns"><button type="button" class="fn-cancel" data-close>Cancelar</button><button type="button" class="fn-confirm" id="rg-apply">Aplicar</button></div>
+  </div>
+</div>
 
-  new Chart(dreCtx, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [
-        {
-          label: 'Faturamento',
-          data: fat,
-          backgroundColor: 'rgba(221, 120, 82, 0.85)',
-          borderRadius: 6,
-          order: 2,
-          barPercentage: 0.7,
-          categoryPercentage: 0.8,
-        },
-        {
-          label: 'Custos',
-          data: costs,
-          backgroundColor: 'rgba(173, 166, 153, 0.85)',
-          borderRadius: 6,
-          order: 2,
-          barPercentage: 0.7,
-          categoryPercentage: 0.8,
-        },
-        {
-          label: 'Lucro',
-          data: profit,
-          type: 'line',
-          borderColor: '#28231c',
-          backgroundColor: 'rgba(40, 35, 28, 0.06)',
-          borderWidth: 2.5,
-          fill: false,
-          tension: 0.35,
-          pointBackgroundColor: '#fefefd',
-          pointBorderColor: '#28231c',
-          pointBorderWidth: 2.5,
-          pointRadius: 5,
-          pointHoverRadius: 7,
-          order: 1,
-        }
-      ]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: '#fefefd', borderColor: '#e0dbd0', borderWidth: 1,
-          titleColor: '#28231c', bodyColor: '#28231c', padding: 12,
-          titleFont: { family: 'Space Grotesk', weight: 'bold', size: 13 },
-          bodyFont:  { family: 'Inter', size: 12 },
-          callbacks: {
-            label: function(c) { return ' ' + c.dataset.label + ': R$ ' + c.parsed.y.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-          }
-        }
-      },
-      scales: {
-        x: {
-          grid: { color: 'rgba(40, 35, 28, 0.04)' },
-          ticks: { color: '#ada699', font: { family: 'JetBrains Mono', size: 10 } }
-        },
-        y: {
-          beginAtZero: true,
-          grid: { color: 'rgba(40, 35, 28, 0.04)' },
-          ticks: {
-            color: '#ada699', font: { family: 'JetBrains Mono', size: 10 },
-            callback: function(v) {
-              if (Math.abs(v) >= 1000) return 'R$ ' + (v / 1000).toFixed(0) + 'k';
-              return 'R$ ' + v.toLocaleString('pt-BR');
-            }
-          }
-        }
-      }
+<script nonce="<%= csp_nonce %>">
+(function () {
+  var C = { ink: '#28231c', coral500: '#dd7852', coral50: '#fbeae3', coral700: '#9c4930', graphite: '#575148', sand: '#f1eee6', stone: '#e0dbd0', ash: '#ada699', rose500: '#c85050', cream: '#fafaf6' };
+  var MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+  var REF = { day: 'que ontem', week: 'que a semana passada', month: 'que o mês passado', year: 'que o ano passado', custom: 'que o intervalo anterior' };
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function icon(n, size, extra) { return window.feather && feather.icons[n] ? feather.icons[n].toSvg(Object.assign({ width: size, height: size }, extra || {})) : ''; }
+  function money(v, d) { var n = Number(v || 0); d = d == null ? 2 : d; return (n < 0 ? '−' : '') + 'R$ ' + Math.abs(n).toFixed(d).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+  function moneyC(v) { return Math.abs(Number(v || 0)) >= 1000 ? money(v, 0) : money(v, 2); }
+  function q(o) { var s = 'period=' + encodeURIComponent(o.period); if (o.period === 'custom' && o.start && o.end) s += '&start_date=' + o.start + '&end_date=' + o.end; return s; }
+
+  var st = { period: 'month', start: null, end: null, data: null, open: null, sel: null, loading: false };
+
+  // ── Dados ────────────────────────────────────────────────────────────────
+  var seqLoad = 0;
+  function load() {
+    var my = ++seqLoad;
+    if (!st.data) $('fn-body').innerHTML = '<div class="fn-loading"><span class="fn-spin"></span></div>';
+    else $('fn-body').style.opacity = '.55';
+    fetch('/owner/financial_tracking.json?' + q(st), { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      .then(function (r) { if (!r.ok) throw r.status; return r.json(); })
+      .then(function (d) { if (my !== seqLoad) return; st.data = d; st.sel = null; render(); })
+      .catch(function () { if (my !== seqLoad) return; $('fn-body').innerHTML = '<div class="fn-empty"><h3>Não foi possível carregar</h3><p>Confira a conexão e tente de novo.</p></div>'; })
+      .then(function () { $('fn-body').style.opacity = ''; });
+  }
+
+  // ── Render ───────────────────────────────────────────────────────────────
+  function semMovimento(d) { var k = d.kpis || {}; return !Number(k.revenue) && !Number(k.open_revenue) && !Number((k.costs || {}).total); }
+
+  function deltaHtml(prev) {
+    if (!prev) return '';
+    var delta = Number(prev.profit_delta) || 0, pct = prev.profit_delta_pct, ref = (REF[st.period] || 'que o período anterior') + (prev.partial ? ', até o mesmo dia' : '');
+    if (Math.abs(delta) < 0.01) return '<div class="fn-delta">No mesmo nível ' + ref + '</div>';
+    var up = delta > 0, size = pct != null ? Math.abs(pct).toFixed(1).replace('.', ',') + '%' : moneyC(Math.abs(delta));
+    return '<div class="fn-delta ' + (up ? 'is-up' : 'is-down') + '">' + icon(up ? 'arrow-up-right' : 'arrow-down-right', 15) + '<b>' + size + ' ' + (up ? 'acima' : 'abaixo') + '</b><span>' + ref + '</span></div>';
+  }
+
+  function heroHtml(d) {
+    var k = d.kpis, neg = Number(k.profit) < 0;
+    return '<section class="fn-hero' + (neg ? ' is-neg' : '') + '">' +
+      '<div class="fn-hero-top"><span class="fn-mono">Lucro · ' + esc(d.period_label) + '</span>' +
+        (k.margin != null ? '<span class="fn-margin">' + icon(neg ? 'trending-down' : 'trending-up', 13) + Number(k.margin).toFixed(1).replace('.', ',') + '% margem</span>' : '') + '</div>' +
+      '<div class="fn-profit">' + money(k.profit) + '</div>' + deltaHtml(d.previous) +
+      '<div class="fn-rule"></div>' +
+      '<div class="fn-calc"><div><small>REALIZADO</small><b>' + moneyC(k.revenue) + '</b></div><span>−</span><div><small>CUSTOS</small><b>' + moneyC((k.costs || {}).total) + '</b></div></div>' +
+    '</section>';
+  }
+
+  function sideHtml(d) {
+    var k = d.kpis, out = '', open = Number(k.open_revenue) || 0, t = d.trailing_12m, c = k.costs || {};
+    var ct = Number(c.total) || 0, fx = Number(c.fixed) || 0, vr = Number(c.variable) || 0;
+    out += '<div class="fn-card"><div class="fn-mono">Custos do período</div>' +
+      '<div class="fn-cost-tot">' + moneyC(ct) + '</div>' +
+      (ct > 0 ? '<div class="fn-cost-bar"><i style="width:' + (fx / ct * 100).toFixed(1) + '%"></i></div>' : '') +
+      '<div class="fn-cost-leg"><span><i class="is-fx"></i>Fixos <b>' + moneyC(fx) + '</b></span><span><i></i>Variáveis <b>' + moneyC(vr) + '</b></span></div>' +
+      (ct === 0 ? '<p class="fn-cost-hint">Sem custos lançados — o lucro aparece maior do que é.</p>' : '') + '</div>';
+    if (open > 0) out += '<div class="fn-card fn-open"><span class="fn-open-ic">' + icon('calendar', 16) + '</span><div><div class="fn-mono">Em aberto</div><p>Serviços já confirmados que ainda vão acontecer. Entram no lucro quando forem atendidos.</p></div><b>' + moneyC(open) + '</b></div>';
+    if (t) {
+      var sp = t.sparkline || [], max = Math.max.apply(null, [1].concat(sp.map(function (v) { return Math.abs(v || 0); })));
+      out += '<div class="fn-card fn-trail"><div class="fn-trail-t"><div class="fn-mono">Últimos 12 meses</div><b>' + (t.avg_margin != null ? Number(t.avg_margin).toFixed(1).replace('.', ',') + '% margem média' : 'Sem dados suficientes') + '</b>' +
+        '<small>Lucro <strong>' + moneyC(t.profit) + '</strong> · Fat. ' + moneyC(t.revenue) + '</small></div>' +
+        '<div class="fn-spark">' + sp.map(function (v, i) { return '<i class="' + ((v || 0) < 0 ? 'is-neg' : '') + '" style="height:' + Math.max(2, Math.abs(v || 0) / max * 40) + 'px;opacity:' + (0.4 + i / sp.length * 0.6).toFixed(2) + '"></i>'; }).join('') + '</div></div>';
     }
+    return out;
+  }
+
+  // Gráfico combinado em SVG: barras de faturamento e custos, linha de lucro.
+  function chartHtml(d) {
+    var data = d.chart || [];
+    if (!data.length) return '<div class="fn-chart"><div class="fn-empty-chart">Sem dados no período.</div></div>';
+    if (st.sel == null || st.sel >= data.length) st.sel = data.length - 1;
+    // Cada dia/mês ocupa no mínimo 54px; havendo espaço, as barras se espalham pela largura toda.
+    var avail = Math.max(300, ($('fn-chartbox') ? $('fn-chartbox').clientWidth : 900) - 42);
+    var BW = Math.max(54, Math.floor(avail / data.length)), H = 190, TOP = 16, plot = H - TOP, W = data.length * BW;
+    var max = Math.max.apply(null, [1].concat(data.map(function (x) { return Math.max(x.revenue || 0, x.cost || 0); })));
+    var minP = Math.min.apply(null, [0].concat(data.map(function (x) { return x.profit || 0; })));
+    var span = (max - minP) || 1, y = function (v) { return TOP + (max - (v || 0)) / span * plot; }, base = y(0);
+    var bars = '', pts = [], bw = Math.min(26, Math.max(12, Math.floor(BW * 0.26)));
+    data.forEach(function (x, i) {
+      var cx = i * BW + BW / 2, rh = (x.revenue || 0) / span * plot, ch = (x.cost || 0) / span * plot, on = i === st.sel, dim = !on ? ' opacity="0.35"' : '';
+      bars += '<g class="bk" data-i="' + i + '"><rect class="hl" x="' + (i * BW + 3) + '" y="0" width="' + (BW - 6) + '" height="' + (H + 22) + '" rx="10" fill="' + C.sand + '" opacity="' + (on ? 1 : 0) + '"/>' +
+        '<rect x="' + (cx - bw - 1) + '" y="' + (base - Math.max(2, rh)) + '" width="' + bw + '" height="' + Math.max(2, rh) + '" rx="3" fill="' + C.coral500 + '"' + dim + '/>' +
+        '<rect x="' + (cx + 1) + '" y="' + (base - Math.max(2, ch)) + '" width="' + bw + '" height="' + Math.max(2, ch) + '" rx="3" fill="' + C.graphite + '"' + (on ? ' opacity="0.85"' : ' opacity="0.3"') + '/>' +
+        '<text x="' + cx + '" y="' + (H + 16) + '" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="' + (on ? C.ink : C.ash) + '"' + (on ? ' font-weight="700"' : '') + '>' + esc(x.label) + '</text></g>';
+      pts.push([cx, y(x.profit)]);
+    });
+    var line = '<polyline fill="none" stroke="' + C.ink + '" stroke-width="2" stroke-linejoin="round" points="' + pts.map(function (p) { return p.join(','); }).join(' ') + '"/>' +
+      pts.map(function (p, i) { var on = i === st.sel; return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + (on ? 6 : 4) + '" fill="' + (on ? C.ink : C.cream) + '" stroke="' + C.ink + '" stroke-width="2" pointer-events="none"/>'; }).join('');
+    var zero = minP < 0 ? '<line x1="0" x2="' + W + '" y1="' + base + '" y2="' + base + '" stroke="' + C.stone + '" stroke-dasharray="4 4"/>' : '';
+    var s = data[st.sel], m = (s.revenue || 0) > 0 ? (s.profit || 0) / s.revenue * 100 : null, neg = Number(s.profit) < 0;
+    return '<div class="fn-chart">' +
+      '<div class="fn-legend"><span><i style="background:' + C.coral500 + '"></i>Faturamento</span><span><i style="background:' + C.graphite + '"></i>Custos</span><span><i class="is-line"></i>Lucro</span></div>' +
+      '<div class="fn-detail"><span class="fn-detail-l">' + esc(String(s.label).toUpperCase()) + (m != null ? '<em>' + m.toFixed(1).replace('.', ',') + '% margem</em>' : '') + '</span>' +
+        '<span class="fn-detail-i"><i style="background:' + C.coral500 + '"></i><span><small>Faturamento</small><b>' + moneyC(s.revenue) + '</b></span></span>' +
+        '<span class="fn-detail-i"><i style="background:' + C.graphite + '"></i><span><small>Custos</small><b>' + moneyC(s.cost) + '</b></span></span>' +
+        '<span class="fn-detail-i"><i style="background:' + C.ink + '"></i><span><small>Lucro</small><b class="' + (neg ? 'is-neg' : '') + '">' + moneyC(s.profit) + '</b></span></span></div>' +
+      '<div class="fn-plot" id="fn-plot"><svg width="' + W + '" height="' + (H + 24) + '" viewBox="0 0 ' + W + ' ' + (H + 24) + '" role="img" aria-label="Gráfico de faturamento, custos e lucro">' + zero + bars + line + '</svg></div>' +
+    '</div>';
+  }
+
+  function dreRowHtml(m) {
+    var key = m.year + '-' + m.month, open = st.open === key, neg = Number(m.profit) < 0;
+    function amt(v) { return money(v); }
+    function cost(v) { v = Number(v || 0); return (v > 0 ? '−' : '') + money(Math.abs(v)); }
+    function line(label, val, cls) { return '<div class="fn-line ' + (cls || '') + '"><span>' + label + '</span><b>' + val + '</b></div>'; }
+    var costCls = function (v) { return Number(v || 0) > 0 ? 'is-neg' : ''; };
+    return '<div class="fn-row' + (open ? ' is-open' : '') + '">' +
+      '<div class="fn-row-h"><button type="button" class="fn-row-main" data-toggle="' + key + '" aria-expanded="' + open + '"><span class="fn-row-t"><b>' + esc(m.label) + '</b>' +
+        '<small>Lucro <strong class="' + (neg ? 'is-neg' : '') + '">' + moneyC(m.profit) + '</strong>' + (m.margin != null ? ' · ' + Number(m.margin).toFixed(1).replace('.', ',') + '% margem' : '') + '</small></span>' +
+        '<span class="fn-cols"><span><small>FATURAMENTO</small>' + moneyC(m.revenue) + '</span><span><small>CUSTOS</small>' + moneyC(m.total_cost) + '</span>' +
+          '<span class="' + (neg ? 'is-neg' : '') + '"><small>LUCRO</small>' + moneyC(m.profit) + '</span><span><small>MARGEM</small>' + (m.margin != null ? Number(m.margin).toFixed(1).replace('.', ',') + '%' : '—') + '</span></span>' +
+        '<span class="fn-row-chev">' + icon('chevron-down', 18) + '</span></button>' +
+        '<button type="button" class="fn-row-plus" data-cost="' + key + '" aria-label="Lançar custos de ' + esc(m.label) + '">' + icon('plus', 15) + '</button></div>' +
+      '<div class="fn-row-b">' +
+        line('Faturamento real', amt(m.revenue)) + line('Em aberto', amt(m.open_revenue), 'is-muted') + '<div class="fn-div"></div>' +
+        line('Custos fixos', cost(m.fixed_cost), costCls(m.fixed_cost)) + line('Custos variáveis', cost(m.variable_cost), costCls(m.variable_cost)) +
+        line('Total custos', cost(m.total_cost), 'is-bold ' + costCls(m.total_cost)) +
+        '<div class="fn-div"></div>' + line('Lucro líquido', amt(m.profit), 'is-bold is-big' + (neg ? ' is-neg' : '')) +
+        (m.margin != null ? '<span class="fn-pill">Margem ' + Number(m.margin).toFixed(1).replace('.', ',') + '%</span>' : '') +
+        (!m.has_cost_record ? '<div><button type="button" class="fn-row-cta" data-cost="' + key + '">' + icon('plus', 13) + 'LANÇAR CUSTOS DESTE MÊS</button></div>' : '') +
+      '</div></div>';
+  }
+
+  function renderChart() {
+    var box = $('fn-chartbox'); if (!box) return;
+    var sl = $('fn-plot') ? $('fn-plot').scrollLeft : 0;
+    box.innerHTML = chartHtml(st.data);
+    if ($('fn-plot')) $('fn-plot').scrollLeft = sl;
+  }
+
+  function render() {
+    var d = st.data;
+    $('fn-export').disabled = semMovimento(d);
+    var top = semMovimento(d)
+      ? '<div class="fn-empty"><div class="fn-empty-ic">' + icon('bar-chart-2', 20) + '</div><h3>Sem movimento neste período</h3><p>Os números aparecem sozinhos conforme os atendimentos acontecem. Se quiser adiantar, lance seus custos fixos: sem eles o lucro aparece maior do que é.</p></div>'
+      : '<div class="fn-grid">' + heroHtml(d) + '<div class="fn-side">' + sideHtml(d) + '</div></div>' +
+        '<div class="fn-sec"><h2>Evolução</h2><span class="fn-mono">' + esc(d.period_label) + '</span></div><div id="fn-chartbox">' + chartHtml(d) + '</div>';
+    var dre = (d.monthly_dre || []).slice().reverse();
+    $('fn-body').innerHTML = top +
+      '<div class="fn-sec"><h2>DRE mensal</h2><button type="button" class="fn-add" id="fn-add-now">' + icon('plus', 16) + 'Lançar custos do mês atual</button></div>' +
+      '<div class="fn-dre">' + dre.map(dreRowHtml).join('') + '</div>';
+    // Redesenha o gráfico já com o cartão na tela, pra medir a largura real.
+    if ($('fn-chartbox')) { renderChart(); var plot = $('fn-plot'); if (plot) plot.scrollLeft = plot.scrollWidth; }
+  }
+
+  // ── Folhas ───────────────────────────────────────────────────────────────
+  function openSheet(id) { var s = $(id); s.classList.add('is-on'); s.setAttribute('aria-hidden', 'false'); }
+  function closeSheet(id) { var s = $(id); s.classList.remove('is-on'); s.setAttribute('aria-hidden', 'true'); }
+  function closeAll() { ['sh-cost', 'sh-exp', 'sh-range'].forEach(function (id) { if (id === 'sh-cost' && cs.saving) return; if (id === 'sh-exp' && xbusy) return; closeSheet(id); }); }
+
+  // ── Lançar custos (mesma lógica do app) ──────────────────────────────────
+  var FIXED = [['rent', 'Aluguel'], ['salaries', 'Salários'], ['water', 'Água'], ['electricity', 'Luz']];
+  var VARIABLE = [['products', 'Produtos'], ['maintenance', 'Manutenção']];
+  var cs = { year: 0, month: 0, form: null, pend: [], pendLines: {}, hasPend: false, saving: false, seq: 0 };
+  function digitsFrom(v) { var c = Math.round(Number(v || 0) * 100); return c > 0 ? String(c) : ''; }
+  function numFrom(dg) { return dg ? (parseInt(dg, 10) || 0) / 100 : 0; }
+  function centsDisplay(dg) { if (!dg) return ''; return ((parseInt(dg, 10) || 0) / 100).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+  function banner(type, text) { $('sh-cost-banner').innerHTML = text ? '<div class="fn-banner is-' + type + '">' + icon(type === 'success' ? 'check-circle' : type === 'error' ? 'alert-circle' : 'info', 14) + '<span>' + esc(text) + '</span></div>' : ''; }
+
+  function openCosts(year, month) {
+    cs.year = year; cs.month = month; cs.form = null;
+    $('sh-cost-m').textContent = MESES[month - 1] + ' ' + year;
+    banner(); $('sh-cost-body').innerHTML = '<div class="fn-loading" style="padding:40px 0"><span class="fn-spin"></span></div>';
+    openSheet('sh-cost');
+    fetch('/owner/monthly_costs/edit.json?year=' + year + '&month=' + month, { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+      .then(function (data) {
+        var pv = data.pending_values || {}, f = function (k) { return Object.prototype.hasOwnProperty.call(pv, k) ? digitsFrom(pv[k]) : digitsFrom(data[k]); };
+        var lines = [];
+        if (!data.has_pending) {
+          if (Number(data.other_fixed || 0) > 0) lines.push({ id: null, syn: null, key: 'lf' + (++cs.seq), name: 'Outros fixos', amount: digitsFrom(data.other_fixed), type: 'fixed' });
+          if (Number(data.other_variable || 0) > 0) lines.push({ id: null, syn: null, key: 'lv' + (++cs.seq), name: 'Outros variáveis', amount: digitsFrom(data.other_variable), type: 'variable' });
+        }
+        cs.pendLines = {};
+        (data.custom_lines || []).forEach(function (l) {
+          var syn = typeof l.id === 'string';
+          if (l.pending && l.id != null) cs.pendLines[String(l.id)] = true;
+          lines.push({ id: syn ? null : l.id, syn: syn ? l.id : null, key: 'l' + (++cs.seq), name: l.name || '', amount: digitsFrom(l.amount), type: l.cost_type });
+        });
+        // Legado: "utilities" (água + luz juntos) vai pra Luz.
+        var elec = Object.prototype.hasOwnProperty.call(pv, 'electricity') ? digitsFrom(pv.electricity)
+          : (Number(data.water || 0) > 0 || Number(data.electricity || 0) > 0 ? digitsFrom(data.electricity) : digitsFrom(data.electricity || data.utilities));
+        cs.form = { rent: f('rent'), salaries: f('salaries'), water: f('water'), electricity: elec, products: f('products'), maintenance: f('maintenance'),
+          notes: Object.prototype.hasOwnProperty.call(pv, 'notes') ? pv.notes : (data.notes || ''), lines: lines };
+        cs.pend = Array.isArray(data.pending_fields) && data.pending_fields.length ? data.pending_fields : Object.keys(pv);
+        cs.hasPend = !!data.has_pending;
+        if (cs.hasPend) banner('info', 'Há alterações aguardando aprovação neste mês.');
+        renderCosts();
+        var first = $('sh-cost-body').querySelector('input'); if (first) first.focus();
+      })
+      .catch(function () { $('sh-cost-body').innerHTML = ''; banner('error', 'Não foi possível carregar os custos deste mês.'); });
+  }
+  function moneyRow(k, label) {
+    var p = cs.pend.indexOf(k) !== -1;
+    return '<div class="fn-money"><label for="c-' + k + '">' + label + (p ? '<span class="fn-pend">AGUARDANDO APROVAÇÃO</span>' : '') + '</label>' +
+      '<span class="fn-mwrap' + (p ? ' is-pend' : '') + '"><small>R$</small><input id="c-' + k + '" data-field="' + k + '" inputmode="numeric" placeholder="0,00" value="' + centsDisplay(cs.form[k]) + '"></span></div>';
+  }
+  function lineRows(type) {
+    return cs.form.lines.filter(function (l) { return l.type === type; }).map(function (l) {
+      var p = cs.pendLines[String(l.syn || l.id)];
+      return '<div class="fn-cline" data-line="' + l.key + '"><input data-lname placeholder="Nome do custo (ex.: Internet)" maxlength="60" value="' + esc(l.name) + '">' +
+        '<span class="fn-mwrap' + (p ? ' is-pend' : '') + '"><small>R$</small><input data-lamount inputmode="numeric" placeholder="0,00" value="' + centsDisplay(l.amount) + '"></span>' +
+        '<button type="button" data-lrm aria-label="Remover">' + icon('x', 15) + '</button></div>';
+    }).join('');
+  }
+  function renderCosts() {
+    var total = 0; FIXED.concat(VARIABLE).forEach(function (p) { total += numFrom(cs.form[p[0]]); }); cs.form.lines.forEach(function (l) { total += numFrom(l.amount); });
+    $('sh-cost-body').innerHTML =
+      '<div class="fn-glab">FIXOS</div>' + FIXED.map(function (p) { return moneyRow(p[0], p[1]); }).join('') + lineRows('fixed') +
+      '<button type="button" class="fn-addline" data-addline="fixed">' + icon('plus', 14) + 'Adicionar custo fixo</button>' +
+      '<div class="fn-glab" style="margin-top:12px">VARIÁVEIS</div>' + VARIABLE.map(function (p) { return moneyRow(p[0], p[1]); }).join('') + lineRows('variable') +
+      '<button type="button" class="fn-addline" data-addline="variable">' + icon('plus', 14) + 'Adicionar custo variável</button>' +
+      '<div class="fn-glab" style="margin-top:12px">OBSERVAÇÕES</div><textarea class="fn-notes" id="c-notes" placeholder="Opcional">' + esc(cs.form.notes) + '</textarea>';
+    $('sh-cost-save').innerHTML = 'Salvar · ' + money(total);
+  }
+  function refreshTotal() { var total = 0; FIXED.concat(VARIABLE).forEach(function (p) { total += numFrom(cs.form[p[0]]); }); cs.form.lines.forEach(function (l) { total += numFrom(l.amount); }); if (!cs.saving) $('sh-cost-save').innerHTML = 'Salvar · ' + money(total); }
+  function lineOf(el) { var row = el.closest('[data-line]'); return row && cs.form.lines.filter(function (l) { return l.key === row.dataset.line; })[0]; }
+  // Valor como caixa registradora: cada dígito empurra os centavos (4 → 0,04 → 0,48 → 4,80).
+  function onMoneyInput(el, set) { var dg = (el.value.match(/\d/g) || []).join('').slice(0, 12); set(dg); el.value = centsDisplay(dg); refreshTotal(); }
+  $('sh-cost-body').addEventListener('input', function (e) {
+    if (!cs.form) return;
+    var t = e.target, l;
+    if (t.dataset.field) onMoneyInput(t, function (dg) { cs.form[t.dataset.field] = dg; });
+    else if (t.hasAttribute('data-lamount') && (l = lineOf(t))) onMoneyInput(t, function (dg) { l.amount = dg; });
+    else if (t.hasAttribute('data-lname') && (l = lineOf(t))) l.name = t.value;
+    else if (t.id === 'c-notes') cs.form.notes = t.value;
   });
-});
+  $('sh-cost-body').addEventListener('click', function (e) {
+    var t;
+    if ((t = e.target.closest('[data-addline]'))) { cs.form.lines.push({ id: null, syn: null, key: 'n' + (++cs.seq), name: '', amount: '', type: t.dataset.addline }); renderCosts(); var rows = $('sh-cost-body').querySelectorAll('[data-line] [data-lname]'); var last = [].filter.call(rows, function (r) { return lineOf(r).type === t.dataset.addline; }).pop(); if (last) last.focus(); return; }
+    if ((t = e.target.closest('[data-lrm]'))) { var l = lineOf(t); cs.form.lines = cs.form.lines.filter(function (x) { return x !== l; }); renderCosts(); refreshTotal(); }
+  });
+  $('sh-cost-save').addEventListener('click', function () {
+    if (!cs.form || cs.saving) return;
+    var f = cs.form, lines = f.lines.filter(function (l) { return (l.name || '').trim() && l.amount; }).map(function (l) {
+      return { id: l.id || l.syn || undefined, name: l.name.trim().slice(0, 80), amount: numFrom(l.amount), cost_type: l.type };
+    });
+    var payload = { monthly_cost: { rent: numFrom(f.rent), salaries: numFrom(f.salaries), water: numFrom(f.water), electricity: numFrom(f.electricity), utilities: 0, other_fixed: 0, products: numFrom(f.products), maintenance: numFrom(f.maintenance), other_variable: 0, notes: f.notes }, custom_lines: lines };
+    cs.saving = true; $('sh-cost-save').disabled = true; $('sh-cost-save').innerHTML = '<span class="fn-spin is-sm is-light"></span>';
+    fetch('/owner/monthly_costs/upsert?year=' + cs.year + '&month=' + cs.month, { method: 'POST', credentials: 'same-origin', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (res) {
+        cs.saving = false; $('sh-cost-save').disabled = false; refreshTotal();
+        if (!res.ok) { banner('error', res.d.error || 'Não foi possível salvar.'); return; }
+        if (res.d.pending) { banner('success', res.d.message || 'Alterações enviadas para aprovação.'); setTimeout(function () { closeSheet('sh-cost'); load(); }, 1600); return; }
+        if (res.d.ok === false) { banner('info', res.d.message || 'Nenhuma alteração detectada.'); return; }
+        closeSheet('sh-cost'); load();
+      })
+      .catch(function () { cs.saving = false; $('sh-cost-save').disabled = false; refreshTotal(); banner('error', 'Falha de conexão.'); });
+  });
+
+  // ── Exportar ─────────────────────────────────────────────────────────────
+  var xbusy = null;
+  function xerr(msg) { $('sh-exp-err').innerHTML = msg ? '<div class="fn-banner is-error" style="margin-top:6px">' + icon('alert-circle', 14) + '<span>' + esc(msg) + '</span></div>' : ''; }
+  function statusMsg(s) {
+    if (s === 401) return 'Sua sessão expirou. Entre de novo para exportar.';
+    if (s === 403) return 'Só o dono do lava-rápido pode exportar o relatório.';
+    if (s >= 500) return 'O servidor falhou ao gerar o relatório. Tente de novo em instantes.';
+    return 'Não foi possível gerar o arquivo. Tente de novo.';
+  }
+  function slug(label) { return String(label || 'periodo').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
+  function setBusy(kind) {
+    xbusy = kind;
+    document.querySelectorAll('[data-export]').forEach(function (b) {
+      var on = b.dataset.export === kind;
+      b.disabled = !!kind && !on;
+      b.querySelector('[data-desc]').textContent = on ? 'Gerando…' : (b.dataset.export === 'pdf' ? 'Para ler, imprimir ou mandar pro sócio' : 'Para o contador — com fórmulas e cada atendimento');
+    });
+  }
+  function exportXlsx() {
+    return fetch('/owner/financial_report.xlsx?' + q(st), { credentials: 'same-origin' })
+      .then(function (r) { if (!r.ok) throw r.status; return r.blob(); })
+      .then(function (blob) {
+        var a = document.createElement('a'), url = URL.createObjectURL(blob);
+        a.href = url; a.download = 'Loov-Financeiro-' + slug(st.data.period_label) + '.xlsx';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+      });
+  }
+  // PDF: o mesmo documento do app, impresso pelo navegador ("Salvar como PDF").
+  function exportPdf() {
+    return fetch('/owner/financial_report.json?' + q(st), { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      .then(function (r) { if (!r.ok) throw r.status; return r.json(); })
+      .then(function (rep) {
+        var title = 'Loov-Financeiro-' + slug(rep.period_label);
+        var frame = document.createElement('iframe');
+        frame.setAttribute('aria-hidden', 'true');
+        frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+        document.body.appendChild(frame);
+        var doc = frame.contentWindow.document;
+        doc.open(); doc.write(buildReportHtml(rep).replace('<head>', '<head><title>' + esc(title) + '</title>')); doc.close();
+        var prevTitle = document.title; document.title = title;
+        return new Promise(function (resolve) {
+          var go = function () {
+            frame.contentWindow.focus(); frame.contentWindow.print();
+            setTimeout(function () { document.title = prevTitle; frame.remove(); resolve(); }, 800);
+          };
+          // Espera as fontes da Loov carregarem no documento antes de imprimir.
+          var fonts = doc.fonts && doc.fonts.ready ? doc.fonts.ready : Promise.resolve();
+          Promise.race([fonts, new Promise(function (r) { setTimeout(r, 2500); })]).then(function () { setTimeout(go, 150); });
+        });
+      });
+  }
+  document.querySelectorAll('[data-export]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (xbusy) return;
+      var kind = b.dataset.export; setBusy(kind); xerr('');
+      (kind === 'pdf' ? exportPdf() : exportXlsx())
+        .then(function () { setBusy(null); closeSheet('sh-exp'); })
+        .catch(function (s) { setBusy(null); xerr(typeof s === 'number' ? statusMsg(s) : 'Não foi possível gerar o arquivo. Confira a conexão e tente de novo.'); });
+    });
+  });
+
+  // ── Período ──────────────────────────────────────────────────────────────
+  function paintPeriod() { document.querySelectorAll('[data-period]').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.period === st.period ? 'true' : 'false'); }); }
+  function iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  document.querySelectorAll('[data-period]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var p = b.dataset.period;
+      if (p === 'custom') {
+        $('rg-start').value = st.start || iso(new Date(Date.now() - 30 * 864e5)); $('rg-end').value = st.end || iso(new Date());
+        $('rg-err').innerHTML = ''; openSheet('sh-range'); return;
+      }
+      st.period = p; st.start = st.end = null; paintPeriod(); load();
+    });
+  });
+  $('rg-apply').addEventListener('click', function () {
+    var a = $('rg-start').value, z = $('rg-end').value;
+    if (!a || !z || a > z) { $('rg-err').innerHTML = '<div class="fn-banner is-error">' + icon('alert-circle', 14) + '<span>Escolha um início antes do fim.</span></div>'; return; }
+    st.period = 'custom'; st.start = a; st.end = z; paintPeriod(); closeSheet('sh-range'); load();
+  });
+
+  // ── Eventos gerais ───────────────────────────────────────────────────────
+  document.addEventListener('click', function (e) {
+    var t;
+    if ((t = e.target.closest('[data-cost]'))) { e.stopPropagation(); var p = t.dataset.cost.split('-'); openCosts(Number(p[0]), Number(p[1])); return; }
+    if ((t = e.target.closest('[data-toggle]'))) { st.open = st.open === t.dataset.toggle ? null : t.dataset.toggle; render(); return; }
+    if (e.target.closest('#fn-add-now')) { var n = new Date(); openCosts(n.getFullYear(), n.getMonth() + 1); return; }
+    if (e.target.closest('#fn-export')) { if (!st.data) return; $('sh-exp-m').textContent = st.data.period_label || ''; xerr(''); setBusy(null); openSheet('sh-exp'); return; }
+    if ((t = e.target.closest('.bk'))) { st.sel = Number(t.dataset.i); renderChart(); return; }
+    if (e.target.closest('[data-close]') || e.target.classList.contains('fn-sheet-bg')) { closeAll(); }
+  });
+  // Passar o mouse num dia do gráfico também mostra os números dele.
+  document.addEventListener('mouseover', function (e) {
+    var t = e.target.closest && e.target.closest('.bk'); if (!t) return;
+    var i = Number(t.dataset.i); if (i === st.sel) return;
+    st.sel = i; renderChart();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeAll();
+  });
+
+  <%= render "owner/monthly_costs/report_html" %>
+
+  // Redesenha o gráfico se a janela mudar de largura.
+  var rzT = null; window.addEventListener('resize', function () { clearTimeout(rzT); rzT = setTimeout(function () { if (st.data) renderChart(); }, 150); });
+  if (window.feather) feather.replace();
+  load();
+})();
 </script>

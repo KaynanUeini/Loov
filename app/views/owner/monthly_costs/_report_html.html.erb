@@ -1,0 +1,349 @@
+<%#
+  Gerador do PDF do relatório financeiro — porte literal de buildReportHtml
+  (LoovApp/src/services/financialReport.js), pro site sair com o mesmo
+  documento do app. Incluído dentro do <script> do Financeiro.
+%>
+  // Cores da Loov (as mesmas do app).
+  var RC = { ink: '#28231c', coral500: '#dd7852', coral50: '#fbeae3', coral700: '#9c4930', graphite: '#575148', sand: '#f1eee6', stone: '#e0dbd0', ash: '#ada699', rose500: '#c85050' };
+// ─── formatação ──────────────────────────────────────────────────────────────
+
+function rp_money(v) {
+  const n = Number(v || 0);
+  const abs = Math.abs(n).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return `${n < 0 ? '−' : ''}R$ ${abs}`;
+}
+
+function rp_pct(v) {
+  if (v === null || v === undefined) return '—';
+  const n = Number(v);
+  return `${n < 0 ? '−' : ''}${Math.abs(n).toFixed(1).replace('.', ',')}%`;
+}
+
+function rp_int(v) {
+  return String(Number(v || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+function rp_dateBR(iso) {
+  const [y, m, d] = String(iso).slice(0, 10).split('-');
+  return `${d}/${m}/${y}`;
+}
+
+// Nome de cliente e de serviço vêm de cadastro livre — nunca entram cru no HTML.
+function rp_esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+var RP_CHANNEL = {
+  app:        'App',
+  disponivel: 'Disponível',
+  walk_in:    'Balcão',
+};
+
+// Lista de atendimentos entra no PDF até este tamanho. Acima disso vira um
+// livreto de 20 páginas que ninguém lê — a lista completa fica na planilha.
+var RP_MAX = 250;
+
+// ─── HTML do PDF ─────────────────────────────────────────────────────────────
+
+function rp_bar(value, max, color) {
+  const w = max > 0 ? Math.max(2, Math.round((value / max) * 100)) : 0;
+  return `<div class="bar"><i style="width:${w}%;background:${color}"></i></div>`;
+}
+
+function rp_sectionHead(title, caption, total) {
+  return `
+    <div class="sec-head">
+      <div>
+        <h2>${title}</h2>
+        ${caption ? `<p class="caption">${caption}</p>` : ''}
+      </div>
+      ${total !== undefined ? `<div class="sec-total">${total}</div>` : ''}
+    </div>`;
+}
+
+function rp_revenueSection(r) {
+  const list = r.revenue_by_service || [];
+  const s = r.summary;
+  if (list.length === 0) {
+    return `${rp_sectionHead('Faturamento', 'O que entrou, serviço por serviço')}
+      <p class="empty">Nenhum atendimento concluído neste período.</p>`;
+  }
+  const max = Math.max(...list.map(x => x.net));
+  const rows = list.map((x, i) => `
+    <div class="rank-row">
+      <div class="rank">${String(i + 1).padStart(2, '0')}</div>
+      <div class="rank-main">
+        <div class="rank-name">${rp_esc(x.service)}</div>
+        <div class="rank-meta">${x.category ? `${rp_esc(x.category)} · ` : ''}${rp_int(x.count)} ${x.count === 1 ? 'atendimento' : 'atendimentos'} · ticket ${rp_money(x.avg_ticket)}</div>
+        ${rp_bar(x.net, max, RC.coral500)}
+      </div>
+      <div class="rank-amt">
+        <div>${rp_money(x.net)}</div>
+        <small>${rp_pct(x.share)}</small>
+      </div>
+    </div>`).join('');
+
+  // Comissão só aparece quando existe — sem Disponível no período, a conta
+  // bruto − comissão é "X − 0 = X" e só ocupa espaço.
+  const composition = Number(s.commission) > 0 ? `
+    <div class="ledger">
+      <div class="ledger-row"><span>Faturamento bruto</span><span>${rp_money(s.gross_revenue)}</span></div>
+      <div class="ledger-row neg"><span>Comissão Loov (Disponível)</span><span>${rp_money(-s.commission)}</span></div>
+      <div class="ledger-row total"><span>Faturamento líquido</span><span>${rp_money(s.revenue)}</span></div>
+    </div>` : '';
+
+  const channels = (r.revenue_by_channel || []);
+  const channelBlock = channels.length > 1 ? `
+    <h3>Por canal</h3>
+    <div class="ledger">
+      ${channels.map(c => `
+        <div class="ledger-row"><span>${rp_esc(c.label)} <em>${rp_int(c.count)} · ${rp_pct(c.share)}</em></span><span>${rp_money(c.net)}</span></div>`).join('')}
+    </div>` : '';
+
+  return `
+    ${rp_sectionHead('Faturamento', 'O que entrou, serviço por serviço', rp_money(s.revenue))}
+    <div class="rank-list">${rows}</div>
+    ${composition}
+    ${channelBlock}`;
+}
+
+function rp_costGroup(title, lines, max) {
+  if (lines.length === 0) return '';
+  const subtotal = lines.reduce((acc, l) => acc + Number(l.amount), 0);
+  return `
+    <div class="cost-group">
+      <div class="cost-group-head"><span>${title}</span><span>${rp_money(subtotal)}</span></div>
+      ${lines.map(l => `
+        <div class="cost-row">
+          <div class="cost-main">
+            <div class="cost-name">${rp_esc(l.label)}</div>
+            ${rp_bar(l.amount, max, RC.graphite)}
+          </div>
+          <div class="cost-amt">${rp_money(l.amount)}<small>${rp_pct(l.share)}</small></div>
+        </div>`).join('')}
+    </div>`;
+}
+
+function rp_costsSection(r) {
+  const c = r.costs;
+  const notes = [];
+  if (c.prorated) {
+    notes.push('O período não cobre o mês inteiro, então cada custo mensal entra proporcional aos dias do período — a mesma conta do gráfico do app.');
+  }
+  if ((c.months_without_costs || []).length) {
+    notes.push(`Sem custos lançados em ${rp_esc(c.months_without_costs.join(', '))}. O lucro desses meses aparece maior do que é.`);
+  }
+  const noteBlock = notes.length
+    ? `<div class="note">${notes.map(n => `<p>${n}</p>`).join('')}</div>`
+    : '';
+
+  if (!c.lines || c.lines.length === 0) {
+    return `${rp_sectionHead('Custos', 'O que saiu, linha por linha')}
+      <p class="empty">Nenhum custo lançado para este período.</p>${noteBlock}`;
+  }
+  const max = Math.max(...c.lines.map(l => Number(l.amount)));
+  return `
+    ${rp_sectionHead('Custos', 'O que saiu, linha por linha', rp_money(c.total))}
+    ${rp_costGroup('Fixos', c.lines.filter(l => l.type === 'fixed'), max)}
+    ${rp_costGroup('Variáveis', c.lines.filter(l => l.type === 'variable'), max)}
+    ${noteBlock}`;
+}
+
+function rp_monthlySection(r) {
+  const list = r.monthly || [];
+  if (list.length === 0) return '';
+  return `
+    <section class="block">
+      ${rp_sectionHead('Mês a mês', 'Faturamento, custos e lucro de cada mês do período')}
+      <table>
+        <thead><tr>
+          <th>Mês</th><th class="r">Atend.</th><th class="r">Faturamento</th>
+          <th class="r">Custos</th><th class="r">Lucro</th><th class="r">Margem</th>
+        </tr></thead>
+        <tbody>
+          ${list.map(m => `
+            <tr>
+              <td>${rp_esc(m.label)}</td>
+              <td class="r">${rp_int(m.count)}</td>
+              <td class="r">${rp_money(m.revenue)}</td>
+              <td class="r">${rp_money(m.costs)}</td>
+              <td class="r ${m.profit < 0 ? 'neg' : ''}">${rp_money(m.profit)}</td>
+              <td class="r muted">${rp_pct(m.margin)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </section>`;
+}
+
+function rp_appointmentsSection(r) {
+  const list = r.appointments || [];
+  if (list.length === 0) return '';
+  if (list.length > RP_MAX) {
+    return `
+      <section class="block">
+        ${rp_sectionHead('Atendimentos', `${rp_int(list.length)} atendimentos no período`)}
+        <p class="empty">A lista completa, atendimento por atendimento, está na planilha — exporte em Excel pelo mesmo botão.</p>
+      </section>`;
+  }
+  return `
+    <section class="block">
+      ${rp_sectionHead('Atendimentos', `${rp_int(list.length)} ${list.length === 1 ? 'atendimento concluído' : 'atendimentos concluídos'} no período`)}
+      <table class="dense">
+        <thead><tr>
+          <th>Data</th><th>Cliente</th><th>Serviço</th><th>Canal</th><th class="r">Valor</th>
+        </tr></thead>
+        <tbody>
+          ${list.map(a => `
+            <tr>
+              <td class="muted nowrap">${rp_dateBR(a.date)} ${rp_esc(a.time)}</td>
+              <td>${rp_esc(a.client)}</td>
+              <td>${rp_esc(a.service)}${a.price_adjusted ? ' <em>· preço ajustado</em>' : ''}</td>
+              <td class="muted">${RP_CHANNEL[a.channel] || ''}</td>
+              <td class="r nowrap">${rp_money(a.net)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </section>`;
+}
+
+function buildReportHtml(r) {
+  const s = r.summary;
+  const loss = Number(s.profit) < 0;
+  const generated = new Date(r.generated_at);
+  const generatedLabel = `${String(generated.getDate()).padStart(2, '0')}/${String(generated.getMonth() + 1).padStart(2, '0')}/${generated.getFullYear()} às ${String(generated.getHours()).padStart(2, '0')}:${String(generated.getMinutes()).padStart(2, '0')}`;
+  const barMax = Math.max(Number(s.revenue), Number(s.costs_total), 1);
+
+  return `<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=block" rel="stylesheet">
+<style>
+  @page { size: A4; margin: 34px 40px 40px; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    font-family: Inter, -apple-system, "Helvetica Neue", Roboto, Arial, sans-serif;
+    color: ${RC.ink}; font-size: 10.5px; line-height: 1.45; background: #fff;
+  }
+  .display { font-family: "Space Grotesk", -apple-system, "Helvetica Neue", Roboto, sans-serif; }
+  .mono, .eyebrow, .rank { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; }
+
+  /* Abertura: período como manchete, lucro como resposta. */
+  .top { display: flex; justify-content: space-between; align-items: baseline; }
+  .wordmark { font-family: "Space Grotesk", sans-serif; font-weight: 700; font-size: 15px; letter-spacing: -0.3px; }
+  .wordmark b { color: ${RC.coral500}; }
+  .eyebrow { font-size: 8.5px; letter-spacing: 2px; text-transform: uppercase; color: ${RC.coral500}; }
+  h1 { font-family: "Space Grotesk", sans-serif; font-weight: 700; font-size: 40px; letter-spacing: -1.2px; line-height: 1.05; margin-top: 26px; }
+  .who { color: ${RC.graphite}; font-size: 11.5px; margin-top: 6px; }
+
+  .hero { margin-top: 30px; padding: 22px 24px; border-radius: 18px; background: ${RC.sand}; }
+  .hero-label { color: ${RC.graphite}; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.2px; }
+  .hero-value { font-family: "Space Grotesk", sans-serif; font-weight: 700; font-size: 44px; letter-spacing: -1.5px; line-height: 1.1; margin-top: 4px; color: ${loss ? RC.rose500 : RC.ink}; }
+  .hero-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; color: ${RC.graphite}; }
+  .pill { font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 99px; background: ${loss ? '#f3dcdc' : RC.coral50}; color: ${loss ? RC.rose500 : RC.coral700}; }
+
+  .vs { margin-top: 18px; }
+  .vs-row { display: grid; grid-template-columns: 82px 1fr 100px; align-items: center; gap: 10px; margin-top: 7px; }
+  .vs-row span:first-child { color: ${RC.graphite}; }
+  .vs-row span:last-child { text-align: right; font-weight: 600; }
+
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
+  .kpi { border: 1px solid ${RC.stone}; border-radius: 14px; padding: 12px 14px; }
+  .kpi-label { color: ${RC.graphite}; font-size: 9px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+  .kpi-value { font-family: "Space Grotesk", sans-serif; font-weight: 700; font-size: 17px; letter-spacing: -0.4px; margin-top: 4px; }
+
+  /* Seções */
+  .block { margin-top: 34px; }
+  .sec-head { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1.5px solid ${RC.ink}; padding-bottom: 8px; margin-bottom: 4px; break-after: avoid; page-break-after: avoid; }
+  h2 { font-family: "Space Grotesk", sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.5px; }
+  h3 { font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: ${RC.graphite}; margin: 18px 0 2px; }
+  .caption { color: ${RC.graphite}; font-size: 10.5px; margin-top: 1px; }
+  .sec-total { font-family: "Space Grotesk", sans-serif; font-weight: 700; font-size: 18px; letter-spacing: -0.3px; }
+  .empty { color: ${RC.graphite}; padding: 14px 0; }
+
+  .bar { height: 5px; border-radius: 3px; background: ${RC.sand}; margin-top: 6px; overflow: hidden; }
+  .bar i { display: block; height: 100%; border-radius: 3px; }
+
+  /* Ranking de serviços */
+  .rank-row { display: grid; grid-template-columns: 30px 1fr 110px; gap: 10px; align-items: start; padding: 11px 0; border-bottom: 1px solid ${RC.stone}; break-inside: avoid; page-break-inside: avoid; }
+  .rank { color: ${RC.ash}; font-size: 12px; padding-top: 1px; }
+  .rank-name { font-weight: 600; font-size: 12px; }
+  .rank-meta { color: ${RC.graphite}; font-size: 9.5px; margin-top: 1px; }
+  .rank-amt { text-align: right; font-weight: 600; font-size: 12px; }
+  .rank-amt small, .cost-amt small { display: block; color: ${RC.ash}; font-weight: 500; font-size: 9.5px; }
+
+  .ledger { margin-top: 10px; }
+  .ledger-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid ${RC.stone}; }
+  .ledger-row em { color: ${RC.ash}; font-style: normal; margin-left: 6px; }
+  .ledger-row.neg span:last-child { color: ${RC.rose500}; }
+  .ledger-row.total { font-weight: 600; border-bottom: 0; border-top: 1.5px solid ${RC.ink}; }
+
+  /* Custos */
+  .cost-group { margin-top: 14px; break-inside: avoid; page-break-inside: avoid; }
+  .cost-group-head { display: flex; justify-content: space-between; font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: ${RC.graphite}; font-weight: 600; padding-bottom: 4px; }
+  .cost-row { display: grid; grid-template-columns: 1fr 110px; gap: 10px; padding: 9px 0; border-bottom: 1px solid ${RC.stone}; }
+  .cost-name { font-weight: 500; }
+  .cost-amt { text-align: right; font-weight: 600; }
+
+  .note { margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: ${RC.sand}; color: ${RC.graphite}; font-size: 9.5px; break-inside: avoid; }
+  .note p + p { margin-top: 4px; }
+
+  /* Tabelas */
+  table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  th { text-align: left; font-size: 8.5px; text-transform: uppercase; letter-spacing: 1px; color: ${RC.graphite}; font-weight: 600; padding: 8px 6px 6px; border-bottom: 1px solid ${RC.stone}; }
+  td { padding: 7px 6px; border-bottom: 1px solid ${RC.stone}; vertical-align: top; }
+  tr { break-inside: avoid; page-break-inside: avoid; }
+  thead { display: table-header-group; }
+  th:first-child, td:first-child { padding-left: 0; }
+  th:last-child, td:last-child { padding-right: 0; }
+  .r { text-align: right; }
+  .muted { color: ${RC.graphite}; }
+  .neg { color: ${RC.rose500}; }
+  .nowrap { white-space: nowrap; }
+  td em { color: ${RC.ash}; font-style: normal; }
+  table.dense td { padding-top: 5px; padding-bottom: 5px; font-size: 9.5px; }
+
+  footer { margin-top: 34px; padding-top: 10px; border-top: 1px solid ${RC.stone}; color: ${RC.ash}; font-size: 9px; display: flex; justify-content: space-between; }
+</style></head>
+<body>
+  <div class="top">
+    <div class="wordmark">loov<b>.</b></div>
+    <div class="eyebrow">Relatório financeiro</div>
+  </div>
+
+  <h1>${rp_esc(r.period_label)}</h1>
+  <div class="who">${rp_esc((r.car_wash && r.car_wash.name))}${(r.car_wash && r.car_wash.address) ? ` · ${rp_esc(r.car_wash.address)}` : ''}</div>
+
+  <div class="hero">
+    <div class="hero-label">${loss ? 'Prejuízo no período' : 'Lucro líquido'}</div>
+    <div class="hero-value">${rp_money(s.profit)}</div>
+    <div class="hero-row">
+      ${s.margin !== null && s.margin !== undefined ? `<span class="pill">Margem ${rp_pct(s.margin)}</span>` : ''}
+      <span>Faturamento menos custos do período</span>
+    </div>
+    <div class="vs">
+      <div class="vs-row"><span>Faturamento</span>${rp_bar(s.revenue, barMax, RC.coral500)}<span>${rp_money(s.revenue)}</span></div>
+      <div class="vs-row"><span>Custos</span>${rp_bar(s.costs_total, barMax, RC.graphite)}<span>${rp_money(s.costs_total)}</span></div>
+    </div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="kpi-label">Atendimentos</div><div class="kpi-value">${rp_int(s.attended_count)}</div></div>
+    <div class="kpi"><div class="kpi-label">Ticket médio</div><div class="kpi-value">${rp_money(s.avg_ticket)}</div></div>
+    <div class="kpi"><div class="kpi-label">Custos fixos</div><div class="kpi-value">${rp_money(s.fixed_cost)}</div></div>
+    <div class="kpi"><div class="kpi-label">Em aberto</div><div class="kpi-value">${rp_money(s.open_revenue)}</div></div>
+  </div>
+
+  <section class="block">${rp_revenueSection(r)}</section>
+  <section class="block">${rp_costsSection(r)}</section>
+  ${rp_monthlySection(r)}
+  ${rp_appointmentsSection(r)}
+
+  <footer>
+    <span>${rp_esc((r.car_wash && r.car_wash.name))} · ${rp_dateBR(r.start_date)} a ${rp_dateBR(r.end_date)}</span>
+    <span>Gerado em ${generatedLabel} pela Loov</span>
+  </footer>
+</body></html>`;
+}
+
