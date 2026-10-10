@@ -194,20 +194,16 @@ class DisponivelController < ApplicationController
 
   # POST /disponivel
   #
-  # Pelo site, a reserva exige cartão e pré-autoriza 35% do serviço (o
+  # Site e app: a reserva exige cartão e pré-autoriza 35% do serviço (o
   # PREPAYMENT_PCT) no momento do pedido: o valor fica reservado no cartão,
   # vira cobrança quando o dono aceita (Appointment#accept!) e é liberado se
   # ele recusa, se o tempo de aceite acaba ou se o cliente desiste. Os 65%
   # restantes são pagos no lava-rápido.
-  #
-  # O app ainda não tem tela de cartão, então pedido vindo dele (login por
-  # JWT, sem sessão) segue sem cobrança até ganhar esse fluxo.
   def create
     log_tag = "[Disponivel#create]"
     Rails.logger.info("#{log_tag} IN user_id=#{current_user&.id} params=#{params.permit(:car_wash_id, :service_id, :slot).to_h.inspect}")
 
-    charge_upfront = !app_request_with_valid_jwt?
-    if charge_upfront && !current_user.has_payment_method?
+    unless current_user.has_payment_method?
       render json: {
         error: "Cadastre um cartão para reservar no Last Minute. Você paga #{(Appointment::PREPAYMENT_PCT * 100).round}% agora pra garantir a vaga.",
         code:  "card_required"
@@ -269,30 +265,31 @@ class DisponivelController < ApplicationController
       return
     end
 
-    if charge_upfront
-      outcome, detail = authorize_prepayment!(appointment, log_tag)
-      if outcome == :declined
-        render json: { error: detail, code: "card_declined" }, status: :payment_required
-        return
+    outcome, detail = authorize_prepayment!(appointment, log_tag)
+    if outcome == :declined
+      render json: { error: detail, code: "card_declined" }, status: :payment_required
+      return
+    end
+    if outcome == :action
+      # Banco pediu 3DS: a vaga fica segura por PAYMENT_AUTH_TTL enquanto o
+      # cliente confirma (navegador no site,
+      # tela do Stripe no app). O dono só fica sabendo depois.
+      Rails.logger.info("#{log_tag} requires_action appointment_id=#{appointment.id}")
+      begin
+        ExpireDisponivelAcceptanceJob.set(wait: Appointment::PAYMENT_AUTH_TTL).perform_later(appointment.id)
+      rescue => job_err
+        Rails.logger.warn("#{log_tag} falha ao enfileirar expiração do 3DS: #{job_err.message}")
       end
-      if outcome == :action
-        # Banco pediu 3DS: a vaga fica segura por PAYMENT_AUTH_TTL enquanto o
-        # cliente confirma no navegador. O dono só fica sabendo depois.
-        Rails.logger.info("#{log_tag} requires_action appointment_id=#{appointment.id}")
-        begin
-          ExpireDisponivelAcceptanceJob.set(wait: Appointment::PAYMENT_AUTH_TTL).perform_later(appointment.id)
-        rescue => job_err
-          Rails.logger.warn("#{log_tag} falha ao enfileirar expiração do 3DS: #{job_err.message}")
-        end
-        render json: {
-          ok:              true,
-          requires_action: true,
-          appointment_id:  appointment.id,
-          client_secret:   detail,
-          prepayment:      appointment.prepayment_amount.to_f
-        }
-        return
-      end
+      render json: {
+        ok:              true,
+        requires_action: true,
+        appointment_id:  appointment.id,
+        client_secret:   detail,
+        # O app inicializa o Stripe com esta chave pra abrir a confirmação.
+        publishable_key: ENV["STRIPE_PUBLISHABLE_KEY"].presence || Rails.application.credentials.dig(:stripe, :publishable_key),
+        prepayment:      appointment.prepayment_amount.to_f
+      }
+      return
     end
 
     Rails.logger.info("#{log_tag} OK appointment_id=#{appointment.id}")
@@ -477,18 +474,6 @@ class DisponivelController < ApplicationController
       prepayment:     appointment.prepayment_amount.to_f,
       payment_status: appointment.stripe_payment_intent_id.present? ? "authorized" : "pending"
     }
-  end
-
-  # O app manda o JWT do próprio usuário no Authorization. Só a presença do
-  # header não basta: o login do app também cria sessão, e um cliente do site
-  # pularia a cobrança mandando um header qualquer. Vale como app só com um
-  # token válido, e do mesmo usuário logado.
-  def app_request_with_valid_jwt?
-    token = request.headers["Authorization"].to_s[/\ABearer\s+(.+)\z/, 1]
-    return false if token.blank?
-    Warden::JWTAuth::UserDecoder.new.call(token, :user, nil) == current_user
-  rescue StandardError
-    false
   end
 
   def release_prepayment(appointment)

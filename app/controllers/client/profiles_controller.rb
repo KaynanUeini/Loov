@@ -175,12 +175,14 @@ module Client
         has_card:      current_user.stripe_payment_method_id.present?,
         card_display:  current_user.card_display,
         card_brand:    current_user.stripe_card_brand,
-        card_last4:    current_user.stripe_card_last4
+        card_last4:    current_user.stripe_card_last4,
+        card_holder:   current_user.stripe_card_holder
       }
     end
 
+    # Mesma fonte que o site usa (ENV); credentials fica de reserva.
     def stripe_publishable_key
-      Rails.application.credentials.dig(:stripe, :publishable_key)
+      ENV["STRIPE_PUBLISHABLE_KEY"].presence || Rails.application.credentials.dig(:stripe, :publishable_key)
     end
   end
 end
