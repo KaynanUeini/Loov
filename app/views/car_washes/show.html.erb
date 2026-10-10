@@ -46,7 +46,6 @@
      Sem foto ainda: fundo ink com a inicial gigante translúcida (o "cover
      desenhado" do app). Botões de vidro por cima, como no app. */
   .cw-hero { position: relative; height: 260px; background: var(--ink); overflow: hidden; }
-  .cw-hero-mono { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 220px; line-height: 1; letter-spacing: -4px; color: rgba(250,250,246,.07); user-select: none; }
   .cw-hero-bar { position: relative; display: flex; justify-content: space-between; padding: 16px; }
   .cw-glass { width: 42px; height: 42px; border-radius: 50%; border: 0; background: rgba(255,255,255,.92); color: var(--ink) !important; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(0,0,0,.18); transition: transform .15s, background .15s; }
   .cw-glass:hover { transform: scale(1.06); }
@@ -255,7 +254,6 @@
   /* ── Telas grandes ─────────────────────────────────────────────────── */
   @media (min-width: 720px) {
     .cw-hero { height: 300px; }
-    .cw-hero-mono { font-size: 300px; }
     .cw-hero-bar, .cw-stats-wrap, .cw-tabs, .cw-pane { padding-left: 32px; padding-right: 32px; }
     .cw-stats { padding: 24px 28px; }
     .cw-title { font-size: 30px; letter-spacing: -0.8px; }
@@ -300,7 +298,6 @@
   <%# ── Detalhe ─────────────────────────────────────────────────── %>
   <section class="cw-view is-on" id="cw-detail">
     <div class="cw-hero">
-      <div class="cw-hero-mono" id="cw-mono" aria-hidden="true"></div>
       <div class="cw-hero-bar">
         <a class="cw-glass" id="cw-back" href="/<%= coords_qs %>" aria-label="Voltar"><i data-feather="arrow-left" style="width:18px;height:18px"></i></a>
         <% if is_client %>
@@ -430,7 +427,6 @@
 
   // ── Detalhe ─────────────────────────────────────────────────────────────
   function renderStats() {
-    $('cw-mono').textContent = (String(CW.name || '?').trim()[0] || '?').toUpperCase();
     var open = !!CW.open_now, n = Number(CW.reviews_count) || 0;
     $('cw-stats').innerHTML =
       '<div class="cw-stats-top">' +
