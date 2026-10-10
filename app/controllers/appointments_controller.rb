@@ -1,6 +1,12 @@
 class AppointmentsController < ApplicationController
   before_action :authenticate_user!
-  skip_before_action :verify_authenticity_token, only: [:create]
+  # O app manda o login no cabeçalho Authorization, sem o token CSRF do
+  # formulário. O cancelamento fica livre só nesse caso: um site de terceiros
+  # não consegue enviar esse cabeçalho, então no navegador a proteção segue.
+  skip_before_action :verify_authenticity_token, if: -> {
+    action_name == 'create' ||
+      (action_name == 'cancel' && request.authorization.to_s.start_with?('Bearer '))
+  }
   before_action :set_appointment, only: [:show, :cancel, :help]
   before_action :set_car_wash, only: [:new, :create]
   # Cleanup lazy de Disponíveis vencidos a cada acesso. Throttled no model
