@@ -14,11 +14,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&family=Montserrat:wght@400;500;700&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
-  <%# CSS já montado no deploy (assets:precompile no Dockerfile), servido como
-      arquivo com versão no nome. Antes o endereço sem versão fazia o servidor
-      montar o CSS na hora do pedido — com a instância recém-acordada isso
-      passava de 30 s e o site caía com "Error compiling CSS asset". %>
-  <%= stylesheet_link_tag "tailwind", "application" %>
+  <link rel="stylesheet" href="/assets/tailwind.css">
+  <link rel="stylesheet" href="/assets/application.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
   <script src="https://js.stripe.com/v3/" nonce="<%= csp_nonce %>"></script>
