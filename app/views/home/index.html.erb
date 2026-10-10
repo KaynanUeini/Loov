@@ -1148,7 +1148,6 @@
   </main>
 </div>
 
-<%= render 'owner/disponivel_acceptance/widget' %>
 
 <script>
 (function() {
@@ -1818,9 +1817,10 @@
 
   // ── Hooks ─────────────────────────────────────────────────────────────
   document.getElementById('od-walkin-btn').addEventListener('click', openWalkInSheet);
+  // O sino abre o pedido do Last Minute pendente (alerta global do layout).
+  // Antes mandava pra /owner/disponivel_acceptance, que é só JSON.
   document.getElementById('od-bell-btn').addEventListener('click', () => {
-    // Bolinha no sino indica disponíveis pendentes — manda pro endpoint web
-    window.location.href = '/owner/disponivel_acceptance';
+    if (!(window.LoovLM && window.LoovLM.open())) showToast('Nenhum pedido do Last Minute aguardando agora.', 'info');
   });
 
   // ── Live tick — atualiza ETAs e progress sem refetch ─────────────────

@@ -636,6 +636,11 @@
   <main>
     <%= yield %>
   </main>
+  <%# Pedido do Last Minute tem 3 min: o alerta acompanha o dono e o
+      atendente em qualquer página, não só no painel. %>
+  <% if user_signed_in? && (current_user.owner? || current_user.attendant?) && current_car_wash %>
+    <%= render 'owner/disponivel_acceptance/widget' %>
+  <% end %>
   <script nonce="<%= csp_nonce %>">
     document.addEventListener('DOMContentLoaded', () => {
 

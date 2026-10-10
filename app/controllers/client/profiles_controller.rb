@@ -176,7 +176,9 @@ module Client
         card_display:  current_user.card_display,
         card_brand:    current_user.stripe_card_brand,
         card_last4:    current_user.stripe_card_last4,
-        card_holder:   current_user.stripe_card_holder
+        card_holder:   current_user.stripe_card_holder,
+        card_exp_month: current_user.stripe_card_exp_month,
+        card_exp_year:  current_user.stripe_card_exp_year
       }
     end
 

@@ -1,234 +1,368 @@
-<%# Widget de aceite de agendamentos Disponíveis. Aparece automaticamente quando chega um pedido. %>
+<%#
+  Alerta de pedido do Last Minute — em TODAS as páginas do dono e do
+  atendente (renderizado pelo layout), não só no painel.
 
-<div id="disp-widget-wrap" style="display:none;position:fixed;inset:0;z-index:600;pointer-events:none;">
+  O pedido vive 3 minutos. Antes este alerta só existia no dashboard: o dono
+  que estava no Financeiro ou no Gerenciar não via nada, o tempo acabava e o
+  cliente recebia uma recusa que ninguém decidiu. Agora:
 
-  <!-- Overlay escurecido -->
-  <div id="disp-widget-overlay"
-       style="position:absolute;inset:0;background:rgba(40, 35, 28,0.75);backdrop-filter:blur(6px);pointer-events:all;opacity:0;transition:opacity .3s;"></div>
+  - Toma a tela, como o pedido de corrida do motorista no Uber: um pedido com
+    prazo não pode ser um sino discreto num canto.
+  - Anel de contagem regressiva (o comprimento é o tempo, coral → rosa nos
+    últimos 30s), mesmo vocabulário do painel e do app.
+  - Som curto ao chegar e a cada 15s enquanto ninguém decide.
+  - Título da aba piscando e notificação do sistema quando a aba está em
+    segundo plano — o dono pode estar em outra aba ou outro programa.
 
-  <!-- Card central -->
-  <div id="disp-widget-card"
-       style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(0.92);pointer-events:all;width:calc(100% - 2rem);max-width:420px;opacity:0;transition:all .35s cubic-bezier(.16,1,.3,1);">
+  Navegador só toca som e mostra notificação depois de um clique na página e
+  de uma permissão; a pílula "Ativar alertas" pede as duas coisas de uma vez.
+%>
+<div id="lm-alert" hidden>
+  <div class="lma-ov"></div>
+  <div class="lma-card" role="alertdialog" aria-modal="true" aria-labelledby="lma-svc" aria-describedby="lma-when">
+    <div class="lma-head">
+      <span class="lma-eyebrow"><i class="lma-dot"></i><span id="lma-eyebrow-txt">Last Minute · novo pedido</span></span>
+      <span class="lma-queue" id="lma-queue" hidden></span>
+    </div>
 
-    <style>
-      .dw2 { background:#fafaf6; border-radius:20px; overflow:hidden; box-shadow:0 0 0 1px rgba(221, 120, 82,0.25), 0 32px 80px rgba(40, 35, 28,0.98); }
+    <div class="lma-ring-wrap">
+      <svg class="lma-ring" viewBox="0 0 120 120" aria-hidden="true">
+        <circle cx="60" cy="60" r="52" class="lma-ring-bg"/>
+        <circle cx="60" cy="60" r="52" class="lma-ring-fg" id="lma-ring"/>
+      </svg>
+      <div class="lma-count"><b id="lma-count">3:00</b><span>pra decidir</span></div>
+    </div>
 
-      /* Barra de progresso no topo */
-      .dw2-progress { height:4px; background:rgba(40, 35, 28,0.05); position:relative; overflow:hidden; }
-      .dw2-progress-fill { position:absolute; left:0; top:0; bottom:0; background:linear-gradient(to right,#dd7852,#6aaa00); transition:width .9s linear; }
-      .dw2-progress-fill.urgent { background:linear-gradient(to right,#f87171,#dc2626); }
-
-      /* Header */
-      .dw2-header { padding:.875rem 1.25rem .75rem; border-bottom:1px solid #fafaf6; display:flex; align-items:center; justify-content:space-between; }
-      .dw2-badge { display:inline-flex; align-items:center; gap:.35rem; background:rgba(221, 120, 82,.08); border:1px solid rgba(221, 120, 82,.2); border-radius:100px; padding:.2rem .75rem; font-size:.62rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#dd7852; font-family:'Inter',sans-serif; }
-      .dw2-badge-dot { width:7px; height:7px; border-radius:50%; background:#dd7852; animation:dw2Pulse 1s ease-in-out infinite; }
-      @keyframes dw2Pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.7)} }
-      .dw2-timer { font-family:'Space Grotesk',sans-serif; font-size:2rem; line-height:1; letter-spacing:.04em; color:#dd7852; }
-      .dw2-timer.urgent { color:#f87171; animation:dw2Shake .4s ease infinite; }
-      @keyframes dw2Shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-2px)} 75%{transform:translateX(2px)} }
-
-      /* Body */
-      .dw2-body { padding:1.125rem 1.25rem .875rem; }
-      .dw2-title { font-family:'Space Grotesk',sans-serif; font-size:1.25rem; color:#28231c; letter-spacing:.03em; margin-bottom:.25rem; }
-      .dw2-client { font-size:.875rem; font-weight:600; color:#28231c; margin-bottom:.2rem; }
-      .dw2-details { font-size:.78rem; color:#ada699; }
-
-      .dw2-price-row { display:flex; align-items:flex-end; justify-content:space-between; margin-top:.875rem; padding:.75rem 1rem; background:rgba(221, 120, 82,.04); border:1px solid rgba(221, 120, 82,.1); border-radius:12px; }
-      .dw2-price-label { font-size:.62rem; color:rgba(221, 120, 82,.4); font-family:'Inter',sans-serif; letter-spacing:.1em; text-transform:uppercase; }
-      .dw2-price-val { font-family:'Space Grotesk',sans-serif; font-size:1.875rem; color:#dd7852; letter-spacing:.02em; line-height:1; }
-      .dw2-prepay { font-size:.68rem; color:#575148; margin-top:.1rem; }
-
-      /* Actions */
-      .dw2-actions { display:grid; grid-template-columns:1fr 1fr; gap:.5rem; padding:.875rem 1.25rem 1.25rem; }
-      .dw2-btn { border:none; border-radius:100px; padding:.75rem; font-family:'Inter',sans-serif; font-size:.875rem; font-weight:700; cursor:pointer; transition:all .18s; display:flex; align-items:center; justify-content:center; gap:.4rem; }
-      .dw2-accept { background:#dd7852; color:#fafaf6; }
-      .dw2-accept:hover:not(:disabled) { background:#9c4930; transform:translateY(-1px); }
-      .dw2-accept:disabled { opacity:.5; cursor:not-allowed; transform:none; }
-      .dw2-reject { background:rgba(40, 35, 28,.04); border:1px solid #e0dbd0; color:#ada699; }
-      .dw2-reject:hover:not(:disabled) { border-color:rgba(248,113,113,.3); color:#f87171; background:rgba(248,113,113,.06); }
-      .dw2-reject:disabled { opacity:.5; cursor:not-allowed; }
-
-      /* Toast de resultado */
-      .dw2-result { display:none; padding:1rem 1.25rem 1.25rem; text-align:center; }
-      .dw2-result-icon { font-size:1.75rem; margin-bottom:.5rem; }
-      .dw2-result-text { font-size:.875rem; font-weight:600; }
-      .dw2-result.accepted .dw2-result-icon { color:#dd7852; }
-      .dw2-result.accepted .dw2-result-text { color:#dd7852; }
-      .dw2-result.rejected .dw2-result-icon { color:#f87171; }
-      .dw2-result.rejected .dw2-result-text { color:#f87171; }
-
-      .dw2-spinner { width:16px; height:16px; border:2px solid rgba(40, 35, 28,.3); border-top-color:#fafaf6; border-radius:50%; animation:dw2Spin .7s linear infinite; display:inline-block; }
-      @keyframes dw2Spin { to{transform:rotate(360deg)} }
-    </style>
-
-    <div class="dw2" id="dw2-card">
-      <div class="dw2-progress"><div class="dw2-progress-fill" id="dw2-fill"></div></div>
-      <div class="dw2-header">
-        <div class="dw2-badge"><div class="dw2-badge-dot"></div>Disponível · Novo pedido</div>
-        <div class="dw2-timer" id="dw2-timer">3:00</div>
-      </div>
-      <div class="dw2-body">
-        <div class="dw2-title">Aceitar agendamento?</div>
-        <div class="dw2-client" id="dw2-client">—</div>
-        <div class="dw2-details" id="dw2-details">—</div>
-        <div class="dw2-price-row">
-          <div>
-            <div class="dw2-price-label">Valor do serviço</div>
-            <div class="dw2-price-val" id="dw2-price">R$0</div>
-          </div>
-          <div style="text-align:right;">
-            <div class="dw2-price-label">Pré-pago</div>
-            <div class="dw2-prepay" id="dw2-prepay">—</div>
-          </div>
+    <div class="lma-main">
+      <h3 class="lma-svc" id="lma-svc">—</h3>
+      <div class="lma-when" id="lma-when">—</div>
+      <div class="lma-client">
+        <span class="lma-av" id="lma-av">?</span>
+        <div style="min-width:0">
+          <div class="lma-name" id="lma-name">—</div>
+          <div class="lma-car" id="lma-car"></div>
         </div>
-      </div>
-      <div class="dw2-actions" id="dw2-actions">
-        <button class="dw2-btn dw2-accept" id="dw2-accept"><i class="fas fa-check"></i> Aceitar</button>
-        <button class="dw2-btn dw2-reject" id="dw2-reject"><i class="fas fa-times"></i> Recusar</button>
-      </div>
-      <div class="dw2-result" id="dw2-result">
-        <div class="dw2-result-icon" id="dw2-result-icon"></div>
-        <div class="dw2-result-text" id="dw2-result-text"></div>
       </div>
     </div>
 
+    <div class="lma-money">
+      <div class="lma-row"><span>Valor do serviço</span><b id="lma-total">—</b></div>
+      <div class="lma-row"><span>Garantido no cartão do cliente <em>35%</em></span><b id="lma-pre">—</b></div>
+      <div class="lma-row strong"><span>Você recebe na chegada</span><b id="lma-rest">—</b></div>
+    </div>
+
+    <div class="lma-actions" id="lma-actions">
+      <button type="button" class="lma-btn lma-no" id="lma-no">Recusar</button>
+      <button type="button" class="lma-btn lma-yes" id="lma-yes">Aceitar pedido</button>
+    </div>
+    <div class="lma-result" id="lma-result" hidden></div>
   </div>
 </div>
 
-<script>
-(function() {
-  const CSRF   = document.querySelector('meta[name="csrf-token"]')?.content || '';
-  const WRAP   = document.getElementById('disp-widget-wrap');
-  const OVERLAY = document.getElementById('disp-widget-overlay');
-  const CARD   = document.getElementById('disp-widget-card');
+<button type="button" class="lma-enable" id="lma-enable" hidden>
+  <span class="lma-enable-ic">🔔</span>
+  <span><b>Ativar alertas do Last Minute</b><small>Som e aviso do navegador quando chegar pedido</small></span>
+  <span class="lma-enable-x" id="lma-enable-x" aria-label="Agora não">×</span>
+</button>
 
-  let currentId    = null;
-  let totalSeconds = 180;
-  let secondsLeft  = 180;
-  let countTimer   = null;
-  let pollTimer    = null;
-  let acting       = false;
-
-  // ── POLLING ──────────────────────────────────────────────────────────────
-  function startPolling() {
-    fetch('/owner/disponivel_acceptance', { headers: { Accept: 'application/json' } })
-      .then(r => r.json())
-      .then(data => {
-        if (!data.length) { if (currentId) hide(); return; }
-        const appt = data[0];
-        if (appt.id !== currentId) { currentId = appt.id; show(appt); }
-      })
-      .catch(() => {});
-    pollTimer = setTimeout(startPolling, 3000);
+<style>
+  #lm-alert[hidden], .lma-enable[hidden], #lm-alert [hidden] { display: none !important; }
+  #lm-alert { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .lma-ov { position: absolute; inset: 0; background: rgba(25,20,15,.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); animation: lmaFade .25s ease both; }
+  .lma-card {
+    position: relative; width: 100%; max-width: 420px; max-height: calc(100vh - 32px); overflow-y: auto;
+    background: var(--paper, #fefefd); border-radius: 28px; padding: 22px 22px 20px;
+    box-shadow: 0 30px 80px rgba(25,20,15,.45); animation: lmaIn .38s cubic-bezier(.16,1,.3,1) both;
+    font-family: 'Inter', sans-serif; color: var(--ink, #28231c);
   }
+  @keyframes lmaFade { from { opacity: 0; } }
+  @keyframes lmaIn { from { opacity: 0; transform: translateY(24px) scale(.96); } }
+  .lma-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .lma-eyebrow { display: inline-flex; align-items: center; gap: 8px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--coral-500, #dd7852); }
+  .lma-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: lmaPulse 1s ease-in-out infinite; }
+  @keyframes lmaPulse { 50% { opacity: .3; transform: scale(.7); } }
+  .lma-queue { font-size: 11.5px; font-weight: 600; color: var(--graphite, #575148); background: var(--sand, #f1eee6); border-radius: 999px; padding: 4px 10px; }
 
-  // ── SHOW ─────────────────────────────────────────────────────────────────
-  function show(appt) {
-    acting = false;
-    secondsLeft  = appt.seconds_left || 180;
-    totalSeconds = 180;
+  .lma-ring-wrap { position: relative; width: 132px; height: 132px; margin: 14px auto 6px; }
+  .lma-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .lma-ring-bg { fill: none; stroke: var(--sand, #f1eee6); stroke-width: 8; }
+  .lma-ring-fg { fill: none; stroke: var(--coral-500, #dd7852); stroke-width: 8; stroke-linecap: round; stroke-dasharray: 326.73; transition: stroke-dashoffset .95s linear, stroke .3s; }
+  #lm-alert.urgent .lma-ring-fg { stroke: var(--rose-500, #d05a5a); }
+  .lma-count { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .lma-count b { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 32px; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
+  .lma-count span { font-size: 11px; color: var(--ash, #ada699); margin-top: 2px; }
+  #lm-alert.urgent .lma-count b { color: var(--rose-500, #d05a5a); }
 
-    document.getElementById('dw2-client').textContent  = appt.client_name || '—';
-    document.getElementById('dw2-details').textContent = appt.service_name + ' · ' + appt.scheduled_at;
-    document.getElementById('dw2-price').textContent   = 'R$' + Number(appt.service_price || 0).toFixed(0);
-    document.getElementById('dw2-prepay').textContent  = 'R$' + Number(appt.prepayment || 0).toFixed(2) + ' já autorizado';
-    document.getElementById('dw2-actions').style.display = 'grid';
-    document.getElementById('dw2-result').style.display  = 'none';
-    document.getElementById('dw2-accept').disabled = false;
-    document.getElementById('dw2-reject').disabled = false;
-    document.getElementById('dw2-accept').innerHTML = '<i class="fas fa-check"></i> Aceitar';
-    document.getElementById('dw2-reject').innerHTML = '<i class="fas fa-times"></i> Recusar';
+  .lma-main { text-align: center; }
+  .lma-svc { margin: 6px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 24px !important; letter-spacing: -.6px; color: var(--ink, #28231c) !important; line-height: 1.15; }
+  .lma-when { color: var(--graphite, #575148); font-size: 13.5px; margin-top: 4px; }
+  .lma-client { display: flex; align-items: center; gap: 10px; text-align: left; margin-top: 16px; padding: 12px 14px; background: var(--cream, #fafaf6); border: 1px solid var(--stone, #e0dbd0); border-radius: 16px; }
+  .lma-av { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--coral-50, #fbeae3); color: var(--coral-500, #dd7852); font-weight: 700; }
+  .lma-name { font-weight: 600; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lma-car { display: flex; align-items: center; gap: 8px; margin-top: 3px; color: var(--graphite, #575148); font-size: 12.5px; flex-wrap: wrap; }
+  .lma-plate { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; letter-spacing: 1.5px; background: var(--ink, #28231c); color: var(--cream, #fafaf6); border-radius: 6px; padding: 2px 7px; }
 
-    updateTimer();
+  .lma-money { margin-top: 12px; border: 1px solid var(--stone, #e0dbd0); border-radius: 16px; overflow: hidden; }
+  .lma-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 14px; font-size: 13.5px; color: var(--graphite, #575148); }
+  .lma-row + .lma-row { border-top: 1px solid var(--stone, #e0dbd0); }
+  .lma-row em { font-style: normal; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ash, #ada699); margin-left: 4px; }
+  .lma-row b { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; color: var(--ink, #28231c); font-variant-numeric: tabular-nums; }
+  .lma-row.strong span { color: var(--ink, #28231c); font-weight: 600; }
+  .lma-row.strong b { color: var(--coral-500, #dd7852); font-size: 17px; }
 
-    WRAP.style.display = 'block';
-    requestAnimationFrame(() => {
-      OVERLAY.style.opacity = '1';
-      CARD.style.opacity    = '1';
-      CARD.style.transform  = 'translate(-50%,-50%) scale(1)';
+  .lma-actions { display: grid; grid-template-columns: 1fr 1.6fr; gap: 10px; margin-top: 16px; }
+  .lma-btn { border-radius: 999px; padding: 15px 14px; font-size: 14.5px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background .15s, border-color .15s, opacity .15s, transform .15s; }
+  .lma-yes { background: var(--coral-500, #dd7852) !important; color: var(--cream, #fafaf6) !important; border: none !important; box-shadow: 0 6px 16px rgba(221,120,82,.3); }
+  .lma-yes:hover:not(:disabled) { background: var(--coral-700, #9c4930) !important; transform: translateY(-1px); }
+  .lma-no { background: transparent; color: var(--graphite, #575148); border: 1px solid var(--stone, #e0dbd0); }
+  .lma-no:hover:not(:disabled) { border-color: var(--rose-500, #d05a5a); color: var(--rose-500, #d05a5a); }
+  .lma-btn:disabled { opacity: .55; cursor: wait; transform: none; }
+  .lma-result { margin-top: 16px; padding: 14px; border-radius: 16px; text-align: center; font-weight: 600; font-size: 14px; }
+  .lma-result.ok  { background: #e4f4ed; color: #2d6b4f; }
+  .lma-result.no  { background: var(--sand, #f1eee6); color: var(--graphite, #575148); }
+  .lma-result.err { background: #fdecec; color: var(--rose-500, #d05a5a); }
+
+  .lma-enable {
+    position: fixed; left: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 1500;
+    display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 32px);
+    padding: 12px 14px 12px 12px; border-radius: 18px; cursor: pointer; text-align: left; font-family: 'Inter', sans-serif;
+    background: var(--ink, #28231c); color: var(--cream, #fafaf6); border: none;
+    box-shadow: 0 14px 34px rgba(25,20,15,.3); animation: lmaIn .4s cubic-bezier(.16,1,.3,1) both;
+  }
+  .lma-enable-ic { width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,.1); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .lma-enable b { display: block; font-size: 13.5px; }
+  .lma-enable small { display: block; font-size: 11.5px; opacity: .65; margin-top: 2px; }
+  .lma-enable-x { margin-left: 4px; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; opacity: .55; }
+  .lma-enable-x:hover { opacity: 1; background: rgba(255,255,255,.1); }
+
+  @media (max-width: 520px) {
+    #lm-alert { align-items: flex-end; padding: 0; }
+    .lma-card { max-width: none; border-radius: 28px 28px 0 0; padding-bottom: calc(20px + env(safe-area-inset-bottom)); animation-name: lmaUp; }
+    @keyframes lmaUp { from { transform: translateY(40px); opacity: .5; } }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .lma-card, .lma-ov, .lma-enable { animation: none; }
+    .lma-dot { animation: none; }
+  }
+</style>
+
+<script nonce="<%= csp_nonce %>">
+(function () {
+  if (window.LoovLM) return;
+  var CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+  var TTL = <%= Appointment::ACCEPTANCE_TTL.to_i %>;
+  var CIRC = 2 * Math.PI * 52;
+  var $ = function (id) { return document.getElementById(id); };
+  var root = $('lm-alert');
+
+  var st = { queue: [], cur: null, deadline: 0, acting: false, done: false, tick: null, chime: null, flash: null, seenIds: {}, closed: {} };
+  var baseTitle = document.title;
+
+  function brl(v) { return 'R$ ' + (Number(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function secsLeft() { return Math.max(0, Math.round((st.deadline - Date.now()) / 1000)); }
+
+  // ── Som (Web Audio: sem arquivo, sem custo de carga) ──────────────────
+  var actx = null;
+  function unlockAudio() {
+    try {
+      if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+      if (actx.state === 'suspended') actx.resume();
+    } catch (e) {}
+  }
+  function chime() {
+    if (!actx || actx.state !== 'running') return;
+    var t = actx.currentTime;
+    [[880, 0], [1318.5, .16], [1760, .32]].forEach(function (n) {
+      var o = actx.createOscillator(), g = actx.createGain();
+      o.type = 'sine'; o.frequency.value = n[0];
+      g.gain.setValueAtTime(0, t + n[1]);
+      g.gain.linearRampToValueAtTime(.22, t + n[1] + .02);
+      g.gain.exponentialRampToValueAtTime(.001, t + n[1] + .45);
+      o.connect(g); g.connect(actx.destination);
+      o.start(t + n[1]); o.stop(t + n[1] + .5);
     });
+  }
+  ['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) {
+    window.addEventListener(ev, unlockAudio, { passive: true });
+  });
 
-    clearInterval(countTimer);
-    countTimer = setInterval(() => {
-      secondsLeft = Math.max(0, secondsLeft - 1);
-      updateTimer();
-      if (secondsLeft <= 0) { clearInterval(countTimer); setTimeout(hide, 1200); }
-    }, 1000);
+  // ── Notificação do sistema (aba em segundo plano) ─────────────────────
+  function systemNotify(a) {
+    if (!('Notification' in window) || Notification.permission !== 'granted' || !document.hidden) return;
+    try {
+      var n = new Notification('Novo pedido Last Minute · ' + a.scheduled_at, {
+        body: (a.client_name || 'Cliente') + ' quer ' + a.service_name + '. Você tem 3 min pra aceitar.',
+        tag: 'lm-' + a.id, requireInteraction: true, icon: '/favicon.svg'
+      });
+      n.onclick = function () { window.focus(); n.close(); };
+    } catch (e) {}
   }
 
-  function updateTimer() {
-    const m   = Math.floor(secondsLeft / 60);
-    const s   = secondsLeft % 60;
-    const pct = (secondsLeft / totalSeconds) * 100;
-    const urgent = secondsLeft <= 30;
+  // ── Pílula "Ativar alertas" ───────────────────────────────────────────
+  var DISMISS_KEY = 'loov_lm_alerts_dismissed';
+  function maybeShowEnable() {
+    var dismissed = false; try { dismissed = localStorage.getItem(DISMISS_KEY) === '1'; } catch (e) {}
+    var need = ('Notification' in window) && Notification.permission === 'default';
+    $('lma-enable').hidden = dismissed || !need;
+  }
+  $('lma-enable').addEventListener('click', function (e) {
+    if (e.target.id === 'lma-enable-x') {
+      try { localStorage.setItem(DISMISS_KEY, '1'); } catch (x) {}
+      $('lma-enable').hidden = true; return;
+    }
+    unlockAudio(); chime();
+    if ('Notification' in window) Notification.requestPermission().then(maybeShowEnable, maybeShowEnable);
+    $('lma-enable').hidden = true;
+  });
 
-    document.getElementById('dw2-timer').textContent = m + ':' + String(s).padStart(2,'0');
-    document.getElementById('dw2-timer').className   = 'dw2-timer' + (urgent ? ' urgent' : '');
-    document.getElementById('dw2-fill').style.width  = pct + '%';
-    document.getElementById('dw2-fill').className    = 'dw2-progress-fill' + (urgent ? ' urgent' : '');
+  // ── Exibição ──────────────────────────────────────────────────────────
+  function fill(a) {
+    $('lma-svc').textContent = a.service_name || 'Serviço';
+    $('lma-when').textContent = 'Hoje às ' + a.scheduled_at + (a.car_wash_name ? ' · ' + a.car_wash_name : '');
+    var name = a.client_name || 'Cliente';
+    $('lma-av').textContent = name.trim().charAt(0).toUpperCase() || '?';
+    $('lma-name').textContent = name;
+    var car = $('lma-car'); car.innerHTML = '';
+    if (a.vehicle_model) { var m = document.createElement('span'); m.textContent = a.vehicle_model; car.appendChild(m); }
+    if (a.vehicle_plate) { var p = document.createElement('span'); p.className = 'lma-plate'; p.textContent = a.vehicle_plate; car.appendChild(p); }
+    if (!a.vehicle_model && !a.vehicle_plate) car.textContent = 'Veículo não informado';
+    var total = Number(a.service_price) || 0, pre = Number(a.prepayment) || 0;
+    $('lma-total').textContent = brl(total);
+    $('lma-pre').textContent = pre ? brl(pre) : '—';
+    $('lma-rest').textContent = brl(Math.max(0, total - pre));
   }
 
-  // ── HIDE ─────────────────────────────────────────────────────────────────
+  function renderQueue() {
+    var extra = st.queue.filter(function (q) { return !st.cur || q.id !== st.cur.id; }).length;
+    $('lma-queue').hidden = extra < 1;
+    $('lma-queue').textContent = '+' + extra + ' na fila';
+  }
+
+  function show(a) {
+    st.cur = a; st.acting = false; st.done = false;
+    st.deadline = Date.now() + Math.max(0, a.seconds_left || TTL) * 1000;
+    fill(a);
+    $('lma-actions').hidden = false; $('lma-result').hidden = true;
+    $('lma-yes').disabled = $('lma-no').disabled = false;
+    $('lma-yes').textContent = 'Aceitar pedido'; $('lma-no').textContent = 'Recusar';
+    $('lma-eyebrow-txt').textContent = 'Last Minute · novo pedido';
+    root.hidden = false; renderQueue();
+    document.documentElement.style.overflow = 'hidden';
+    updateTick();
+    clearInterval(st.tick); st.tick = setInterval(updateTick, 1000);
+
+    if (!st.seenIds[a.id]) {
+      st.seenIds[a.id] = true;
+      chime(); systemNotify(a);
+    }
+    clearInterval(st.chime); st.chime = setInterval(function () { if (!st.done && !st.acting) chime(); }, 15000);
+    clearInterval(st.flash);
+    var on = false;
+    st.flash = setInterval(function () { on = !on; document.title = on ? '⚡ Novo pedido Last Minute' : baseTitle; }, 1000);
+    setTimeout(function () { var y = $('lma-yes'); if (y) y.focus(); }, 60);
+  }
+
+  function updateTick() {
+    var s = secsLeft();
+    $('lma-count').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+    $('lma-ring').style.strokeDashoffset = String(CIRC * (1 - s / TTL));
+    root.classList.toggle('urgent', s <= 30 && !st.done);
+    if (s <= 0 && !st.done && !st.acting) finish('no', 'Tempo esgotado. O pedido foi liberado e o cliente não foi cobrado.');
+  }
+
+  function stopSignals() {
+    clearInterval(st.chime); clearInterval(st.flash);
+    document.title = baseTitle;
+  }
+
   function hide() {
-    OVERLAY.style.opacity = '0';
-    CARD.style.opacity    = '0';
-    CARD.style.transform  = 'translate(-50%,-50%) scale(0.92)';
-    setTimeout(() => { WRAP.style.display = 'none'; currentId = null; }, 350);
-    clearInterval(countTimer);
+    clearInterval(st.tick); stopSignals();
+    root.hidden = true; st.cur = null;
+    document.documentElement.style.overflow = '';
+    next();
   }
 
-  // ── AÇÕES ─────────────────────────────────────────────────────────────────
+  function finish(kind, text) {
+    st.done = true; stopSignals(); clearInterval(st.tick);
+    root.classList.remove('urgent');
+    $('lma-actions').hidden = true;
+    var r = $('lma-result'); r.hidden = false; r.className = 'lma-result ' + kind; r.textContent = text;
+    var id = st.cur && st.cur.id;
+    if (id) st.closed[id] = true;
+    st.queue = st.queue.filter(function (q) { return q.id !== id; });
+    setTimeout(hide, kind === 'ok' ? 2200 : 2600);
+  }
+
+  function next() {
+    if (st.cur) return;
+    var a = st.queue[0];
+    if (a) show(a);
+  }
+
   function act(action) {
-    if (acting || !currentId) return;
-    acting = true;
-    clearInterval(countTimer);
-
-    const acceptBtn = document.getElementById('dw2-accept');
-    const rejectBtn = document.getElementById('dw2-reject');
-    acceptBtn.disabled = true;
-    rejectBtn.disabled = true;
-    acceptBtn.innerHTML = action === 'accept' ? '<span class="dw2-spinner"></span>' : acceptBtn.innerHTML;
-
-    fetch('/owner/disponivel_acceptance/' + currentId + '/' + action, {
-      method:  'PATCH',
-      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF, Accept: 'application/json' }
-    })
-    .then(r => r.json())
-    .then(data => {
-      document.getElementById('dw2-actions').style.display = 'none';
-      const result = document.getElementById('dw2-result');
-      result.style.display = 'block';
-
-      if (data.ok) {
-        if (action === 'accept') {
-          result.className = 'dw2-result accepted';
-          document.getElementById('dw2-result-icon').innerHTML = '<i class="fas fa-check-circle"></i>';
-          document.getElementById('dw2-result-text').textContent = 'Aceito! O cliente está a caminho.';
+    if (st.acting || st.done || !st.cur) return;
+    st.acting = true;
+    var btn = action === 'accept' ? $('lma-yes') : $('lma-no');
+    $('lma-yes').disabled = $('lma-no').disabled = true;
+    btn.textContent = action === 'accept' ? 'Aceitando…' : 'Recusando…';
+    fetch('/owner/disponivel_acceptance/' + st.cur.id + '/' + action, {
+      method: 'PATCH', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-Token': CSRF }
+    }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok && d.ok, d: d }; }); })
+      .then(function (x) {
+        if (x.ok) {
+          finish(action === 'accept' ? 'ok' : 'no', action === 'accept'
+            ? 'Aceito. O cliente já foi avisado e está a caminho.'
+            : 'Recusado. O cliente não é cobrado.');
+          document.dispatchEvent(new CustomEvent('loov:lm-decided', { detail: { action: action } }));
         } else {
-          result.className = 'dw2-result rejected';
-          document.getElementById('dw2-result-icon').innerHTML = '<i class="fas fa-times-circle"></i>';
-          document.getElementById('dw2-result-text').textContent = 'Recusado. Cliente não será cobrado.';
+          st.acting = false;
+          $('lma-yes').disabled = $('lma-no').disabled = false;
+          $('lma-yes').textContent = 'Aceitar pedido'; $('lma-no').textContent = 'Recusar';
+          var r = $('lma-result'); r.hidden = false; r.className = 'lma-result err';
+          r.textContent = (x.d && x.d.error) || 'Não foi possível concluir. Tente de novo.';
         }
-        currentId = null;
-        setTimeout(hide, 2000);
-      } else {
-        result.className = 'dw2-result rejected';
-        document.getElementById('dw2-result-icon').innerHTML = '<i class="fas fa-triangle-exclamation"></i>';
-        document.getElementById('dw2-result-text').textContent = data.error || 'Erro. Tente novamente.';
-        acting = false;
-      }
-    })
-    .catch(() => {
-      acting = false;
-      acceptBtn.disabled = false;
-      rejectBtn.disabled = false;
-      acceptBtn.innerHTML = '<i class="fas fa-check"></i> Aceitar';
-    });
+      })
+      .catch(function () {
+        st.acting = false;
+        $('lma-yes').disabled = $('lma-no').disabled = false;
+        $('lma-yes').textContent = 'Aceitar pedido'; $('lma-no').textContent = 'Recusar';
+        var r = $('lma-result'); r.hidden = false; r.className = 'lma-result err'; r.textContent = 'Sem conexão. Tente de novo.';
+      });
+  }
+  $('lma-yes').addEventListener('click', function () { act('accept'); });
+  $('lma-no').addEventListener('click', function () { act('reject'); });
+
+  // ── Polling ───────────────────────────────────────────────────────────
+  // 3s com a aba à vista; 6s em segundo plano (o navegador já espaça timers
+  // de abas ocultas, e a notificação do sistema cobre o resto).
+  var pollT = null;
+  function poll() {
+    fetch('/owner/disponivel_acceptance', { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (list) {
+        if (!Array.isArray(list)) return;
+        // Fechado aqui não volta: o servidor pode levar um poll pra refletir.
+        st.queue = list.filter(function (q) { return !st.closed[q.id]; });
+        document.dispatchEvent(new CustomEvent('loov:lm-pending', { detail: { count: st.queue.length } }));
+        if (st.cur && !st.done && !st.acting && !list.some(function (q) { return q.id === st.cur.id; })) {
+          // Sumiu do servidor sem decisão daqui: decidido em outro aparelho
+          // (app ou outra aba) ou expirou.
+          finish('no', 'Este pedido já foi respondido ou expirou.');
+        }
+        if (st.cur) renderQueue(); else next();
+      })
+      .catch(function () {})
+      .then(function () { pollT = setTimeout(poll, document.hidden ? 6000 : 3000); });
   }
 
-  document.getElementById('dw2-accept').addEventListener('click', () => act('accept'));
-  document.getElementById('dw2-reject').addEventListener('click', () => act('reject'));
+  window.LoovLM = {
+    // O sino do painel abre o pedido pendente, se houver.
+    open: function () { if (st.cur) return true; if (st.queue.length) { next(); return true; } return false; },
+    pending: function () { return st.queue.length; }
+  };
 
-  document.addEventListener('DOMContentLoaded', startPolling);
+  maybeShowEnable();
+  poll();
 })();
 </script>
