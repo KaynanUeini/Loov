@@ -23,6 +23,10 @@ module Client
       if request.format.html?
         strict_csp!
         backfill_card_details
+        # Vindo da reserva do Last Minute: depois de salvar o cartão, volta
+        # pra ela. Só caminho interno, nunca outro site.
+        rt = params[:return_to].to_s
+        session[:return_to_after_card] = rt if rt.start_with?("/") && !rt.start_with?("//")
       end
 
       # Na página do cartão o SetupIntent é sempre preparado: serve pra

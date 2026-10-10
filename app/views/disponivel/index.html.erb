@@ -131,6 +131,23 @@
   .dp-svc .price { margin-top: 4px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.5px; color: var(--coral-500); }
   .dp-svc .price small { font-family: 'Inter', sans-serif; font-weight: 400; font-size: 14px; letter-spacing: 0; color: var(--graphite); }
   .dp-svc p { margin: 12px 0 0; font-size: 14px; line-height: 20px; color: var(--graphite); white-space: pre-line; }
+  /* Divisão do pagamento: o que sai do cartão AGORA vem primeiro e maior —
+     é a informação que o cliente precisa saber antes de tocar no botão. */
+  .dp-pay { margin-top: 18px; border: 1px solid var(--stone); border-radius: 16px; overflow: hidden; background: var(--cream); }
+  .dp-pay-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 12px 14px; }
+  .dp-pay-row + .dp-pay-row { border-top: 1px solid var(--stone); }
+  .dp-pay-row span { color: var(--graphite); font-size: 13.5px; }
+  .dp-pay-row span em { font-style: normal; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: .6px; color: var(--ash); margin-left: 6px; }
+  .dp-pay-row b { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; color: var(--ink); white-space: nowrap; }
+  .dp-pay-row.now span { color: var(--ink); font-weight: 600; }
+  .dp-pay-row.now span em { color: var(--coral-500); }
+  .dp-pay-row.now b { color: var(--coral-500); font-size: 18px; }
+  .dp-pay-card { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-top: 1px solid var(--stone); background: var(--paper); font-size: 13px; color: var(--ink); }
+  .dp-pay-card svg { color: var(--graphite); flex-shrink: 0; }
+  .dp-pay-card a { margin-left: auto; color: var(--coral-500); font-weight: 600; font-size: 12.5px; text-decoration: none; }
+  .dp-pay-card a:hover { text-decoration: underline; }
+  .dp-pay-card.missing { background: var(--coral-50); color: var(--coral-700); line-height: 1.4; }
+  .dp-pay-card.missing svg { color: var(--coral-500); }
   .dp-hint { margin: 16px 0 12px; text-align: center; font-size: 11px; line-height: 15px; color: var(--ash); }
   .dp-confirm { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; padding: 16px; border: 0; border-radius: 14px !important; background: var(--coral-500) !important; color: var(--cream) !important; font-size: 14px; font-weight: 600; }
   .dp-confirm[disabled] { opacity: .6; cursor: default; }
@@ -282,6 +299,16 @@
   var COORDS_KEY = 'loov_last_coords';
   var RECORD_KEY = 'loov_ave_recorde';
   var SIGNED_IN = <%= user_signed_in? ? "true" : "false" %>;
+  // Pelo site a reserva pré-autoriza esta fração no cartão (Appointment::PREPAYMENT_PCT).
+  var PCT       = <%= Appointment::PREPAYMENT_PCT %>;
+  var PCT_LABEL = Math.round(PCT * 100) + '%', REST_LABEL = (100 - Math.round(PCT * 100)) + '%';
+  var HAS_CARD  = <%= (user_signed_in? && current_user.has_payment_method?) ? "true" : "false" %>;
+  var CARD_TXT  = <%= raw json_escape(((user_signed_in? && current_user.card_display) || "").to_json) %>;
+  function prepayOf(price) { return Math.round(Number(price) * PCT * 100) / 100; }
+  function cardUrl(cwId) {
+    var back = '/disponivel' + (cwId ? '?car_wash_id=' + cwId : '');
+    return '/client/profile/edit?add_card=1&return_to=' + encodeURIComponent(back);
+  }
 
   var state = {
     loc: 'pending', coords: null, loading: true, items: [], sortBy: 'relevance',
@@ -525,9 +552,28 @@
         svcs.map(function (s) { return '<button type="button" class="dp-pill" data-svc="' + s.id + '" aria-pressed="' + (svc && s.id === svc.id) + '">' + esc(s.title) + '</button>'; }).join('') + '</div>' : '') +
       (svc ? '<div class="dp-svc"><h3>' + esc(svc.title) + '</h3><div class="price">R$ ' + money(svc.price, 2) + '<small>' + dur + '</small></div>' +
         '<p>' + esc(svc.description && svc.description.trim() ? svc.description : 'Este lava-rápido não cadastrou uma descrição detalhada. Confirme os itens incluídos ao chegar.') + '</p></div>' : '') +
-      '<p class="dp-hint">O lava-rápido tem 3 min pra aceitar. Você não é cobrado se não for aceita. Pagamento na chegada.</p>' +
+      payBlock(svc, cw) +
+      '<p class="dp-hint">Os ' + PCT_LABEL + ' ficam reservados no cartão e só são cobrados se o lava-rápido aceitar em até 3 min. ' +
+        'Se ele recusar ou o tempo acabar, o valor é liberado.</p>' +
       '<button type="button" class="dp-confirm" id="dp-confirm"' + (state.reserving || !svc ? ' disabled' : '') + '>' +
-        (state.reserving ? '<span class="dp-spin"></span>' : 'Confirmar reserva ' + icon('arrow-right', 16)) + '</button>';
+        (state.reserving ? '<span class="dp-spin"></span>'
+          : (SIGNED_IN && !HAS_CARD) ? icon('credit-card', 16) + ' Cadastrar cartão para reservar'
+          : svc ? 'Reservar e pagar R$ ' + money(prepayOf(svc.price), 2) + ' ' + icon('arrow-right', 16)
+          : 'Confirmar reserva') + '</button>';
+  }
+  // O "Pagamento na chegada" escondia que parte sai do cartão na hora. Agora a
+  // divisão fica explícita antes do botão, com o valor em reais e o cartão
+  // que vai ser usado — sem surpresa na fatura.
+  function payBlock(svc, cw) {
+    if (!svc) return '';
+    var now = prepayOf(svc.price), rest = Math.max(0, Math.round((Number(svc.price) - now) * 100) / 100);
+    var cardLine = !SIGNED_IN ? ''
+      : HAS_CARD ? '<div class="dp-pay-card">' + icon('credit-card', 15) + '<span>' + esc(CARD_TXT) + '</span><a href="' + cardUrl(cw.id) + '">Trocar</a></div>'
+      : '<div class="dp-pay-card missing">' + icon('credit-card', 15) + '<span>Para reservar no Last Minute você precisa de um cartão cadastrado. É ele que garante a vaga.</span></div>';
+    return '<div class="dp-pay">' +
+      '<div class="dp-pay-row now"><span>Agora, no cartão<em>' + PCT_LABEL + '</em></span><b>R$ ' + money(now, 2) + '</b></div>' +
+      '<div class="dp-pay-row"><span>Na chegada, no lava-rápido<em>' + REST_LABEL + '</em></span><b>R$ ' + money(rest, 2) + '</b></div>' +
+      cardLine + '</div>';
   }
   function confirmReserve() {
     var it = state.target;
@@ -536,15 +582,18 @@
     // Toque mudo em "Confirmar" era indistinguível de site travado.
     if (!it || !svc || !slot) { toast(!slot ? 'Este horário não está mais disponível. Atualize a lista.' : 'Selecione um serviço para continuar.', 'error'); return; }
     if (!SIGNED_IN) { toast('Entre na sua conta para reservar.', 'error'); setTimeout(function () { location.href = '/users/sign_in'; }, 900); return; }
+    if (!HAS_CARD) { location.href = cardUrl(it.car_wash.id); return; }
     state.reserving = true; renderSheet();
     api('/disponivel', { method: 'POST', body: JSON.stringify({ car_wash_id: it.car_wash.id, service_id: svc.id, slot: slot }) })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { r: r, d: d }; }); })
       .then(function (x) {
         if (x.r.status === 401) { location.href = '/users/sign_in'; return; }
+        if (x.d.code === 'card_required') { location.href = cardUrl(it.car_wash.id); return; }
         if (!x.r.ok || !x.d.ok) { toast(x.d.error || ('Erro ' + x.r.status + ': não foi possível reservar.'), 'error'); return; }
         state.reserving = false;
         closeSheet();
-        startWaiting({ id: x.d.appointment_id, expires_at: x.d.expires_at, seconds: x.d.seconds || 180, car_wash: it.car_wash, service: svc, slot: slot });
+        startWaiting({ id: x.d.appointment_id, expires_at: x.d.expires_at, seconds: x.d.seconds || 180, car_wash: it.car_wash, service: svc, slot: slot,
+          prepayment: x.d.prepayment != null ? x.d.prepayment : prepayOf(svc.price) });
       })
       .catch(function () { toast('Erro de conexão. Tente novamente.', 'error'); })
       .finally(function () { if (state.reserving) { state.reserving = false; renderSheet(); } });
@@ -611,7 +660,9 @@
     var a = state.appt, dw = $('dw');
     dw.style.setProperty('--accent', accentOf());
     if (state.outcome) { renderResult(); return; }
-    var price = a.service && a.service.price != null ? 'R$ ' + money(a.service.price, 2) : null;
+    var total = a.service && a.service.price != null ? Number(a.service.price) : null;
+    var held = total != null ? a.prepayment : null;
+    var rest = total != null ? Math.max(0, Math.round((total - held) * 100) / 100) : null;
     var dur = Number(a.service && a.service.duration) > 0 ? ' · ' + a.service.duration + ' min' : '';
     $('dw-in').innerHTML =
       '<div class="dw-head"><div class="dw-status"><span class="dw-dot"></span><span id="dw-status-txt">' + statusLabel() + '</span></div>' +
@@ -622,27 +673,32 @@
       '<div class="dw-card">' +
         '<div class="dw-row"><span>Serviço</span><b>' + esc(a.service.title || '—') + '</b></div>' +
         '<div class="dw-row"><span>Horário</span><b>' + fmtTime(a.slot) + dur + '</b></div>' +
-        (price ? '<div class="dw-row"><span>Na chegada</span><b style="color:var(--coral-500)">' + price + '</b></div>' : '') +
+        (held != null ? '<div class="dw-row"><span>Reservado no cartão</span><b style="color:var(--coral-500)">R$ ' + money(held, 2) + '</b></div>' : '') +
+        (rest != null ? '<div class="dw-row"><span>Na chegada</span><b>R$ ' + money(rest, 2) + '</b></div>' : '') +
         // Cancelar exige SEGURAR 2,5s: com um alvo voando pela tela, um toque
         // perdido na caça ao passarinho não pode desfazer a reserva.
         '<button type="button" class="dw-cancel" id="dw-cancel" aria-label="Cancelar reserva. Mantenha pressionado por dois segundos e meio">' +
           '<i></i><span id="dw-cancel-txt">Segure para cancelar</span></button>' +
       '</div>' +
-      '<p class="dw-reassure">Você não é cobrado se a reserva não for aceita</p>' +
+      '<p class="dw-reassure">O valor reservado só vira cobrança se a reserva for aceita</p>' +
       '<div class="dw-game" id="dw-game"></div>';
     bindCancel();
     renderScore();
     updateUrgency();
   }
   function renderResult() {
-    var o = state.outcome, name = (state.appt && state.appt.car_wash && state.appt.car_wash.name) || 'O lava-rápido';
+    var o = state.outcome, a = state.appt || {}, name = (a.car_wash && a.car_wash.name) || 'O lava-rápido';
+    var total = a.service && a.service.price != null ? Number(a.service.price) : null;
+    var paid = total != null && a.prepayment != null ? 'R$ ' + money(a.prepayment, 2) : 'os ' + PCT_LABEL;
+    var rest = total != null && a.prepayment != null ? 'R$ ' + money(Math.max(0, total - a.prepayment), 2) : 'o restante';
+    var freed = ' O valor reservado no cartão foi liberado: você não foi cobrado.';
     var r = o === 'accepted'
-      ? { t: 'Reserva confirmada', s: 'Seu horário está garantido. É só chegar, e o pagamento é no local.', cta: 'Ir para agendamento', go: 'appt' }
+      ? { t: 'Reserva confirmada', s: 'Seu horário está garantido. Cobramos ' + paid + ' no cartão; ' + rest + ' você paga no lava-rápido.', cta: 'Ir para agendamento', go: 'appt' }
       : o === 'expired'
-      ? { t: 'Tempo esgotado', s: name + ' não respondeu dentro dos 3 minutos e o horário foi liberado. Você não foi cobrado.', cta: 'Buscar outro lava-rápido', go: 'list' }
+      ? { t: 'Tempo esgotado', s: name + ' não respondeu dentro dos 3 minutos e o horário foi liberado.' + freed, cta: 'Buscar outro lava-rápido', go: 'list' }
       : o === 'rejected'
-      ? { t: 'Reserva recusada', s: name + ' não pôde atender agora. Você não foi cobrado.', cta: 'Buscar outro lava-rápido', go: 'list' }
-      : { t: 'Reserva cancelada', s: 'O horário foi liberado e você não foi cobrado.', cta: 'Buscar outro lava-rápido', go: 'list' };
+      ? { t: 'Reserva recusada', s: name + ' não pôde atender agora.' + freed, cta: 'Buscar outro lava-rápido', go: 'list' }
+      : { t: 'Reserva cancelada', s: 'O horário foi liberado.' + freed, cta: 'Buscar outro lava-rápido', go: 'list' };
     $('dw-in').innerHTML = '<div class="dw-result' + (o === 'accepted' ? ' is-ok' : '') + '">' +
       (o === 'accepted' ? '<div class="dw-mark">' + icon('check', 20) + '</div>'
         : '<img src="' + ILL + 'reserva-vazia.svg" alt="Ilustração de um carro parado com bolhas de espuma, um relógio e um passarinho pousado no teto">') +
@@ -681,7 +737,7 @@
     var id = state.appt && state.appt.id;
     closeWaiting();
     if (id) api('/disponivel/' + id + '/cancel', { method: 'PATCH' }).catch(function () {});
-    toast('Reserva desistida. Horário liberado.', 'error');
+    toast('Reserva desistida. Horário e valor no cartão liberados.', 'error');
     load(true);
   }
 

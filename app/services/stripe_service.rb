@@ -19,12 +19,23 @@ class StripeService
     end
   end
 
+  # Libera uma pré-autorização (o valor some da fatura do cliente sem virar
+  # cobrança). reject!/expire! já chamavam este método, que não existia —
+  # o NoMethodError era engolido pelo rescue e a recusa falhava calada.
+  def cancel(payment_intent_id)
+    Stripe::PaymentIntent.cancel(payment_intent_id)
+  end
+
+  # Pré-autoriza (capture_method manual): o valor fica reservado no cartão e
+  # só vira cobrança no capture. payment_method_types fixo em cartão porque
+  # o confirm imediato com métodos automáticos exigiria return_url.
   def create_payment_intent(amount_cents:, currency: "brl", customer_id:, payment_method_id:, metadata: {})
     Stripe::PaymentIntent.create(
       amount:               amount_cents,
       currency:             currency,
       customer:             customer_id,
       payment_method:       payment_method_id,
+      payment_method_types: ["card"],
       capture_method:       "manual",
       confirm:              true,
       metadata:             metadata

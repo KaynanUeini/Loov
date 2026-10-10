@@ -193,11 +193,27 @@ class DisponivelController < ApplicationController
   end
 
   # POST /disponivel
-  # Cria o agendamento sem pagamento no app — o cliente paga presencialmente
-  # (dinheiro, PIX direto com o dono ou maquininha) no lava-rápido.
+  #
+  # Pelo site, a reserva exige cartão e pré-autoriza 35% do serviço (o
+  # PREPAYMENT_PCT) no momento do pedido: o valor fica reservado no cartão,
+  # vira cobrança quando o dono aceita (Appointment#accept!) e é liberado se
+  # ele recusa, se o tempo de aceite acaba ou se o cliente desiste. Os 65%
+  # restantes são pagos no lava-rápido.
+  #
+  # O app ainda não tem tela de cartão, então pedido vindo dele (login por
+  # JWT, sem sessão) segue sem cobrança até ganhar esse fluxo.
   def create
     log_tag = "[Disponivel#create]"
     Rails.logger.info("#{log_tag} IN user_id=#{current_user&.id} params=#{params.permit(:car_wash_id, :service_id, :slot).to_h.inspect}")
+
+    charge_upfront = !app_request_with_valid_jwt?
+    if charge_upfront && !current_user.has_payment_method?
+      render json: {
+        error: "Cadastre um cartão para reservar no Last Minute. Você paga #{(Appointment::PREPAYMENT_PCT * 100).round}% agora pra garantir a vaga.",
+        code:  "card_required"
+      }, status: :payment_required
+      return
+    end
 
     car_wash = CarWash.find(params[:car_wash_id])
     service  = car_wash.services.find(params[:service_id])
@@ -253,6 +269,14 @@ class DisponivelController < ApplicationController
       return
     end
 
+    if charge_upfront
+      declined = authorize_prepayment!(appointment, log_tag)
+      if declined
+        render json: { error: declined, code: "card_declined" }, status: :payment_required
+        return
+      end
+    end
+
     Rails.logger.info("#{log_tag} OK appointment_id=#{appointment.id}")
 
     notify_owner_of_request(appointment, log_tag)
@@ -270,7 +294,8 @@ class DisponivelController < ApplicationController
       appointment_id: appointment.id,
       expires_at:     appointment.acceptance_expires_at.iso8601,
       seconds:        Appointment::ACCEPTANCE_TTL.to_i,
-      payment_status: "pending" # pagamento será feito presencialmente
+      prepayment:     appointment.prepayment_amount.to_f,
+      payment_status: appointment.stripe_payment_intent_id.present? ? "authorized" : "pending"
     }
 
   rescue ActiveRecord::RecordNotFound => e
@@ -311,6 +336,7 @@ class DisponivelController < ApplicationController
     end
 
     appointment.update!(status: "cancelled")
+    release_prepayment(appointment)
     render json: { ok: true, status: appointment.status }
 
   rescue ActiveRecord::RecordNotFound
@@ -339,6 +365,62 @@ class DisponivelController < ApplicationController
   end
 
   private
+
+  # Reserva os 35% no cartão salvo. Devolve nil quando deu certo, ou a
+  # mensagem pro cliente quando não deu — nesse caso o pedido é cancelado
+  # na hora, antes de o dono ser avisado, e a vaga volta pra lista.
+  def authorize_prepayment!(appointment, log_tag)
+    amount_cents = (appointment.prepayment_amount.to_f * 100).round
+    current_user.stripe_customer!
+    intent = StripeService.new.create_payment_intent(
+      amount_cents:      amount_cents,
+      customer_id:       current_user.stripe_customer_id,
+      payment_method_id: current_user.stripe_payment_method_id,
+      metadata:          { appointment_id: appointment.id, kind: "last_minute_prepayment" }
+    )
+
+    unless intent.status == "requires_capture"
+      # Ex.: banco pedindo autenticação 3DS, que este fluxo ainda não trata.
+      begin
+        StripeService.new.cancel(intent.id)
+      rescue => e
+        Rails.logger.warn("#{log_tag} cancel do intent #{intent.id} falhou: #{e.message}")
+      end
+      appointment.update_columns(status: "cancelled", updated_at: Time.current)
+      Rails.logger.warn("#{log_tag} intent #{intent.id} status=#{intent.status} appointment_id=#{appointment.id}")
+      return "Seu banco pediu uma confirmação extra que ainda não conseguimos fazer pelo site. Tente outro cartão."
+    end
+
+    appointment.update_columns(stripe_payment_intent_id: intent.id, updated_at: Time.current)
+    nil
+  rescue Stripe::CardError => e
+    appointment.update_columns(status: "cancelled", updated_at: Time.current)
+    Rails.logger.warn("#{log_tag} card_error appointment_id=#{appointment.id} code=#{e.code} msg=#{e.message}")
+    "O cartão recusou a reserva dos #{(Appointment::PREPAYMENT_PCT * 100).round}%. Tente outro cartão."
+  rescue Stripe::StripeError => e
+    appointment.update_columns(status: "cancelled", updated_at: Time.current)
+    Rails.logger.error("#{log_tag} stripe_error appointment_id=#{appointment.id} #{e.class}: #{e.message}")
+    "Não conseguimos falar com o processador do cartão agora. Tente de novo em instantes."
+  end
+
+  # O app manda o JWT do próprio usuário no Authorization. Só a presença do
+  # header não basta: o login do app também cria sessão, e um cliente do site
+  # pularia a cobrança mandando um header qualquer. Vale como app só com um
+  # token válido, e do mesmo usuário logado.
+  def app_request_with_valid_jwt?
+    token = request.headers["Authorization"].to_s[/\ABearer\s+(.+)\z/, 1]
+    return false if token.blank?
+    Warden::JWTAuth::UserDecoder.new.call(token, :user, nil) == current_user
+  rescue StandardError
+    false
+  end
+
+  def release_prepayment(appointment)
+    return if appointment.stripe_payment_intent_id.blank?
+    StripeService.new.cancel(appointment.stripe_payment_intent_id)
+  rescue => e
+    Rails.logger.warn("[Disponivel#cancel] falha ao liberar #{appointment.stripe_payment_intent_id}: #{e.message}")
+  end
 
   # A regra de "o que o Last Minute vende" mora em Service.last_minute — o
   # mesmo scope que a validação do agendamento consulta, pra lista e backend

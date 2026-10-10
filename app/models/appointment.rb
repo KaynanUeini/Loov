@@ -97,9 +97,19 @@ class Appointment < ApplicationRecord
       return 0
     end
 
-    count = where(status: "pending_acceptance", appointment_type: "disponivel")
+    stale = where(status: "pending_acceptance", appointment_type: "disponivel")
               .where("acceptance_expires_at < ?", Time.current)
-              .update_all(status: "cancelled", updated_at: Time.current)
+
+    # O update_all não passa pelo expire!, então solta aqui o valor reservado
+    # no cartão. Sem isto a pré-autorização ficava presa até o Stripe derrubar
+    # sozinho (dias depois), com o cliente vendo o valor na fatura.
+    stale.where.not(stripe_payment_intent_id: nil).pluck(:stripe_payment_intent_id).each do |pi|
+      StripeService.new.cancel(pi)
+    rescue => e
+      Rails.logger.warn("expire_stale: falha ao liberar #{pi}: #{e.message}")
+    end
+
+    count = stale.update_all(status: "cancelled", updated_at: Time.current)
 
     begin
       Rails.cache.write("appointments:expire_stale:last_run", Time.current, expires_in: 30.seconds)
