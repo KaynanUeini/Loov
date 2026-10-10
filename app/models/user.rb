@@ -139,6 +139,62 @@ class User < ApplicationRecord
             stripe_card_holder: nil, stripe_card_exp_month: nil, stripe_card_exp_year: nil)
   end
 
+  # ── Limite de agendamentos e faltas ──────────────────────────────────────
+  # O agendamento comum não tem custo pro cliente; sem regra, um só cliente
+  # podia prender vários horários de graça e não aparecer. A régua é em
+  # degraus e aparece antes de confirmar:
+  #   · até 3 agendamentos comuns futuros ao mesmo tempo, 1 por lava-rápido/dia
+  #   · 2 faltas em 90 dias → por 60 dias o agendamento comum pede sinal (35%)
+  #   · 3 faltas em 90 dias → agendamento comum bloqueado por 30 dias
+  # Só conta falta de agendamento COMUM: no Last Minute a falta já custa os
+  # 35% pagos, e o Last Minute continua liberado em qualquer degrau.
+  LIMITE_AGENDAMENTOS = 3
+  JANELA_FALTAS       = 90.days
+  DIAS_SINAL          = 60.days
+  DIAS_BLOQUEIO       = 30.days
+
+  def faltas_recentes
+    appointments.where(status: "no_show", appointment_type: "regular")
+                .where("scheduled_at >= ?", JANELA_FALTAS.ago)
+  end
+
+  # nil | { tipo: :sinal | :bloqueio, ate: Time, faltas: n }
+  def restricao_agendamento
+    datas = faltas_recentes.order(scheduled_at: :desc).pluck(:scheduled_at)
+    return nil if datas.size < 2
+    ultima = datas.first
+    if datas.size >= 3 && ultima + DIAS_BLOQUEIO > Time.current
+      { tipo: :bloqueio, ate: ultima + DIAS_BLOQUEIO, faltas: datas.size }
+    elsif ultima + DIAS_SINAL > Time.current
+      { tipo: :sinal, ate: ultima + DIAS_SINAL, faltas: datas.size }
+    end
+  end
+
+  # Texto do aviso de falta, no degrau em que o cliente acabou de cair.
+  # Usado no push (quando o dono marca) e na central de notificações.
+  def aviso_de_falta(appointment)
+    shop = appointment.car_wash&.name || "O lava-rápido"
+    quando = appointment.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%H:%M de %d/%m")
+    base = "#{shop} registrou que você não compareceu às #{quando}. Se você foi, conteste pelo Suporte."
+    r = restricao_agendamento
+    regra =
+      if r&.dig(:tipo) == :bloqueio
+        " Com #{r[:faltas]} faltas em 90 dias, o agendamento comum fica bloqueado até " \
+          "#{r[:ate].in_time_zone('America/Sao_Paulo').strftime('%d/%m')}. O Last Minute continua liberado."
+      elsif r&.dig(:tipo) == :sinal
+        " Com 2 faltas em 90 dias, até #{r[:ate].in_time_zone('America/Sao_Paulo').strftime('%d/%m')} o " \
+          "agendamento comum pede um sinal de #{(Appointment::PREPAYMENT_PCT * 100).round}% no cartão."
+      else
+        " Com 2 faltas em 90 dias, o agendamento comum passa a pedir um sinal no cartão."
+      end
+    base + regra
+  end
+
+  def agendamentos_comuns_ativos
+    appointments.where(appointment_type: "regular", status: %w[confirmed awaiting_payment])
+                .where("scheduled_at > ?", Time.current)
+  end
+
   # ── Exclusão de conta ─────────────────────────────────────────────────────
   # Domínio .invalid nunca recebe e-mail (RFC 2606): marca a conta excluída
   # sem coluna nova e sem colidir com o e-mail de ninguém.

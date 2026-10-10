@@ -154,6 +154,14 @@
   .bk-prog i.is-on { background: var(--coral-500); }
   .bk-sum { display: flex; align-items: center; gap: 12px; padding: 14px; margin: 4px 20px 24px; background: var(--sand); border-radius: 14px; }
   .bk-sum-logo { flex: 0 0 44px; height: 44px; }
+  /* Régua de agendamento (limite e faltas) — igual ao app */
+  .bk-rule { display: flex; gap: 12px; padding: 16px; background: var(--coral-50); border: 1px solid var(--coral-100); border-radius: 16px; color: var(--coral-700); }
+  .bk-rule b { display: block; color: var(--ink); font-size: 14px; margin-bottom: 4px; }
+  .bk-rule p { margin: 0; color: var(--graphite); font-size: 13px; line-height: 1.4; }
+  .bk-rule a { display: inline-block; margin-top: 10px; color: var(--coral-700); font-size: 13px; font-weight: 600; }
+  .bk-rulenote { margin: 12px 0 0; color: var(--graphite); font-size: 12px; line-height: 1.45; }
+  .bk-brow a { color: var(--coral-700); font-weight: 600; }
+  .ok-deposit { margin: 0; color: var(--graphite); font-size: 13px; line-height: 1.45; }
   .bk-sum-logo svg { width: 100%; height: 100%; display: block; }
   .bk-sum-txt { flex: 1; min-width: 0; }
   .bk-sum-shop { font-size: 14px; font-weight: 600; letter-spacing: -0.2px; }
@@ -376,6 +384,24 @@
   var SIGNED_IN = <%= user_signed_in? ? 'true' : 'false' %>;
   var COORDS_QS = <%= raw json_escape(coords_qs.to_json) %>;
   var CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content;
+  // Régua do cliente (limite e faltas, User#restricao_agendamento) e cartão:
+  // o agendamento mostra antes de escolher horário se não pode agendar, e
+  // cobra o sinal quando a régua pede. Mesmo dado que o app lê do perfil.
+  <% regra = is_client ? current_user.restricao_agendamento : nil %>
+  var RULES = <%= raw json_escape((is_client ? {
+    restricao: regra&.dig(:tipo)&.to_s, ate: regra&.dig(:ate)&.in_time_zone("America/Sao_Paulo")&.strftime("%d/%m"),
+    faltas: current_user.faltas_recentes.count, ativos: current_user.agendamentos_comuns_ativos.count,
+    limite: User::LIMITE_AGENDAMENTOS, has_card: current_user.has_payment_method?, card: current_user.card_display
+  } : {}).to_json) %>;
+  var PCT = <%= Appointment::PREPAYMENT_PCT %>, PCT_LABEL = Math.round(PCT * 100) + '%';
+  var STRIPE_PK = <%= raw json_escape(ENV['STRIPE_PUBLISHABLE_KEY'].to_s.to_json) %>;
+  function comSinal() { return RULES.restricao === 'sinal'; }
+  function bloqueado() { return RULES.restricao === 'bloqueio'; }
+  function noLimite() { return RULES.limite && RULES.ativos >= RULES.limite; }
+  function sinalDe(price) { return Math.round(Number(price) * PCT * 100) / 100; }
+  function cardUrl() {
+    return '/client/profile/edit?add_card=1&return_to=' + encodeURIComponent(location.pathname + location.search + '#agendar-' + (bk.service ? bk.service.id : ''));
+  }
 
   var MONTHS = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
   var WD_SHORT = ['dom','seg','ter','qua','qui','sex','sáb'];
@@ -592,11 +618,14 @@
     var w = whenText();
     $('bk-aside-sum').innerHTML = '<div class="bk-sum">' + sumHtml() + '</div>' +
       '<div class="bk-aside-line"><span>Quando</span><b>' + (w ? esc(w) : 'Escolha dia e horário') + '</b></div>' +
-      '<div class="bk-aside-line"><span>Pagamento</span><b>No lava-rápido</b></div>';
+      '<div class="bk-aside-line"><span>Pagamento</span><b>' + (comSinal() ? 'Sinal de ' + PCT_LABEL + ' no cartão' : 'No lava-rápido') + '</b></div>';
     $('bk-total').textContent = 'R$' + money(s.price);
-    var cta = $('bk-cta');
-    cta.disabled = (bk.step === 1 && !bk.time) || bk.submitting;
-    cta.innerHTML = bk.submitting ? '<span class="bk-spin"></span>' : (bk.step === 1 ? 'Continuar' : 'Confirmar') + ' ' + icon('arrow-right', 16);
+    var cta = $('bk-cta'), travado = bloqueado() || noLimite();
+    cta.disabled = (bk.step === 1 && (!bk.time || travado)) || bk.submitting;
+    var rotulo = bk.step === 1 ? 'Continuar'
+      : comSinal() ? (RULES.has_card ? 'Pagar sinal R$ ' + money(sinalDe(s.price), 2) : 'Cadastrar cartão')
+      : 'Confirmar';
+    cta.innerHTML = bk.submitting ? '<span class="bk-spin"></span>' : rotulo + ' ' + icon('arrow-right', 16);
     $('bk-step').innerHTML = bk.step === 1 ? step1Html() : step2Html();
     var on = document.querySelector('.bk-day.is-on');
     var row = on && on.parentNode;
@@ -614,6 +643,17 @@
         '<small>' + MONTHS[d.getMonth()] + '</small><b>' + d.getDate() + '</b><small>' + dayLabel(d) + '</small></button>';
     }).join('');
     var d = dates[bk.dateIdx], body;
+    // Quem não pode agendar sabe antes de escolher horário, com a saída possível.
+    if (bloqueado() || noLimite()) {
+      body = '<div class="bk-rule">' + icon(bloqueado() ? 'slash' : 'calendar', 18) + '<div>' +
+        '<b>' + (bloqueado() ? 'Agendamento bloqueado até ' + esc(RULES.ate) : 'Você já tem ' + RULES.limite + ' agendamentos marcados') + '</b>' +
+        '<p>' + (bloqueado()
+          ? 'Por causa de ' + RULES.faltas + ' faltas nos últimos 90 dias. O Last Minute continua liberado. Se alguma falta foi registrada por engano, fale com o Suporte.'
+          : 'Pra marcar outro, cancele um deles ou espere um acontecer.') + '</p>' +
+        '<a href="' + (bloqueado() ? '/disponivel' : '/appointments') + '">' + (bloqueado() ? 'Ver o Last Minute →' : 'Ver meus agendamentos →') + '</a>' +
+        '</div></div>';
+      return '<div class="bk-lab">Dia</div><div class="bk-days" id="bk-days">' + days + '</div><div class="bk-lab">Horário</div>' + body;
+    }
     if (bk.loading) body = '<div class="bk-spin"></div>';
     else if (closedOn(d)) {
       var name = WD_LOWER[d.getDay()], label = ['segunda','terça','quarta','quinta','sexta'].indexOf(name) !== -1 ? name + '-feira' : name;
@@ -649,8 +689,20 @@
         '<div class="bk-brow bk-btot"><span>Total</span><b>R$ ' + money(s.price, 2) + '</b></div>' +
       '</div>' +
       '<div class="bk-lab" style="margin-top:24px">Pagamento</div>' +
-      '<div class="bk-method"><span class="bk-method-ic">' + icon('dollar-sign', 18) + '</span><span><b>No lava-rápido</b><small>Dinheiro, PIX ou cartão no local</small></span>' +
-        '<span class="bk-radio">' + icon('check', 12, { 'stroke-width': 3 }) + '</span></div>' +
+      (comSinal()
+        ? '<div class="bk-break">' +
+            '<div class="bk-brow"><span>Sinal agora, no cartão ' + PCT_LABEL + '</span><b>R$ ' + money(sinalDe(s.price), 2) + '</b></div>' +
+            '<div class="bk-bdiv"></div>' +
+            '<div class="bk-brow"><span>Na chegada, no lava-rápido</span><b>R$ ' + money(Math.max(0, Number(s.price) - sinalDe(s.price)), 2) + '</b></div>' +
+            '<div class="bk-bdiv"></div>' +
+            '<div class="bk-brow"><span>' + icon('credit-card', 14) + ' ' + esc(RULES.has_card ? RULES.card : 'Nenhum cartão cadastrado') + '</span>' +
+              '<a href="' + cardUrl() + '">' + (RULES.has_card ? 'Trocar' : 'Cadastrar') + '</a></div>' +
+          '</div>' +
+          '<p class="bk-rulenote">Por causa de 2 faltas nos últimos 90 dias, até ' + esc(RULES.ate) + ' o agendamento comum pede um sinal. ' +
+            'Ele volta pro cartão se você cancelar até 2 horas antes; se faltar, não volta.</p>'
+        : '<div class="bk-method"><span class="bk-method-ic">' + icon('dollar-sign', 18) + '</span><span><b>No lava-rápido</b><small>Dinheiro, PIX ou cartão no local</small></span>' +
+            '<span class="bk-radio">' + icon('check', 12, { 'stroke-width': 3 }) + '</span></div>' +
+          '<p class="bk-rulenote">Cancelamento grátis até 2 horas antes. Faltas sem cancelar contam: com 2 em 90 dias, o agendamento comum passa a pedir um sinal no cartão.</p>') +
       '<div class="bk-err' + (bk.error ? '' : ' is-off') + '">' + icon('alert-circle', 14) + '<span>' + esc(bk.error || '') + '</span></div>';
   }
 
@@ -678,6 +730,7 @@
       return;
     }
     if (bk.submitting) return;
+    if (comSinal() && !RULES.has_card) { location.href = cardUrl(); return; }
     bk.submitting = true; bk.error = null; renderBooking();
     fetch('/car_washes/' + CW.id + '/appointments', {
       method: 'POST', credentials: 'same-origin',
@@ -685,15 +738,38 @@
       body: JSON.stringify({ appointment: { car_wash_id: CW.id, service_id: bk.service.id, date: ymd(dates[bk.dateIdx]), time: bk.time } })
     }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (data) { return { ok: r.ok, data: data }; }); })
       .then(function (res) {
+        if (res.data.code === 'card_required') { location.href = cardUrl(); return; }
+        if (res.data.requires_action) {
+          return confirmarSinal(res.data).then(function (ok) {
+            bk.submitting = false;
+            if (ok) { renderDone(ok.deposit); return; }
+            renderBooking();
+          });
+        }
         bk.submitting = false;
-        if (res.ok) { renderDone(); return; }
+        if (res.ok) { renderDone(res.data.deposit); return; }
         bk.error = res.data.error || 'Não foi possível agendar.';
         renderBooking();
       })
       .catch(function () { bk.submitting = false; bk.error = 'Erro de conexão.'; renderBooking(); });
   }
 
-  function renderDone() {
+  // Banco pediu confirmação do sinal (3DS): a janela do banco abre aqui mesmo;
+  // depois o servidor confere com o Stripe — o navegador não é confiado.
+  function confirmarSinal(dd) {
+    if (!window.Stripe || !STRIPE_PK) { bk.error = 'Não foi possível abrir a confirmação do banco. Tente de novo.'; return Promise.resolve(null); }
+    return Stripe(STRIPE_PK).handleNextAction({ clientSecret: dd.client_secret }).then(function (r) {
+      if (r.error) { bk.error = 'O banco não confirmou o sinal. Nada foi cobrado.'; return null; }
+      return fetch('/appointments/' + dd.appointment_id + '/authorized', {
+        method: 'POST', credentials: 'same-origin', headers: { Accept: 'application/json', 'X-CSRF-Token': CSRF }
+      }).then(function (x) { return x.json().catch(function () { return {}; }).then(function (b) {
+        if (x.ok && b.ok) return b;
+        bk.error = b.error || 'Não foi possível concluir o agendamento.'; return null;
+      }); });
+    }).catch(function () { bk.error = 'A confirmação do banco foi interrompida. Nada foi cobrado.'; return null; });
+  }
+
+  function renderDone(deposit) {
     var s = bk.service, d = dates[bk.dateIdx];
     $('cw-done').innerHTML = '<div class="ok">' +
       '<div class="ok-check">' + icon('check', 52, { 'stroke-width': 3 }) + '</div>' +
@@ -703,7 +779,10 @@
         '<div class="ok-div"></div>' +
         '<div class="ok-shop"><div class="ok-logo">' + LoovLogos.logoOf(CW) + '</div>' +
           '<div class="ok-shop-t"><b>' + esc(CW.name) + '</b><small>' + esc(s.title) + ' · ' + (s.duration || 30) + 'min</small></div>' +
-          '<div class="ok-price">R$' + money(s.price) + '</div></div></div>' +
+          '<div class="ok-price">R$' + money(s.price) + '</div></div>' +
+        (deposit ? '<div class="ok-div"></div><p class="ok-deposit">Sinal de R$ ' + money(deposit, 2) + ' pago no cartão. O restante, R$ ' +
+          money(Math.max(0, Number(s.price) - deposit), 2) + ', você paga no lava-rápido.</p>' : '') +
+      '</div>' +
       '<div class="ok-actions"><a class="ok-primary" href="/appointments">Ver meus agendamentos</a><a class="ok-ghost" href="/' + COORDS_QS + '">Voltar pra home</a></div>' +
     '</div>';
     history.replaceState({ v: 'done' }, '', '#agendado');

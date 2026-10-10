@@ -123,6 +123,7 @@ module Owner
     # PATCH /owner/checkins/:id/no_show
     def no_show
       @appointment.update!(status: "no_show")
+      avisar_falta(@appointment)
       render json: { ok: true }.merge(serialize_appointment(@appointment))
     rescue => e
       render json: { error: e.message }, status: :unprocessable_entity
@@ -285,6 +286,20 @@ module Owner
 
     private
 
+    # Falta em agendamento comum entra na régua do cliente (User#restricao_
+    # agendamento): ele precisa saber na hora, com o jeito de contestar.
+    def avisar_falta(appointment)
+      return unless appointment.regular? && appointment.user.present?
+      ExpoPushNotifier.new.notify_user(
+        appointment.user,
+        title: "Registramos uma falta",
+        body:  appointment.user.aviso_de_falta(appointment),
+        data:  { type: "appointment_no_show", appointment_id: appointment.id }
+      )
+    rescue => e
+      Rails.logger.error("[CheckinsController#no_show] aviso de falta falhou: #{e.message}")
+    end
+
     def ensure_owner_or_attendant
       unless current_user&.owner? || current_user&.attendant?
         render json: { error: "Acesso negado." }, status: :forbidden
@@ -346,8 +361,10 @@ module Owner
                   Time.current <= a.scheduled_at + duracao_min.minutes + 30.minutes
 
       is_disponivel    = a.disponivel? rescue false
-      prepayment       = is_disponivel ? a.prepayment_amount.to_f : 0
-      remaining_amount = is_disponivel ? (a.effective_price - prepayment).round(2) : nil
+      # Last Minute ou agendamento comum com sinal: o que o cliente já pagou no app.
+      pago_no_app      = is_disponivel || a.stripe_payment_intent_id.present?
+      prepayment       = pago_no_app ? a.prepayment_amount.to_f : 0
+      remaining_amount = pago_no_app ? (a.effective_price - prepayment).round(2) : nil
 
       {
         id:               a.id,

@@ -104,7 +104,10 @@ class Appointment < ApplicationRecord
       return 0
     end
 
-    stale = where(status: %w[pending_acceptance awaiting_payment], appointment_type: "disponivel")
+    # awaiting_payment vale pros dois tipos: o agendamento comum com sinal
+    # também segura o horário só enquanto o banco confirma.
+    stale = where(status: %w[pending_acceptance awaiting_payment])
+              .where("status = 'awaiting_payment' OR appointment_type = 'disponivel'")
               .where("acceptance_expires_at < ?", Time.current)
 
     # O update_all não passa pelo expire!, então solta aqui o valor reservado
@@ -243,18 +246,63 @@ class Appointment < ApplicationRecord
     false
   end
 
-  # Lava-rápido cancelou um Last Minute: o cliente recebe de volta o que pagou
+  # Lava-rápido cancelou um Last Minute (ou um agendamento comum com sinal):
+  # o cliente recebe de volta o que pagou
   # (ou a reserva no cartão é desfeita, se ainda não tinha virado cobrança).
   # Quando é o CLIENTE que não vai, não há estorno: a vaga ficou presa pra ele.
   # Devolve :ok, :none (não havia pagamento) ou :failed (estorno manual).
   def estornar_prepagamento!
-    return :none unless disponivel? && stripe_payment_intent_id.present?
+    return :none unless stripe_payment_intent_id.present?
     StripeService.new.refund(stripe_payment_intent_id)
     :ok
   rescue => e
     Rails.logger.error("[Appointment##{id}] estorno do Last Minute falhou: #{e.class}: #{e.message}")
     abrir_chamado_de_estorno_manual
     :failed
+  end
+
+  # Sinal do agendamento comum (cliente com 2 faltas recentes). Diferente do
+  # Last Minute, aqui não existe aceite do dono: o horário é confirmado na
+  # hora, então o valor é cobrado de uma vez (autoriza e captura). Uma
+  # autorização sem captura venceria antes de agendamentos de até 15 dias.
+  # Devolve [:ok] | [:action, client_secret] | [:declined, mensagem].
+  def cobrar_sinal!
+    self.prepayment_amount = (effective_price * PREPAYMENT_PCT).round(2)
+    save!(validate: false)
+    user.stripe_customer!
+    intent = StripeService.new.create_payment_intent(
+      amount_cents:      (prepayment_amount.to_f * 100).round,
+      customer_id:       user.stripe_customer_id,
+      payment_method_id: user.stripe_payment_method_id,
+      metadata:          { appointment_id: id, kind: "regular_deposit" }
+    )
+    update_columns(stripe_payment_intent_id: intent.id, updated_at: Time.current)
+    case intent.status
+    when "requires_capture"
+      confirmar_sinal!
+    when "requires_action"
+      [:action, intent.client_secret]
+    else
+      recusar_sinal!(intent.id)
+    end
+  rescue Stripe::CardError
+    recusar_sinal!(stripe_payment_intent_id, "O cartão recusou o sinal. Tente outro cartão.")
+  rescue Stripe::StripeError => e
+    Rails.logger.error("[Appointment##{id}] sinal: #{e.class}: #{e.message}")
+    recusar_sinal!(stripe_payment_intent_id, "Não conseguimos falar com o processador do cartão agora. Tente de novo em instantes.")
+  end
+
+  # Banco autorizou (direto ou depois do 3DS): cobra e confirma o horário.
+  def confirmar_sinal!
+    StripeService.new.capture(stripe_payment_intent_id)
+    update_columns(status: "confirmed", acceptance_expires_at: nil, updated_at: Time.current)
+    [:ok]
+  end
+
+  def recusar_sinal!(intent_id, msg = "Não conseguimos cobrar o sinal nesse cartão. Tente outro cartão.")
+    StripeService.new.cancel(intent_id) if intent_id.present? rescue nil
+    update_columns(status: "cancelled", updated_at: Time.current)
+    [:declined, msg]
   end
 
   # Estorno automático falhou: abre um chamado no nome do cliente, já com a
@@ -265,12 +313,12 @@ class Appointment < ApplicationRecord
     codigo = "LV-#{id.to_s.rjust(4, '0')}"
     ticket = user.support_tickets.create!(
       category: "financeiro", status: "open", car_wash: car_wash,
-      description: "Estorno manual do Last Minute #{codigo}"
+      description: "Estorno manual da reserva #{codigo}"
     )
     ticket.messages.create!(
       user:       User.find_by(role: "admin") || user,
       from_admin: true,
-      body:       "#{car_wash&.name || 'O lava-rápido'} cancelou sua reserva Last Minute #{codigo} e o estorno " \
+      body:       "#{car_wash&.name || 'O lava-rápido'} cancelou sua reserva #{codigo} e o estorno " \
                   "automático não foi concluído. A equipe Loov vai fazer o estorno manualmente e te avisa por aqui."
     )
   rescue => e
@@ -297,7 +345,7 @@ class Appointment < ApplicationRecord
 
   # Timeout expirou → cancela sem cobrança
   def expire!(stripe_service = nil)
-    return false unless (pending_acceptance? || awaiting_payment?) && disponivel?
+    return false unless awaiting_payment? || (pending_acceptance? && disponivel?)
 
     ActiveRecord::Base.transaction do
       if stripe_payment_intent_id.present? && stripe_service.present?

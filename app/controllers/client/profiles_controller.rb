@@ -178,7 +178,21 @@ module Client
         card_last4:    current_user.stripe_card_last4,
         card_holder:   current_user.stripe_card_holder,
         card_exp_month: current_user.stripe_card_exp_month,
-        card_exp_year:  current_user.stripe_card_exp_year
+        card_exp_year:  current_user.stripe_card_exp_year,
+        # Régua de agendamento: o app e o site mostram antes de confirmar.
+        booking_rules:  booking_rules
+      }
+    end
+
+    def booking_rules
+      r = current_user.restricao_agendamento
+      {
+        restricao:   r&.dig(:tipo)&.to_s,
+        ate:         r&.dig(:ate)&.iso8601,
+        faltas:      current_user.faltas_recentes.count,
+        ativos:      current_user.agendamentos_comuns_ativos.count,
+        limite:      User::LIMITE_AGENDAMENTOS,
+        sinal_pct:   (Appointment::PREPAYMENT_PCT * 100).round
       }
     end
 

@@ -167,9 +167,26 @@ esse código ao lava-rápido pra confirmar que a reserva é sua.
 Rota: o botão "Rota" abre o app de mapas com o caminho até o lava-rápido.
 A aba atualiza sozinha e ao puxar pra baixo.
 
+## LIMITE DE AGENDAMENTOS E FALTAS (AGENDAMENTO COMUM)
+A regra aparece no app e no site antes de confirmar o agendamento.
+- Limite: até 3 agendamentos comuns marcados ao mesmo tempo, e no máximo 1 por
+  lava-rápido no mesmo dia. Pra marcar outro, cancele um ou espere um acontecer.
+- Falta: quando o lava-rápido registra que o cliente não compareceu (sem ter
+  cancelado), o cliente recebe o aviso "Registramos uma falta".
+- 2 faltas em 90 dias: por 60 dias depois da última falta, o agendamento comum
+  pede um sinal de 35% no cartão (cobrado na hora de agendar; o resto é pago no
+  lava-rápido). O sinal volta pro cartão se o cliente cancelar até 2 horas
+  antes ou se o lava-rápido cancelar; se o cliente faltar, não volta.
+- 3 faltas em 90 dias: o agendamento comum fica bloqueado por 30 dias depois da
+  última falta. O app mostra até quando.
+- O Last Minute continua liberado em todos os casos.
+- Faltas com mais de 90 dias deixam de contar.
+- Falta registrada por engano (o cliente foi atendido): ESCALE, pedindo o código
+  LV-0000 e o que aconteceu. Não prometa que a falta será retirada.
+
 ## CANCELAR UM AGENDAMENTO
 - Agendamento comum: no card, em Próximos, toque em "Cancelar agendamento" e
-  confirme. O horário é liberado.
+  confirme. O horário é liberado (e o sinal, quem pagou, volta pro cartão).
 - Prazo: só dá pra cancelar pelo app até 2 horas antes do horário. Depois disso
   o link some do card e, se tentar, aparece "Prazo de cancelamento encerrou às
   HH:MM de DD/MM".
@@ -284,6 +301,7 @@ horário.
   perdido, atendimento, preço diferente do anunciado, lava-rápido fechado no
   horário agendado.
 - Cancelamento fora do prazo, agendamento que sumiu ou status errado.
+- Contestação de falta registrada.
 - Não consegue trocar o e-mail ou excluir a conta pelo app, ou outros pedidos
   sobre dados pessoais (LGPD).
 - Cartão adicionado/trocado sem o cliente saber, suspeita de acesso indevido.

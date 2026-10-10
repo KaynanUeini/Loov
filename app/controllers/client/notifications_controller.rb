@@ -117,6 +117,16 @@ module Client
               created_at: a.updated_at.iso8601,
               read: reads.key?(key)
             }
+          when "no_show"
+            next unless a.appointment_type == "regular"
+            key = "appt_no_show-#{a.id}"
+            list << {
+              id: key, type: "appointment_no_show",
+              title: "Registramos uma falta",
+              desc:  current_user.aviso_de_falta(a),
+              created_at: a.updated_at.iso8601,
+              read: reads.key?(key)
+            }
           when "attended"
             next if a.review.present?  # já avaliou, não precisa de aviso
             key = "appt_attended-#{a.id}"

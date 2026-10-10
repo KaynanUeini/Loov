@@ -32,6 +32,7 @@ Rails.application.routes.draw do
     member do
       delete :cancel
       get    :help
+      post   :authorized
     end
   end
 

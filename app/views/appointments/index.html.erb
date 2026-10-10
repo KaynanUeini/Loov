@@ -200,7 +200,7 @@
       <div class="ag-sheet-ic"><i data-feather="x-circle" style="width:22px;height:22px"></i></div>
       <h2 id="ag-cancel-t">Cancelar agendamento?</h2>
       <div class="ag-sum"><b id="ag-cancel-shop"></b><small id="ag-cancel-when"></small></div>
-      <p class="ag-desc">O horário será liberado e esta ação não pode ser desfeita.</p>
+      <p class="ag-desc" id="ag-cancel-desc">O horário será liberado e esta ação não pode ser desfeita.</p>
       <div class="ag-err is-off" id="ag-cancel-err"></div>
       <button type="button" class="ag-btn-danger" id="ag-cancel-go">Cancelar agendamento</button>
       <button type="button" class="ag-btn-ghost" id="ag-cancel-back">Voltar</button>
@@ -364,6 +364,9 @@
     var d = new Date(a.scheduled_at);
     $('ag-cancel-shop').textContent = (a.car_wash && a.car_wash.name) || 'Lava-rápido';
     $('ag-cancel-when').textContent = WD[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' · ' + hm(a.scheduled_at);
+    // Sinal pago no app (régua de faltas): volta se cancelar dentro do prazo.
+    $('ag-cancel-desc').textContent = 'O horário será liberado e esta ação não pode ser desfeita.' +
+      (a.deposit ? ' O sinal de R$ ' + Number(a.deposit).toFixed(2).replace('.', ',') + ' volta pro seu cartão.' : '');
     setCancelErr(null); setCancelBusy(false);
     var s = $('ag-cancel'); s.classList.add('is-on'); s.setAttribute('aria-hidden', 'false');
     $('ag-cancel-back').focus();

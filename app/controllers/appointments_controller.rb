@@ -4,10 +4,10 @@ class AppointmentsController < ApplicationController
   # formulário. O cancelamento fica livre só nesse caso: um site de terceiros
   # não consegue enviar esse cabeçalho, então no navegador a proteção segue.
   skip_before_action :verify_authenticity_token, if: -> {
-    action_name == 'create' ||
+    action_name.in?(%w[create authorized]) ||
       (action_name == 'cancel' && request.authorization.to_s.start_with?('Bearer '))
   }
-  before_action :set_appointment, only: [:show, :cancel, :help]
+  before_action :set_appointment, only: [:show, :cancel, :help, :authorized]
   before_action :set_car_wash, only: [:new, :create]
   # Cleanup lazy de Disponíveis vencidos a cada acesso. Throttled no model
   # (1x/30s app-wide) — não pesa no banco mesmo com polling frequente.
@@ -133,6 +133,22 @@ class AppointmentsController < ApplicationController
     # precisam concordar, e nesta base já custou cinco correções descobrir isso
     # do jeito difícil. A mensagem diz até quando, senão o cliente só sabe que
     # não pode e não sabe quando poderá.
+    # Limite e faltas (User#restricao_agendamento). Vem antes da pausa e da
+    # disponibilidade: se a pessoa não pode agendar, o motivo é este, não o
+    # horário.
+    if @appointment.regular?
+      erro = regra_de_agendamento(start_time)
+      if erro
+        status = erro[:code] == "card_required" ? :payment_required : :unprocessable_entity
+        respond_to do |format|
+          format.html { redirect_to car_wash_path(@car_wash, anchor: 'booking'), alert: erro[:error] }
+          format.json { render json: erro, status: status }
+        end
+        return
+      end
+    end
+    com_sinal = @appointment.regular? && current_user.restricao_agendamento&.dig(:tipo) == :sinal
+
     if @car_wash.pausado_para?(start_time)
       volta = @car_wash.paused_until.in_time_zone("America/Sao_Paulo").strftime("%H:%M")
       msg   = "O lava-rápido pausou os agendamentos até #{volta}. Escolha um horário depois disso."
@@ -167,7 +183,14 @@ class AppointmentsController < ApplicationController
         raise ActiveRecord::Rollback
       end
 
-      @appointment.status = 'confirmed'
+      # Com sinal, o horário fica preso só enquanto o banco cobra (como o
+      # Last Minute no 3DS) e não aparece pro dono até virar confirmed.
+      if com_sinal
+        @appointment.status = 'awaiting_payment'
+        @appointment.acceptance_expires_at = Time.current + Appointment::PAYMENT_AUTH_TTL
+      else
+        @appointment.status = 'confirmed'
+      end
       saved = @appointment.save
       raise ActiveRecord::Rollback unless saved
     end
@@ -188,16 +211,59 @@ class AppointmentsController < ApplicationController
       return
     end
 
-    begin
-      AppointmentMailer.confirmation(@appointment).deliver_now
-    rescue => e
-      Rails.logger.error("[Appointments#create] Email falhou: #{e.message}")
+    if com_sinal
+      resultado, detalhe = @appointment.cobrar_sinal!
+      if resultado == :declined
+        render json: { error: detalhe, code: "card_declined" }, status: :payment_required
+        return
+      end
+      if resultado == :action
+        begin
+          ExpireDisponivelAcceptanceJob.set(wait: Appointment::PAYMENT_AUTH_TTL).perform_later(@appointment.id)
+        rescue => e
+          Rails.logger.warn("[Appointments#create] expiração do sinal não enfileirada: #{e.message}")
+        end
+        render json: {
+          ok: true, requires_action: true, appointment_id: @appointment.id, client_secret: detalhe,
+          publishable_key: ENV["STRIPE_PUBLISHABLE_KEY"].presence || Rails.application.credentials.dig(:stripe, :publishable_key),
+          deposit: @appointment.prepayment_amount.to_f
+        }
+        return
+      end
     end
+
+    enviar_confirmacao(@appointment)
 
     respond_to do |format|
       format.html { redirect_to appointments_path, notice: "Agendamento criado com sucesso!" }
-      format.json { render json: { message: "Agendamento confirmado!", appointment_id: @appointment.id }, status: :created }
+      format.json { render json: { message: "Agendamento confirmado!", appointment_id: @appointment.id,
+                                   deposit: @appointment.stripe_payment_intent_id.present? ? @appointment.prepayment_amount.to_f : nil },
+                           status: :created }
     end
+  end
+
+  # POST /appointments/:id/authorized — o banco confirmou o sinal (3DS). O
+  # servidor confere com o Stripe; o que o aparelho diz não é confiado.
+  def authorized
+    a = @appointment
+    return render(json: { ok: true, appointment_id: a.id, deposit: a.prepayment_amount.to_f }) if a.status == "confirmed"
+    unless a.status == "awaiting_payment" && a.stripe_payment_intent_id.present?
+      return render json: { error: "O tempo para confirmar no banco acabou e o horário foi liberado.", code: "expired" },
+                    status: :unprocessable_entity
+    end
+
+    intent = StripeService.new.retrieve(a.stripe_payment_intent_id)
+    unless intent.status == "requires_capture"
+      _, msg = a.recusar_sinal!(a.stripe_payment_intent_id, "O banco não confirmou o sinal. Nada foi cobrado; tente de novo ou use outro cartão.")
+      return render json: { error: msg, code: "card_declined" }, status: :payment_required
+    end
+
+    a.with_lock { a.confirmar_sinal! if a.status == "awaiting_payment" }
+    enviar_confirmacao(a.reload)
+    render json: { ok: true, appointment_id: a.id, deposit: a.prepayment_amount.to_f }
+  rescue Stripe::StripeError => e
+    Rails.logger.error("[Appointments#authorized] #{e.class}: #{e.message}")
+    render json: { error: "Não conseguimos confirmar com o banco agora. Tente de novo em instantes." }, status: :bad_gateway
   end
 
   # Mesmo JSON da aba Agenda do app; a página HTML também o usa (embutido).
@@ -239,6 +305,9 @@ class AppointmentsController < ApplicationController
         review:            review_data,
         phone_last4:       phone_last4,
         show_code:         show_code,
+        # Sinal pago no app (agendamento comum de quem tem faltas recentes):
+        # volta pro cartão se cancelar dentro do prazo.
+        deposit:           (a.regular? && a.stripe_payment_intent_id.present?) ? a.prepayment_amount.to_f : nil,
         car_wash: {
           id:   a.car_wash.id,
           name: a.car_wash.name,
@@ -297,9 +366,11 @@ class AppointmentsController < ApplicationController
     end
 
     @appointment.update_columns(status: 'cancelled')
+    # Cancelou dentro do prazo: o sinal (quem tinha) volta pro cartão.
+    estorno = @appointment.estornar_prepagamento!
     respond_to do |format|
       format.html { redirect_to appointments_path, notice: "Agendamento cancelado. O horário foi liberado." }
-      format.json { render json: { ok: true, status: 'cancelled' } }
+      format.json { render json: { ok: true, status: 'cancelled', refund: estorno } }
     end
   end
 
@@ -309,6 +380,46 @@ class AppointmentsController < ApplicationController
   end
 
   private
+
+  def enviar_confirmacao(appointment)
+    AppointmentMailer.confirmation(appointment).deliver_now
+  rescue => e
+    Rails.logger.error("[Appointments] Email falhou: #{e.message}")
+  end
+
+  # nil quando pode agendar; senão o JSON de erro com um code que o app e o
+  # site usam pra mostrar a tela certa.
+  def regra_de_agendamento(start_time)
+    r = current_user.restricao_agendamento
+    if r&.dig(:tipo) == :bloqueio
+      return { code: "no_show_block", until: r[:ate].iso8601,
+               error: "Por causa de #{r[:faltas]} faltas recentes, o agendamento comum está bloqueado até " \
+                      "#{r[:ate].in_time_zone('America/Sao_Paulo').strftime('%d/%m')}. O Last Minute continua liberado." }
+    end
+
+    ativos = current_user.agendamentos_comuns_ativos
+    if ativos.count >= User::LIMITE_AGENDAMENTOS
+      return { code: "limit_reached",
+               error: "Você já tem #{User::LIMITE_AGENDAMENTOS} agendamentos marcados. Pra marcar outro, cancele um " \
+                      "ou espere um deles acontecer." }
+    end
+
+    dia = start_time.in_time_zone("America/Sao_Paulo").to_date
+    mesmo_dia = current_user.appointments
+      .where(car_wash_id: @car_wash.id, status: %w[confirmed awaiting_payment pending_acceptance])
+      .where(scheduled_at: dia.in_time_zone("America/Sao_Paulo").all_day)
+    if mesmo_dia.exists?
+      return { code: "same_day", error: "Você já tem um horário neste lava-rápido nesse dia." }
+    end
+
+    if r&.dig(:tipo) == :sinal && !current_user.has_payment_method?
+      return { code: "card_required",
+               error: "Por causa de faltas recentes, o agendamento comum pede um sinal de " \
+                      "#{(Appointment::PREPAYMENT_PCT * 100).round}% no cartão até " \
+                      "#{r[:ate].in_time_zone('America/Sao_Paulo').strftime('%d/%m')}. Cadastre um cartão pra continuar." }
+    end
+    nil
+  end
 
   def end_time(a)
     a.scheduled_at + a.service.duration.minutes
