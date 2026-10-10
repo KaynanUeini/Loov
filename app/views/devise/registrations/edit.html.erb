@@ -110,7 +110,6 @@
   .ac-f .ac-ferr { margin-top: 6px; font-size: 11.5px; font-weight: 600; color: var(--rose-500, #c0392b); }
   .ac-ro { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px solid var(--stone); border-radius: 14px; background: var(--cream); color: var(--graphite); font-size: 15px; }
   .ac-ro span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .ac-ro a { color: var(--coral-500) !important; font-size: 12px; font-weight: 600; white-space: nowrap; }
   .ac-save { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px; padding: 16px; border: 0; border-radius: 100px; background: var(--coral-500); color: var(--cream); font-size: 14px; font-weight: 600; transition: opacity .15s; }
   .ac-save[disabled] { opacity: .7; cursor: default; }
   .ac-spin { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(250,250,246,.35); border-top-color: var(--cream); animation: acspin .8s linear infinite; }
@@ -296,7 +295,7 @@
       <div class="ac-handle"></div>
       <div class="ac-sheet-h"><h2 id="sh-dados-t">Editar perfil</h2><button type="button" class="ac-x" data-close aria-label="Fechar"><i data-feather="x" style="width:20px;height:20px"></i></button></div>
       <div class="ac-sheet-b">
-        <div class="ac-f"><label>E-mail</label><div class="ac-ro"><span id="pd-email"></span><a href="#" data-goto-sec>Alterar</a><i data-feather="lock" style="width:13px;height:13px"></i></div></div>
+        <div class="ac-f"><label>E-mail</label><div class="ac-ro"><span id="pd-email"></span><i data-feather="lock" style="width:13px;height:13px"></i></div></div>
         <div class="ac-f"><label for="pd-name">Nome</label><input id="pd-name" autocomplete="name"></div>
         <div class="ac-f"><label for="pd-phone">Telefone</label><input id="pd-phone" inputmode="tel" autocomplete="tel" placeholder="(11) 99999-9999"></div>
         <div class="ac-f"><label for="pd-cpf">CPF</label><input id="pd-cpf" inputmode="numeric" placeholder="000.000.000-00"></div>
@@ -512,7 +511,6 @@
     if ((t = e.target.closest('[data-open]'))) { showView(t.dataset.open, true); return; }
     if (e.target.closest('[data-back]')) { history.back(); return; }
     if (e.target.closest('[data-close]') || e.target.classList.contains('ac-sheet-bg')) { closeSheets(); return; }
-    if (e.target.closest('[data-goto-sec]')) { e.preventDefault(); closeSheets(); showView('seguranca', true); return; }
     if (e.target.closest('#pd-save')) { saveDados(); return; }
     if (e.target.closest('#vh-save')) { saveVehicle(); return; }
     if (e.target.closest('#sec-danger-ask')) { $('sec-danger').classList.add('is-asking'); return; }
