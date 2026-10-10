@@ -482,7 +482,7 @@
         </li>
         <li>
           <div class="nav-avatar-wrap">
-            <%= link_to edit_user_registration_path, class: "nav-avatar #{current_user.profile_complete? ? '' : 'incomplete'}", title: current_user.profile_complete? ? current_user.display_name : "Complete seu perfil" do %>
+            <%= link_to edit_user_registration_path, class: "nav-avatar #{current_user.profile_complete? ? '' : 'incomplete'}", title: current_user.profile_complete? ? "Perfil" : "Complete seu perfil", "aria-label": "Perfil" do %>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
             <% end %>
             <% unless current_user.profile_complete? %><span class="nav-avatar-dot"></span><% end %>

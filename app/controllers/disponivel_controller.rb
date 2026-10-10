@@ -49,13 +49,25 @@ class DisponivelController < ApplicationController
 
     @available_slots = []
 
+    # Tudo o que o laço abaixo consulta, carregado de uma vez pra todas as
+    # lojas: horários de funcionamento, lavagens e ocupação. Antes eram ~120
+    # consultas por carregamento (algumas por loja, uma de cada vez); agora
+    # são poucas, e o Last Minute aparece bem mais rápido na home.
+    ActiveRecord::Associations::Preloader.new(records: dedup_car_washes, associations: :operating_hours).call
+    cw_ids = dedup_car_washes.map(&:id)
+    services_by_cw = Service.last_minute.where(car_wash_id: cw_ids).order(:price).group_by(&:car_wash_id)
+    max_duration = services_by_cw.values.flatten.map { |svc| svc.duration.to_i }.max.to_i
+    occupancy_until = window_start + CarWash::JANELA_LAST_MINUTE + CarWash::PASSO_LAST_MINUTE.minutes +
+                      [max_duration, CarWash::PASSO_LAST_MINUTE].max.minutes
+
+    Appointment.with_preloaded_occupancy(cw_ids, from: window_start - 1.minute, to: occupancy_until) do
     dedup_car_washes.each do |cw|
       # Last Minute é um produto de LAVAGEM: oferece todas as lavagens do
       # estabelecimento e nenhum outro tipo de serviço (polimento, higienização
       # etc.). Antes o corte era por duração (<= 60 min), o que escondia a
       # "Lavagem Completa" e fazia o cliente ver uma opção só, sem entender por
       # quê — enquanto deixava passar serviços de outras categorias curtos.
-      entry_services = last_minute_services(cw).to_a
+      entry_services = services_by_cw[cw.id] || []
       next if entry_services.empty?
 
       slot = cw.last_minute_slot(window_start)
@@ -80,6 +92,7 @@ class DisponivelController < ApplicationController
         min_price:   fitting.map { |s| s.price.to_f }.min,
         distance_km: distance_km
       }
+    end
     end
 
     # Belt-and-suspenders: dedup final pelo id do car_wash

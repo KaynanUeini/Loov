@@ -325,20 +325,47 @@ class Appointment < ApplicationRecord
   EFFECTIVE_END_SQL = "COALESCE(appointments.attended_at, " \
                       "appointments.scheduled_at + (services.duration * interval '1 minute'))".freeze
 
-  def self.peak_concurrency_during(car_wash:, start_at:, end_at:, exclude_id: nil)
-    scope = occupying_capacity
+  # Ocupação de várias lojas carregada numa consulta só, pra listagens (o
+  # Last Minute olha 20+ lojas por carregamento). Dentro do bloco,
+  # peak_concurrency_during usa estes intervalos em memória em vez de ir ao
+  # banco uma vez por loja — com o banco no Neon, cada ida custava ~15 ms e a
+  # lista inteira passava de 1,5 s. Fora do bloco, nada muda.
+  def self.with_preloaded_occupancy(car_wash_ids, from:, to:)
+    rows = occupying_capacity
       .joins(:service)
-      .where(car_wash_id: car_wash.id)
-      .where(
-        "appointments.scheduled_at < ? AND #{EFFECTIVE_END_SQL} > ?",
-        end_at, start_at
-      )
-    scope = scope.where.not(id: exclude_id) if exclude_id
+      .where(car_wash_id: car_wash_ids)
+      .where("appointments.scheduled_at < ? AND #{EFFECTIVE_END_SQL} > ?", to, from)
+      .pluck(:car_wash_id, Arel.sql("appointments.scheduled_at"), Arel.sql(EFFECTIVE_END_SQL))
+    by_cw = Hash.new { |h, k| h[k] = [] }
+    rows.each { |cw_id, s, e| by_cw[cw_id] << [s, e] }
 
-    ranges = scope.pluck(
-      Arel.sql("appointments.scheduled_at"),
-      Arel.sql(EFFECTIVE_END_SQL)
-    )
+    previous = Thread.current[:loov_preloaded_occupancy]
+    Thread.current[:loov_preloaded_occupancy] = { ids: car_wash_ids.to_set, from: from, to: to, ranges: by_cw }
+    yield
+  ensure
+    Thread.current[:loov_preloaded_occupancy] = previous
+  end
+
+  def self.peak_concurrency_during(car_wash:, start_at:, end_at:, exclude_id: nil)
+    pre = Thread.current[:loov_preloaded_occupancy]
+    ranges =
+      if pre && exclude_id.nil? && pre[:ids].include?(car_wash.id) && start_at >= pre[:from] && end_at <= pre[:to]
+        # Mesmo filtro da consulta abaixo, aplicado aos intervalos já carregados.
+        pre[:ranges][car_wash.id].select { |s, e| s < end_at && e > start_at }
+      else
+        scope = occupying_capacity
+          .joins(:service)
+          .where(car_wash_id: car_wash.id)
+          .where(
+            "appointments.scheduled_at < ? AND #{EFFECTIVE_END_SQL} > ?",
+            end_at, start_at
+          )
+        scope = scope.where.not(id: exclude_id) if exclude_id
+        scope.pluck(
+          Arel.sql("appointments.scheduled_at"),
+          Arel.sql(EFFECTIVE_END_SQL)
+        )
+      end
     return 0 if ranges.empty?
 
     events = ranges.flat_map { |s, e|

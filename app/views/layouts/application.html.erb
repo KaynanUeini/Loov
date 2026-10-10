@@ -798,7 +798,10 @@
           senha errada, 422) ou logo após um redirect com aviso ("Conta
           atualizada"), o recarregamento virava um GET novo e apagava a
           mensagem antes de o cliente ler. %>
-      <% if user_signed_in? && current_user.client? && request.get? && flash.empty? %>
+      <%# Home do cliente fica de fora: ela mesma lê a localização (URL, cache,
+          GPS) e já começa a buscar o Last Minute. Recarregar a página só pra
+          pôr lat/lng na URL custava um carregamento inteiro antes de tudo. %>
+      <% if user_signed_in? && current_user.client? && request.get? && flash.empty? && request.path != "/" %>
       if (!window.location.pathname.includes('/client/profile') &&
           (!urlParams.has('latitude') || !urlParams.has('longitude'))) {
         const cached = localStorage.getItem('loov_last_coords');
