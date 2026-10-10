@@ -40,6 +40,9 @@
     font-size: 13.5px; line-height: 1.5;
   }
   .gm-banner svg { flex-shrink: 0; margin-top: 2px; }
+  /* display:flex do autor vence o [hidden] do navegador; sem isto o aviso
+     de coordenada aparecia mesmo pra loja já localizada no mapa. */
+  .gm-banner[hidden] { display: none !important; }
   .gm-banner.warn { background: #fbf3dd; border: 1px solid #ecdba3; color: #7a5f14; }
   .gm-banner.info { background: var(--sand); border: 1px solid var(--stone); color: var(--graphite); }
 
