@@ -2,6 +2,14 @@ module Owner
   class FinancialTrackingController < ApplicationController
     include FinancialPeriod
 
+    # Horário do atendimento em Brasília, pra agrupar por hora/dia/mês.
+    # scheduled_at é timestamp SEM fuso guardado em UTC: primeiro diz ao
+    # Postgres que o valor é UTC, depois converte. Só "AT TIME ZONE
+    # 'America/Sao_Paulo'" lia o valor como se já fosse de Brasília e somava
+    # 3h — atendimento das 18h do dia 9 caía no dia 10 no gráfico, e o das 22h
+    # do último dia do mês caía no mês seguinte do DRE.
+    LOCAL_SCHEDULED_AT = "((scheduled_at AT TIME ZONE 'UTC') AT TIME ZONE 'America/Sao_Paulo')".freeze
+
     skip_before_action :verify_authenticity_token
     before_action :authenticate_user!
     # Atendente também acessa pra ver/lançar custos (a UI mostra só as
@@ -56,9 +64,9 @@ module Owner
 
       # ── VENDAS POR DIA ─────────────────────────────────────────────────────
       sales_by_day_data = @appointments
-      .group(Arel.sql("DATE(scheduled_at)"))
-      .select("DATE(scheduled_at) AS sale_date, COUNT(*) AS appointment_count, SUM(#{Appointment::NET_REVENUE_SQL}) AS total_value")
-      .order(Arel.sql("DATE(scheduled_at) ASC"))
+      .group(Arel.sql("DATE(#{LOCAL_SCHEDULED_AT})"))
+      .select("DATE(#{LOCAL_SCHEDULED_AT}) AS sale_date, COUNT(*) AS appointment_count, SUM(#{Appointment::NET_REVENUE_SQL}) AS total_value")
+      .order(Arel.sql("DATE(#{LOCAL_SCHEDULED_AT}) ASC"))
 
       @sales_by_day = (@start_date..@end_date).map do |date|
         entry = sales_by_day_data.find { |e| e.sale_date == date }
@@ -71,8 +79,8 @@ module Owner
 
       # ── VENDAS POR MÊS ─────────────────────────────────────────────────────
       sales_by_month_data = @appointments
-      .group(Arel.sql("DATE_TRUNC('month', scheduled_at)"))
-      .select("DATE_TRUNC('month', scheduled_at) AS period_start, COUNT(*) AS appointment_count, SUM(#{Appointment::NET_REVENUE_SQL}) AS total_value")
+      .group(Arel.sql("DATE_TRUNC('month', #{LOCAL_SCHEDULED_AT})"))
+      .select("DATE_TRUNC('month', #{LOCAL_SCHEDULED_AT}) AS period_start, COUNT(*) AS appointment_count, SUM(#{Appointment::NET_REVENUE_SQL}) AS total_value")
       .order(Arel.sql("period_start ASC"))
 
       all_months = []
@@ -93,8 +101,8 @@ module Owner
 
       # ── VENDAS POR ANO ─────────────────────────────────────────────────────
       sales_by_year_data = @appointments
-      .group(Arel.sql("DATE_TRUNC('year', scheduled_at)"))
-      .select("DATE_TRUNC('year', scheduled_at) AS period_start, COUNT(*) AS appointment_count, SUM(#{Appointment::NET_REVENUE_SQL}) AS total_value")
+      .group(Arel.sql("DATE_TRUNC('year', #{LOCAL_SCHEDULED_AT})"))
+      .select("DATE_TRUNC('year', #{LOCAL_SCHEDULED_AT}) AS period_start, COUNT(*) AS appointment_count, SUM(#{Appointment::NET_REVENUE_SQL}) AS total_value")
       .order(Arel.sql("period_start ASC"))
 
       @sales_by_year = (@start_date.year..@end_date.year).map do |year|
@@ -134,9 +142,9 @@ module Owner
         @chart_data = @sales_by_day.map { |e| { date: e.sale_date.strftime("%d/%m"), value: e.total_value.to_f } }
 
         confirmed_by_day = confirmed_base
-        .group(Arel.sql("DATE(scheduled_at)"))
-        .select("DATE(scheduled_at) AS sale_date, SUM(#{Appointment::NET_REVENUE_SQL}) AS total_value")
-        .order(Arel.sql("DATE(scheduled_at) ASC"))
+        .group(Arel.sql("DATE(#{LOCAL_SCHEDULED_AT})"))
+        .select("DATE(#{LOCAL_SCHEDULED_AT}) AS sale_date, SUM(#{Appointment::NET_REVENUE_SQL}) AS total_value")
+        .order(Arel.sql("DATE(#{LOCAL_SCHEDULED_AT}) ASC"))
         confirmed_map = confirmed_by_day.each_with_object({}) { |e, h| h[e.sale_date.strftime("%d/%m")] = e.total_value.to_f }
         @confirmed_chart_data = @chart_data.map { |d| { date: d[:date], value: confirmed_map[d[:date]] || 0 } }
 
@@ -144,8 +152,8 @@ module Owner
         @chart_data = @sales_by_month.map { |e| { date: (I18n.l(e.period_start, format: "%b/%Y", locale: :"pt-BR") rescue e.period_start.strftime("%m/%Y")), value: e.total_value.to_f } }
 
         confirmed_by_month = confirmed_base
-        .group(Arel.sql("DATE_TRUNC('month', scheduled_at)"))
-        .select("DATE_TRUNC('month', scheduled_at) AS period_start, SUM(#{Appointment::NET_REVENUE_SQL}) AS total_value")
+        .group(Arel.sql("DATE_TRUNC('month', #{LOCAL_SCHEDULED_AT})"))
+        .select("DATE_TRUNC('month', #{LOCAL_SCHEDULED_AT}) AS period_start, SUM(#{Appointment::NET_REVENUE_SQL}) AS total_value")
         .order(Arel.sql("period_start ASC"))
         confirmed_map = confirmed_by_month.each_with_object({}) do |e, h|
           label = I18n.l(e.period_start.to_date, format: "%b/%Y", locale: :"pt-BR") rescue e.period_start.strftime("%m/%Y")
@@ -157,8 +165,8 @@ module Owner
         @chart_data = @sales_by_year.map { |e| { date: e.period_start.strftime("%Y"), value: e.total_value.to_f } }
 
         confirmed_by_year = confirmed_base
-        .group(Arel.sql("DATE_TRUNC('year', scheduled_at)"))
-        .select("DATE_TRUNC('year', scheduled_at) AS period_start, SUM(#{Appointment::NET_REVENUE_SQL}) AS total_value")
+        .group(Arel.sql("DATE_TRUNC('year', #{LOCAL_SCHEDULED_AT})"))
+        .select("DATE_TRUNC('year', #{LOCAL_SCHEDULED_AT}) AS period_start, SUM(#{Appointment::NET_REVENUE_SQL}) AS total_value")
         .order(Arel.sql("period_start ASC"))
         confirmed_map = confirmed_by_year.each_with_object({}) { |e, h| h[e.period_start.strftime("%Y")] = e.total_value.to_f }
         @confirmed_chart_data = @chart_data.map { |d| { date: d[:date], value: confirmed_map[d[:date]] || 0 } }
@@ -534,7 +542,7 @@ module Owner
         .where(status: "attended")
         .where(scheduled_at: day.beginning_of_day..day.end_of_day)
         .joins(:service)
-        .group(Arel.sql("EXTRACT(HOUR FROM (scheduled_at AT TIME ZONE 'America/Sao_Paulo'))"))
+        .group(Arel.sql("EXTRACT(HOUR FROM (#{LOCAL_SCHEDULED_AT}))"))
         .sum(Appointment::NET_REVENUE_SQL)
       rev_by_hour = raw.each_with_object({}) { |(k, v), h| h[k.to_i] = v.to_f }
 
@@ -558,7 +566,7 @@ module Owner
         .where(status: "attended")
         .where(scheduled_at: start_date.beginning_of_day..end_date.end_of_day)
         .joins(:service)
-        .group(Arel.sql("DATE(scheduled_at AT TIME ZONE 'America/Sao_Paulo')"))
+        .group(Arel.sql("DATE(#{LOCAL_SCHEDULED_AT})"))
         .sum(Appointment::NET_REVENUE_SQL)
       rev_by_day = raw.each_with_object({}) do |(k, v), h|
         date = k.is_a?(String) ? Date.parse(k) : k.to_date
@@ -584,7 +592,7 @@ module Owner
         .where(status: "attended")
         .where(scheduled_at: start_date.beginning_of_day..end_date.end_of_day)
         .joins(:service)
-        .group(Arel.sql("DATE_TRUNC('month', scheduled_at AT TIME ZONE 'America/Sao_Paulo')"))
+        .group(Arel.sql("DATE_TRUNC('month', #{LOCAL_SCHEDULED_AT})"))
         .sum(Appointment::NET_REVENUE_SQL)
       rev_by_month = raw.each_with_object({}) do |(k, v), h|
         date = k.is_a?(String) ? Date.parse(k) : k.to_date
@@ -616,7 +624,7 @@ module Owner
         .where(status: "attended")
         .where(scheduled_at: window_start.beginning_of_day..window_end.end_of_day)
         .joins(:service)
-        .group(Arel.sql("DATE_TRUNC('month', scheduled_at AT TIME ZONE 'America/Sao_Paulo')"))
+        .group(Arel.sql("DATE_TRUNC('month', #{LOCAL_SCHEDULED_AT})"))
         .sum(Appointment::NET_REVENUE_SQL)
       rev_by_month = rev_raw.each_with_object({}) do |(k, v), h|
         date = k.is_a?(String) ? Date.parse(k) : k.to_date
@@ -628,7 +636,7 @@ module Owner
         .where("scheduled_at >= ?", Time.current)
         .where(scheduled_at: Time.current..window_end.end_of_day)
         .joins(:service)
-        .group(Arel.sql("DATE_TRUNC('month', scheduled_at AT TIME ZONE 'America/Sao_Paulo')"))
+        .group(Arel.sql("DATE_TRUNC('month', #{LOCAL_SCHEDULED_AT})"))
         .sum(Appointment::NET_REVENUE_SQL)
       open_by_month = open_raw.each_with_object({}) do |(k, v), h|
         date = k.is_a?(String) ? Date.parse(k) : k.to_date

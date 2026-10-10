@@ -149,7 +149,7 @@ module Owner
 
       appts = @car_wash.appointments
         .occupying_capacity
-        .where("DATE(scheduled_at) = ?", date)
+        .where(scheduled_at: date.in_time_zone("America/Sao_Paulo").all_day) # dia de Brasília (DATE() dava o dia em UTC)
         .includes(:service, :user)
         .to_a
 

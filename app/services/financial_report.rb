@@ -26,7 +26,7 @@ class FinancialReport
     # Mesmos nomes que o dono vê no app e no site: "Agendamento" e "Last Minute".
     "app"        => "Agendamento",
     "disponivel" => "Last Minute",
-    "walk_in"    => "Balcão"
+    "walk_in"    => "Avulso"
   }.freeze
 
   attr_reader :car_wash, :start_date, :end_date, :period, :period_label
