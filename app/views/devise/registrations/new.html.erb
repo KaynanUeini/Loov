@@ -1,182 +1,398 @@
+<%#
+  Cadastro do site — irmão do login (sessions/new): mesma divisão em duas
+  metades e a mesma voz do app (RegisterScreen), em 2 passos.
+
+    Passo 1 · "Como você vai usar a Loov?" — dois cartões grandes (cliente /
+              dono). Escolher já avança: são só duas opções, um clique a menos
+              (Hick), e dá pra voltar.
+    Passo 2 · os campos daquele perfil e nada mais. Senha com olho e medidor
+              ao vivo; erros aparecem no próprio campo, em português.
+
+  A metade escura conversa com a escolha: a manchete cinética e os três
+  benefícios mudam quando a pessoa troca de perfil (cliente: "Sem fila. Sem
+  espera. Só brilho."; dono: "Agenda cheia. Fila zero. Caixa girando.").
+  Tipo editorial enorme e uma faixa correndo embaixo — referência wiemer;
+  um acento só sobre escuro — Spotify; uma ideia por tela — Apple.
+
+  ?role=owner (link "Cadastrar meu lava-rápido" da landing) abre direto no
+  passo 2 do dono. Erro de validação volta no passo 2 com o perfil escolhido.
+%>
+<%
+  roles        = %w[client owner]
+  picked_role  = params[:role].presence_in(roles) || (resource.errors.any? ? resource.role.presence_in(roles) : nil)
+  min_pass     = resource.class.password_length.min
+  err          = ->(attr) { resource.errors.full_messages_for(attr).first }
+%>
 <style>
-  .reg-role-grid {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 10px; margin-bottom: 20px;
-  }
-  .reg-role-input { display: none; }
-  .reg-role-card {
-    display: flex; flex-direction: column; gap: 4px;
-    background: var(--paper);
-    border: 1px solid var(--stone);
-    border-radius: 14px;
-    padding: 14px 16px;
-    cursor: pointer;
-    transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
-    user-select: none;
-  }
-  .reg-role-card:hover { border-color: var(--coral-100); background: var(--cream); }
-  .reg-role-input:checked + .reg-role-card {
-    border-color: var(--coral-500);
-    background: var(--coral-50);
-    box-shadow: 0 0 0 3px rgba(220,120,82,0.08);
-  }
-  .reg-role-title {
-    font-size: 14.5px; font-weight: 600; color: var(--ink);
-    display: flex; align-items: center; gap: 8px;
-  }
-  .reg-role-title i { color: var(--coral-500); font-size: 13px; }
-  .reg-role-desc { font-size: 12px; color: var(--graphite); line-height: 1.4; }
+  .sx { min-height: 100vh; padding-top: 60px; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); background: var(--cream); }
+  .sx *, .sx *::before, .sx *::after { box-sizing: border-box; }
+  .sx button { font-family: inherit; cursor: pointer; }
 
-  .reg-step-list {
-    margin-top: 32px; padding-top: 24px;
-    border-top: 1px solid var(--stone);
-    display: flex; flex-direction: column; gap: 12px;
-    position: relative;
-  }
-  .reg-step-row { display: flex; align-items: center; gap: 14px; font-size: 14px; color: var(--graphite); }
-  .reg-step-num {
-    width: 26px; height: 26px; border-radius: 50%;
-    border: 1.5px solid var(--coral-300);
-    display: inline-flex; align-items: center; justify-content: center;
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 13px; font-weight: 700; color: var(--coral-700);
-    flex-shrink: 0;
-    background: var(--coral-50);
-  }
+  /* ── Metade de marca ─────────────────────────────────────────────── */
+  .sx-stage { position: relative; overflow: hidden; isolation: isolate; background: var(--obsidian); color: var(--cream); display: flex; flex-direction: column; justify-content: space-between; padding: 56px 64px 0; }
+  .sx-stage::before { content: ""; position: absolute; width: 760px; height: 760px; right: -280px; bottom: -320px; z-index: -1; background: radial-gradient(closest-side, var(--sx-glow, rgba(221,120,82,.42)), rgba(0,0,0,0) 70%); filter: blur(10px); animation: sx-breathe 9s ease-in-out infinite; transition: background .8s ease; }
+  .sx[data-role="owner"] .sx-stage { --sx-glow: rgba(75,142,192,.38); }
+  @keyframes sx-breathe { 0%, 100% { transform: none; opacity: .85; } 50% { transform: translate(-40px, -30px) scale(1.08); opacity: 1; } }
+  .sx-top { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ash); }
+  .sx-kinetic { margin: 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: clamp(56px, 6.6vw, 112px); line-height: .92; letter-spacing: -0.045em; color: var(--cream) !important; }
+  .sx-kinetic span { display: block; opacity: 0; transform: translateY(40%); filter: blur(12px); animation: sx-word .9s cubic-bezier(.2,.8,.2,1) forwards; }
+  .sx-kinetic span:nth-child(1) { animation-delay: .1s; }
+  .sx-kinetic span:nth-child(2) { animation-delay: .45s; color: var(--coral-500); }
+  .sx-kinetic span:nth-child(3) { animation-delay: .8s; }
+  .sx[data-role="owner"] .sx-kinetic span:nth-child(2) { color: #7fb6dd; }
+  @keyframes sx-word { to { opacity: 1; transform: none; filter: none; } }
+  .sx-perks { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; max-width: 34ch; }
+  .sx-perks li { display: flex; gap: 12px; align-items: flex-start; font-size: 16px; line-height: 1.45; color: #cfc8bb; opacity: 0; animation: sx-fade .6s ease forwards; }
+  .sx-perks li:nth-child(1) { animation-delay: 1.05s; } .sx-perks li:nth-child(2) { animation-delay: 1.2s; } .sx-perks li:nth-child(3) { animation-delay: 1.35s; }
+  .sx-perks b { color: var(--cream); font-weight: 600; }
+  .sx-perks i { flex: 0 0 22px; height: 22px; margin-top: 1px; border-radius: 50%; background: rgba(250,250,246,.08); display: inline-flex; align-items: center; justify-content: center; color: var(--coral-500); }
+  .sx[data-role="owner"] .sx-perks i { color: #7fb6dd; }
+  @keyframes sx-fade { to { opacity: 1; } }
+  /* Faixa correndo — serviços que a Loov agenda. */
+  .sx-marquee { margin: 40px -64px 0; padding: 18px 0; border-top: 1px solid rgba(250,250,246,.1); overflow: hidden; white-space: nowrap; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; letter-spacing: .14em; text-transform: uppercase; color: rgba(250,250,246,.38); }
+  .sx-marquee div { display: inline-block; padding-left: 100%; animation: sx-run 38s linear infinite; }
+  .sx-marquee span { margin: 0 18px; }
+  .sx-marquee em { font-style: normal; color: var(--coral-500); }
+  @keyframes sx-run { to { transform: translateX(-100%); } }
 
-  .client-fields { display: none; }
-  .client-fields.visible { display: contents; }
+  /* ── Metade do formulário ────────────────────────────────────────── */
+  .sx-panel { display: flex; align-items: center; justify-content: center; padding: 48px 40px; }
+  .sx-wrap { width: 100%; max-width: 420px; }
+  .sx-mobile-head { display: none; }
+  .sx-prog { display: flex; gap: 6px; margin-bottom: 26px; }
+  .sx-prog i { flex: 1; height: 4px; border-radius: 2px; background: var(--sand); transition: background .3s; }
+  .sx-prog i.is-on { background: var(--coral-500); }
+  .sx-step-lab { margin-bottom: 8px; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ash); }
+  .sx-title { margin: 0 0 8px !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 38px; line-height: 1.05; letter-spacing: -0.035em; color: var(--ink) !important; }
+  .sx-sub { margin: 0 0 26px; font-size: 15.5px; line-height: 1.5; color: var(--graphite); }
+  .sx-step { display: none; }
+  .sx-step.is-on { display: block; animation: sx-in .35s cubic-bezier(.2,.8,.2,1); }
+  @keyframes sx-in { from { opacity: 0; transform: translateX(16px); } }
+
+  /* Passo 1: cartões de perfil */
+  .sx-roles { display: grid; gap: 12px; }
+  .sx-role { display: flex; align-items: center; gap: 16px; width: 100%; padding: 20px; text-align: left; border-radius: 20px; border: 1.5px solid var(--stone); background: var(--paper); color: var(--ink); transition: border-color .15s, transform .15s, box-shadow .2s, background .15s; }
+  .sx-role:hover { border-color: var(--ink); transform: translateY(-2px); box-shadow: 0 14px 30px -22px rgba(40,35,28,.6); }
+  .sx-role:focus-visible { outline: 3px solid var(--coral-500); outline-offset: 2px; }
+  .sx-role[aria-pressed="true"] { border-color: var(--coral-500); background: var(--coral-50); }
+  .sx-role-ic { flex: 0 0 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; }
+  .sx-role-ic.is-coral { background: var(--coral-100); color: var(--coral-700); }
+  .sx-role-ic.is-pool { background: #dceaf3; color: #2a5f8a; }
+  .sx-role-t { flex: 1; min-width: 0; }
+  .sx-role-t b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 18px; letter-spacing: -0.3px; }
+  .sx-role-t small { display: block; margin-top: 4px; font-size: 13.5px; line-height: 1.45; color: var(--graphite); }
+  .sx-role-go { flex: 0 0 34px; height: 34px; border-radius: 50%; background: var(--sand); display: flex; align-items: center; justify-content: center; color: var(--ink); transition: background .15s, color .15s, transform .15s; }
+  .sx-role:hover .sx-role-go { background: var(--ink); color: var(--cream); transform: translateX(2px); }
+
+  /* Passo 2: campos */
+  .sx-back { display: inline-flex; align-items: center; gap: 6px; margin: -6px 0 16px -8px; padding: 8px; border: 0; border-radius: 10px; background: transparent; color: var(--graphite); font-size: 14px; font-weight: 600; }
+  .sx-back:hover { background: var(--sand); color: var(--ink); }
+  .sx-field { margin-bottom: 16px; }
+  .sx-label { display: flex; justify-content: space-between; margin-bottom: 8px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--graphite); }
+  .sx-label small { letter-spacing: .5px; color: var(--ash); text-transform: none; font-family: 'Inter', sans-serif; font-size: 12px; }
+  .sx-input { width: 100%; height: 54px; padding: 0 16px; font-size: 16px; font-family: 'Inter', sans-serif; border-radius: 14px !important; transition: border-color .15s ease, box-shadow .2s ease, background .2s ease !important; }
+  .sx-input:focus { background: var(--cream) !important; box-shadow: 0 0 0 4px rgba(221,120,82,.16); }
+  .sx-input.is-err { border-color: var(--rose-500, #c0392b) !important; }
+  .sx-ferr { margin-top: 6px; font-size: 12.5px; font-weight: 600; color: var(--rose-500, #c0392b); }
+  .sx-ferr:empty { display: none; }
+  .sx-pass { position: relative; }
+  .sx-pass .sx-input { padding-right: 52px; }
+  .sx-eye { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 12px; border: 0; background: transparent; color: var(--graphite); display: inline-flex; align-items: center; justify-content: center; }
+  .sx-eye:hover { background: var(--sand); color: var(--ink); }
+  .sx-meter { display: flex; gap: 4px; margin-top: 8px; }
+  .sx-meter i { flex: 1; height: 4px; border-radius: 2px; background: var(--sand); transition: background .25s; }
+  .sx-meter[data-lvl="1"] i:nth-child(-n+1) { background: #e0a050; }
+  .sx-meter[data-lvl="2"] i:nth-child(-n+2) { background: #d7b33c; }
+  .sx-meter[data-lvl="3"] i:nth-child(-n+3) { background: #3fa66b; }
+  .sx-meter-txt { margin-top: 6px; font-size: 12.5px; color: var(--graphite); min-height: 1.2em; }
+  .sx-hidden { display: none !important; }
+  .sx-submit { text-transform: none !important; width: 100%; height: 56px; margin-top: 8px; border-radius: 9999px !important; display: inline-flex; align-items: center; justify-content: center; gap: 10px; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; letter-spacing: .2px; box-shadow: 0 10px 24px -10px rgba(221,120,82,.7); transition: transform .15s ease, box-shadow .2s ease !important; }
+  .sx-submit:hover { transform: translateY(-1px); box-shadow: 0 14px 28px -10px rgba(221,120,82,.8); }
+  .sx-submit .sx-arrow { transition: transform .2s ease; }
+  .sx-submit:hover .sx-arrow { transform: translateX(3px); }
+  .sx-submit .sx-spin { display: none; width: 18px; height: 18px; border-radius: 50%; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; animation: sx-spin .7s linear infinite; }
+  .sx-submit.is-loading { pointer-events: none; opacity: .9; }
+  .sx-submit.is-loading .sx-spin { display: inline-block; }
+  .sx-submit.is-loading .sx-arrow { display: none; }
+  @keyframes sx-spin { to { transform: rotate(360deg); } }
+  .sx-note { margin-top: 14px; font-size: 12.5px; line-height: 1.5; color: var(--ash); text-align: center; }
+  .sx-alt { margin-top: 26px; padding-top: 22px; border-top: 1px solid var(--stone); text-align: center; font-size: 15px; color: var(--graphite); }
+  .sx-alt a { color: var(--coral-700) !important; font-weight: 600; text-decoration: none; }
+  .sx-alt a:hover { color: var(--coral-500) !important; }
+  .sx-formerr { display: flex; gap: 8px; margin-bottom: 18px; padding: 12px 14px; border-radius: 14px; background: #f6d4d4; color: var(--rose-500, #c0392b); font-size: 13.5px; font-weight: 600; line-height: 1.4; }
+
+  /* ── Celular: vira a tela do app ─────────────────────────────────── */
+  @media (max-width: 900px) {
+    .sx { grid-template-columns: 1fr; }
+    .sx-stage { display: none; }
+    .sx-panel { align-items: flex-start; padding: 28px 22px 48px; }
+    .sx-mobile-head { display: block; margin-bottom: 26px; }
+    .sx-mobile-head h2 { margin: 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 30px; line-height: 1.08; letter-spacing: -0.03em; color: var(--ink) !important; }
+    .sx-mobile-head em { font-style: normal; color: var(--coral-500); }
+    .sx-title { font-size: 28px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sx-kinetic span, .sx-perks li { animation: none; opacity: 1; transform: none; filter: none; }
+    .sx-stage::before, .sx-marquee div { animation: none; }
+    .sx-step.is-on { animation: none; }
+  }
 </style>
 
-<div class="loov-auth">
+<div class="sx" id="sx" data-role="<%= picked_role || 'client' %>">
 
-  <!-- ── EDITORIAL ──────────────────────────────────── -->
-  <aside class="loov-auth-editorial">
-    <div class="loov-eyebrow"><span class="dot"></span>BEM-VINDO À LOOV</div>
-    <h1 class="loov-h1" style="text-align:left;">
-      Crie sua<br><span class="accent">conta</span>.
-    </h1>
-    <p class="loov-lead" style="margin-left:0;text-align:left;">
-      Escolha seu perfil e comece a usar a Loov em menos de 2 minutos.
-    </p>
-    <div class="reg-step-list">
-      <div class="reg-step-row"><div class="reg-step-num">1</div>Escolha seu perfil</div>
-      <div class="reg-step-row"><div class="reg-step-num">2</div>Preencha seus dados</div>
-      <div class="reg-step-row"><div class="reg-step-num">3</div>Confirme seu e-mail</div>
+  <section class="sx-stage" aria-hidden="true">
+    <div class="sx-top" id="sx-top">Para quem quer o carro limpo</div>
+    <div>
+      <h1 class="sx-kinetic" id="sx-kinetic"><span>Sem fila.</span><span>Sem espera.</span><span>Só brilho.</span></h1>
     </div>
-  </aside>
-
-  <!-- ── FORM ──────────────────────────────────────── -->
-  <section class="loov-auth-form-side">
-    <div class="loov-eyebrow"><span class="dot"></span>CRIAR CONTA</div>
-    <h2 class="loov-h1" style="font-size:clamp(28px,4vw,40px);text-align:left;">
-      Vamos <span class="accent">começar</span>.
-    </h2>
-    <p class="loov-lead" style="margin-left:0;text-align:left;margin-bottom:28px;">
-      Selecione seu perfil e cadastre-se em segundos.
-    </p>
-
-    <div class="reg-role-grid">
-      <div>
-        <input type="radio" name="role_ui" id="role-client" value="client" class="reg-role-input" checked>
-        <label for="role-client" class="reg-role-card">
-          <div class="reg-role-title"><i class="fas fa-user"></i> Cliente</div>
-          <div class="reg-role-desc">Agende serviços em lava-rápidos próximos a você</div>
-        </label>
-      </div>
-      <div>
-        <input type="radio" name="role_ui" id="role-owner" value="owner" class="reg-role-input">
-        <label for="role-owner" class="reg-role-card">
-          <div class="reg-role-title"><i class="fas fa-store"></i> Proprietário</div>
-          <div class="reg-role-desc">Gerencie seu lava-rápido e receba agendamentos</div>
-        </label>
-      </div>
-    </div>
-
-    <%= form_for(resource, as: resource_name, url: registration_path(resource_name), html: { id: "reg-form" }) do |f| %>
-
-      <%= render "devise/shared/flash" %>
-      <%= render "devise/shared/error_messages", resource: resource %>
-
-      <%# Papel inicial: ?role=owner (link "Cadastrar meu lava-rápido" da
-          landing) ao abrir; depois de um erro, o que a pessoa tinha escolhido
-          — antes voltava sempre "client", e o dono virava cliente sem notar. %>
-      <%= f.hidden_field :role, id: "role-hidden",
-            value: (params[:role].presence_in(%w[client owner]) || resource.role.presence_in(%w[client owner]) || "client") %>
-
-      <div class="client-fields visible" id="client-fields">
-        <div class="loov-field">
-          <%= f.label :full_name, "Nome completo", class: "loov-label" %>
-          <%= f.text_field :full_name, class: "loov-input", placeholder: "Seu nome completo", id: "full_name_field" %>
-        </div>
-        <div class="loov-field">
-          <%= f.label :phone, "Telefone", class: "loov-label" %>
-          <%= f.text_field :phone, class: "loov-input", placeholder: "(11) 99999-9999", id: "phone_field", maxlength: 15 %>
-        </div>
-      </div>
-
-      <div class="loov-field">
-        <%= f.label :email, "E-mail", class: "loov-label" %>
-        <%= f.email_field :email, autofocus: true, autocomplete: "email",
-            class: "loov-input", placeholder: "seu@email.com" %>
-      </div>
-
-      <div class="loov-field">
-        <%= f.label :password, "Senha", class: "loov-label" %>
-        <%= f.password_field :password, autocomplete: "new-password",
-            class: "loov-input", placeholder: "Mínimo #{resource.class.password_length.min} caracteres" %>
-      </div>
-
-      <div class="loov-field">
-        <%= f.label :password_confirmation, "Confirmar senha", class: "loov-label" %>
-        <%= f.password_field :password_confirmation, autocomplete: "new-password",
-            class: "loov-input", placeholder: "Repita a senha" %>
-      </div>
-
-      <%= f.submit "Criar conta", class: "loov-btn-primary loov-btn-block loov-btn-lg" %>
-
-    <% end %>
-
-    <div class="loov-footer-row">
-      <%= render "devise/shared/links" %>
+    <div>
+      <ul class="sx-perks" id="sx-perks"></ul>
+      <div class="sx-marquee"><div>
+        <% 2.times do %><span>Lavagem</span><span><em>●</em></span><span>Polimento</span><span><em>●</em></span><span>Higienização</span><span><em>●</em></span><span>Vitrificação</span><span><em>●</em></span><span>Cristalização</span><span><em>●</em></span><span>Last Minute</span><span><em>●</em></span><% end %>
+      </div></div>
     </div>
   </section>
 
+  <section class="sx-panel">
+    <div class="sx-wrap">
+      <div class="sx-mobile-head"><h2>Seu carro <em>limpo</em>,<br>sem fila.</h2></div>
+      <div class="sx-prog"><i class="is-on"></i><i id="sx-prog2"></i></div>
+
+      <%# ── Passo 1 ── %>
+      <div class="sx-step" id="sx-step1">
+        <div class="sx-step-lab">Passo 1 de 2</div>
+        <h2 class="sx-title">Como você vai usar a Loov?</h2>
+        <p class="sx-sub">Isso define o que você vê depois de entrar.</p>
+        <div class="sx-roles">
+          <button type="button" class="sx-role" data-role="client" aria-pressed="false">
+            <span class="sx-role-ic is-coral"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 11l1.6-4.2A2 2 0 0 1 8.5 5.5h7a2 2 0 0 1 1.9 1.3L19 11"/><rect x="3" y="11" width="18" height="6" rx="2"/><path d="M5.5 17v2M18.5 17v2"/><circle cx="7.5" cy="14" r="1"/><circle cx="16.5" cy="14" r="1"/></svg></span>
+            <span class="sx-role-t"><b>Quero lavar meu carro</b><small>Agendar em lava-rápidos, pegar vagas de última hora e acompanhar tudo.</small></span>
+            <span class="sx-role-go"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg></span>
+          </button>
+          <button type="button" class="sx-role" data-role="owner" aria-pressed="false">
+            <span class="sx-role-ic is-pool"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></span>
+            <span class="sx-role-t"><b>Tenho um lava-rápido</b><small>Gerenciar agenda, preços e equipe, e ver como o negócio está indo.</small></span>
+            <span class="sx-role-go"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg></span>
+          </button>
+        </div>
+      </div>
+
+      <%# ── Passo 2 ── %>
+      <div class="sx-step" id="sx-step2">
+        <button type="button" class="sx-back" id="sx-back"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>Trocar perfil</button>
+        <div class="sx-step-lab" id="sx-step2-lab">Passo 2 de 2 · Cliente</div>
+        <h2 class="sx-title" id="sx-step2-title">Sua conta.</h2>
+        <p class="sx-sub" id="sx-step2-sub">Leva menos de um minuto.</p>
+
+        <%= render "devise/shared/flash" %>
+        <% general = resource.errors.full_messages_for(:base) + resource.errors.full_messages_for(:role) %>
+        <% if general.any? %><div class="sx-formerr"><%= general.join(". ") %></div><% end %>
+
+        <%= form_for(resource, as: resource_name, url: registration_path(resource_name), html: { id: "sx-form", novalidate: true, data: { turbo: false } }) do |f| %>
+          <%= f.hidden_field :role, id: "sx-role", value: picked_role || "client" %>
+
+          <div class="sx-field" data-only="owner">
+            <label class="sx-label" for="sx-cwname">Nome do lava-rápido</label>
+            <input class="sx-input" id="sx-cwname" placeholder="Ex.: Lava Rápido do Zé" autocomplete="organization" maxlength="80">
+            <div class="sx-ferr" data-for="sx-cwname"></div>
+          </div>
+
+          <div class="sx-field">
+            <%= f.label :full_name, "Seu nome", class: "sx-label" %>
+            <%= f.text_field :full_name, class: "sx-input#{' is-err' if err.(:full_name)}", id: "sx-name", placeholder: "Seu nome completo", autocomplete: "name" %>
+            <div class="sx-ferr" data-for="sx-name"><%= err.(:full_name) %></div>
+          </div>
+
+          <div class="sx-field">
+            <%= f.label :email, "E-mail", class: "sx-label" %>
+            <%= f.email_field :email, class: "sx-input#{' is-err' if err.(:email)}", id: "sx-email", placeholder: "voce@email.com", autocomplete: "email", inputmode: "email" %>
+            <div class="sx-ferr" data-for="sx-email"><%= err.(:email) %></div>
+          </div>
+
+          <div class="sx-field" data-only="client">
+            <%= f.label :phone, "Telefone", class: "sx-label" %>
+            <%= f.telephone_field :phone, class: "sx-input#{' is-err' if err.(:phone)}", id: "sx-phone", placeholder: "(11) 99999-9999", autocomplete: "tel", inputmode: "tel", maxlength: 15 %>
+            <div class="sx-ferr" data-for="sx-phone"><%= err.(:phone) %></div>
+          </div>
+
+          <div class="sx-field" data-only="client">
+            <label class="sx-label" for="sx-cpf">CPF <small>opcional</small></label>
+            <%= f.text_field :cpf, class: "sx-input#{' is-err' if err.(:cpf)}", id: "sx-cpf", placeholder: "000.000.000-00", inputmode: "numeric", maxlength: 14 %>
+            <div class="sx-ferr" data-for="sx-cpf"><%= err.(:cpf) %></div>
+          </div>
+
+          <div class="sx-field">
+            <%= f.label :password, "Senha", class: "sx-label" %>
+            <div class="sx-pass">
+              <%= f.password_field :password, class: "sx-input#{' is-err' if err.(:password)}", id: "sx-pass", placeholder: "Mínimo #{min_pass} caracteres", autocomplete: "new-password" %>
+              <button type="button" class="sx-eye" id="sx-eye" aria-label="Mostrar senha" aria-controls="sx-pass" aria-pressed="false"></button>
+            </div>
+            <div class="sx-meter" id="sx-meter" data-lvl="0" aria-hidden="true"><i></i><i></i><i></i></div>
+            <div class="sx-meter-txt" id="sx-meter-txt"></div>
+            <div class="sx-ferr" data-for="sx-pass"><%= err.(:password) %></div>
+          </div>
+          <%# Confirmação = a própria senha (o olho já permite conferir). %>
+          <%= f.hidden_field :password_confirmation, id: "sx-pass2" %>
+
+          <button type="submit" class="sx-submit loov-btn-primary" id="sx-submit">
+            <span class="sx-spin" aria-hidden="true"></span>
+            <span class="sx-submit-label">Criar conta</span>
+            <svg class="sx-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
+          <p class="sx-note" id="sx-note">Grátis. Sem cartão pra criar a conta.</p>
+        <% end %>
+      </div>
+
+      <div class="sx-alt">Já tem conta? <%= link_to "Entrar", new_session_path(resource_name) %></div>
+    </div>
+  </section>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  const radios       = document.querySelectorAll('input[name="role_ui"]');
-  const clientFields = document.getElementById('client-fields');
-  const roleHidden   = document.getElementById('role-hidden');
-  const phoneField   = document.getElementById('phone_field');
-  const nameField    = document.getElementById('full_name_field');
+<script nonce="<%= csp_nonce %>">
+(function () {
+  var MIN = <%= min_pass %>;
+  var START_ROLE = <%= raw json_escape(picked_role.to_json) %>;
+  var COPY = {
+    client: {
+      top: 'Para quem quer o carro limpo', words: ['Sem fila.', 'Sem espera.', 'Só brilho.'],
+      perks: [['Reserve em segundos', 'no lava-rápido mais perto de você.'], ['Last Minute:', 'vagas de agora, a poucos minutos de casa.'], ['Pague no local', '— cartão só pras vagas de última hora.']],
+      lab: 'Passo 2 de 2 · Cliente', title: 'Sua conta.', sub: 'Leva menos de um minuto.', note: 'Grátis. Sem cartão pra criar a conta.', btn: 'Criar conta'
+    },
+    owner: {
+      top: 'Para quem tem um lava-rápido', words: ['Agenda cheia.', 'Fila zero.', 'Caixa girando.'],
+      perks: [['Agenda e equipe', 'no celular, em tempo real.'], ['Horário vago vira venda:', 'o Last Minute oferece a vaga pra quem está perto.'], ['Financeiro e insights', 'pra saber o que dá lucro.']],
+      lab: 'Passo 2 de 2 · Proprietário', title: 'Conta do seu negócio.', sub: 'Depois você cadastra endereço, horários e serviços.', note: 'Grátis pra começar. Você só configura o que quiser.', btn: 'Criar conta e configurar'
+    }
+  };
+  var CHECK = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+  var EYE = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+  var EYE_OFF = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+  function $(id) { return document.getElementById(id); }
+  var root = $('sx'), role = START_ROLE || 'client';
 
-  radios.forEach(radio => {
-    radio.addEventListener('change', function() {
-      const isClient = this.value === 'client';
-      roleHidden.value = this.value;
-      clientFields.classList.toggle('visible', isClient);
-      if (nameField)  nameField.required  = isClient;
-      if (phoneField) phoneField.required = isClient;
-    });
+  // ── Metade escura acompanha o perfil ──────────────────────────────────────
+  function paintStage(r) {
+    var c = COPY[r];
+    root.dataset.role = r;
+    $('sx-top').textContent = c.top;
+    // Recria os spans pra animação de entrada rodar de novo.
+    $('sx-kinetic').innerHTML = c.words.map(function (w) { return '<span>' + w + '</span>'; }).join('');
+    $('sx-perks').innerHTML = c.perks.map(function (p) { return '<li><i>' + CHECK + '</i><span><b>' + p[0] + '</b> ' + p[1] + '</span></li>'; }).join('');
+  }
+
+  // ── Passos ────────────────────────────────────────────────────────────────
+  function show(step) {
+    $('sx-step1').classList.toggle('is-on', step === 1);
+    $('sx-step2').classList.toggle('is-on', step === 2);
+    $('sx-prog2').classList.toggle('is-on', step === 2);
+  }
+  function pick(r, focus) {
+    role = r;
+    document.querySelectorAll('.sx-role').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.role === r ? 'true' : 'false'); });
+    $('sx-role').value = r;
+    var c = COPY[r];
+    $('sx-step2-lab').textContent = c.lab; $('sx-step2-title').textContent = c.title;
+    $('sx-step2-sub').textContent = c.sub; $('sx-note').textContent = c.note;
+    document.querySelector('.sx-submit-label').textContent = c.btn;
+    document.querySelectorAll('[data-only]').forEach(function (el) { el.classList.toggle('sx-hidden', el.dataset.only !== r); });
+    paintStage(r);
+    show(2);
+    if (focus) setTimeout(function () { var f = r === 'owner' ? $('sx-cwname') : $('sx-name'); if (f && !f.value) f.focus(); }, 60);
+  }
+  document.querySelectorAll('.sx-role').forEach(function (b) {
+    b.addEventListener('click', function () { pick(b.dataset.role, true); });
+    b.addEventListener('mouseenter', function () { if ($('sx-step1').classList.contains('is-on')) paintStage(b.dataset.role); });
+  });
+  $('sx-back').addEventListener('click', function () { show(1); var b = document.querySelector('.sx-role[data-role="' + role + '"]'); if (b) b.focus(); });
+
+  // ── Máscaras ──────────────────────────────────────────────────────────────
+  function maskPhone(t) {
+    var d = t.replace(/\D/g, '').slice(0, 11);
+    if (d.length <= 2) return d.length ? '(' + d : '';
+    if (d.length <= 6) return '(' + d.slice(0, 2) + ') ' + d.slice(2);
+    if (d.length <= 10) return '(' + d.slice(0, 2) + ') ' + d.slice(2, 6) + '-' + d.slice(6);
+    return '(' + d.slice(0, 2) + ') ' + d.slice(2, 7) + '-' + d.slice(7);
+  }
+  function maskCpf(t) {
+    var d = t.replace(/\D/g, '').slice(0, 11);
+    if (d.length <= 3) return d;
+    if (d.length <= 6) return d.slice(0, 3) + '.' + d.slice(3);
+    if (d.length <= 9) return d.slice(0, 3) + '.' + d.slice(3, 6) + '.' + d.slice(6);
+    return d.slice(0, 3) + '.' + d.slice(3, 6) + '.' + d.slice(6, 9) + '-' + d.slice(9);
+  }
+  $('sx-phone').addEventListener('input', function () { this.value = maskPhone(this.value); });
+  $('sx-cpf').addEventListener('input', function () { this.value = maskCpf(this.value); });
+
+  // ── Senha: olho e medidor ─────────────────────────────────────────────────
+  var pass = $('sx-pass'), eye = $('sx-eye');
+  eye.innerHTML = EYE;
+  eye.addEventListener('click', function () {
+    var s = pass.type === 'password';
+    pass.type = s ? 'text' : 'password';
+    eye.innerHTML = s ? EYE_OFF : EYE;
+    eye.setAttribute('aria-pressed', s ? 'true' : 'false');
+    eye.setAttribute('aria-label', s ? 'Ocultar senha' : 'Mostrar senha');
+  });
+  function meter() {
+    var v = pass.value, lvl = 0, txt = '';
+    if (v.length) {
+      var kinds = [/[a-z]/, /[A-Z]/, /\d/, /[^A-Za-z0-9]/].filter(function (r) { return r.test(v); }).length;
+      if (v.length < MIN) { lvl = 1; txt = 'Faltam ' + (MIN - v.length) + ' caractere' + (MIN - v.length > 1 ? 's' : '') + '.'; }
+      else if (kinds >= 3 || v.length >= 12) { lvl = 3; txt = 'Senha forte.'; }
+      else { lvl = 2; txt = 'Boa. Misturar letras, números e símbolos deixa mais forte.'; }
+    }
+    $('sx-meter').dataset.lvl = lvl; $('sx-meter-txt').textContent = txt;
+  }
+  pass.addEventListener('input', meter);
+
+  // ── Validação no próprio campo (antes de enviar) ──────────────────────────
+  function setErr(id, msg) {
+    var el = $(id), box = document.querySelector('[data-for="' + id + '"]');
+    if (el) el.classList.toggle('is-err', !!msg);
+    if (box) box.textContent = msg || '';
+  }
+  function validate(only) {
+    var e = {};
+    var name = $('sx-name').value.trim(), email = $('sx-email').value.trim();
+    if (role === 'owner' && !$('sx-cwname').value.trim()) e['sx-cwname'] = 'Informe o nome do lava-rápido.';
+    if (!name) e['sx-name'] = 'Informe seu nome.';
+    if (!email) e['sx-email'] = 'Informe seu e-mail.';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e['sx-email'] = 'Esse e-mail parece incompleto.';
+    if (role === 'client' && $('sx-phone').value.replace(/\D/g, '').length < 10) e['sx-phone'] = 'Informe um telefone com DDD.';
+    var cpf = $('sx-cpf').value.replace(/\D/g, '');
+    if (role === 'client' && cpf && cpf.length !== 11) e['sx-cpf'] = 'CPF incompleto.';
+    if (pass.value.length < MIN) e['sx-pass'] = 'A senha precisa de pelo menos ' + MIN + ' caracteres.';
+    (only ? [only] : ['sx-cwname', 'sx-name', 'sx-email', 'sx-phone', 'sx-cpf', 'sx-pass']).forEach(function (id) { setErr(id, e[id]); });
+    return e;
+  }
+  ['sx-cwname', 'sx-name', 'sx-email', 'sx-phone', 'sx-cpf', 'sx-pass'].forEach(function (id) {
+    var el = $(id);
+    el.addEventListener('blur', function () { if (el.value) validate(id); });
+    el.addEventListener('input', function () { if (el.classList.contains('is-err')) validate(id); });
   });
 
-  if (phoneField) {
-    phoneField.addEventListener('input', function() {
-      let v = this.value.replace(/\D/g, '');
-      v = v.length <= 10
-        ? v.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3')
-        : v.replace(/^(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
-      this.value = v;
-    });
-  }
+  var form = $('sx-form'), btn = $('sx-submit');
+  form.addEventListener('submit', function (ev) {
+    var e = validate();
+    var first = Object.keys(e)[0];
+    if (first) { ev.preventDefault(); $(first).focus(); return; }
+    $('sx-pass2').value = pass.value;
+    // Campos do outro perfil não vão junto (dono não informa telefone aqui).
+    if (role === 'owner') { $('sx-phone').disabled = true; $('sx-cpf').disabled = true; }
+    // Nome do lava-rápido: o assistente de configuração do dono já abre com ele.
+    if (role === 'owner') { try { localStorage.setItem('loov_pending_car_wash_name', $('sx-cwname').value.trim()); } catch (x) {} }
+    btn.classList.add('is-loading');
+    document.querySelector('.sx-submit-label').textContent = 'Criando conta…';
+  });
+  window.addEventListener('pageshow', function () {
+    btn.classList.remove('is-loading');
+    document.querySelector('.sx-submit-label').textContent = COPY[role].btn;
+    $('sx-phone').disabled = false; $('sx-cpf').disabled = false;
+  });
 
-  const currentRole   = roleHidden.value || 'client';
-  const matchingRadio = document.querySelector('input[name="role_ui"][value="' + currentRole + '"]');
-  if (matchingRadio) {
-    matchingRadio.checked = true;
-    clientFields.classList.toggle('visible', currentRole === 'client');
-  }
-});
+  // Início: com perfil já escolhido (?role= ou erro do servidor) abre no passo 2.
+  if (START_ROLE) { pick(START_ROLE, false); }
+  else { paintStage('client'); show(1); }
+  try { var saved = localStorage.getItem('loov_pending_car_wash_name'); if (saved && !$('sx-cwname').value) $('sx-cwname').value = saved; } catch (x) {}
+})();
 </script>

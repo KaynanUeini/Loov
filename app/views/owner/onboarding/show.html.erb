@@ -381,6 +381,15 @@
     addService();
   });
 
+  // Nome digitado no cadastro (registrations/new) já preenche o passo 1.
+  (function () {
+    try {
+      var pending = localStorage.getItem('loov_pending_car_wash_name');
+      var field = document.getElementById('s1-name');
+      if (pending && field && !field.value) field.value = pending;
+    } catch (e) {}
+  })();
+
   function saveStep1() {
     var name = document.getElementById('s1-name').value.trim();
     var logradouro = document.getElementById('s1-logradouro').value.trim();
