@@ -270,33 +270,34 @@ class DisponivelController < ApplicationController
     end
 
     if charge_upfront
-      declined = authorize_prepayment!(appointment, log_tag)
-      if declined
-        render json: { error: declined, code: "card_declined" }, status: :payment_required
+      outcome, detail = authorize_prepayment!(appointment, log_tag)
+      if outcome == :declined
+        render json: { error: detail, code: "card_declined" }, status: :payment_required
+        return
+      end
+      if outcome == :action
+        # Banco pediu 3DS: a vaga fica segura por PAYMENT_AUTH_TTL enquanto o
+        # cliente confirma no navegador. O dono só fica sabendo depois.
+        Rails.logger.info("#{log_tag} requires_action appointment_id=#{appointment.id}")
+        begin
+          ExpireDisponivelAcceptanceJob.set(wait: Appointment::PAYMENT_AUTH_TTL).perform_later(appointment.id)
+        rescue => job_err
+          Rails.logger.warn("#{log_tag} falha ao enfileirar expiração do 3DS: #{job_err.message}")
+        end
+        render json: {
+          ok:              true,
+          requires_action: true,
+          appointment_id:  appointment.id,
+          client_secret:   detail,
+          prepayment:      appointment.prepayment_amount.to_f
+        }
         return
       end
     end
 
     Rails.logger.info("#{log_tag} OK appointment_id=#{appointment.id}")
-
-    notify_owner_of_request(appointment, log_tag)
-
-    # Job é enfileirado fora da transação — se falhar, a lazy expiration
-    # (expire_stale_acceptances!) ainda cobre o caso.
-    begin
-      ExpireDisponivelAcceptanceJob.set(wait: Appointment::ACCEPTANCE_TTL).perform_later(appointment.id)
-    rescue => job_err
-      Rails.logger.warn("Disponivel#create: falha ao enfileirar ExpireDisponivelAcceptanceJob: #{job_err.message}")
-    end
-
-    render json: {
-      ok:             true,
-      appointment_id: appointment.id,
-      expires_at:     appointment.acceptance_expires_at.iso8601,
-      seconds:        Appointment::ACCEPTANCE_TTL.to_i,
-      prepayment:     appointment.prepayment_amount.to_f,
-      payment_status: appointment.stripe_payment_intent_id.present? ? "authorized" : "pending"
-    }
+    start_acceptance!(appointment, log_tag)
+    render json: request_payload(appointment)
 
   rescue ActiveRecord::RecordNotFound => e
     Rails.logger.warn("#{log_tag} not_found user_id=#{current_user&.id} car_wash_id=#{params[:car_wash_id].inspect} service_id=#{params[:service_id].inspect} msg=#{e.message}")
@@ -307,6 +308,51 @@ class DisponivelController < ApplicationController
       error: e.message,
       trace: e.backtrace&.first(3)
     }, status: :internal_server_error
+  end
+
+  # POST /disponivel/:id/authorized
+  #
+  # O navegador chama depois que o cliente confirmou no banco (3DS). Não
+  # confia no navegador: pergunta ao Stripe se o valor está mesmo reservado.
+  # Só aí o pedido vira pending_acceptance, o dono é avisado e os 3 min de
+  # aceite começam a contar — o tempo gasto no banco não sai do prazo dele.
+  def authorized
+    log_tag = "[Disponivel#authorized]"
+    appointment = Appointment.find(params[:id])
+    return render(json: { error: "Acesso negado." }, status: :forbidden) unless appointment.user_id == current_user.id
+
+    # Segunda chamada (duplo clique, retry): devolve o estado já alcançado.
+    return render(json: request_payload(appointment)) if appointment.status == "pending_acceptance"
+
+    unless appointment.status == "awaiting_payment" && appointment.stripe_payment_intent_id.present?
+      return render json: { error: "O tempo para confirmar no banco acabou e a vaga foi liberada.", code: "expired" },
+                    status: :unprocessable_entity
+    end
+
+    intent = StripeService.new.retrieve(appointment.stripe_payment_intent_id)
+    unless intent.status == "requires_capture"
+      release_prepayment(appointment)
+      appointment.update_columns(status: "cancelled", updated_at: Time.current)
+      Rails.logger.warn("#{log_tag} intent #{intent.id} status=#{intent.status} appointment_id=#{appointment.id}")
+      return render json: { error: "O banco não confirmou o pagamento. Nada foi cobrado; tente de novo ou use outro cartão.", code: "card_declined" },
+                    status: :payment_required
+    end
+
+    promoted = false
+    appointment.with_lock do
+      if appointment.status == "awaiting_payment"
+        appointment.update!(status: "pending_acceptance", acceptance_expires_at: Time.current + Appointment::ACCEPTANCE_TTL)
+        promoted = true
+      end
+    end
+    start_acceptance!(appointment, log_tag) if promoted
+    Rails.logger.info("#{log_tag} OK appointment_id=#{appointment.id} promoted=#{promoted}")
+    render json: request_payload(appointment.reload)
+  rescue ActiveRecord::RecordNotFound
+    render json: { error: "Reserva não encontrada." }, status: :not_found
+  rescue Stripe::StripeError => e
+    Rails.logger.error("#{log_tag} stripe_error #{e.class}: #{e.message}")
+    render json: { error: "Não conseguimos confirmar com o banco agora. Tente de novo em instantes." }, status: :bad_gateway
   end
 
   # GET /disponivel/:id/confirmacao
@@ -327,7 +373,7 @@ class DisponivelController < ApplicationController
       return
     end
 
-    unless appointment.status == "pending_acceptance"
+    unless %w[pending_acceptance awaiting_payment].include?(appointment.status)
       render json: {
         error: "Esta reserva não pode mais ser cancelada.",
         status: appointment.status
@@ -366,9 +412,11 @@ class DisponivelController < ApplicationController
 
   private
 
-  # Reserva os 35% no cartão salvo. Devolve nil quando deu certo, ou a
-  # mensagem pro cliente quando não deu — nesse caso o pedido é cancelado
-  # na hora, antes de o dono ser avisado, e a vaga volta pra lista.
+  # Reserva os 35% no cartão salvo. Devolve:
+  #   [:ok]                     valor reservado, segue o fluxo normal
+  #   [:action, client_secret]  banco pediu 3DS; o navegador conclui
+  #   [:declined, mensagem]     não deu; pedido cancelado antes de o dono
+  #                             saber, e a vaga volta pra lista
   def authorize_prepayment!(appointment, log_tag)
     amount_cents = (appointment.prepayment_amount.to_f * 100).round
     current_user.stripe_customer!
@@ -379,8 +427,19 @@ class DisponivelController < ApplicationController
       metadata:          { appointment_id: appointment.id, kind: "last_minute_prepayment" }
     )
 
-    unless intent.status == "requires_capture"
-      # Ex.: banco pedindo autenticação 3DS, que este fluxo ainda não trata.
+    case intent.status
+    when "requires_capture"
+      appointment.update_columns(stripe_payment_intent_id: intent.id, updated_at: Time.current)
+      [:ok]
+    when "requires_action"
+      appointment.update_columns(
+        stripe_payment_intent_id: intent.id,
+        status:                   "awaiting_payment",
+        acceptance_expires_at:    Time.current + Appointment::PAYMENT_AUTH_TTL,
+        updated_at:               Time.current
+      )
+      [:action, intent.client_secret]
+    else
       begin
         StripeService.new.cancel(intent.id)
       rescue => e
@@ -388,19 +447,36 @@ class DisponivelController < ApplicationController
       end
       appointment.update_columns(status: "cancelled", updated_at: Time.current)
       Rails.logger.warn("#{log_tag} intent #{intent.id} status=#{intent.status} appointment_id=#{appointment.id}")
-      return "Seu banco pediu uma confirmação extra que ainda não conseguimos fazer pelo site. Tente outro cartão."
+      [:declined, "Não conseguimos reservar o valor nesse cartão. Tente outro cartão."]
     end
-
-    appointment.update_columns(stripe_payment_intent_id: intent.id, updated_at: Time.current)
-    nil
   rescue Stripe::CardError => e
     appointment.update_columns(status: "cancelled", updated_at: Time.current)
     Rails.logger.warn("#{log_tag} card_error appointment_id=#{appointment.id} code=#{e.code} msg=#{e.message}")
-    "O cartão recusou a reserva dos #{(Appointment::PREPAYMENT_PCT * 100).round}%. Tente outro cartão."
+    [:declined, "O cartão recusou a reserva dos #{(Appointment::PREPAYMENT_PCT * 100).round}%. Tente outro cartão."]
   rescue Stripe::StripeError => e
     appointment.update_columns(status: "cancelled", updated_at: Time.current)
     Rails.logger.error("#{log_tag} stripe_error appointment_id=#{appointment.id} #{e.class}: #{e.message}")
-    "Não conseguimos falar com o processador do cartão agora. Tente de novo em instantes."
+    [:declined, "Não conseguimos falar com o processador do cartão agora. Tente de novo em instantes."]
+  end
+
+  # Pedido pronto pro dono: avisa e agenda a expiração do aceite. Job fora
+  # da transação — se falhar, a lazy expiration ainda cobre.
+  def start_acceptance!(appointment, log_tag)
+    notify_owner_of_request(appointment, log_tag)
+    ExpireDisponivelAcceptanceJob.set(wait: Appointment::ACCEPTANCE_TTL).perform_later(appointment.id)
+  rescue => job_err
+    Rails.logger.warn("#{log_tag} falha ao enfileirar ExpireDisponivelAcceptanceJob: #{job_err.message}")
+  end
+
+  def request_payload(appointment)
+    {
+      ok:             true,
+      appointment_id: appointment.id,
+      expires_at:     appointment.acceptance_expires_at.iso8601,
+      seconds:        [(appointment.acceptance_expires_at - Time.current).round, 0].max,
+      prepayment:     appointment.prepayment_amount.to_f,
+      payment_status: appointment.stripe_payment_intent_id.present? ? "authorized" : "pending"
+    }
   end
 
   # O app manda o JWT do próprio usuário no Authorization. Só a presença do

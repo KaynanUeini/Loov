@@ -38,7 +38,7 @@ module Owner
 
       appointments = car_wash.appointments
         .where(scheduled_at: today_start..today_end)
-        .where.not(status: "cancelled")
+        .where.not(status: %w[cancelled awaiting_payment])
         .includes(:service, :user)
         .order(:scheduled_at)
         .map { |a| serialize_appointment(a, loyalty, loyalty_counts) }

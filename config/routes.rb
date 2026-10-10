@@ -40,6 +40,7 @@ Rails.application.routes.draw do
     member do
       get   :confirmacao
       patch :cancel
+      post  :authorized
     end
     collection { get :checkout }
   end

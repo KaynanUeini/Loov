@@ -196,7 +196,10 @@ class AppointmentsController < ApplicationController
 
   # Mesmo JSON da aba Agenda do app; a página HTML também o usa (embutido).
   private def appointments_payload
+    # awaiting_payment é a reserva ainda na janela do banco (3DS): não é
+    # agendamento até o banco confirmar.
     all = current_user.appointments
+      .where.not(status: "awaiting_payment")
       .includes(:service, :car_wash, :review)
       .order(scheduled_at: :desc)
 

@@ -34,7 +34,8 @@ Rails.application.config.action_dispatch.default_headers = {
     # viacep.com.br: busca de endereço pelo CEP no cadastro do lava-rápido.
     # Sem ele o navegador bloqueava a consulta e todo CEP dava "não encontrado".
     "connect-src 'self' https://api.stripe.com https://api.anthropic.com https://viacep.com.br",
-    "frame-src https://js.stripe.com",
+    # hooks.stripe.com: janela de confirmação do banco (3DS) do Last Minute.
+    "frame-src https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'"

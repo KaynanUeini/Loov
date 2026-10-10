@@ -22,6 +22,7 @@ module Owner
         # Início do dia de Brasília. `scheduled_at::date >= CURRENT_DATE`
         # comparava o dia em UTC: depois das 21h o "hoje" já era amanhã.
         .where("appointments.scheduled_at >= ?", Time.zone.now.beginning_of_day)
+        .where.not(status: "awaiting_payment") # cliente ainda confirmando no banco
 
       # HTML-only filters preservados (period / search)
       if params[:period].present?

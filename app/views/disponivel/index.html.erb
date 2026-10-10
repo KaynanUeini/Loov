@@ -304,6 +304,7 @@
   var PCT_LABEL = Math.round(PCT * 100) + '%', REST_LABEL = (100 - Math.round(PCT * 100)) + '%';
   var HAS_CARD  = <%= (user_signed_in? && current_user.has_payment_method?) ? "true" : "false" %>;
   var CARD_TXT  = <%= raw json_escape(((user_signed_in? && current_user.card_display) || "").to_json) %>;
+  var STRIPE_PK = <%= raw json_escape(ENV['STRIPE_PUBLISHABLE_KEY'].to_s.to_json) %>;
   function prepayOf(price) { return Math.round(Number(price) * PCT * 100) / 100; }
   function cardUrl(cwId) {
     var back = '/disponivel' + (cwId ? '?car_wash_id=' + cwId : '');
@@ -590,13 +591,41 @@
         if (x.r.status === 401) { location.href = '/users/sign_in'; return; }
         if (x.d.code === 'card_required') { location.href = cardUrl(it.car_wash.id); return; }
         if (!x.r.ok || !x.d.ok) { toast(x.d.error || ('Erro ' + x.r.status + ': não foi possível reservar.'), 'error'); return; }
-        state.reserving = false;
-        closeSheet();
-        startWaiting({ id: x.d.appointment_id, expires_at: x.d.expires_at, seconds: x.d.seconds || 180, car_wash: it.car_wash, service: svc, slot: slot,
-          prepayment: x.d.prepayment != null ? x.d.prepayment : prepayOf(svc.price) });
+        return (x.d.requires_action ? confirmWithBank(x.d) : Promise.resolve(x.d)).then(function (d) {
+          if (!d) return; // banco não confirmou: já avisado, vaga liberada
+          state.reserving = false;
+          closeSheet();
+          startWaiting({ id: d.appointment_id, expires_at: d.expires_at, seconds: d.seconds || 180, car_wash: it.car_wash, service: svc, slot: slot,
+            prepayment: d.prepayment != null ? d.prepayment : prepayOf(svc.price) });
+        });
       })
       .catch(function () { toast('Erro de conexão. Tente novamente.', 'error'); })
       .finally(function () { if (state.reserving) { state.reserving = false; renderSheet(); } });
+  }
+
+  // ── confirmação do banco (3DS) ───────────────────────────────────────────
+  // Alguns bancos pedem uma confirmação extra (senha, código por SMS, app do
+  // banco) antes de reservar os 35%. O Stripe.js abre essa janela do próprio
+  // banco aqui mesmo; depois o servidor confere com o Stripe antes de levar o
+  // pedido ao dono — o resultado que vem do navegador não é confiado.
+  function confirmWithBank(d) {
+    var release = function (msg) {
+      api('/disponivel/' + d.appointment_id + '/cancel', { method: 'PATCH' }).catch(function () {});
+      toast(msg, 'error'); load(true);
+      return null;
+    };
+    if (!window.Stripe || !STRIPE_PK) return Promise.resolve(release('Não foi possível abrir a confirmação do banco. Tente de novo.'));
+    toast('Seu banco pediu uma confirmação. Siga as instruções na janela que vai abrir.');
+    return Stripe(STRIPE_PK).handleNextAction({ clientSecret: d.client_secret }).then(function (res) {
+      if (res.error) return release(res.error.message ? 'O banco não confirmou: ' + res.error.message : 'O banco não confirmou o pagamento. Nada foi cobrado.');
+      return api('/disponivel/' + d.appointment_id + '/authorized', { method: 'POST' })
+        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (b) { return { r: r, b: b }; }); })
+        .then(function (y) {
+          if (y.r.ok && y.b.ok) return y.b;
+          toast(y.b.error || 'Não foi possível concluir a reserva.', 'error'); load(true);
+          return null;
+        });
+    }).catch(function () { return release('A confirmação do banco foi interrompida. Nada foi cobrado.'); });
   }
 
   // ── espera pelo aceite ───────────────────────────────────────────────────

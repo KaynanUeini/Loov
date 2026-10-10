@@ -38,7 +38,14 @@ class StripeService
       payment_method_types: ["card"],
       capture_method:       "manual",
       confirm:              true,
+      # Se o banco pedir 3DS, a próxima ação fica no formato que o Stripe.js
+      # resolve no navegador (stripe.handleNextAction), sem return_url.
+      use_stripe_sdk:       true,
       metadata:             metadata
     )
+  end
+
+  def retrieve(payment_intent_id)
+    Stripe::PaymentIntent.retrieve(payment_intent_id)
   end
 end

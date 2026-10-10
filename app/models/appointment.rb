@@ -11,7 +11,14 @@ class Appointment < ApplicationRecord
   # regular:            confirmed → attended | no_show | cancelled
   # disponivel:         pending_acceptance → confirmed → attended | no_show | cancelled
   #                     pending_acceptance → rejected  (dono recusou ou timeout)
-  STATUSES = %w[confirmed pending_acceptance attended no_show cancelled rejected].freeze
+  #                     awaiting_payment → pending_acceptance (banco confirmou o 3DS)
+  #                     awaiting_payment → cancelled (cliente/banco não confirmou)
+  #
+  # awaiting_payment: reserva do site cujo banco pediu confirmação extra (3DS)
+  # pros 35%. Segura a vaga enquanto o cliente confirma, mas o dono ainda não
+  # vê nem é avisado — o pedido só existe pra ele depois do banco aprovar.
+  STATUSES = %w[confirmed pending_acceptance awaiting_payment attended no_show cancelled rejected].freeze
+  PAYMENT_AUTH_TTL = 5.minutes # tempo pro cliente confirmar no banco
 
   # ── COMISSÃO E PRÉ-PAGAMENTO ──────────────────────────────────────────────
   PREPAYMENT_PCT   = 0.35  # 35% do valor total pago no app
@@ -78,9 +85,9 @@ class Appointment < ApplicationRecord
   scope :occupying_capacity, -> {
     where(
       "appointments.status IN (?) OR " \
-      "(appointments.status = ? AND appointments.acceptance_expires_at > ?)",
+      "(appointments.status IN (?) AND appointments.acceptance_expires_at > ?)",
       %w[confirmed attended],
-      "pending_acceptance",
+      %w[pending_acceptance awaiting_payment],
       Time.current
     )
   }
@@ -97,7 +104,7 @@ class Appointment < ApplicationRecord
       return 0
     end
 
-    stale = where(status: "pending_acceptance", appointment_type: "disponivel")
+    stale = where(status: %w[pending_acceptance awaiting_payment], appointment_type: "disponivel")
               .where("acceptance_expires_at < ?", Time.current)
 
     # O update_all não passa pelo expire!, então solta aqui o valor reservado
@@ -135,6 +142,10 @@ class Appointment < ApplicationRecord
   # ── HELPERS DE STATUS ─────────────────────────────────────────────────────
   def pending_acceptance?
     status == "pending_acceptance"
+  end
+
+  def awaiting_payment?
+    status == "awaiting_payment"
   end
 
   def confirmed?
@@ -252,7 +263,7 @@ class Appointment < ApplicationRecord
 
   # Timeout expirou → cancela sem cobrança
   def expire!(stripe_service = nil)
-    return false unless pending_acceptance? && disponivel?
+    return false unless (pending_acceptance? || awaiting_payment?) && disponivel?
 
     ActiveRecord::Base.transaction do
       if stripe_payment_intent_id.present? && stripe_service.present?

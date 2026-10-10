@@ -6,7 +6,8 @@ class ExpireDisponivelAcceptanceJob < ApplicationJob
   def perform(appointment_id)
     appointment = Appointment.find_by(id: appointment_id)
     return unless appointment.present?
-    return unless appointment.pending_acceptance? && appointment.disponivel?
+    # awaiting_payment: cliente não concluiu a confirmação do banco a tempo.
+    return unless (appointment.pending_acceptance? || appointment.awaiting_payment?) && appointment.disponivel?
 
     # Só expira se o aceite ainda não aconteceu
     if appointment.acceptance_expired?
