@@ -46,7 +46,7 @@
      Tipografia grande no lugar de cards de KPI: o número é a informação,
      a moldura não acrescentava nada. */
   .ag-stats {
-    display: grid; grid-template-columns: repeat(3, 1fr);
+    display: grid; grid-template-columns: repeat(2, 1fr);
     border-top: 1px solid var(--stone); border-bottom: 1px solid var(--stone);
     margin-bottom: 26px;
   }
@@ -216,8 +216,6 @@
     .ag-side .ag-det-close { display: none; }
   }
   @media (max-width: 640px) {
-    .ag-stats { grid-template-columns: 1fr 1fr; }
-    .ag-stat:nth-child(3) { grid-column: 1 / -1; border-left: none; padding-left: 0; border-top: 1px solid var(--stone); }
     .ag-seg { width: 100%; }
     .ag-seg button { flex: 1; }
     .ag-search kbd { display: none; }
@@ -305,20 +303,14 @@
   function renderStats() {
     const list = allAppts();
     const sum = list.reduce((n, a) => n + (a.price || 0), 0);
-    const nx = nextAppt();
-    const rel = nx && relTime(nx);
     const period = st.days === 1 ? 'hoje' : `nos próximos ${st.days} dias`;
     document.getElementById('ag-stats').innerHTML = st.loading ? `
       <div class="ag-stat"><div class="ag-mono">Agendamentos</div><div class="ag-stat-v">—</div></div>
-      <div class="ag-stat"><div class="ag-mono">Previsto</div><div class="ag-stat-v">—</div></div>
-      <div class="ag-stat"><div class="ag-mono">Próximo</div><div class="ag-stat-v">—</div></div>` : `
+      <div class="ag-stat"><div class="ag-mono">Previsto</div><div class="ag-stat-v">—</div></div>` : `
       <div class="ag-stat"><div class="ag-mono">Agendamentos</div>
         <div class="ag-stat-v">${st.total}</div><div class="ag-stat-s">${period}</div></div>
       <div class="ag-stat"><div class="ag-mono">Previsto</div>
-        <div class="ag-stat-v">${brl(sum)}</div><div class="ag-stat-s">valor cheio dos serviços</div></div>
-      <div class="ag-stat"><div class="ag-mono">Próximo</div>
-        <div class="ag-stat-v">${nx ? esc(nx.time) : '—'}</div>
-        <div class="ag-stat-s">${nx ? `${esc(nx.client_name)}${rel ? ' · ' + rel.txt.toLowerCase() : ''}` : 'nada pela frente ' + period}</div></div>`;
+        <div class="ag-stat-v">${brl(sum)}</div><div class="ag-stat-s">valor cheio dos serviços</div></div>`;
   }
 
   // ── Lista ─────────────────────────────────────────────────────────────
