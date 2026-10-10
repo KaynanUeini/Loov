@@ -31,7 +31,9 @@ Rails.application.config.action_dispatch.default_headers = {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
     "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net",
     "img-src 'self' data: https:",
-    "connect-src 'self' https://api.stripe.com https://api.anthropic.com",
+    # viacep.com.br: busca de endereço pelo CEP no cadastro do lava-rápido.
+    # Sem ele o navegador bloqueava a consulta e todo CEP dava "não encontrado".
+    "connect-src 'self' https://api.stripe.com https://api.anthropic.com https://viacep.com.br",
     "frame-src https://js.stripe.com",
     "object-src 'none'",
     "base-uri 'self'",

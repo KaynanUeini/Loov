@@ -1,586 +1,513 @@
+<%#
+  Assistente do dono — porte da OwnerOnboardingScreen do app, em 4 passos
+  curtos (LOCAL · OPERAÇÃO · HORÁRIOS · SERVIÇOS) + "Tudo pronto!". Cada tela
+  pede uma coisa só: saber que o próximo é "só marcar os dias" reduz abandono.
+
+  Mesma divisão do login e do cadastro: à direita o formulário; à esquerda,
+  sobre escuro, uma PRÉVIA AO VIVO do cartão do lava-rápido como o cliente vai
+  ver na busca — nome, logo, bairro, horário de hoje, serviços e preço se
+  montam enquanto o dono preenche (o "objeto" mostrado antes de existir, como
+  a Apple faz ao configurar um produto; tipo grande e respiro do wiemer).
+
+  Endpoints (os mesmos do app): POST /owner/onboarding/car_wash (fim do passo
+  2, com os dados dos passos 1 e 2), /hours e /services. Lava-rápido já criado
+  sem horários/serviços retoma no passo que falta (@resume).
+
+  O CEP chama o ViaCEP direto do navegador (liberado na política de
+  segurança); o nome digitado no cadastro chega por localStorage.
+%>
+<%= render "shared/loov_logos" %>
+<script src="/vendor/feather-4.29.2.min.js" nonce="<%= csp_nonce %>"></script>
 <style>
-  .wiz-progress { display: flex; align-items: center; margin-bottom: 40px; }
-  .wiz-step { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; }
-  .wiz-step-circle {
-    width: 40px; height: 40px; border-radius: 50%;
-    border: 1.5px solid var(--stone); background: var(--paper);
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 14px; font-weight: 700; color: var(--ash);
-    transition: all 0.3s ease; z-index: 1;
-  }
-  .wiz-step.active .wiz-step-circle {
-    border-color: var(--coral-500);
-    background: var(--coral-50);
-    color: var(--coral-700);
-  }
-  .wiz-step.done .wiz-step-circle {
-    border-color: var(--coral-500);
-    background: var(--coral-500);
-    color: var(--cream);
-  }
-  .wiz-step-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; text-transform: uppercase; letter-spacing: 1.4px;
-    color: var(--ash); white-space: nowrap;
-  }
-  .wiz-step.active .wiz-step-label { color: var(--coral-500); }
-  .wiz-step.done .wiz-step-label { color: var(--ink); }
-  .wiz-connector { flex: 1; height: 1px; background: var(--stone); margin-top: -22px; transition: background 0.3s ease; }
-  .wiz-connector.done { background: var(--coral-500); }
+  html, body { overflow-x: clip !important; } /* senão o sticky da prévia não funciona */
+  .ob { min-height: 100vh; padding-top: 60px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); background: var(--cream); color: var(--ink); }
+  .ob *, .ob *::before, .ob *::after { box-sizing: border-box; }
+  .ob button { font-family: inherit; cursor: pointer; }
+  .ob svg.feather { display: block; }
 
-  .wiz-form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  .wiz-form-row-cep { display: grid; grid-template-columns: 140px 1fr 100px; gap: 14px; }
-  .wiz-form-row-uf { display: grid; grid-template-columns: 80px 1fr 1fr; gap: 14px; }
+  /* ── Prévia (metade escura) ──────────────────────────────────────── */
+  .ob-stage { align-self: start; position: sticky; top: 60px; height: calc(100vh - 60px); min-height: 600px; overflow: hidden; isolation: isolate; background: var(--obsidian); color: var(--cream); display: flex; flex-direction: column; justify-content: center; padding: 48px 56px; }
+  .ob-stage::before { content: ""; position: absolute; width: 760px; height: 760px; left: -240px; bottom: -320px; z-index: -1; background: radial-gradient(closest-side, rgba(75,142,192,.34), rgba(0,0,0,0) 70%); filter: blur(10px); animation: ob-breathe 10s ease-in-out infinite; }
+  @keyframes ob-breathe { 0%, 100% { transform: none; opacity: .85; } 50% { transform: translate(40px, -30px) scale(1.08); opacity: 1; } }
+  .ob-top { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ash); }
+  .ob-stage h2 { margin: 12px 0 28px !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: clamp(34px, 3.6vw, 56px); line-height: 1; letter-spacing: -0.04em; color: var(--cream) !important; }
+  .ob-stage h2 em { font-style: normal; color: #7fb6dd; }
+  /* O cartão — mesmo desenho do "Perto de você" da home do cliente. */
+  .ob-card { width: 100%; max-width: 420px; padding: 18px; border-radius: 22px; background: var(--paper); color: var(--ink); box-shadow: 0 30px 60px -28px rgba(0,0,0,.7); transform: rotate(-1.2deg); transition: transform .4s cubic-bezier(.2,.8,.2,1); }
+  .ob-card:hover { transform: rotate(0deg) translateY(-3px); }
+  .ob-card-top { display: flex; align-items: center; gap: 14px; }
+  .ob-card-logo { flex: 0 0 56px; height: 56px; }
+  .ob-card-logo svg { width: 100%; height: 100%; display: block; }
+  .ob-card-t { flex: 1; min-width: 0; }
+  .ob-card-name { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 19px; letter-spacing: -0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ob-card-name.is-ph { color: var(--ash); }
+  .ob-card-sub { margin-top: 3px; font-size: 13px; color: var(--graphite); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ob-card-badge { flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 100px; background: #d1ebd6; color: #2d6b42; font-size: 11px; font-weight: 600; }
+  .ob-card-badge.is-off { background: var(--sand); color: var(--graphite); }
+  .ob-card-meta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--stone); font-size: 12.5px; font-weight: 600; color: var(--graphite); }
+  .ob-card-meta span { display: inline-flex; align-items: center; gap: 5px; }
+  .ob-card-svcs { display: grid; gap: 8px; margin-top: 14px; }
+  .ob-card-svc { display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--sand); font-size: 13.5px; }
+  .ob-card-svc b { font-family: 'Space Grotesk', sans-serif; font-weight: 700; }
+  .ob-card-svc.is-ph { color: var(--ash); background: transparent; border: 1px dashed var(--stone); }
+  .ob-card-cta { margin-top: 14px; display: flex; justify-content: space-between; align-items: center; }
+  .ob-card-cta small { font-size: 12.5px; color: var(--graphite); }
+  .ob-card-cta b { font-family: 'Space Grotesk', sans-serif; font-size: 18px; }
+  .ob-card-cta span { padding: 9px 14px; border-radius: 100px; background: var(--coral-500); color: var(--cream); font-size: 13px; font-weight: 600; }
+  .ob-stage-note { margin-top: 26px; max-width: 36ch; font-size: 14.5px; line-height: 1.5; color: #cfc8bb; }
 
-  .wiz-day-buttons {
-    display: grid; grid-template-columns: repeat(7, 1fr);
-    gap: 8px; margin-bottom: 20px;
-  }
-  .wiz-day-btn {
-    background: var(--paper); border: 1px solid var(--stone);
-    border-radius: 10px; padding: 10px 4px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; font-weight: 600; letter-spacing: 1.2px;
-    color: var(--graphite); cursor: pointer;
-    transition: all 0.2s ease;
-    text-align: center; text-transform: uppercase; user-select: none;
-  }
-  .wiz-day-btn:hover { border-color: var(--coral-300); color: var(--ink); }
-  .wiz-day-btn.active {
-    background: var(--coral-50); border-color: var(--coral-500); color: var(--coral-700);
-  }
+  /* ── Formulário ──────────────────────────────────────────────────── */
+  .ob-panel { padding: 32px 40px 120px; display: flex; justify-content: center; }
+  .ob-wrap { width: 100%; max-width: 480px; }
+  .ob-head { display: flex; align-items: center; justify-content: space-between; min-height: 40px; }
+  .ob-back { width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--sand); color: var(--ink); display: inline-flex; align-items: center; justify-content: center; transition: background .15s; }
+  .ob-back:hover { background: var(--stone); }
+  .ob-back[hidden] { visibility: hidden; display: inline-flex !important; }
+  .ob-exit { border: 0 !important; background: transparent !important; box-shadow: none !important; width: auto !important; height: auto !important; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px; color: var(--ash); padding: 10px; }
+  /* O layout pinta todo button[type=submit] de coral; o "SAIR" é discreto. */
+  .ob-head button[type="submit"].ob-exit { background: transparent !important; color: var(--ash) !important; padding: 10px !important; border-radius: 10px !important; font-family: 'JetBrains Mono', monospace !important; font-size: 11px !important; letter-spacing: 1px !important; }
+  .ob-head button[type="submit"].ob-exit:hover { background: #fdf0f0 !important; color: var(--rose-500, #c0392b) !important; }
+  .ob-prog { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 14px 0 26px; }
+  .ob-prog div { display: grid; gap: 7px; }
+  .ob-prog i { height: 4px; border-radius: 2px; background: var(--sand); transition: background .3s; }
+  .ob-prog span { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 1.2px; color: var(--ash); transition: color .3s; }
+  .ob-prog .is-on i { background: var(--coral-500); }
+  .ob-prog .is-now span { color: var(--ink); font-weight: 600; }
+  .ob-step { display: none; }
+  .ob-step.is-on { display: block; animation: ob-in .35s cubic-bezier(.2,.8,.2,1); }
+  @keyframes ob-in { from { opacity: 0; transform: translateX(16px); } }
+  .ob-lab { margin-bottom: 8px; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; color: var(--ash); }
+  .ob-title { margin: 0 0 8px !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 38px; line-height: 1.04; letter-spacing: -0.035em; color: var(--ink) !important; }
+  .ob-sub { margin: 0 0 24px; font-size: 15px; line-height: 1.5; color: var(--graphite); }
+  .ob-row { display: grid; gap: 12px; }
+  .ob-f { margin-bottom: 16px; }
+  .ob-f label { display: block; margin-bottom: 8px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--graphite); }
+  .ob-in { width: 100%; height: 52px; padding: 0 16px; font-size: 16px; font-family: 'Inter', sans-serif; border-radius: 14px !important; transition: border-color .15s ease, box-shadow .2s ease, background .2s ease !important; }
+  textarea.ob-in { height: auto; min-height: 76px; padding: 14px 16px; resize: vertical; line-height: 1.45; }
+  select.ob-in { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23ada699' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>") !important; background-repeat: no-repeat !important; background-position: right 14px center !important; padding-right: 40px; }
+  .ob-in:focus { background-color: var(--cream) !important; box-shadow: 0 0 0 4px rgba(221,120,82,.16); }
+  .ob-in.is-err { border-color: var(--rose-500, #c0392b) !important; }
+  .ob-ferr { margin-top: 6px; font-size: 12.5px; font-weight: 600; color: var(--rose-500, #c0392b); }
+  .ob-ferr:empty { display: none; }
+  .ob-help { margin-top: 6px; font-size: 12.5px; color: var(--graphite); }
+  .ob-cep { position: relative; }
+  .ob-cep .ob-spin { position: absolute; right: 16px; top: 50%; margin-top: -9px; }
+  .ob-spin { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid var(--coral-100); border-top-color: var(--coral-500); animation: ob-spin .7s linear infinite; }
+  .ob-spin.is-off { display: none; }
+  @keyframes ob-spin { to { transform: rotate(360deg); } }
+  .ob-filled { animation: ob-flash 1s ease; }
+  @keyframes ob-flash { 0% { background-color: #e7f4ea; } 100% { } }
+  .ob-formerr { display: flex; gap: 8px; margin: 6px 0 14px; padding: 12px 14px; border-radius: 14px; background: #f6d4d4; color: var(--rose-500, #c0392b); font-size: 13.5px; font-weight: 600; line-height: 1.4; }
+  .ob-formerr:empty { display: none; }
 
-  .wiz-day-time-rows { display: flex; flex-direction: column; gap: 10px; }
-  .wiz-day-time-row {
-    display: none; align-items: center; gap: 14px;
-    background: var(--sand); border: 1px solid var(--stone);
-    border-radius: 12px; padding: 14px 16px;
-  }
-  .wiz-day-time-row.visible { display: flex; }
-  .wiz-day-time-label {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 16px; font-weight: 700;
-    color: var(--coral-500); min-width: 36px;
-  }
-  .wiz-time-select-wrap { display: flex; align-items: center; gap: 8px; flex: 1; }
-  .wiz-time-label-small {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; color: var(--ash);
-    text-transform: uppercase; letter-spacing: 1.2px;
-    white-space: nowrap;
-  }
-  .wiz-time-select {
-    background: var(--paper); border: 1px solid var(--stone);
-    border-radius: 8px; padding: 6px 10px;
-    font-family: 'Inter', sans-serif; font-size: 13px;
-    color: var(--ink); outline: none; cursor: pointer;
-    appearance: none; text-align: center;
-    transition: border-color 0.2s;
-  }
-  .wiz-time-select:focus { border-color: var(--coral-500); }
-  .wiz-time-sep {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 16px; color: var(--ash);
-  }
+  /* Passo 2: contadores */
+  .ob-stepper { display: flex; align-items: center; gap: 16px; padding: 18px; border-radius: 18px; background: var(--paper); border: 1px solid var(--stone); margin-bottom: 12px; }
+  .ob-stepper-t { flex: 1; min-width: 0; }
+  .ob-stepper-t b { display: block; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 1.6px; color: var(--graphite); font-weight: 400; }
+  .ob-stepper-t small { display: block; margin-top: 4px; font-size: 13px; color: var(--graphite); }
+  .ob-stepper-c { display: flex; align-items: center; gap: 4px; }
+  .ob-stepper-c button { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--stone); background: var(--cream); color: var(--ink); display: flex; align-items: center; justify-content: center; transition: background .15s; }
+  .ob-stepper-c button:hover:not([disabled]) { background: var(--sand); }
+  .ob-stepper-c button[disabled] { opacity: .35; cursor: default; }
+  .ob-stepper-c output { min-width: 44px; text-align: center; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 26px; letter-spacing: -0.5px; }
 
-  .wiz-service-card {
-    background: var(--sand); border: 1px solid var(--stone);
-    border-radius: 14px; padding: 18px;
-    margin-bottom: 12px; position: relative;
+  /* Passo 3: dias e horários */
+  .ob-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .ob-chip { padding: 9px 14px; border-radius: 100px; border: 1px solid var(--stone); background: var(--paper); color: var(--ink); font-size: 13px; font-weight: 600; transition: background .15s, border-color .15s; }
+  .ob-chip:hover { border-color: var(--ink); }
+  .ob-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 16px; }
+  .ob-day { height: 48px; border-radius: 14px; border: 1px solid var(--stone); background: var(--paper); color: var(--graphite); font-size: 13px; font-weight: 600; transition: background .15s, color .15s, border-color .15s; }
+  .ob-day[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--cream); }
+  .ob-hours { display: grid; gap: 8px; }
+  .ob-hour { display: grid; grid-template-columns: 52px 1fr 1fr; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 16px; background: var(--paper); border: 1px solid var(--stone); }
+  .ob-hour b { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px; }
+  .ob-hour label { display: grid; gap: 4px; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1.2px; color: var(--ash); }
+  .ob-hour select { height: 42px; border-radius: 12px !important; font-size: 15px; font-weight: 600; }
+  .ob-empty { display: flex; align-items: center; gap: 8px; padding: 16px; border-radius: 16px; border: 1px dashed var(--stone); color: var(--ash); font-size: 14px; }
+  .ob-copy { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 10px 4px; border: 0; background: transparent; color: var(--coral-700); font-size: 13px; font-weight: 600; }
+  .ob-copy:hover { color: var(--coral-500); }
+
+  /* Passo 4: serviços */
+  .ob-svc { padding: 18px; border-radius: 20px; background: var(--paper); border: 1px solid var(--stone); margin-bottom: 12px; }
+  .ob-svc-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .ob-svc-h span { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 1.6px; color: var(--ash); }
+  .ob-svc-h button { border: 0; background: transparent; color: var(--ash); padding: 6px; border-radius: 8px; }
+  .ob-svc-h button:hover { color: var(--rose-500, #c0392b); background: #fdf0f0; }
+  .ob-svc .ob-f:last-child { margin-bottom: 0; }
+  .ob-add { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; border-radius: 16px; border: 1.5px dashed var(--coral-300, #e8a48a); background: var(--coral-50); color: var(--coral-700); font-size: 14px; font-weight: 600; transition: background .15s; }
+  .ob-add:hover { background: var(--coral-100); }
+
+  /* Rodapé fixo com o botão — sempre à mão, como no app. */
+  .ob-bar { position: fixed; right: 0; bottom: 0; width: 50%; z-index: 20; padding: 14px 40px calc(18px + env(safe-area-inset-bottom, 0px)); background: linear-gradient(to top, var(--cream) 72%, rgba(250,250,246,0)); display: flex; justify-content: center; }
+  .ob-cta { width: 100%; max-width: 480px; height: 56px; border: 0; border-radius: 9999px; background: var(--coral-500); color: var(--cream); display: inline-flex; align-items: center; justify-content: center; gap: 10px; font-size: 16px; font-weight: 600; box-shadow: 0 10px 24px -10px rgba(221,120,82,.7); transition: transform .15s, box-shadow .2s, opacity .2s; }
+  .ob-cta:hover:not([disabled]) { transform: translateY(-1px); box-shadow: 0 14px 28px -10px rgba(221,120,82,.8); }
+  .ob-cta[disabled] { opacity: .7; cursor: default; }
+  .ob-cta .ob-spin { border-color: rgba(250,250,246,.35); border-top-color: var(--cream); }
+
+  /* Pronto */
+  .ob-done { text-align: center; padding-top: 40px; }
+  .ob-done-ic { width: 88px; height: 88px; margin: 0 auto 22px; border-radius: 50%; background: var(--coral-100); color: var(--coral-700); display: flex; align-items: center; justify-content: center; animation: ob-pop .5s cubic-bezier(.2,1.4,.4,1) both; }
+  @keyframes ob-pop { from { transform: scale(.4); opacity: 0; } }
+  .ob-done .ob-sub { max-width: 40ch; margin: 0 auto 26px; }
+
+  @media (max-width: 900px) {
+    .ob { grid-template-columns: 1fr; }
+    .ob-stage { display: none; }
+    .ob-panel { padding: 20px 20px 120px; }
+    .ob-bar { width: 100%; padding: 12px 20px calc(16px + env(safe-area-inset-bottom, 0px)); }
+    .ob-title { font-size: 30px; }
+    .ob-days { gap: 4px; }
+    .ob-hour { grid-template-columns: 44px 1fr 1fr; padding: 10px; }
   }
-  .wiz-service-remove {
-    position: absolute; top: 14px; right: 14px;
-    background: none; border: none;
-    color: var(--ash); cursor: pointer;
-    font-size: 14px; transition: color 0.2s;
-    padding: 0;
+  @media (min-width: 560px) {
+    .ob-row-cep { grid-template-columns: 1fr 120px; }
+    .ob-row-uf { grid-template-columns: 1fr 90px; }
+    .ob-row-2 { grid-template-columns: 1fr 1fr; }
   }
-  .wiz-service-remove:hover { color: var(--rose-500); }
-
-  .wiz-btn-add {
-    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-    background: transparent; color: var(--coral-700);
-    border: 1.5px dashed var(--coral-300); border-radius: 12px;
-    padding: 12px 16px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; font-weight: 600; letter-spacing: 1.4px;
-    cursor: pointer; transition: all 0.2s;
-    width: 100%; margin-top: 12px;
-    text-transform: uppercase;
-  }
-  .wiz-btn-add:hover { border-color: var(--coral-500); background: var(--coral-50); }
-
-  .wiz-actions { display: flex; gap: 12px; margin-top: 22px; }
-  .wiz-actions .loov-btn-primary { flex: 1; justify-content: center; }
-
-  .wiz-cep-error { font-size: 12.5px; color: var(--rose-500); display: none; margin-top: 4px; font-weight: 500; }
-  .wiz-days-hint { font-size: 13px; color: var(--ash); margin: 12px 0 0; }
-
-  .wiz-success-icon {
-    width: 80px; height: 80px; border-radius: 50%;
-    background: var(--coral-50); border: 2px solid var(--coral-500);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 28px; color: var(--coral-700);
-    margin: 0 auto 22px;
-  }
-
-  .wiz-input-with-icon { position: relative; }
-  .wiz-input-spinner {
-    display: none; position: absolute; right: 14px;
-    top: 50%; transform: translateY(-50%);
-    color: var(--coral-500);
-  }
-
-  @media (max-width: 580px) {
-    .wiz-day-buttons { grid-template-columns: repeat(4, 1fr); }
-    .wiz-form-row-2, .wiz-form-row-cep, .wiz-form-row-uf { grid-template-columns: 1fr; }
-    .wiz-day-time-row { flex-direction: column; align-items: flex-start; }
-    .wiz-time-select-wrap { width: 100%; }
+  @media (prefers-reduced-motion: reduce) {
+    .ob-stage::before, .ob-step.is-on, .ob-done-ic { animation: none; }
   }
 </style>
 
-<div class="loov-page loov-page--narrow">
+<div class="ob">
+  <section class="ob-stage" aria-hidden="true">
+    <div class="ob-top">Prévia · como o cliente vê</div>
+    <h2>Seu lava-rápido,<br><em>na palma da mão</em><br>de quem está perto.</h2>
+    <div class="ob-card" id="pv"></div>
+    <p class="ob-stage-note" id="pv-note">O cartão se monta enquanto você preenche. É assim que ele aparece na busca e no mapa.</p>
+  </section>
 
-  <div class="wiz-progress">
-    <div class="wiz-step active" id="step-ind-1">
-      <div class="wiz-step-circle" id="circle-1">1</div>
-      <span class="wiz-step-label">Lava-rápido</span>
-    </div>
-    <div class="wiz-connector" id="conn-1"></div>
-    <div class="wiz-step" id="step-ind-2">
-      <div class="wiz-step-circle" id="circle-2">2</div>
-      <span class="wiz-step-label">Horários</span>
-    </div>
-    <div class="wiz-connector" id="conn-2"></div>
-    <div class="wiz-step" id="step-ind-3">
-      <div class="wiz-step-circle" id="circle-3">3</div>
-      <span class="wiz-step-label">Serviços</span>
-    </div>
-    <div class="wiz-connector" id="conn-3"></div>
-    <div class="wiz-step" id="step-ind-4">
-      <div class="wiz-step-circle" id="circle-4"><i class="fas fa-check" style="font-size:11px;"></i></div>
-      <span class="wiz-step-label">Pronto!</span>
-    </div>
-  </div>
-
-  <!-- PASSO 1 -->
-  <div id="step-1">
-    <div class="loov-hero">
-      <div class="loov-eyebrow"><span class="dot"></span>Passo 1 de 3</div>
-      <h1 class="loov-h1">Seu <span class="accent">lava-rápido</span>.</h1>
-      <p class="loov-lead">Comece com as informações básicas do seu estabelecimento.</p>
-    </div>
-
-    <div class="loov-card">
-      <div class="loov-field">
-        <label class="loov-label">Nome do lava-rápido</label>
-        <input type="text" class="loov-input" id="s1-name" placeholder="Ex.: Lava Car Premium">
+  <section class="ob-panel">
+    <div class="ob-wrap">
+      <div class="ob-head">
+        <button type="button" class="ob-back" id="ob-back" aria-label="Voltar" hidden><i data-feather="chevron-left" style="width:18px;height:18px"></i></button>
+        <%= button_to "SAIR", destroy_user_session_path, method: :delete, class: "ob-exit", form: { data: { turbo: false } } %>
+      </div>
+      <div class="ob-prog" id="ob-prog">
+        <div data-n="1"><i></i><span>LOCAL</span></div>
+        <div data-n="2"><i></i><span>OPERAÇÃO</span></div>
+        <div data-n="3"><i></i><span>HORÁRIOS</span></div>
+        <div data-n="4"><i></i><span>SERVIÇOS</span></div>
       </div>
 
-      <div class="wiz-form-row-cep">
-        <div class="loov-field">
-          <label class="loov-label">CEP</label>
-          <div class="wiz-input-with-icon">
-            <input type="text" class="loov-input" id="s1-cep" placeholder="00000-000" maxlength="9" style="padding-right: 40px;">
-            <div id="cep-spinner" class="wiz-input-spinner">
-              <i class="fas fa-circle-notch fa-spin"></i>
-            </div>
-          </div>
-          <span class="wiz-cep-error" id="cep-error">CEP não encontrado.</span>
+      <%# ── 1 · Local ── %>
+      <div class="ob-step" data-step="1">
+        <div class="ob-lab">PASSO 1 DE 4</div>
+        <h1 class="ob-title">Onde o cliente te encontra.</h1>
+        <p class="ob-sub">Nome e endereço são o que aparece na busca e no mapa. O CEP preenche o resto pra você.</p>
+        <div class="ob-f"><label for="f-name">Nome do lava-rápido</label><input class="ob-in" id="f-name" placeholder="Ex.: Lava Car Premium" autocomplete="organization"><div class="ob-ferr" data-for="f-name"></div></div>
+        <div class="ob-row ob-row-cep">
+          <div class="ob-f"><label for="f-cep">CEP</label><div class="ob-cep"><input class="ob-in" id="f-cep" placeholder="00000-000" inputmode="numeric" maxlength="9" autocomplete="postal-code"><span class="ob-spin is-off" id="cep-spin"></span></div><div class="ob-ferr" data-for="f-cep"></div></div>
+          <div class="ob-f"><label for="f-numero">Número</label><input class="ob-in" id="f-numero" placeholder="123" inputmode="numeric"></div>
         </div>
-        <div class="loov-field">
-          <label class="loov-label">Logradouro</label>
-          <input type="text" class="loov-input" id="s1-logradouro" placeholder="Rua / Avenida">
+        <div class="ob-f"><label for="f-rua">Rua / avenida</label><input class="ob-in" id="f-rua" placeholder="Preenchido pelo CEP" autocomplete="address-line1"><div class="ob-ferr" data-for="f-rua"></div></div>
+        <div class="ob-row ob-row-uf">
+          <div class="ob-f"><label for="f-bairro">Bairro</label><input class="ob-in" id="f-bairro" placeholder="Bairro"></div>
+          <div class="ob-f"><label for="f-uf">UF</label><input class="ob-in" id="f-uf" placeholder="SP" maxlength="2" style="text-transform:uppercase"></div>
         </div>
-        <div class="loov-field">
-          <label class="loov-label">Número</label>
-          <input type="text" class="loov-input" id="s1-numero" placeholder="123">
-        </div>
+        <div class="ob-f"><label for="f-cidade">Cidade</label><input class="ob-in" id="f-cidade" placeholder="Cidade" autocomplete="address-level2"><div class="ob-ferr" data-for="f-cidade"></div></div>
       </div>
 
-      <div class="wiz-form-row-2">
-        <div class="loov-field">
-          <label class="loov-label">Bairro</label>
-          <input type="text" class="loov-input" id="s1-bairro" placeholder="Bairro">
-        </div>
-        <div class="loov-field">
-          <label class="loov-label">Cidade</label>
-          <input type="text" class="loov-input" id="s1-cidade" placeholder="Cidade">
-        </div>
+      <%# ── 2 · Operação ── %>
+      <div class="ob-step" data-step="2">
+        <div class="ob-lab">PASSO 2 DE 4</div>
+        <h1 class="ob-title">Como você opera.</h1>
+        <p class="ob-sub">A capacidade define quantos agendamentos a Loov aceita no mesmo horário. Se mudar conforme o dia, você ajusta depois no painel.</p>
+        <div class="ob-stepper"><div class="ob-stepper-t"><b>CARROS AO MESMO TEMPO</b><small>Quantos você consegue atender em paralelo</small></div>
+          <div class="ob-stepper-c" data-counter="capacity" data-min="1" data-max="30"><button type="button" data-d="-1" aria-label="Menos"><i data-feather="minus" style="width:16px;height:16px"></i></button><output>1</output><button type="button" data-d="1" aria-label="Mais"><i data-feather="plus" style="width:16px;height:16px"></i></button></div></div>
+        <div class="ob-stepper"><div class="ob-stepper-t"><b>FUNCIONÁRIOS</b><small>Só informativo, não afeta a agenda</small></div>
+          <div class="ob-stepper-c" data-counter="employees" data-min="1" data-max="50"><button type="button" data-d="-1" aria-label="Menos"><i data-feather="minus" style="width:16px;height:16px"></i></button><output>1</output><button type="button" data-d="1" aria-label="Mais"><i data-feather="plus" style="width:16px;height:16px"></i></button></div></div>
       </div>
 
-      <div class="wiz-form-row-uf">
-        <div class="loov-field">
-          <label class="loov-label">UF</label>
-          <input type="text" class="loov-input" id="s1-uf" placeholder="SP" maxlength="2">
-        </div>
-        <div class="loov-field">
-          <label class="loov-label">Capacidade simultânea</label>
-          <input type="number" class="loov-input" id="s1-capacity" placeholder="2" min="1" value="1">
-          <span class="loov-help">Atendimentos ao mesmo tempo</span>
-        </div>
-        <div class="loov-field">
-          <label class="loov-label">Nº de funcionários</label>
-          <input type="number" class="loov-input" id="s1-employees" placeholder="3" min="1" value="1">
-        </div>
+      <%# ── 3 · Horários ── %>
+      <div class="ob-step" data-step="3">
+        <div class="ob-lab">PASSO 3 DE 4</div>
+        <h1 class="ob-title">Horário de funcionamento.</h1>
+        <p class="ob-sub">Só aparecem horários pra agendar nos dias em que você abre.</p>
+        <div class="ob-chips"><button type="button" class="ob-chip" data-preset="1,2,3,4,5">Seg a Sex</button><button type="button" class="ob-chip" data-preset="1,2,3,4,5,6">Seg a Sáb</button><button type="button" class="ob-chip" data-preset="0,1,2,3,4,5,6">Todos os dias</button></div>
+        <div class="ob-days" id="ob-days"></div>
+        <div id="ob-hours"></div>
       </div>
-    </div>
 
-    <div class="wiz-actions">
-      <button class="loov-btn-primary" id="btn-next-1" onclick="saveStep1()">
-        Continuar <i class="fas fa-arrow-right"></i>
-      </button>
-    </div>
-  </div>
-
-  <!-- PASSO 2 -->
-  <div id="step-2" style="display:none;">
-    <div class="loov-hero">
-      <div class="loov-eyebrow"><span class="dot"></span>Passo 2 de 3</div>
-      <h1 class="loov-h1">Horários de <span class="accent">funcionamento</span>.</h1>
-      <p class="loov-lead">Selecione os dias e configure o horário de cada um.</p>
-    </div>
-
-    <div class="loov-card">
-      <div class="wiz-day-buttons">
-        <% [["Dom",0],["Seg",1],["Ter",2],["Qua",3],["Qui",4],["Sex",5],["Sáb",6]].each do |label, val| %>
-        <div class="wiz-day-btn" data-day="<%= val %>" onclick="toggleDay(<%= val %>, '<%= label %>')"><%= label %></div>
-        <% end %>
+      <%# ── 4 · Serviços ── %>
+      <div class="ob-step" data-step="4">
+        <div class="ob-lab">PASSO 4 DE 4</div>
+        <h1 class="ob-title">Seus serviços.</h1>
+        <p class="ob-sub">A duração define de quanto em quanto tempo abre uma vaga na agenda. Comece com um; dá pra adicionar mais depois.</p>
+        <div id="ob-svcs"></div>
+        <button type="button" class="ob-add" id="ob-add"><i data-feather="plus" style="width:15px;height:15px"></i>Adicionar serviço</button>
       </div>
-      <div class="wiz-day-time-rows" id="day-time-rows"></div>
-      <p class="wiz-days-hint" id="days-hint">Selecione pelo menos um dia.</p>
-    </div>
 
-    <div class="wiz-actions">
-      <button class="loov-btn-secondary" onclick="goToStep(1)"><i class="fas fa-arrow-left"></i></button>
-      <button class="loov-btn-primary" onclick="saveStep2()">
-        Continuar <i class="fas fa-arrow-right"></i>
-      </button>
-    </div>
-  </div>
+      <%# ── Pronto ── %>
+      <div class="ob-step ob-done" data-step="5">
+        <div class="ob-done-ic"><i data-feather="check" style="width:36px;height:36px"></i></div>
+        <h1 class="ob-title">Tudo pronto!</h1>
+        <p class="ob-sub" id="ob-done-sub"></p>
+      </div>
 
-  <!-- PASSO 3 -->
-  <div id="step-3" style="display:none;">
-    <div class="loov-hero">
-      <div class="loov-eyebrow"><span class="dot"></span>Passo 3 de 3</div>
-      <h1 class="loov-h1">Seus <span class="accent">serviços</span>.</h1>
-      <p class="loov-lead">Adicione pelo menos um serviço com preço e duração.</p>
+      <div class="ob-formerr" id="ob-err" role="alert"></div>
     </div>
+  </section>
 
-    <div class="loov-card">
-      <div id="services-list"></div>
-      <button class="wiz-btn-add" onclick="addService()">
-        <i class="fas fa-plus"></i> Adicionar serviço
-      </button>
-    </div>
-
-    <div class="wiz-actions">
-      <button class="loov-btn-secondary" onclick="goToStep(2)"><i class="fas fa-arrow-left"></i></button>
-      <button class="loov-btn-primary" id="btn-finish" onclick="saveStep3()">
-        Finalizar <i class="fas fa-check"></i>
-      </button>
-    </div>
-  </div>
-
-  <!-- PASSO 4 -->
-  <div id="step-4" style="display:none;">
-    <div class="loov-card loov-card--lg" style="text-align: center;">
-      <div class="wiz-success-icon"><i class="fas fa-check"></i></div>
-      <h2 class="loov-h2" style="margin-bottom: 10px;">Tudo <span style="color: var(--coral-500);">pronto!</span></h2>
-      <p class="loov-lead" style="margin-bottom: 24px;">Seu lava-rápido está cadastrado e pronto para receber agendamentos.</p>
-      <a href="/" class="loov-btn-primary">
-        <i class="fas fa-gauge-high"></i> Ir para o painel
-      </a>
-    </div>
-  </div>
-
+  <div class="ob-bar"><button type="button" class="ob-cta" id="ob-cta"></button></div>
 </div>
 
-<script>
-  var carWashId = null;
-  var activeDays = {};
-  var serviceCount = 0;
+<script nonce="<%= csp_nonce %>">
+(function () {
+  var RESUME = <%= raw json_escape((@resume || {}).to_json) %>;
+  var CATEGORIES = ['Lavagem', 'Polimento', 'Higienização', 'Cristalização', 'Vitrificação', 'Enceramento', 'Hidratação de Couro', 'Limpeza de Motor', 'Revitalização de Plásticos', 'Polimento de Faróis', 'Impermeabilização', 'Oxi-sanitização', 'Outros'];
+  var DAY_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+  var DAY_LONG = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+  var TIMES = []; for (var i = 0; i < 96; i++) TIMES.push(String(Math.floor(i / 4)).padStart(2, '0') + ':' + String((i % 4) * 15).padStart(2, '0'));
+  var OPEN = '08:00', CLOSE = '18:00';
 
-  var ALL_CATEGORIES = [
-    "Lavagem", "Polimento", "Higienização", "Cristalização", "Vitrificação",
-    "Enceramento", "Hidratação de Couro", "Limpeza de Motor",
-    "Revitalização de Plásticos", "Polimento de Faróis",
-    "Impermeabilização", "Oxi-sanitização", "Outros"
-  ];
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function icon(n, size) { return window.feather && feather.icons[n] ? feather.icons[n].toSvg({ width: size, height: size }) : ''; }
+  function titleCase(s) { return s.trim().split(/\s+/).map(function (w) { return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(); }).join(' '); }
+  function parsePrice(t) { var n = Number(String(t).replace(/\./g, '').replace(',', '.')); return isFinite(n) ? n : NaN; }
+  function money(n) { return 'R$ ' + (Number(n) || 0).toFixed(2).replace('.', ',').replace(/,00$/, ''); }
 
-  function toTitleCase(str) {
-    return str.replace(/\w\S*/g, function(word) {
-      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-    });
+  var st = { step: 1, carWashId: null, capacity: 1, employees: 1, days: {}, services: [], saving: false };
+  var seq = 0;
+  function newService() { return { key: 's' + (++seq), category: st.services.length ? '' : 'Lavagem', title: '', description: '', price: '', duration: '' }; }
+
+  // ── Prévia ao vivo ────────────────────────────────────────────────────────
+  function todayLabel() {
+    var d = st.days[new Date().getDay()];
+    if (!Object.keys(st.days).length) return null;
+    return d ? (d.opens.replace(/:00$/, '').replace(/^0/, '') + '–' + d.closes.replace(/:00$/, '').replace(/^0/, '') + 'h') : 'Fechado hoje';
+  }
+  function renderPreview() {
+    var name = $('f-name').value.trim() || RESUME.name || '';
+    var bairro = $('f-bairro').value.trim() || RESUME.bairro || '', cidade = $('f-cidade').value.trim() || RESUME.cidade || '';
+    var hood = [bairro, cidade].filter(Boolean).join(' · ');
+    var svcs = st.services.filter(function (s) { return s.title.trim(); });
+    var prices = svcs.map(function (s) { return parsePrice(s.price); }).filter(function (n) { return n > 0; });
+    var hrs = todayLabel();
+    var open = hrs && hrs !== 'Fechado hoje';
+    $('pv').innerHTML =
+      '<div class="ob-card-top"><div class="ob-card-logo">' + LoovLogos.logoOf({ id: 'preview', name: name || 'Seu Lava-Rápido' }) + '</div>' +
+        '<div class="ob-card-t"><div class="ob-card-name' + (name ? '' : ' is-ph') + '">' + esc(name || 'Seu lava-rápido') + '</div>' +
+        '<div class="ob-card-sub">' + esc(hood || 'Bairro · Cidade') + '</div></div>' +
+        (hrs ? '<span class="ob-card-badge' + (open ? '' : ' is-off') + '">' + (open ? 'Aberto' : 'Fechado') + '</span>' : '') + '</div>' +
+      '<div class="ob-card-meta"><span>' + icon('star', 12) + 'Novo</span><span>' + icon('clock', 12) + esc(hrs || 'Horário') + '</span><span>' + icon('layers', 12) + st.capacity + (st.capacity === 1 ? ' carro' : ' carros') + ' por vez</span></div>' +
+      '<div class="ob-card-svcs">' + (svcs.length ? svcs.slice(0, 3).map(function (s) {
+          var p = parsePrice(s.price);
+          return '<div class="ob-card-svc"><span>' + esc(titleCase(s.title)) + (s.duration ? ' · ' + esc(s.duration) + ' min' : '') + '</span><b>' + (p > 0 ? money(p) : '—') + '</b></div>';
+        }).join('') : '<div class="ob-card-svc is-ph"><span>Seus serviços aparecem aqui</span><b>R$ —</b></div>') + '</div>' +
+      '<div class="ob-card-cta"><small>a partir de <b>' + (prices.length ? money(Math.min.apply(null, prices)) : 'R$ —') + '</b></small><span>Ver horários</span></div>';
   }
 
-  function applyTitleCase(input) {
-    input.addEventListener('blur', function() {
-      if (this.value.trim()) this.value = toTitleCase(this.value.trim());
-    });
+  // ── Passos ────────────────────────────────────────────────────────────────
+  var CTA = { 1: 'Continuar', 2: 'Continuar', 3: 'Continuar', 4: 'Finalizar', 5: 'Ir para o painel' };
+  function go(n) {
+    st.step = n; err('');
+    document.querySelectorAll('.ob-step').forEach(function (s) { s.classList.toggle('is-on', Number(s.dataset.step) === n); });
+    document.querySelectorAll('#ob-prog > div').forEach(function (d) { var k = Number(d.dataset.n); d.classList.toggle('is-on', k <= n); d.classList.toggle('is-now', k === n); });
+    $('ob-prog').style.visibility = n === 5 ? 'hidden' : '';
+    // Voltar só antes de o lava-rápido existir (passo 2) ou entre horários e serviços.
+    $('ob-back').hidden = !(n === 2 || n === 4) || (n === 4 && RESUME.step === 4);
+    setCta();
+    window.scrollTo(0, 0);
+    renderPreview();
   }
-
-  function goToStep(n) {
-    [1,2,3,4].forEach(function(i) {
-      document.getElementById('step-' + i).style.display = i === n ? 'block' : 'none';
-    });
-    updateProgress(n);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  function setCta() {
+    var b = $('ob-cta');
+    b.disabled = st.saving;
+    b.innerHTML = st.saving ? '<span class="ob-spin"></span>Salvando…' : CTA[st.step] + ' ' + icon(st.step === 4 ? 'check' : 'arrow-right', 17);
   }
+  function err(m) { $('ob-err').textContent = m || ''; }
+  function fieldErr(id, m) { var el = $(id), box = document.querySelector('[data-for="' + id + '"]'); if (el) el.classList.toggle('is-err', !!m); if (box) box.textContent = m || ''; }
 
-  function updateProgress(current) {
-    [1,2,3,4].forEach(function(i) {
-      var ind = document.getElementById('step-ind-' + i);
-      var circle = document.getElementById('circle-' + i);
-      ind.className = 'wiz-step';
-      if (i < current) {
-        ind.classList.add('done');
-        circle.innerHTML = '<i class="fas fa-check" style="font-size:11px;"></i>';
-      } else if (i === current) {
-        ind.classList.add('active');
-        if (i < 4) circle.innerHTML = i;
-      } else {
-        if (i < 4) circle.innerHTML = i;
-      }
-      if (i < 4) {
-        var conn = document.getElementById('conn-' + i);
-        conn.className = 'wiz-connector' + (i < current ? ' done' : '');
-      }
-    });
-  }
-
-  document.addEventListener('DOMContentLoaded', function() {
-    var cep = document.getElementById('s1-cep');
-    cep.addEventListener('input', function() {
-      var raw = this.value.replace(/\D/g, '');
-      this.value = raw.length > 5 ? raw.slice(0,5) + '-' + raw.slice(5,8) : raw;
-    });
-    cep.addEventListener('blur', function() {
-      var raw = this.value.replace(/\D/g, '');
-      if (raw.length !== 8) return;
-      document.getElementById('cep-spinner').style.display = 'block';
-      document.getElementById('cep-error').style.display = 'none';
-      fetch('https://viacep.com.br/ws/' + raw + '/json/')
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          document.getElementById('cep-spinner').style.display = 'none';
-          if (data.erro) { document.getElementById('cep-error').style.display = 'block'; return; }
-          document.getElementById('s1-logradouro').value = data.logradouro || '';
-          document.getElementById('s1-bairro').value = data.bairro || '';
-          document.getElementById('s1-cidade').value = data.localidade || '';
-          document.getElementById('s1-uf').value = data.uf || '';
-          document.getElementById('s1-numero').focus();
-        })
-        .catch(function() {
-          document.getElementById('cep-spinner').style.display = 'none';
-          document.getElementById('cep-error').style.display = 'block';
-        });
-    });
-
-    addService();
+  // ── Passo 1: CEP ──────────────────────────────────────────────────────────
+  var cep = $('f-cep');
+  cep.addEventListener('input', function () {
+    var d = cep.value.replace(/\D/g, '').slice(0, 8);
+    cep.value = d.length > 5 ? d.slice(0, 5) + '-' + d.slice(5) : d;
+    if (d.length === 8) lookupCep();
   });
+  cep.addEventListener('blur', lookupCep);
+  var lastCep = '';
+  function lookupCep() {
+    var raw = cep.value.replace(/\D/g, '');
+    if (raw.length !== 8 || raw === lastCep) return;
+    lastCep = raw;
+    $('cep-spin').classList.remove('is-off'); fieldErr('f-cep', '');
+    fetch('https://viacep.com.br/ws/' + raw + '/json/')
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.erro) { fieldErr('f-cep', 'CEP não encontrado. Confira os números ou preencha o endereço abaixo.'); return; }
+        [['f-rua', d.logradouro], ['f-bairro', d.bairro], ['f-cidade', d.localidade], ['f-uf', d.uf]].forEach(function (p) {
+          if (!p[1]) return;
+          var el = $(p[0]); el.value = p[1]; el.classList.remove('ob-filled'); void el.offsetWidth; el.classList.add('ob-filled'); fieldErr(p[0], '');
+        });
+        $('f-numero').focus();
+        renderPreview();
+      })
+      .catch(function () { lastCep = ''; fieldErr('f-cep', 'Não foi possível buscar o CEP agora. Preencha o endereço abaixo.'); })
+      .then(function () { $('cep-spin').classList.add('is-off'); });
+  }
+  var RULES = { 'f-name': 'Informe o nome do lava-rápido.', 'f-rua': 'Informe a rua.', 'f-cidade': 'Informe a cidade.' };
+  Object.keys(RULES).forEach(function (id) {
+    $(id).addEventListener('blur', function () { if (!$(id).value.trim()) fieldErr(id, RULES[id]); });
+    $(id).addEventListener('input', function () { if ($(id).value.trim()) fieldErr(id, ''); });
+  });
+  ['f-name', 'f-bairro', 'f-cidade'].forEach(function (id) { $(id).addEventListener('input', renderPreview); });
+  $('f-uf').addEventListener('input', function () { this.value = this.value.toUpperCase().replace(/[^A-Z]/g, ''); });
 
-  // Nome digitado no cadastro (registrations/new) já preenche o passo 1.
-  (function () {
-    try {
-      var pending = localStorage.getItem('loov_pending_car_wash_name');
-      var field = document.getElementById('s1-name');
-      if (pending && field && !field.value) field.value = pending;
-    } catch (e) {}
-  })();
-
-  function saveStep1() {
-    var name = document.getElementById('s1-name').value.trim();
-    var logradouro = document.getElementById('s1-logradouro').value.trim();
-    var cidade = document.getElementById('s1-cidade').value.trim();
-    if (!name || !logradouro || !cidade) {
-      alert('Preencha nome, logradouro e cidade para continuar.');
-      return;
-    }
-    var btn = document.getElementById('btn-next-1');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Salvando...';
-    fetch('<%= owner_onboarding_car_wash_path %>', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content },
-      body: JSON.stringify({ car_wash: {
-        name: name,
-        cep: document.getElementById('s1-cep').value.trim(),
-        logradouro: logradouro,
-        numero: document.getElementById('s1-numero').value.trim(),
-        bairro: document.getElementById('s1-bairro').value.trim(),
-        cidade: cidade,
-        uf: document.getElementById('s1-uf').value.trim(),
-        capacity_per_slot: document.getElementById('s1-capacity').value || 1,
-        num_employees: document.getElementById('s1-employees').value || 1
-      }})
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      btn.disabled = false;
-      btn.innerHTML = 'Continuar <i class="fas fa-arrow-right"></i>';
-      if (data.success) { carWashId = data.car_wash_id; goToStep(2); }
-      else { alert('Erro: ' + (data.errors || []).join(', ')); }
-    })
-    .catch(function() {
-      btn.disabled = false;
-      btn.innerHTML = 'Continuar <i class="fas fa-arrow-right"></i>';
-      alert('Erro ao salvar. Tente novamente.');
-    });
+  function step1() {
+    var bad = Object.keys(RULES).filter(function (id) { return !$(id).value.trim(); });
+    Object.keys(RULES).forEach(function (id) { fieldErr(id, bad.indexOf(id) !== -1 ? RULES[id] : ''); });
+    if (bad.length) { err('Preencha o nome, a rua e a cidade pra continuar.'); $(bad[0]).focus(); return; }
+    go(2);
   }
 
-  function buildHourOptions(sel) {
-    var o = '';
-    for (var h = 0; h < 24; h++) { var v = (h<10?'0':'')+h; o += '<option value="'+v+'"'+(sel===v?' selected':'')+'>'+v+'</option>'; }
-    return o;
+  // ── Passo 2: contadores; aqui o lava-rápido é criado ──────────────────────
+  document.querySelectorAll('[data-counter]').forEach(function (c) {
+    var key = c.dataset.counter, min = Number(c.dataset.min), max = Number(c.dataset.max);
+    function paint() { c.querySelector('output').textContent = st[key]; c.querySelector('[data-d="-1"]').disabled = st[key] <= min; c.querySelector('[data-d="1"]').disabled = st[key] >= max; }
+    c.addEventListener('click', function (e) { var b = e.target.closest('[data-d]'); if (!b) return; st[key] = Math.min(max, Math.max(min, st[key] + Number(b.dataset.d))); paint(); renderPreview(); });
+    paint();
+  });
+  function post(url, body) {
+    return fetch(url, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().catch(function () { return null; }).then(function (d) { return { ok: r.ok && d && d.success, data: d, status: r.status }; }); });
   }
-  function buildMinOptions(sel) {
-    var o = '';
-    ['00','15','30','45'].forEach(function(m) { o += '<option value="'+m+'"'+(sel===m?' selected':'')+'>'+m+'</option>'; });
-    return o;
+  function errText(res, fallback) {
+    var d = res.data || {};
+    if (Array.isArray(d.errors) && d.errors.length) return d.errors.join(', ');
+    if (typeof d.error === 'string') return d.error;
+    return fallback + ' (HTTP ' + res.status + ')';
   }
-
-  function toggleDay(day, label) {
-    var btn = document.querySelector('.wiz-day-btn[data-day="'+day+'"]');
-    if (activeDays[day]) {
-      delete activeDays[day];
-      btn.classList.remove('active');
-      var row = document.getElementById('day-row-'+day);
-      if (row) row.remove();
-    } else {
-      activeDays[day] = { oh: '08', om: '00', ch: '18', cm: '00' };
-      btn.classList.add('active');
-      var html = '<div class="wiz-day-time-row visible" id="day-row-'+day+'">'+
-        '<div class="wiz-day-time-label">'+label+'</div>'+
-        '<div class="wiz-time-select-wrap"><span class="wiz-time-label-small">Abre</span>'+
-        '<select class="wiz-time-select" onchange="updateTime('+day+',\'oh\',this.value)">'+buildHourOptions('08')+'</select>'+
-        '<span class="wiz-time-sep">:</span>'+
-        '<select class="wiz-time-select" onchange="updateTime('+day+',\'om\',this.value)">'+buildMinOptions('00')+'</select></div>'+
-        '<div class="wiz-time-select-wrap"><span class="wiz-time-label-small">Fecha</span>'+
-        '<select class="wiz-time-select" onchange="updateTime('+day+',\'ch\',this.value)">'+buildHourOptions('18')+'</select>'+
-        '<span class="wiz-time-sep">:</span>'+
-        '<select class="wiz-time-select" onchange="updateTime('+day+',\'cm\',this.value)">'+buildMinOptions('00')+'</select></div>'+
-        '</div>';
-      var rows = document.getElementById('day-time-rows');
-      var existing = rows.querySelectorAll('.wiz-day-time-row');
-      var inserted = false;
-      for (var i = 0; i < existing.length; i++) {
-        if (day < parseInt(existing[i].id.replace('day-row-',''))) {
-          var tmp = document.createElement('div'); tmp.innerHTML = html;
-          rows.insertBefore(tmp.firstElementChild, existing[i]);
-          inserted = true; break;
-        }
-      }
-      if (!inserted) rows.insertAdjacentHTML('beforeend', html);
-    }
-    document.getElementById('days-hint').style.display = Object.keys(activeDays).length > 0 ? 'none' : 'block';
+  function saving(on) { st.saving = on; setCta(); }
+  function step2() {
+    saving(true);
+    post('<%= owner_onboarding_car_wash_path %>', { car_wash: {
+      name: $('f-name').value.trim(), cep: cep.value.trim(), logradouro: $('f-rua').value.trim(), numero: $('f-numero').value.trim(),
+      bairro: $('f-bairro').value.trim(), cidade: $('f-cidade').value.trim(), uf: $('f-uf').value.trim().toUpperCase(),
+      capacity_per_slot: st.capacity, num_employees: st.employees } })
+      .then(function (res) {
+        saving(false);
+        if (!res.ok) { err(errText(res, 'Não foi possível salvar.')); return; }
+        st.carWashId = res.data.car_wash_id;
+        try { localStorage.removeItem('loov_pending_car_wash_name'); } catch (e) {}
+        go(3);
+      })
+      .catch(function () { saving(false); err('Erro de conexão. Tente novamente.'); });
   }
 
-  function updateTime(day, key, value) {
-    if (activeDays[day]) activeDays[day][key] = value;
+  // ── Passo 3: dias e horários ──────────────────────────────────────────────
+  function opts(sel) { return TIMES.map(function (t) { return '<option' + (t === sel ? ' selected' : '') + '>' + t + '</option>'; }).join(''); }
+  function renderDays() {
+    $('ob-days').innerHTML = [1, 2, 3, 4, 5, 6, 0].map(function (d) { return '<button type="button" class="ob-day" data-day="' + d + '" aria-pressed="' + (!!st.days[d]) + '">' + DAY_SHORT[d] + '</button>'; }).join('');
+    var active = Object.keys(st.days).map(Number).sort(function (a, b) { return (a || 7) - (b || 7); });
+    $('ob-hours').innerHTML = !active.length
+      ? '<div class="ob-empty">' + icon('calendar', 15) + 'Toque nos dias em que você abre.</div>'
+      : '<div class="ob-hours">' + active.map(function (d) {
+          return '<div class="ob-hour"><b>' + DAY_SHORT[d] + '</b>' +
+            '<label>ABRE<select class="ob-in" data-time="' + d + '" data-kind="opens">' + opts(st.days[d].opens) + '</select></label>' +
+            '<label>FECHA<select class="ob-in" data-time="' + d + '" data-kind="closes">' + opts(st.days[d].closes) + '</select></label></div>';
+        }).join('') + '</div>' +
+        (active.length > 1 ? '<button type="button" class="ob-copy" id="ob-copy">' + icon('copy', 13) + 'Aplicar ' + st.days[active[0]].opens + '–' + st.days[active[0]].closes + ' em todos os dias</button>' : '');
+    renderPreview();
+  }
+  document.addEventListener('click', function (e) {
+    var t;
+    if ((t = e.target.closest('[data-day]'))) { var d = Number(t.dataset.day); if (st.days[d]) delete st.days[d]; else st.days[d] = { opens: OPEN, closes: CLOSE }; renderDays(); return; }
+    if ((t = e.target.closest('[data-preset]'))) { var next = {}; t.dataset.preset.split(',').map(Number).forEach(function (d) { next[d] = st.days[d] || { opens: OPEN, closes: CLOSE }; }); st.days = next; renderDays(); return; }
+    if (e.target.closest('#ob-copy')) { var a = Object.keys(st.days).map(Number).sort(function (x, y) { return (x || 7) - (y || 7); }); var base = st.days[a[0]]; a.forEach(function (d) { st.days[d] = { opens: base.opens, closes: base.closes }; }); renderDays(); return; }
+  });
+  document.addEventListener('change', function (e) {
+    var s = e.target.closest('[data-time]');
+    if (s) { st.days[s.dataset.time][s.dataset.kind] = s.value; renderDays(); }
+  });
+  function step3() {
+    var active = Object.keys(st.days).map(Number);
+    if (!active.length) { err('Selecione pelo menos um dia de funcionamento.'); return; }
+    var bad = active.filter(function (d) { return st.days[d].opens >= st.days[d].closes; })[0];
+    if (bad !== undefined) { err('Em ' + DAY_LONG[bad] + ', o fechamento tem que ser depois da abertura.'); return; }
+    var hours = {}; active.forEach(function (d) { hours[d] = { enabled: '1', opens_at: st.days[d].opens, closes_at: st.days[d].closes }; });
+    saving(true);
+    post('<%= owner_onboarding_hours_path %>', { car_wash_id: st.carWashId, hours: hours })
+      .then(function (res) { saving(false); if (res.ok) go(4); else err(errText(res, 'Não foi possível salvar os horários.')); })
+      .catch(function () { saving(false); err('Erro de conexão. Tente novamente.'); });
   }
 
-  function saveStep2() {
-    if (Object.keys(activeDays).length === 0) {
-      alert('Selecione pelo menos um dia de funcionamento.');
-      return;
-    }
-    var hoursData = {};
-    Object.keys(activeDays).forEach(function(day) {
-      var d = activeDays[day];
-      hoursData[day] = { enabled: '1', opens_at: d.oh+':'+d.om, closes_at: d.ch+':'+d.cm };
-    });
-    fetch('<%= owner_onboarding_hours_path %>', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content },
-      body: JSON.stringify({ car_wash_id: carWashId, hours: hoursData })
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data.success) { goToStep(3); }
-      else { alert('Erro: ' + (data.errors || []).join(', ')); }
-    });
-  }
-
-  function addService() {
-    var idx = serviceCount++;
-    var categoryOptions = ALL_CATEGORIES.map(function(c) {
-      return '<option value="'+c+'">'+c+'</option>';
+  // ── Passo 4: serviços ─────────────────────────────────────────────────────
+  function renderSvcs() {
+    $('ob-svcs').innerHTML = st.services.map(function (s, i) {
+      return '<div class="ob-svc" data-svc="' + s.key + '"><div class="ob-svc-h"><span>SERVIÇO ' + (i + 1) + '</span>' + (st.services.length > 1 ? '<button type="button" data-rm="' + s.key + '" aria-label="Remover serviço">' + icon('trash-2', 15) + '</button>' : '') + '</div>' +
+        '<div class="ob-f"><label>Categoria</label><select class="ob-in" data-k="category"><option value="">Selecione</option>' + CATEGORIES.map(function (c) { return '<option' + (c === s.category ? ' selected' : '') + '>' + c + '</option>'; }).join('') + '</select><div class="ob-ferr" data-for="' + s.key + '_category"></div></div>' +
+        '<div class="ob-f"><label>Nome do serviço</label><input class="ob-in" data-k="title" placeholder="Ex.: Lavagem Simples" value="' + esc(s.title) + '"><div class="ob-ferr" data-for="' + s.key + '_title"></div></div>' +
+        '<div class="ob-f"><label>O que está incluído</label><textarea class="ob-in" data-k="description" maxlength="140" placeholder="Ex.: lavagem externa, aspiração e limpeza do painel">' + esc(s.description) + '</textarea><div class="ob-ferr" data-for="' + s.key + '_description"></div></div>' +
+        '<div class="ob-row ob-row-2"><div class="ob-f"><label>Preço (R$)</label><input class="ob-in" data-k="price" inputmode="decimal" placeholder="45,00" value="' + esc(s.price) + '"><div class="ob-ferr" data-for="' + s.key + '_price"></div></div>' +
+        '<div class="ob-f"><label>Duração (min)</label><input class="ob-in" data-k="duration" inputmode="numeric" maxlength="3" placeholder="60" value="' + esc(s.duration) + '"><div class="ob-ferr" data-for="' + s.key + '_duration"></div></div></div></div>';
     }).join('');
-
-    var html = '<div class="wiz-service-card" id="service-'+idx+'">'+
-      '<button class="wiz-service-remove" onclick="removeService('+idx+')" title="Remover"><i class="fas fa-times"></i></button>'+
-      '<div class="wiz-form-row-2" style="margin-bottom: 12px;">'+
-        '<div class="loov-field" style="margin-bottom: 0;">'+
-          '<label class="loov-label">Categoria</label>'+
-          '<select class="loov-input service-category" data-idx="'+idx+'">'+
-            '<option value="">Selecione</option>'+categoryOptions+
-          '</select>'+
-        '</div>'+
-        '<div class="loov-field" style="margin-bottom: 0;">'+
-          '<label class="loov-label">Serviço</label>'+
-          '<input type="text" class="loov-input service-title" placeholder="Ex.: Lavagem Simples" data-idx="'+idx+'">'+
-        '</div>'+
-      '</div>'+
-      '<div class="wiz-form-row-2">'+
-        '<div class="loov-field" style="margin-bottom: 0;">'+
-          '<label class="loov-label">Preço (R$)</label>'+
-          '<input type="number" step="0.01" min="0" class="loov-input service-price" placeholder="0,00" data-idx="'+idx+'">'+
-        '</div>'+
-        '<div class="loov-field" style="margin-bottom: 0;">'+
-          '<label class="loov-label">Duração (min)</label>'+
-          '<input type="number" min="1" class="loov-input service-duration" placeholder="60" data-idx="'+idx+'">'+
-        '</div>'+
-      '</div>'+
-      '</div>';
-
-    document.getElementById('services-list').insertAdjacentHTML('beforeend', html);
-
-    var titleInput = document.querySelector('#service-'+idx+' .service-title');
-    if (titleInput) applyTitleCase(titleInput);
+    renderPreview();
   }
-
-  function removeService(idx) {
-    var el = document.getElementById('service-'+idx);
-    if (el) el.remove();
-  }
-
-  function saveStep3() {
-    var cards = document.querySelectorAll('.wiz-service-card');
-    var services = {};
-    var valid = true;
-
-    cards.forEach(function(card) {
-      var idx = card.id.replace('service-', '');
-      var category = card.querySelector('.service-category').value;
-      var title = card.querySelector('.service-title').value.trim();
-      var price = card.querySelector('.service-price').value;
-      var duration = card.querySelector('.service-duration').value;
-      if (!category || !title || !price || !duration) { valid = false; return; }
-      services[idx] = { title: toTitleCase(title), category: category, price: price, duration: duration };
+  function svcOf(el) { var c = el.closest('[data-svc]'); return c && st.services.filter(function (s) { return s.key === c.dataset.svc; })[0]; }
+  document.addEventListener('input', function (e) {
+    var k = e.target.dataset && e.target.dataset.k, s = k && svcOf(e.target); if (!s) return;
+    if (k === 'price') e.target.value = e.target.value.replace(/[^\d.,]/g, '');
+    if (k === 'duration') e.target.value = e.target.value.replace(/\D/g, '');
+    s[k] = e.target.value;
+    var box = document.querySelector('[data-for="' + s.key + '_' + k + '"]'); if (box && box.textContent) { box.textContent = ''; e.target.classList.remove('is-err'); }
+    renderPreview();
+  });
+  document.addEventListener('change', function (e) { var k = e.target.dataset && e.target.dataset.k, s = k && svcOf(e.target); if (s) { s[k] = e.target.value; renderPreview(); } });
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-rm]'); if (t && st.services.length > 1) { st.services = st.services.filter(function (s) { return s.key !== t.dataset.rm; }); renderSvcs(); return; }
+    if (e.target.closest('#ob-add')) { st.services.push(newService()); renderSvcs(); var last = document.querySelector('#ob-svcs .ob-svc:last-child select'); if (last) last.focus(); }
+  });
+  function step4() {
+    var errs = 0;
+    st.services.forEach(function (s) {
+      var e = {
+        category: s.category ? '' : 'Escolha a categoria.',
+        title: s.title.trim() ? '' : 'Informe o serviço.',
+        description: s.description.trim() ? '' : 'Diga o que está incluído.',
+        price: s.price !== '' && parsePrice(s.price) >= 0 ? '' : 'Preço inválido.',
+        duration: Number(s.duration) > 0 ? '' : 'Duração inválida.'
+      };
+      Object.keys(e).forEach(function (k) {
+        var box = document.querySelector('[data-for="' + s.key + '_' + k + '"]'), el = document.querySelector('[data-svc="' + s.key + '"] [data-k="' + k + '"]');
+        if (box) box.textContent = e[k]; if (el) el.classList.toggle('is-err', !!e[k]); if (e[k]) errs++;
+      });
     });
-
-    if (!valid || Object.keys(services).length === 0) {
-      alert('Preencha categoria, serviço, preço e duração de todos os itens.');
-      return;
-    }
-
-    var btn = document.getElementById('btn-finish');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Salvando...';
-
-    fetch('<%= owner_onboarding_services_path %>', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content },
-      body: JSON.stringify({ car_wash_id: carWashId, services: services })
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      btn.disabled = false;
-      btn.innerHTML = 'Finalizar <i class="fas fa-check"></i>';
-      if (data.success) { goToStep(4); }
-      else { alert('Erro: ' + (data.errors || []).join(', ')); }
-    });
+    if (errs) { err('Preencha todos os campos de cada serviço.'); var f = document.querySelector('#ob-svcs .is-err'); if (f) f.focus(); return; }
+    var payload = {};
+    st.services.forEach(function (s, i) { payload[i] = { title: titleCase(s.title), category: s.category, description: s.description.trim(), price: parsePrice(s.price), duration: Number(s.duration) }; });
+    saving(true);
+    post('<%= owner_onboarding_services_path %>', { car_wash_id: st.carWashId, services: payload })
+      .then(function (res) {
+        saving(false);
+        if (!res.ok) { err(errText(res, 'Não foi possível salvar os serviços.')); return; }
+        $('ob-done-sub').textContent = ($('f-name').value.trim() || RESUME.name || 'Seu lava-rápido') + ' já está no ar e pode receber agendamentos. No painel você acompanha os atendimentos do dia e ajusta serviços, equipe e fidelidade.';
+        $('pv-note').textContent = 'Pronto. É assim que os clientes por perto já te encontram.';
+        go(5);
+      })
+      .catch(function () { saving(false); err('Erro de conexão. Tente novamente.'); });
   }
+
+  $('ob-cta').addEventListener('click', function () {
+    if (st.saving) return;
+    ({ 1: step1, 2: step2, 3: step3, 4: step4, 5: function () { location.href = '/'; } })[st.step]();
+  });
+  $('ob-back').addEventListener('click', function () { if (st.step === 2) go(1); else if (st.step === 4) go(3); });
+
+  // ── Início ────────────────────────────────────────────────────────────────
+  if (window.feather) feather.replace();
+  st.services.push(newService());
+  renderSvcs(); renderDays();
+  if (RESUME.car_wash_id) {
+    st.carWashId = RESUME.car_wash_id;
+    $('f-name').value = RESUME.name || '';
+    go(RESUME.step);
+  } else {
+    try { var pending = localStorage.getItem('loov_pending_car_wash_name'); if (pending) $('f-name').value = pending; } catch (e) {}
+    go(1);
+    if (!$('f-name').value) $('f-name').focus(); else cep.focus();
+  }
+})();
 </script>

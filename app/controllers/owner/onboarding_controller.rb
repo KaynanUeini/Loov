@@ -6,7 +6,17 @@ class Owner::OnboardingController < ApplicationController
   before_action :ensure_owner!
 
   def show
-    redirect_to root_path if current_user.car_washes.any?
+    # Lava-rápido já criado (aqui ou no app) mas sem horários ou serviços:
+    # retoma no primeiro passo que falta, como o app. Completo: vai pro painel.
+    car_wash = current_user.car_washes.order(:created_at).first
+    return unless car_wash
+
+    has_hours    = car_wash.operating_hours.any?
+    has_services = car_wash.services.any?
+    return redirect_to root_path if has_hours && has_services
+
+    @resume = { car_wash_id: car_wash.id, name: car_wash.name, bairro: car_wash.bairro,
+                cidade: car_wash.cidade, step: has_hours ? 4 : 3 }
   end
 
   # GET /owner/onboarding/status — o app usa pra decidir se abre o wizard e em
