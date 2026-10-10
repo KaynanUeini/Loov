@@ -29,19 +29,21 @@
   .sx button { font-family: inherit; cursor: pointer; }
 
   /* ── Metade de marca ─────────────────────────────────────────────── */
-  .sx-stage { position: relative; overflow: hidden; isolation: isolate; background: var(--obsidian); color: var(--cream); display: flex; flex-direction: column; justify-content: space-between; padding: 56px 64px 0; }
+  .sx-stage { align-self: start; position: sticky; top: 60px; height: calc(100vh - 60px); min-height: 560px; overflow: hidden; isolation: isolate; background: var(--obsidian); color: var(--cream); display: flex; flex-direction: column; justify-content: space-between; padding: 56px 64px 0; }
   .sx-stage::before { content: ""; position: absolute; width: 760px; height: 760px; right: -280px; bottom: -320px; z-index: -1; background: radial-gradient(closest-side, var(--sx-glow, rgba(221,120,82,.42)), rgba(0,0,0,0) 70%); filter: blur(10px); animation: sx-breathe 9s ease-in-out infinite; transition: background .8s ease; }
   .sx[data-role="owner"] .sx-stage { --sx-glow: rgba(75,142,192,.38); }
   @keyframes sx-breathe { 0%, 100% { transform: none; opacity: .85; } 50% { transform: translate(-40px, -30px) scale(1.08); opacity: 1; } }
   .sx-top { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--ash); }
-  .sx-kinetic { margin: 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: clamp(56px, 6.6vw, 112px); line-height: .92; letter-spacing: -0.045em; color: var(--cream) !important; }
+  .sx-kinetic { margin: 0 !important; white-space: nowrap; min-height: calc(3 * .92em); font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: clamp(44px, 5.2vw, 100px); line-height: .92; letter-spacing: -0.045em; color: var(--cream) !important; }
   .sx-kinetic span { display: block; opacity: 0; transform: translateY(40%); filter: blur(12px); animation: sx-word .9s cubic-bezier(.2,.8,.2,1) forwards; }
   .sx-kinetic span:nth-child(1) { animation-delay: .1s; }
   .sx-kinetic span:nth-child(2) { animation-delay: .45s; color: var(--coral-500); }
   .sx-kinetic span:nth-child(3) { animation-delay: .8s; }
   .sx[data-role="owner"] .sx-kinetic span:nth-child(2) { color: #7fb6dd; }
   @keyframes sx-word { to { opacity: 1; transform: none; filter: none; } }
-  .sx-perks { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; max-width: 34ch; }
+  /* Altura reservada: os benefícios dos dois perfis ocupam o mesmo espaço,
+     então trocar de perfil não mexe em nada ao redor. */
+  .sx-perks { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; max-width: 34ch; min-height: 210px; align-content: end; }
   .sx-perks li { display: flex; gap: 12px; align-items: flex-start; font-size: 16px; line-height: 1.45; color: #cfc8bb; opacity: 0; animation: sx-fade .6s ease forwards; }
   .sx-perks li:nth-child(1) { animation-delay: 1.05s; } .sx-perks li:nth-child(2) { animation-delay: 1.2s; } .sx-perks li:nth-child(3) { animation-delay: 1.35s; }
   .sx-perks b { color: var(--cream); font-weight: 600; }
@@ -271,7 +273,10 @@
   var root = $('sx'), role = START_ROLE || 'client';
 
   // ── Metade escura acompanha o perfil ──────────────────────────────────────
+  var painted = null;
   function paintStage(r) {
+    if (r === painted) return;
+    painted = r;
     var c = COPY[r];
     root.dataset.role = r;
     $('sx-top').textContent = c.top;
@@ -299,9 +304,16 @@
     show(2);
     if (focus) setTimeout(function () { var f = r === 'owner' ? $('sx-cwname') : $('sx-name'); if (f && !f.value) f.focus(); }, 60);
   }
+  var hoverT = null;
   document.querySelectorAll('.sx-role').forEach(function (b) {
     b.addEventListener('click', function () { pick(b.dataset.role, true); });
-    b.addEventListener('mouseenter', function () { if ($('sx-step1').classList.contains('is-on')) paintStage(b.dataset.role); });
+    // Prévia ao passar o mouse, com um pequeno atraso: só troca se o mouse
+    // parar no cartão (não ao atravessá-lo a caminho do outro).
+    b.addEventListener('mouseenter', function () {
+      clearTimeout(hoverT);
+      hoverT = setTimeout(function () { if ($('sx-step1').classList.contains('is-on')) paintStage(b.dataset.role); }, 160);
+    });
+    b.addEventListener('mouseleave', function () { clearTimeout(hoverT); });
   });
   $('sx-back').addEventListener('click', function () { show(1); var b = document.querySelector('.sx-role[data-role="' + role + '"]'); if (b) b.focus(); });
 
