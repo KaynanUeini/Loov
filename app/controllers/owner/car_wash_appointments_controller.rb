@@ -19,7 +19,9 @@ module Owner
       # que impede o cliente de agendar.
       @appointments = car_wash.appointments
         .occupying_capacity
-        .where("scheduled_at::date >= CURRENT_DATE")
+        # Início do dia de Brasília. `scheduled_at::date >= CURRENT_DATE`
+        # comparava o dia em UTC: depois das 21h o "hoje" já era amanhã.
+        .where("appointments.scheduled_at >= ?", Time.zone.now.beginning_of_day)
 
       # HTML-only filters preservados (period / search)
       if params[:period].present?
@@ -49,12 +51,8 @@ module Owner
       @appointments = @appointments.order(scheduled_at: :asc)
 
       respond_to do |format|
-        format.html do
-          grouped_by_date = @appointments.group_by { |a| a.scheduled_at.to_date }
-          sorted_dates = grouped_by_date.keys.sort
-          @appointments_by_date = {}
-          sorted_dates.each { |date| @appointments_by_date[date] = grouped_by_date[date] }
-        end
+        # A página carrega a lista pelo JSON abaixo (mesmo endpoint do app).
+        format.html {}
 
         format.json do
           days = params[:days].to_i
@@ -140,7 +138,10 @@ module Owner
         client_name:      a.display_client,
         service_title:    a.service&.title,
         service_duration: a.service&.duration,
-        price:            a.effective_price.to_f
+        price:            a.effective_price.to_f,
+        # Last Minute: parte já foi paga no app; a lista mostra o que falta
+        # receber na loja sem precisar abrir o detalhe.
+        prepayment_amount: a.prepayment_amount&.to_f
       }
       if full
         hash.merge!(
@@ -149,7 +150,6 @@ module Owner
           service_desc:      a.service&.description,
           walk_in_name:      a.walk_in_name,
           created_at:        a.created_at.iso8601,
-          prepayment_amount: a.prepayment_amount&.to_f,
           commission_amount: a.commission_amount&.to_f
         )
       end

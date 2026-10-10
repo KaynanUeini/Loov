@@ -1,270 +1,552 @@
-<% Rails.logger.info("Renderizando owner/car_wash_appointments/index.html.erb") %>
+<%#
+  Agendamentos — porte do OwnerAgendamentosScreen do app.
+
+  Mesmos dados e filtros do app (Hoje · 7 dias · 30 dias, agrupado por dia,
+  detalhe do agendamento). No desktop a largura sobra, então vira lista +
+  painel de detalhe fixo ao lado, o par mestre-detalhe do Mail e da fila do
+  Spotify: escolher um card não tira o dono da lista. Sem nada escolhido, o
+  painel mostra o PRÓXIMO atendimento, que é a pergunta que traz alguém a
+  esta tela. No celular o detalhe volta a ser a folha que sobe, como no app.
+%>
+<script src="/vendor/feather-4.29.2.min.js" nonce="<%= csp_nonce %>"></script>
 
 <style>
-  .filter-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 14px; align-items: end;
-  }
-  .filter-actions { display: flex; gap: 8px; align-items: end; flex-wrap: wrap; }
-
-  .custom-dates {
-    display: none; grid-template-columns: 1fr 1fr;
-    gap: 14px; margin-top: 14px; padding-top: 14px;
-    border-top: 1px solid var(--stone);
-  }
-  .custom-dates.visible { display: grid; }
-
-  .date-group { margin-bottom: 14px; }
-
-  .date-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 20px;
-    background: var(--paper); border: 1px solid var(--stone);
-    border-radius: 14px; cursor: pointer;
-    transition: background 0.15s ease, border-color 0.15s ease;
-    user-select: none;
-  }
-  .date-header:hover { background: var(--sand); }
-  .date-header.open {
-    border-radius: 14px 14px 0 0;
-    border-bottom-color: transparent;
-    background: var(--paper);
+  .loov-nav { background: var(--cream) !important; }
+  .ag { background: var(--cream); color: var(--ink); min-height: 100vh; padding-top: 60px; }
+  .ag *, .ag *::before, .ag *::after { box-sizing: border-box; }
+  .ag button { font-family: inherit; cursor: pointer; }
+  .ag svg.feather { display: block; flex-shrink: 0; }
+  .ag .feather-loader { animation: agspin 1s linear infinite; }
+  @keyframes agspin { to { transform: rotate(360deg); } }
+  .ag-wrap { width: 100%; max-width: 1240px; margin: 0 auto; padding: 0 20px 64px; }
+  .ag-mono {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    letter-spacing: 1.6px; text-transform: uppercase; color: var(--ash);
   }
 
-  .date-header-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-
-  .date-label {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 18px; font-weight: 700;
-    color: var(--ink); letter-spacing: -0.3px;
+  /* ── Cabeçalho ── */
+  .ag-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 18px; padding: 28px 0 22px; }
+  .ag-head .ag-mono { color: var(--coral-500); }
+  .ag-head h1 {
+    margin: 6px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700;
+    font-size: clamp(40px, 6vw, 76px); line-height: .95; letter-spacing: -0.045em; color: var(--ink) !important;
   }
-  .date-today { color: var(--coral-500); }
-  .date-weekday {
-    font-family: 'Inter', sans-serif;
-    color: var(--ash); font-size: 13.5px;
-    font-weight: 400; letter-spacing: 0;
-    margin-left: 6px;
-  }
-
-  .date-count {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10.5px; font-weight: 600; letter-spacing: 1.2px;
-    color: var(--graphite); text-transform: uppercase;
+  .ag-seg {
+    display: inline-flex; padding: 4px; gap: 2px; border-radius: 999px;
     background: var(--sand); border: 1px solid var(--stone);
-    border-radius: 100px; padding: 4px 10px;
+  }
+  .ag-seg button {
+    height: 36px; padding: 0 16px; border: none; border-radius: 999px; background: transparent;
+    color: var(--graphite); font-size: 13px; font-weight: 600; transition: background .15s, color .15s;
+  }
+  .ag-seg button:hover { color: var(--ink); }
+  .ag-seg button[aria-pressed="true"] { background: var(--coral-500); color: var(--cream); box-shadow: 0 2px 6px rgba(220,120,82,.25); }
+
+  /* ── Números do período ──
+     Tipografia grande no lugar de cards de KPI: o número é a informação,
+     a moldura não acrescentava nada. */
+  .ag-stats {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    border-top: 1px solid var(--stone); border-bottom: 1px solid var(--stone);
+    margin-bottom: 26px;
+  }
+  .ag-stat { padding: 18px 0 18px 20px; border-left: 1px solid var(--stone); min-width: 0; }
+  .ag-stat:first-child { border-left: none; padding-left: 0; }
+  .ag-stat-v {
+    margin-top: 6px; font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+    font-size: clamp(24px, 3vw, 36px); letter-spacing: -.03em; color: var(--ink);
+    font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ag-stat-s { color: var(--graphite); font-size: 12.5px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ── Layout ── */
+  .ag-grid { display: block; }
+  .ag-side { display: none; }
+
+  .ag-search {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 18px;
+    background: var(--paper); border: 1px solid var(--stone); border-radius: 14px; padding: 0 14px;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .ag-search:focus-within { border-color: var(--coral-500); box-shadow: 0 0 0 3px rgba(220,120,82,.10); }
+  .ag-search svg { color: var(--ash); }
+  .ag-search input {
+    flex: 1; min-width: 0; border: none !important; background: none !important; outline: none;
+    padding: 13px 0 !important; font-size: 14px; color: var(--ink); box-shadow: none !important;
+  }
+  .ag-search input::placeholder { color: var(--ash); }
+  .ag-search kbd {
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--ash);
+    border: 1px solid var(--stone); border-radius: 6px; padding: 2px 6px; background: var(--cream);
   }
 
-  .date-chevron {
-    color: var(--ash); font-size: 12px;
-    transition: transform 0.25s ease;
+  /* ── Grupo de dia ──
+     Cabeçalho gruda no topo enquanto o dia rola, como no Calendário do
+     iPhone em modo lista: dá pra saber de que dia é o card sem voltar. */
+  .ag-day { margin-bottom: 22px; }
+  .ag-day-h {
+    position: sticky; top: 60px; z-index: 5;
+    display: flex; align-items: baseline; gap: 10px;
+    padding: 10px 4px 10px; margin-bottom: 4px;
+    background: linear-gradient(var(--cream) 80%, rgba(250,250,246,0));
   }
-  .date-chevron.open { transform: rotate(180deg); }
+  .ag-day-l { color: var(--coral-500); font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; }
+  .ag-day-d { color: var(--ink); font-size: 13px; font-weight: 600; }
+  .ag-day-c { margin-left: auto; color: var(--ash); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
 
-  .date-body {
-    max-height: 0; overflow: hidden;
-    transition: max-height 0.35s ease;
-    background: var(--paper); border: 1px solid var(--stone);
-    border-top: none; border-radius: 0 0 14px 14px;
+  /* ── Card (AppointmentCard do app) ── */
+  .ag-card {
+    width: 100%; display: flex; align-items: stretch; text-align: left;
+    background: var(--paper); border: 1px solid var(--stone); border-radius: 18px;
+    padding: 14px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(25,20,15,.04);
+    transition: border-color .15s, box-shadow .15s, transform .15s;
   }
-  .date-body.open { max-height: 2400px; }
-
-  .appt-list { display: flex; flex-direction: column; }
-
-  .appt-row {
-    padding: 14px 20px;
-    display: flex; align-items: center; gap: 14px;
-    transition: background 0.15s ease;
-    border-bottom: 1px solid var(--stone);
+  .ag-card:hover { border-color: var(--coral-300); }
+  .ag-card:focus-visible { outline: 2px solid var(--coral-500); outline-offset: 2px; }
+  .ag-card.sel { border-color: var(--coral-500); box-shadow: 0 0 0 3px rgba(220,120,82,.12); }
+  .ag-card.past { opacity: .55; }
+  .ag-card.past:hover, .ag-card.past.sel { opacity: 1; }
+  .ag-tc {
+    width: 62px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: var(--cream); border-radius: 12px; padding: 6px 0;
   }
-  .appt-row:last-child { border-bottom: none; border-radius: 0 0 14px 14px; }
-  .appt-row:hover { background: var(--sand); }
-
-  .appt-time {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 18px; font-weight: 700;
-    color: var(--coral-500); letter-spacing: -0.3px;
-    min-width: 56px;
+  .ag-t { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 18px; letter-spacing: -.4px; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .ag-dur { color: var(--ash); font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: .6px; margin-top: 2px; }
+  .ag-div { width: 1px; background: var(--stone); margin: 0 14px; flex-shrink: 0; }
+  .ag-body { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+  .ag-row1 { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; min-width: 0; }
+  .ag-av {
+    width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--coral-50); color: var(--coral-500); font-weight: 600; font-size: 12px;
   }
-
-  .appt-sep { width: 1px; height: 36px; background: var(--stone); flex-shrink: 0; }
-
-  .appt-info { flex: 1; min-width: 0; }
-  .appt-client {
-    font-size: 14.5px; font-weight: 600;
-    color: var(--ink); margin-bottom: 2px;
+  .ag-name { flex: 1; min-width: 0; color: var(--ink); font-size: 14px; font-weight: 600; letter-spacing: -.1px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ag-tag {
+    flex-shrink: 0; border-radius: 100px; padding: 3px 8px;
+    background: var(--sand); border: 1px solid var(--stone); color: var(--ash);
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .8px;
   }
-  .appt-service { font-size: 12.5px; color: var(--graphite); }
-
-  .btn-detail {
+  .ag-tag.wait { background: #fbf3dd; border-color: #ecdba3; color: #8a6d1f; }
+  .ag-tag.done { background: transparent; border-color: transparent; color: var(--mint-500); display: inline-flex; gap: 4px; align-items: center; }
+  /* Raio sozinho: mesmo símbolo do painel e da aba Last Minute. */
+  .ag-zap {
+    width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0;
     display: inline-flex; align-items: center; justify-content: center;
-    width: 34px; height: 34px; border-radius: 8px;
-    background: transparent; border: 1px solid var(--stone);
-    color: var(--graphite); text-decoration: none;
-    transition: all 0.2s ease; font-size: 12px;
-    flex-shrink: 0;
+    background: var(--ink); color: var(--cream);
   }
-  .btn-detail:hover {
-    border-color: var(--coral-500);
-    color: var(--coral-700);
-    background: var(--coral-50);
-  }
+  .ag-svc { color: var(--graphite); font-size: 12px; margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ag-price { color: var(--ink); font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px; letter-spacing: -.2px; }
+  .ag-price small { color: var(--graphite); font-family: 'Inter', sans-serif; font-weight: 400; font-size: 12px; letter-spacing: 0; margin-left: 6px; }
 
-  .empty-state-card {
-    text-align: center; padding: 60px 24px;
+  .ag-empty { text-align: center; padding: 56px 20px; }
+  .ag-empty-i {
+    width: 64px; height: 64px; border-radius: 20px; margin: 0 auto 16px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--coral-50); border: 1px solid var(--coral-100); color: var(--coral-500);
   }
-  .empty-icon-lg {
-    font-size: 38px; color: var(--stone);
-    margin-bottom: 14px;
-  }
-  .empty-title-lg {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 22px; font-weight: 700;
-    color: var(--ink); margin-bottom: 6px;
-    letter-spacing: -0.3px;
-  }
-  .empty-text-lg {
-    font-size: 14px; color: var(--graphite);
-    margin-bottom: 22px;
-  }
+  .ag-empty b { display: block; color: var(--ink); font-size: 16px; margin-bottom: 6px; }
+  .ag-empty span { color: var(--ash); font-size: 13px; line-height: 1.5; }
+  .ag-skel { height: 86px; border-radius: 18px; margin-bottom: 10px;
+    background: linear-gradient(90deg, var(--sand) 0%, var(--paper) 50%, var(--sand) 100%); background-size: 200% 100%;
+    animation: agsh 1.2s ease-in-out infinite; }
+  @keyframes agsh { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 
-  @media (max-width: 540px) {
-    .filter-grid { grid-template-columns: 1fr; }
-    .custom-dates { grid-template-columns: 1fr; }
-    .appt-sep { display: none; }
+  /* ── Detalhe (painel no desktop, folha no celular) ── */
+  .ag-det-eyebrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 16px; }
+  .ag-det-close {
+    width: 32px; height: 32px; border-radius: 50%; border: none; background: var(--sand);
+    display: flex; align-items: center; justify-content: center; color: var(--graphite);
+  }
+  .ag-det-top { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .ag-det-top .ag-av { width: 52px; height: 52px; font-size: 20px; }
+  .ag-det-name { color: var(--ink); font-size: 19px; font-weight: 600; letter-spacing: -.3px; line-height: 1.2; }
+  .ag-det-when { color: var(--graphite); font-size: 13px; margin-top: 3px; }
+  .ag-count {
+    display: inline-flex; align-items: center; gap: 6px; margin-bottom: 14px;
+    background: var(--coral-50); border: 1px solid var(--coral-100); color: var(--coral-700);
+    border-radius: 999px; padding: 6px 12px; font-size: 12.5px; font-weight: 600;
+  }
+  .ag-count.now { background: var(--ink); border-color: var(--ink); color: var(--cream); }
+  .ag-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .ag-field, .ag-block { background: var(--cream); border: 1px solid var(--stone); border-radius: 14px; padding: 12px 14px; }
+  .ag-block { margin-bottom: 12px; padding: 14px; }
+  .ag-fl { display: flex; align-items: center; gap: 6px; color: var(--ash);
+    font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 1.2px; margin-bottom: 8px; }
+  .ag-fv { color: var(--ink); font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .ag-st { color: var(--ink); font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .ag-sc { color: var(--coral-500); font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .8px; margin-bottom: 6px; text-transform: uppercase; }
+  .ag-sd { color: var(--graphite); font-size: 13px; line-height: 1.5; margin-bottom: 6px; }
+  .ag-sm { color: var(--ash); font-size: 12px; }
+  .ag-vr { display: flex; justify-content: space-between; align-items: baseline; padding: 6px 0; gap: 12px; }
+  .ag-vr span { color: var(--graphite); font-size: 13px; }
+  .ag-vr b { color: var(--graphite); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .ag-vr.total b { color: var(--ink); font-size: 16px; }
+  .ag-vr.due { border-top: 1px solid var(--stone); margin-top: 6px; padding-top: 10px; }
+  .ag-vr.due span { color: var(--ink); font-weight: 600; }
+  .ag-vr.due b { color: var(--coral-700); font-size: 16px; }
+  .ag-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+  .ag-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--sand); border: 1px solid var(--stone); border-radius: 8px; padding: 5px 10px;
+    color: var(--graphite); font-size: 10.5px; font-weight: 600; letter-spacing: .5px;
+  }
+  .ag-pill.lm { background: var(--coral-50); border-color: var(--coral-100); color: var(--coral-700); }
+  .ag-det-hint { color: var(--ash); font-size: 12px; margin-top: 14px; text-align: center; }
+
+  .ag-ov { position: fixed; inset: 0; z-index: 1000; background: rgba(25,20,15,.5); display: flex; align-items: flex-end; }
+  .ag-ov[hidden] { display: none !important; }
+  .ag-sheet {
+    width: 100%; max-height: 90vh; overflow-y: auto; background: var(--paper);
+    border-radius: 28px 28px 0 0; padding: 10px 20px calc(24px + env(safe-area-inset-bottom));
+    animation: agup .25s cubic-bezier(.3,.7,.4,1);
+  }
+  @keyframes agup { from { transform: translateY(40px); opacity: .6; } }
+  .ag-handle { width: 40px; height: 4px; border-radius: 2px; background: var(--stone); margin: 0 auto 14px; }
+
+  @media (min-width: 1000px) {
+    .ag-wrap { padding: 0 32px 80px; }
+    .ag-grid { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 32px; align-items: start; }
+    .ag-side {
+      display: block; position: sticky; top: 84px;
+      background: var(--paper); border: 1px solid var(--stone); border-radius: 24px;
+      padding: 22px; box-shadow: 0 2px 8px rgba(25,20,15,.04);
+      max-height: calc(100vh - 104px); overflow-y: auto;
+    }
+    .ag-side .ag-det-close { display: none; }
+  }
+  @media (max-width: 640px) {
+    .ag-stats { grid-template-columns: 1fr 1fr; }
+    .ag-stat:nth-child(3) { grid-column: 1 / -1; border-left: none; padding-left: 0; border-top: 1px solid var(--stone); }
+    .ag-seg { width: 100%; }
+    .ag-seg button { flex: 1; }
+    .ag-search kbd { display: none; }
   }
 </style>
 
-<div class="loov-page">
-
-  <div class="loov-hero">
-    <div class="loov-eyebrow"><span class="dot"></span><%= current_user.car_washes.first&.name || "Lava-rápido" %></div>
-    <h1 class="loov-h1">Sua <span class="accent">agenda</span>.</h1>
-    <p class="loov-lead">Filtre, acompanhe e gerencie todos os agendamentos do lava-rápido.</p>
-  </div>
-
-  <%= form_with url: owner_car_wash_appointments_path, method: :get, local: true do %>
-  <div class="loov-card" style="margin-bottom: 28px;">
-    <div class="filter-grid">
-      <div class="loov-field" style="margin-bottom: 0;">
-        <label class="loov-label">Período</label>
-        <%= select_tag :period, options_for_select([
-          ["Últimos 7 dias", "last_7_days"],
-          ["Próximos 7 dias", "next_7_days"],
-          ["Personalizado", "custom"]
-        ], params[:period]), include_blank: "Todos os períodos", class: "loov-input", id: "period-select" %>
-      </div>
-      <div class="loov-field" style="margin-bottom: 0;">
-        <label class="loov-label">Status</label>
-        <%= select_tag :status, options_for_select([
-          ["Todos", "Todos"], ["Agendado", "Agendado"],
-          ["Concluído", "Concluído"], ["Cancelado", "Cancelado"]
-        ], params[:status]), class: "loov-input" %>
-      </div>
-      <div class="loov-field" style="margin-bottom: 0;">
-        <label class="loov-label">Buscar</label>
-        <%= text_field_tag :search, params[:search], placeholder: "Cliente ou serviço...", class: "loov-input" %>
-      </div>
-      <div class="filter-actions">
-        <%= submit_tag "Filtrar", class: "loov-btn-primary" %>
-        <%= link_to "Limpar", owner_car_wash_appointments_path, class: "loov-btn-ghost" %>
+<div class="ag">
+  <div class="ag-wrap">
+    <div class="ag-head">
+      <div><div class="ag-mono">Agenda</div><h1>Agendamentos</h1></div>
+      <div class="ag-seg" role="group" aria-label="Período">
+        <button type="button" data-days="1" aria-pressed="true">Hoje</button>
+        <button type="button" data-days="7" aria-pressed="false">7 dias</button>
+        <button type="button" data-days="30" aria-pressed="false">30 dias</button>
       </div>
     </div>
-    <div class="custom-dates <%= params[:period] == 'custom' ? 'visible' : '' %>" id="custom-dates">
-      <div class="loov-field" style="margin-bottom: 0;">
-        <label class="loov-label">Data inicial</label>
-        <%= date_field_tag :start_date, params[:start_date], class: "loov-input" %>
+
+    <div class="ag-stats" id="ag-stats"></div>
+
+    <div class="ag-grid">
+      <div>
+        <label class="ag-search">
+          <i data-ic="search"></i>
+          <input type="search" id="ag-q" placeholder="Buscar cliente ou serviço" autocomplete="off" aria-label="Buscar cliente ou serviço">
+          <kbd>/</kbd>
+        </label>
+        <div id="ag-list"></div>
       </div>
-      <div class="loov-field" style="margin-bottom: 0;">
-        <label class="loov-label">Data final</label>
-        <%= date_field_tag :end_date, params[:end_date], class: "loov-input" %>
-      </div>
+      <aside class="ag-side" id="ag-side" aria-live="polite"></aside>
     </div>
   </div>
-  <% end %>
-
-  <% if @appointments_by_date.empty? %>
-  <div class="loov-card empty-state-card">
-    <div class="empty-icon-lg"><i class="fas fa-calendar-xmark"></i></div>
-    <div class="empty-title-lg">Nenhum agendamento</div>
-    <p class="empty-text-lg">Nenhum resultado para os filtros selecionados.</p>
-    <%= link_to "Limpar filtros", owner_car_wash_appointments_path, class: "loov-btn-secondary" %>
-  </div>
-  <% else %>
-  <div>
-    <% @appointments_by_date.each_with_index do |(date, appointments), index| %>
-    <% is_today = date == Date.today %>
-    <div class="date-group">
-      <div class="date-header <%= is_today ? 'open' : '' %>" onclick="toggleDate(this)">
-        <div class="date-header-left">
-          <span class="date-label <%= is_today ? 'date-today' : '' %>">
-            <%= is_today ? 'Hoje' : date.strftime("%d/%m/%Y") %>
-            <% unless is_today %>
-              <span class="date-weekday">
-                <%= I18n.l(date, format: "%A") rescue date.strftime("%A") %>
-              </span>
-            <% end %>
-          </span>
-          <span class="date-count"><%= appointments.count %> agendamento<%= appointments.count == 1 ? '' : 's' %></span>
-        </div>
-        <i class="fas fa-chevron-down date-chevron <%= is_today ? 'open' : '' %>"></i>
-      </div>
-      <div class="date-body <%= is_today ? 'open' : '' %>">
-        <div class="appt-list">
-          <% appointments.each do |appointment| %>
-          <div class="appt-row">
-            <div class="appt-time"><%= appointment.scheduled_at.strftime("%H:%M") %></div>
-            <div class="appt-sep"></div>
-            <div class="appt-info">
-              <div class="appt-client"><%= appointment.user.display_name.presence || appointment.user.email.split('@').first.capitalize %></div>
-              <div class="appt-service"><%= appointment.service.title %></div>
-            </div>
-            <%
-              status_class = appointment.status.downcase.gsub('í','i').gsub('ú','u')
-              pill_mod = case status_class
-                         when 'agendado' then 'loov-pill--coral'
-                         when 'concluido' then 'loov-pill--success'
-                         when 'cancelado' then 'loov-pill--danger'
-                         else 'loov-pill--neutral'
-                         end
-            %>
-            <span class="loov-pill <%= pill_mod %>">
-              <i class="fas fa-circle" style="font-size: 5px;"></i>
-              <%= appointment.status %>
-            </span>
-            <%= link_to owner_car_wash_appointment_path(appointment), class: "btn-detail", title: "Ver detalhes" do %>
-              <i class="fas fa-arrow-up-right"></i>
-            <% end %>
-          </div>
-          <% end %>
-        </div>
-      </div>
-    </div>
-    <% end %>
-  </div>
-  <% end %>
-
 </div>
 
-<script>
-function toggleDate(header) {
-  var body    = header.nextElementSibling;
-  var chevron = header.querySelector('.date-chevron');
-  var isOpen  = body.classList.contains('open');
-  body.classList.toggle('open', !isOpen);
-  chevron.classList.toggle('open', !isOpen);
-  header.classList.toggle('open', !isOpen);
-}
+<div class="ag-ov" id="ag-ov" hidden>
+  <div class="ag-sheet" role="dialog" aria-modal="true" aria-label="Detalhes do agendamento">
+    <div class="ag-handle"></div>
+    <div id="ag-sheet-body"></div>
+  </div>
+</div>
 
-document.addEventListener('DOMContentLoaded', function() {
-  var periodSelect = document.getElementById('period-select');
-  var customDates  = document.getElementById('custom-dates');
-  if (periodSelect) {
-    periodSelect.addEventListener('change', function() {
-      customDates.classList.toggle('visible', this.value === 'custom');
-    });
+<script nonce="<%= csp_nonce %>">
+(function () {
+  const ic = (n, s = 16) => window.feather?.icons[n] ? feather.icons[n].toSvg({ width: s, height: s, 'stroke-width': 2 }) : '';
+  const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  const brl = v => 'R$ ' + Math.abs(parseFloat(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const desktop = () => window.matchMedia('(min-width: 1000px)').matches;
+  const initial = n => (String(n || '?').trim()[0] || '?').toUpperCase();
+  const isLM = a => a.appointment_type === 'disponivel';
+  const dueAt = a => isLM(a) && a.prepayment_amount ? Math.max(0, a.price - a.prepayment_amount) : null;
+  const startMs = a => new Date(a.scheduled_at).getTime();
+  const endMs = a => startMs(a) + (a.service_duration || 0) * 60000;
+
+  const st = { days: 1, groups: [], total: 0, loading: true, q: '', sel: null, details: {}, detLoading: null };
+
+  function fmtDayLong(iso) {
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
   }
-});
-</script>
+  function relTime(a) {
+    const diff = startMs(a) - Date.now();
+    if (diff <= 0 && Date.now() < endMs(a)) return { now: true, txt: 'Em atendimento agora' };
+    if (diff <= 0) return null;
+    const min = Math.round(diff / 60000);
+    if (min < 60) return { txt: `Começa em ${min} min` };
+    const h = Math.floor(min / 60), r = min % 60;
+    if (h < 24) return { txt: `Começa em ${h}h${r ? String(r).padStart(2, '0') : ''}` };
+    const d = Math.round(h / 24);
+    return { txt: `Daqui a ${d} ${d === 1 ? 'dia' : 'dias'}` };
+  }
 
-<% Rails.logger.info("Template owner/car_wash_appointments/index.html.erb renderizado com sucesso") %>
+  const allAppts = () => st.groups.flatMap(g => g.appointments.map(a => ({ ...a, _group: g })));
+  function visibleGroups() {
+    const q = st.q.trim().toLowerCase();
+    if (!q) return st.groups;
+    return st.groups.map(g => {
+      const appointments = g.appointments.filter(a =>
+        `${a.client_name || ''} ${a.service_title || ''}`.toLowerCase().includes(q));
+      return { ...g, appointments, count: appointments.length };
+    }).filter(g => g.appointments.length);
+  }
+  // O próximo é o primeiro que ainda não terminou e não foi finalizado.
+  const nextAppt = () => allAppts().find(a => a.status !== 'attended' && endMs(a) > Date.now()) || null;
+
+  // ── Números ───────────────────────────────────────────────────────────
+  function renderStats() {
+    const list = allAppts();
+    const sum = list.reduce((n, a) => n + (a.price || 0), 0);
+    const nx = nextAppt();
+    const rel = nx && relTime(nx);
+    const period = st.days === 1 ? 'hoje' : `nos próximos ${st.days} dias`;
+    document.getElementById('ag-stats').innerHTML = st.loading ? `
+      <div class="ag-stat"><div class="ag-mono">Agendamentos</div><div class="ag-stat-v">—</div></div>
+      <div class="ag-stat"><div class="ag-mono">Previsto</div><div class="ag-stat-v">—</div></div>
+      <div class="ag-stat"><div class="ag-mono">Próximo</div><div class="ag-stat-v">—</div></div>` : `
+      <div class="ag-stat"><div class="ag-mono">Agendamentos</div>
+        <div class="ag-stat-v">${st.total}</div><div class="ag-stat-s">${period}</div></div>
+      <div class="ag-stat"><div class="ag-mono">Previsto</div>
+        <div class="ag-stat-v">${brl(sum)}</div><div class="ag-stat-s">valor cheio dos serviços</div></div>
+      <div class="ag-stat"><div class="ag-mono">Próximo</div>
+        <div class="ag-stat-v">${nx ? esc(nx.time) : '—'}</div>
+        <div class="ag-stat-s">${nx ? `${esc(nx.client_name)}${rel ? ' · ' + rel.txt.toLowerCase() : ''}` : 'nada pela frente ' + period}</div></div>`;
+  }
+
+  // ── Lista ─────────────────────────────────────────────────────────────
+  function card(a) {
+    const past = endMs(a) < Date.now() && a.status !== 'pending_acceptance';
+    const due = dueAt(a);
+    let tags = '';
+    if (a.walk_in) tags += `<span class="ag-tag">AVULSO</span>`;
+    if (isLM(a)) tags += `<span class="ag-zap" title="Last Minute">${ic('zap', 11)}</span>`;
+    if (a.status === 'pending_acceptance') tags += `<span class="ag-tag wait">AGUARDANDO ACEITE</span>`;
+    if (a.status === 'attended') tags += `<span class="ag-tag done">${ic('check', 11)}ATENDIDO</span>`;
+    return `
+      <button type="button" class="ag-card${st.sel === a.id ? ' sel' : ''}${past ? ' past' : ''}" data-id="${a.id}"
+              aria-label="${esc(a.time)}, ${esc(a.client_name)}, ${esc(a.service_title)}">
+        <div class="ag-tc"><div class="ag-t">${esc(a.time)}</div>
+          ${a.service_duration ? `<div class="ag-dur">${a.service_duration}MIN</div>` : ''}</div>
+        <div class="ag-div"></div>
+        <div class="ag-body">
+          <div class="ag-row1"><span class="ag-av">${esc(initial(a.client_name))}</span>
+            <span class="ag-name">${esc(a.client_name)}</span>${tags}</div>
+          <div class="ag-svc">${esc(a.service_title || '—')}</div>
+          <div class="ag-price">${brl(a.price)}${due != null ? `<small>${brl(due)} a receber na loja</small>` : ''}</div>
+        </div>
+      </button>`;
+  }
+
+  function renderList() {
+    const el = document.getElementById('ag-list');
+    if (st.loading) { el.innerHTML = '<div class="ag-skel"></div>'.repeat(4); return; }
+    const groups = visibleGroups();
+    if (!groups.length) {
+      const period = st.days === 1 ? 'para hoje' : `nos próximos ${st.days} dias`;
+      el.innerHTML = `<div class="ag-empty"><div class="ag-empty-i">${ic(st.q ? 'search' : 'calendar', 28)}</div>
+        <b>${st.q ? 'Nada encontrado' : 'Nenhum agendamento'}</b>
+        <span>${st.q ? `Nenhum cliente ou serviço com "${esc(st.q)}" ${period}.` : `Você não tem agendamentos confirmados ${period}.`}</span></div>`;
+      return;
+    }
+    el.innerHTML = groups.map(g => {
+      const sum = g.appointments.reduce((n, a) => n + (a.price || 0), 0);
+      return `<section class="ag-day">
+        <div class="ag-day-h"><span class="ag-day-l">${esc(g.label)}</span>
+          <span class="ag-day-d">${esc(fmtDayLong(g.date))}</span>
+          <span class="ag-day-c">${g.count} · ${brl(sum)}</span></div>
+        ${g.appointments.map(card).join('')}
+      </section>`;
+    }).join('');
+  }
+
+  // ── Detalhe ───────────────────────────────────────────────────────────
+  function detailHtml(a, { isNext = false, sheet = false } = {}) {
+    const d = st.details[a.id] || a;
+    const rel = relTime(a);
+    const end = new Date(endMs(a)).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+    const date = new Date(a.scheduled_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Sao_Paulo' });
+    const due = d.prepayment_amount ? Math.max(0, d.price - d.prepayment_amount) : null;
+    const loading = st.detLoading === a.id;
+    return `
+      <div class="ag-det-eyebrow">
+        <span class="ag-mono" style="color:var(--coral-500)">${isNext ? 'Próximo atendimento' : 'Detalhes do agendamento'}</span>
+        <button type="button" class="ag-det-close" data-close aria-label="Fechar">${ic('x', 16)}</button>
+      </div>
+      <div class="ag-det-top"><span class="ag-av">${esc(initial(a.client_name))}</span>
+        <div style="min-width:0"><div class="ag-det-name">${esc(a.client_name)}</div>
+          <div class="ag-det-when">${esc(a._group?.label || '')} · ${esc(a.time)} – ${end}</div></div></div>
+      ${rel ? `<div class="ag-count${rel.now ? ' now' : ''}">${ic(rel.now ? 'activity' : 'clock', 13)}${rel.txt}</div>` : ''}
+      <div class="ag-fields">
+        <div class="ag-field"><div class="ag-fl">${ic('clock', 11)}HORÁRIO</div><div class="ag-fv">${esc(a.time)}</div></div>
+        <div class="ag-field"><div class="ag-fl">${ic('calendar', 11)}DATA</div><div class="ag-fv">${date}</div></div>
+      </div>
+      <div class="ag-block">
+        <div class="ag-fl">${ic('droplet', 11)}SERVIÇO</div>
+        <div class="ag-st">${esc(d.service_title || '—')}</div>
+        ${d.service_category ? `<div class="ag-sc">${esc(d.service_category)}</div>` : ''}
+        ${d.service_desc ? `<div class="ag-sd">${esc(d.service_desc)}</div>` : ''}
+        ${d.service_duration ? `<div class="ag-sm">Duração: ${d.service_duration} min</div>` : ''}
+      </div>
+      <div class="ag-block">
+        <div class="ag-fl">${ic('dollar-sign', 11)}VALORES ${loading ? ic('loader', 11) : ''}</div>
+        <div class="ag-vr total"><span>Valor total</span><b>${brl(d.price)}</b></div>
+        ${d.prepayment_amount ? `<div class="ag-vr"><span>Pré-pago no app</span><b>${brl(d.prepayment_amount)}</b></div>` : ''}
+        ${d.commission_amount ? `<div class="ag-vr"><span>Comissão Loov</span><b>− ${brl(d.commission_amount)}</b></div>` : ''}
+        ${due != null ? `<div class="ag-vr due"><span>A receber na loja</span><b>${brl(due)}</b></div>` : ''}
+      </div>
+      <div class="ag-block">
+        <div class="ag-fl">${ic('tag', 11)}TIPO</div>
+        <div class="ag-pills">
+          ${isLM(a) ? `<span class="ag-pill lm">${ic('zap', 11)}LAST MINUTE</span>` : `<span class="ag-pill">AGENDAMENTO</span>`}
+          ${a.walk_in ? `<span class="ag-pill">AVULSO</span>` : ''}
+          ${a.status === 'pending_acceptance' ? `<span class="ag-pill">AGUARDANDO ACEITE</span>` : ''}
+          ${a.status === 'attended' ? `<span class="ag-pill">ATENDIDO</span>` : ''}
+        </div>
+      </div>
+      ${!sheet && desktop() ? `<div class="ag-det-hint">Use ↑ ↓ para percorrer a lista</div>` : ''}`;
+  }
+
+  function renderSide() {
+    const side = document.getElementById('ag-side');
+    if (!desktop()) return;
+    if (st.loading) { side.innerHTML = '<div class="ag-skel" style="height:320px;margin:0"></div>'; return; }
+    const list = allAppts();
+    const a = list.find(x => x.id === st.sel) || (st.sel == null ? nextAppt() : null);
+    if (!a) {
+      side.innerHTML = `<div class="ag-empty" style="padding:32px 8px"><div class="ag-empty-i">${ic('sun', 26)}</div>
+        <b>Agenda livre</b><span>Nada pela frente ${st.days === 1 ? 'hoje' : `nos próximos ${st.days} dias`}.</span></div>`;
+      return;
+    }
+    side.innerHTML = detailHtml(a, { isNext: st.sel == null });
+    ensureDetail(a.id);
+  }
+
+  async function ensureDetail(id) {
+    if (st.details[id] || st.detLoading === id) return;
+    st.detLoading = id;
+    try {
+      const r = await fetch(`/owner/car_wash_appointments/${id}`, { headers: { Accept: 'application/json' } });
+      const d = await r.json();
+      if (d.id) st.details[id] = d;
+    } catch {}
+    if (st.detLoading === id) st.detLoading = null;
+    renderSide(); renderSheet();
+  }
+
+  function openSheet(id) {
+    st.sel = id;
+    document.getElementById('ag-ov').hidden = false;
+    document.body.style.overflow = 'hidden';
+    renderSheet(); ensureDetail(id); renderList();
+  }
+  function renderSheet() {
+    const ov = document.getElementById('ag-ov');
+    if (ov.hidden) return;
+    const a = allAppts().find(x => x.id === st.sel);
+    if (!a) return closeSheet();
+    document.getElementById('ag-sheet-body').innerHTML = detailHtml(a, { sheet: true });
+  }
+  function closeSheet() {
+    document.getElementById('ag-ov').hidden = true;
+    document.body.style.overflow = '';
+    st.sel = null; renderList();
+  }
+
+  function renderAll() { renderStats(); renderList(); renderSide(); renderSheet(); }
+
+  // ── Dados ─────────────────────────────────────────────────────────────
+  let seq = 0;
+  async function load(silent = false) {
+    const my = ++seq;
+    if (!silent) { st.loading = true; renderAll(); }
+    try {
+      const r = await fetch(`/owner/car_wash_appointments?days=${st.days}`, { headers: { Accept: 'application/json' } });
+      const data = await r.json();
+      if (my !== seq) return;
+      st.groups = Array.isArray(data.groups) ? data.groups : [];
+      st.total = data.total || 0;
+      if (st.sel && !allAppts().some(a => a.id === st.sel)) st.sel = null;
+    } catch {
+      if (my !== seq) return;
+      if (!silent) { st.groups = []; st.total = 0; }
+    }
+    st.loading = false;
+    renderAll();
+  }
+
+  // ── Eventos ───────────────────────────────────────────────────────────
+  document.querySelector('.ag-seg').addEventListener('click', e => {
+    const b = e.target.closest('[data-days]'); if (!b) return;
+    st.days = Number(b.dataset.days); st.sel = null;
+    document.querySelectorAll('.ag-seg button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    try { history.replaceState(null, '', st.days === 1 ? location.pathname : `?days=${st.days}`); } catch {}
+    load();
+  });
+
+  document.getElementById('ag-list').addEventListener('click', e => {
+    const c = e.target.closest('.ag-card'); if (!c) return;
+    const id = Number(c.dataset.id);
+    if (desktop()) {
+      st.sel = st.sel === id ? null : id;   // clicar de novo volta pro "próximo"
+      renderList(); renderSide();
+    } else openSheet(id);
+  });
+
+  document.getElementById('ag-q').addEventListener('input', e => { st.q = e.target.value; renderList(); });
+
+  document.getElementById('ag-ov').addEventListener('click', e => {
+    if (e.target.id === 'ag-ov' || e.target.closest('[data-close]')) closeSheet();
+  });
+  document.getElementById('ag-side').addEventListener('click', e => {
+    if (e.target.closest('[data-close]')) { st.sel = null; renderList(); renderSide(); }
+  });
+
+  // Teclado: "/" busca, Esc fecha, ↑↓ percorre a lista (a fila do Spotify).
+  document.addEventListener('keydown', e => {
+    const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName);
+    if (e.key === '/' && !typing) { e.preventDefault(); document.getElementById('ag-q').focus(); return; }
+    if (e.key === 'Escape') {
+      if (!document.getElementById('ag-ov').hidden) return closeSheet();
+      if (typing) { document.activeElement.blur(); return; }
+      if (st.sel != null) { st.sel = null; renderList(); renderSide(); }
+      return;
+    }
+    if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && desktop() && !typing) {
+      const ids = visibleGroups().flatMap(g => g.appointments.map(a => a.id));
+      if (!ids.length) return;
+      e.preventDefault();
+      const cur = st.sel ?? nextAppt()?.id;
+      let i = ids.indexOf(cur);
+      i = i < 0 ? 0 : Math.min(ids.length - 1, Math.max(0, i + (e.key === 'ArrowDown' ? 1 : -1)));
+      st.sel = ids[i]; renderList(); renderSide();
+      document.querySelector(`.ag-card[data-id="${st.sel}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  });
+
+  let wasDesktop = desktop();
+  window.addEventListener('resize', () => {
+    const now = desktop();
+    if (now !== wasDesktop) { wasDesktop = now; if (now && !document.getElementById('ag-ov').hidden) { document.getElementById('ag-ov').hidden = true; document.body.style.overflow = ''; } renderAll(); }
+  });
+
+  // ── Início ────────────────────────────────────────────────────────────
+  const qd = Number(new URLSearchParams(location.search).get('days'));
+  if ([1, 7, 30].includes(qd)) {
+    st.days = qd;
+    document.querySelectorAll('.ag-seg button').forEach(x => x.setAttribute('aria-pressed', String(Number(x.dataset.days) === qd)));
+  }
+  document.querySelectorAll('[data-ic]').forEach(el => { el.outerHTML = ic(el.dataset.ic, 16); });
+  load();
+  // Agenda viva: recarrega a cada minuto (entra reserva do Last Minute) e o
+  // "começa em" anda junto sem o dono precisar atualizar a página.
+  setInterval(() => { if (!document.hidden) load(true); }, 60000);
+})();
+</script>
