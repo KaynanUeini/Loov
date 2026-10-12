@@ -408,8 +408,9 @@ class AppointmentsController < ApplicationController
     mesmo_dia = current_user.appointments
       .where(car_wash_id: @car_wash.id, status: %w[confirmed awaiting_payment pending_acceptance])
       .where(scheduled_at: dia.in_time_zone("America/Sao_Paulo").all_day)
-    if mesmo_dia.exists?
-      return { code: "same_day", error: "Você já tem um horário neste lava-rápido nesse dia." }
+    if mesmo_dia.count >= User::LIMITE_MESMO_DIA
+      return { code: "same_day",
+               error: "Você já tem #{User::LIMITE_MESMO_DIA} horários neste lava-rápido nesse dia." }
     end
 
     if r&.dig(:tipo) == :sinal && !current_user.has_payment_method?

@@ -143,12 +143,13 @@ class User < ApplicationRecord
   # O agendamento comum não tem custo pro cliente; sem regra, um só cliente
   # podia prender vários horários de graça e não aparecer. A régua é em
   # degraus e aparece antes de confirmar:
-  #   · até 3 agendamentos comuns futuros ao mesmo tempo, 1 por lava-rápido/dia
+  #   · até 3 agendamentos comuns futuros ao mesmo tempo, 3 por lava-rápido/dia
   #   · 2 faltas em 90 dias → por 60 dias o agendamento comum pede sinal (35%)
   #   · 3 faltas em 90 dias → agendamento comum bloqueado por 30 dias
   # Só conta falta de agendamento COMUM: no Last Minute a falta já custa os
   # 35% pagos, e o Last Minute continua liberado em qualquer degrau.
   LIMITE_AGENDAMENTOS = 3
+  LIMITE_MESMO_DIA    = 3 # no mesmo lava-rápido, no mesmo dia (vários carros da família)
   JANELA_FALTAS       = 90.days
   DIAS_SINAL          = 60.days
   DIAS_BLOQUEIO       = 30.days

@@ -169,8 +169,9 @@ A aba atualiza sozinha e ao puxar pra baixo.
 
 ## LIMITE DE AGENDAMENTOS E FALTAS (AGENDAMENTO COMUM)
 A regra aparece no app e no site antes de confirmar o agendamento.
-- Limite: até 3 agendamentos comuns marcados ao mesmo tempo, e no máximo 1 por
-  lava-rápido no mesmo dia. Pra marcar outro, cancele um ou espere um acontecer.
+- Limite: até 3 agendamentos comuns marcados ao mesmo tempo, e no máximo 3 no
+  mesmo lava-rápido no mesmo dia. Pra marcar outro, cancele um ou espere um
+  acontecer.
 - Falta: quando o lava-rápido registra que o cliente não compareceu (sem ter
   cancelado), o cliente recebe o aviso "Registramos uma falta".
 - 2 faltas em 90 dias: por 60 dias depois da última falta, o agendamento comum
