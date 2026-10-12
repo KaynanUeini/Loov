@@ -1,0 +1,389 @@
+<% content_for :page_title, "Suporte" %>
+<%#
+  Suporte — conversa com a equipe Loov (cliente, dono e funcionário), porte
+  da tela de Suporte do app. Os dados vêm dos mesmos endpoints do app, então
+  uma conversa aberta no celular continua aqui e vice-versa.
+
+  Desenho (Apple Mensagens + Spotify + wiemer.store):
+    · Tela grande: duas colunas, como o Mensagens do Mac — conversas à
+      esquerda, a conversa aberta à direita. Celular: uma coluna por vez.
+    · Conversa: balões (você em coral à direita, Loov à esquerda), campo de
+      mensagem fixo embaixo, "Encerrar" como ação discreta no topo.
+    · Nova conversa: o assunto é escolhido numa lista com ícones (Ajustes do
+      iOS), e o texto vem depois — escolher antes de escrever orienta o que
+      contar.
+    · Tudo em frase normal: nada de CAIXA ALTA em botão.
+%>
+<script src="/vendor/feather-4.29.2.min.js"></script>
+
+<style>
+  .su { background: var(--cream); color: var(--ink); min-height: 100vh; }
+  .su *, .su *::before, .su *::after { box-sizing: border-box; }
+  .su [hidden] { display: none !important; }
+  .su button { font-family: inherit; cursor: pointer; }
+  .su svg.feather { display: block; flex-shrink: 0; }
+  .su-wrap { max-width: 1180px; margin: 0 auto; padding: 84px 20px 48px; }
+
+  .su-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+  .su-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; color: var(--coral-500); text-transform: uppercase; }
+  .su-title { margin: 6px 0 0; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 34px; letter-spacing: -1px; line-height: 1.05; }
+  .su-sub { margin: 10px 0 0; color: var(--graphite); font-size: 15px; line-height: 1.5; max-width: 520px; }
+  .su-new { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border: 0; border-radius: 100px; background: var(--coral-500); color: var(--cream); font-size: 14px; font-weight: 600; white-space: nowrap; transition: background .15s, transform .15s; }
+  .su-new:hover { background: var(--coral-700); }
+  .su-new:active { transform: scale(.98); }
+
+  .su-app { display: grid; grid-template-columns: minmax(0, 1fr); background: var(--paper); border: 1px solid var(--stone); border-radius: 24px; overflow: hidden; min-height: 560px; }
+  .su-list { display: flex; flex-direction: column; min-height: 0; }
+  .su-pane { display: flex; flex-direction: column; min-height: 0; background: var(--cream); }
+
+  /* Lista de conversas */
+  .su-list-scroll { flex: 1; overflow-y: auto; padding: 8px; }
+  .su-group { padding: 14px 12px 6px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 1.4px; color: var(--ash); text-transform: uppercase; }
+  .su-row { display: flex; gap: 12px; width: 100%; padding: 12px; border: 0; border-radius: 16px; background: transparent; text-align: left; color: var(--ink); transition: background .12s; }
+  .su-row:hover { background: var(--sand); }
+  .su-row.is-on { background: var(--coral-50); }
+  .su-row-ic { flex: 0 0 42px; height: 42px; border-radius: 50%; background: var(--sand); color: var(--ink); display: flex; align-items: center; justify-content: center; }
+  .su-row.is-on .su-row-ic { background: var(--coral-100); color: var(--coral-700); }
+  .su-row-t { flex: 1; min-width: 0; }
+  .su-row-top { display: flex; align-items: baseline; gap: 8px; }
+  .su-row-top b { flex: 1; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .su-row-top small { font-size: 12px; color: var(--ash); white-space: nowrap; }
+  .su-row-snip { margin-top: 3px; font-size: 13.5px; color: var(--graphite); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4; }
+  .su-row-new { display: inline-flex; align-items: center; gap: 5px; margin-top: 6px; font-size: 12px; font-weight: 600; color: var(--coral-700); }
+  .su-row-new i { width: 7px; height: 7px; border-radius: 50%; background: var(--coral-500); }
+  .su-row.is-done { opacity: .62; }
+  .su-empty-list { padding: 40px 24px; text-align: center; color: var(--graphite); font-size: 14px; line-height: 1.5; }
+
+  /* Painel: conversa */
+  .su-conv-head { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--stone); background: var(--paper); }
+  .su-back { width: 36px; height: 36px; border: 0; border-radius: 50%; background: var(--sand); color: var(--ink); display: flex; align-items: center; justify-content: center; }
+  .su-conv-t { flex: 1; min-width: 0; }
+  .su-conv-t b { display: block; font-size: 16px; font-weight: 600; }
+  .su-conv-t small { font-size: 12.5px; color: var(--graphite); }
+  .su-end { padding: 8px 14px; border: 1px solid var(--stone); border-radius: 100px; background: transparent; color: var(--graphite); font-size: 13px; font-weight: 600; }
+  .su-end:hover { border-color: rgba(200,80,80,.4); color: var(--rose-500, #c85050); }
+  .su-thread { flex: 1; overflow-y: auto; padding: 22px 18px; display: flex; flex-direction: column; gap: 6px; }
+  .su-day { align-self: center; margin: 10px 0 6px; font-size: 11.5px; color: var(--ash); }
+  .su-msg { display: flex; gap: 8px; max-width: 78%; }
+  .su-msg.is-me { align-self: flex-end; flex-direction: row-reverse; }
+  .su-msg-av { flex: 0 0 28px; height: 28px; border-radius: 50%; background: var(--ink); color: var(--cream); display: flex; align-items: center; justify-content: center; align-self: flex-end; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 12px; }
+  .su-msg.is-me .su-msg-av { display: none; }
+  .su-bubble { padding: 10px 14px; border-radius: 20px; font-size: 14.5px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; }
+  .su-msg:not(.is-me) .su-bubble { background: var(--paper); border: 1px solid var(--stone); border-bottom-left-radius: 6px; }
+  .su-msg.is-me .su-bubble { background: var(--coral-500); color: var(--cream); border-bottom-right-radius: 6px; }
+  .su-time { margin-top: 4px; font-size: 11px; color: var(--ash); }
+  .su-msg.is-me .su-time { text-align: right; }
+  .su-closed { margin: 8px auto 0; padding: 10px 16px; border-radius: 100px; background: var(--sand); color: var(--graphite); font-size: 13px; text-align: center; }
+  .su-compose { display: flex; align-items: flex-end; gap: 10px; padding: 12px 14px; border-top: 1px solid var(--stone); background: var(--paper); }
+  .su-compose textarea { flex: 1; min-height: 44px; max-height: 160px; padding: 11px 16px; border: 1px solid var(--stone); border-radius: 22px; background: var(--cream); color: var(--ink); font: 14.5px/1.45 Inter, sans-serif; resize: none; }
+  .su-compose textarea:focus { outline: none; border-color: var(--coral-500); }
+  .su-send { flex: 0 0 44px; height: 44px; border: 0; border-radius: 50%; background: var(--coral-500); color: var(--cream); display: flex; align-items: center; justify-content: center; transition: opacity .15s; }
+  .su-send[disabled] { opacity: .4; cursor: default; }
+
+  /* Painel: nova conversa */
+  .su-form { flex: 1; overflow-y: auto; padding: 24px 22px; }
+  .su-form h2 { margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 24px; letter-spacing: -.5px; }
+  .su-form > p { margin: 6px 0 18px; color: var(--graphite); font-size: 14px; }
+  .su-lab { margin: 18px 0 8px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 1.4px; color: var(--ash); text-transform: uppercase; }
+  .su-topics { background: var(--paper); border: 1px solid var(--stone); border-radius: 18px; overflow: hidden; }
+  .su-topic { display: flex; align-items: center; gap: 12px; width: 100%; padding: 13px 16px; border: 0; border-bottom: 1px solid var(--stone); background: transparent; text-align: left; color: var(--ink); font-size: 15px; }
+  .su-topic:last-child { border-bottom: 0; }
+  .su-topic:hover { background: var(--sand); }
+  .su-topic-ic { width: 32px; height: 32px; border-radius: 10px; background: var(--sand); display: flex; align-items: center; justify-content: center; }
+  .su-topic-label { flex: 1; }
+  .su-topic .su-check { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--stone); display: flex; align-items: center; justify-content: center; color: transparent; }
+  .su-topic.is-on .su-check { background: var(--coral-500); border-color: var(--coral-500); color: var(--cream); }
+  .su-topic.is-on .su-topic-ic { background: var(--coral-50); color: var(--coral-700); }
+  .su-form textarea { width: 100%; min-height: 130px; padding: 14px 16px; border: 1px solid var(--stone); border-radius: 18px; background: var(--paper); color: var(--ink); font: 14.5px/1.5 Inter, sans-serif; resize: vertical; }
+  .su-form textarea:focus { outline: none; border-color: var(--coral-500); }
+  .su-count { margin-top: 6px; text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ash); }
+  .su-err { margin-top: 12px; padding: 12px 14px; border-radius: 14px; background: #fdecec; color: #8a2f2f; font-size: 13.5px; }
+  .su-submit { width: 100%; margin-top: 16px; padding: 15px; border: 0; border-radius: 100px; background: var(--coral-500); color: var(--cream); font-size: 15px; font-weight: 600; }
+  .su-submit[disabled] { opacity: .55; cursor: default; }
+
+  /* Painel vazio (nada aberto) */
+  .su-blank { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; text-align: center; }
+  .su-blank-ic { width: 64px; height: 64px; border-radius: 50%; background: var(--coral-50); border: 1px solid var(--coral-100); color: var(--coral-500); display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+  .su-blank h2 { margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 22px; letter-spacing: -.4px; }
+  .su-blank p { margin: 8px 0 0; max-width: 360px; color: var(--graphite); font-size: 14.5px; line-height: 1.5; }
+  .su-blank .su-new { margin-top: 18px; }
+
+  .su-spin { width: 22px; height: 22px; margin: 40px auto; border: 2px solid var(--stone); border-top-color: var(--coral-500); border-radius: 50%; animation: su-r .8s linear infinite; }
+  @keyframes su-r { to { transform: rotate(360deg); } }
+
+  /* Celular: uma coluna por vez */
+  @media (max-width: 879px) {
+    .su-wrap { padding: 72px 0 0; }
+    .su-head { padding: 0 20px; }
+    .su-app { border-radius: 0; border-left: 0; border-right: 0; min-height: calc(100vh - 210px); }
+    .su-app.is-pane .su-list { display: none; }
+    .su-app:not(.is-pane) .su-pane { display: none; }
+    .su-head { flex-direction: column; align-items: stretch; }
+    .su-head-new { justify-content: center; }
+    .su-app.is-pane ~ * , .su-wrap:has(.su-app.is-pane) .su-head-new { display: none; }
+  }
+  @media (min-width: 880px) {
+    .su-wrap { padding-top: 100px; }
+    .su-title { font-size: 48px; letter-spacing: -1.6px; }
+    .su-app { grid-template-columns: 360px minmax(0, 1fr); height: calc(100vh - 290px); min-height: 520px; }
+    .su-list { border-right: 1px solid var(--stone); }
+    .su-back { display: none; }
+  }
+</style>
+
+<div class="su">
+  <div class="su-wrap">
+    <div class="su-head">
+      <div>
+        <div class="su-eyebrow">Suporte</div>
+        <h1 class="su-title">Fale com a Loov</h1>
+        <p class="su-sub">Respondemos por aqui mesmo. A conversa também aparece no app, e você recebe um aviso quando chega resposta.</p>
+      </div>
+      <button type="button" class="su-new su-head-new" data-new><i data-feather="edit-3" style="width:15px;height:15px"></i>Nova conversa</button>
+    </div>
+
+    <div class="su-app" id="su-app">
+      <aside class="su-list">
+        <div class="su-list-scroll" id="su-list"><div class="su-spin"></div></div>
+      </aside>
+      <section class="su-pane" id="su-pane"></section>
+    </div>
+  </div>
+</div>
+
+<script nonce="<%= csp_nonce %>">
+(function () {
+  var PAPEL = <%= raw json_escape(@papel.to_json) %>;
+  var BASE  = PAPEL === 'client' ? '/client/support_tickets' : '/owner/support_tickets';
+  // Assuntos de cada lado (mesmas chaves do servidor, SupportTicket::CATEGORIES).
+  var TOPICS = PAPEL === 'client' ? [
+    ['agendamento', 'Agendamento', 'calendar'], ['disponivel', 'Last minute', 'zap'],
+    ['financeiro', 'Pagamento', 'credit-card'], ['cancelamento', 'Cancelamento', 'x-circle'],
+    ['cadastro', 'Minha conta', 'user'], ['tecnico', 'Problema no site ou app', 'smartphone'],
+    ['outro', 'Outro assunto', 'help-circle']
+  ] : [
+    ['financeiro', 'Financeiro', 'dollar-sign'], ['agendamento', 'Agendamento', 'calendar'],
+    ['disponivel', 'Last minute', 'zap'], ['cadastro', 'Cadastro', 'user'],
+    ['atendente', 'Equipe', 'users'], ['cancelamento', 'Cancelamento', 'x-circle'],
+    ['tecnico', 'Problema técnico', 'tool'], ['outro', 'Outro assunto', 'help-circle']
+  ];
+  var CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content;
+  var st = { tickets: [], open: null, view: 'blank', topic: null, sending: false, loaded: false };
+  function $(id) { return document.getElementById(id); }
+  function icon(n, s) { return window.feather && feather.icons[n] ? feather.icons[n].toSvg({ width: s, height: s }) : ''; }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function topicOf(k) { return TOPICS.filter(function (t) { return t[0] === k; })[0] || [k, k, 'message-circle']; }
+  function api(url, opts) {
+    opts = opts || {};
+    return fetch(url, Object.assign({ credentials: 'same-origin' }, opts, {
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF }
+    })).then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d }; }); });
+  }
+  function last(t) { var m = t.messages || []; return m[m.length - 1]; }
+  // Resposta nova = a última mensagem é da Loov e a conversa segue aberta.
+  function temResposta(t) { var l = last(t); return t.status !== 'resolved' && l && l.from_admin; }
+
+  // ── Lista ────────────────────────────────────────────────────────────────
+  function renderList() {
+    var el = $('su-list');
+    if (!st.loaded) return;
+    if (!st.tickets.length) {
+      el.innerHTML = '<div class="su-empty-list">Nenhuma conversa ainda.<br>Quando precisar, a gente está aqui.</div>';
+      return;
+    }
+    var abertas = st.tickets.filter(function (t) { return t.status !== 'resolved'; });
+    var fechadas = st.tickets.filter(function (t) { return t.status === 'resolved'; });
+    function row(t) {
+      var tp = topicOf(t.category), l = last(t);
+      var snip = l ? (l.from_admin ? 'Loov: ' : 'Você: ') + l.body : '';
+      return '<button type="button" class="su-row' + (st.open === t.id && st.view === 'conv' ? ' is-on' : '') + (t.status === 'resolved' ? ' is-done' : '') + '" data-open="' + t.id + '">' +
+        '<span class="su-row-ic">' + icon(tp[2], 18) + '</span>' +
+        '<span class="su-row-t"><span class="su-row-top"><b>' + esc(tp[1]) + '</b><small>' + esc((l && l.created_at) || t.created_at) + '</small></span>' +
+          '<span class="su-row-snip">' + esc(snip) + '</span>' +
+          (temResposta(t) ? '<span class="su-row-new"><i></i>Nova resposta</span>' : '') +
+        '</span></button>';
+    }
+    el.innerHTML = (abertas.length ? '<div class="su-group">Em andamento</div>' + abertas.map(row).join('') : '') +
+                   (fechadas.length ? '<div class="su-group">Encerradas</div>' + fechadas.map(row).join('') : '');
+  }
+
+  // ── Painel ───────────────────────────────────────────────────────────────
+  function renderPane() {
+    var pane = $('su-pane');
+    $('su-app').classList.toggle('is-pane', st.view !== 'blank');
+    if (st.view === 'new') return renderNew(pane);
+    var t = st.tickets.filter(function (x) { return x.id === st.open; })[0];
+    if (st.view === 'conv' && t) return renderConv(pane, t);
+    pane.innerHTML = '<div class="su-blank"><div class="su-blank-ic">' + icon('message-circle', 26) + '</div>' +
+      '<h2>' + (st.tickets.length ? 'Escolha uma conversa' : 'Como podemos ajudar?') + '</h2>' +
+      '<p>' + (st.tickets.length ? 'Ou comece uma nova; a equipe Loov responde por aqui.' : 'Conte o que aconteceu e a equipe Loov responde por aqui, normalmente em pouco tempo.') + '</p>' +
+      '<button type="button" class="su-new" data-new>' + icon('edit-3', 15) + 'Nova conversa</button></div>';
+  }
+
+  function renderConv(pane, t) {
+    var tp = topicOf(t.category), done = t.status === 'resolved';
+    var html = '<div class="su-conv-head">' +
+      '<button type="button" class="su-back" data-back aria-label="Voltar">' + icon('chevron-left', 18) + '</button>' +
+      '<div class="su-conv-t"><b>' + esc(tp[1]) + '</b><small>Conversa #' + t.id + ' · ' + (done ? 'encerrada' : 'em andamento') + '</small></div>' +
+      (done ? '' : '<button type="button" class="su-end" data-end>Encerrar</button>') +
+    '</div><div class="su-thread" id="su-thread">';
+    var dia = null;
+    (t.messages || []).forEach(function (m) {
+      var d = String(m.created_at || '').split(' ')[0];
+      if (d && d !== dia) { html += '<div class="su-day">' + esc(d) + '</div>'; dia = d; }
+      var me = !m.from_admin;
+      html += '<div class="su-msg' + (me ? ' is-me' : '') + '"><span class="su-msg-av">L</span><div>' +
+        '<div class="su-bubble">' + esc(m.body) + '</div>' +
+        '<div class="su-time">' + (me ? 'Você' : 'Loov') + ' · ' + esc(String(m.created_at || '').split(' ')[1] || '') + '</div></div></div>';
+    });
+    if (done) html += '<div class="su-closed">Conversa encerrada. Precisa de mais alguma coisa? Comece uma nova.</div>';
+    html += '</div>';
+    if (!done) {
+      html += '<form class="su-compose" id="su-compose"><textarea id="su-input" rows="1" maxlength="2000" placeholder="Escreva sua mensagem"></textarea>' +
+        '<button type="submit" class="su-send" id="su-send" disabled aria-label="Enviar">' + icon('arrow-up', 18) + '</button></form>';
+    }
+    var guardado = $('su-input') ? $('su-input').value : '';
+    pane.innerHTML = html;
+    var th = $('su-thread'); th.scrollTop = th.scrollHeight;
+    var inp = $('su-input');
+    if (inp) {
+      inp.value = guardado;
+      $('su-send').disabled = !guardado.trim();
+      inp.addEventListener('input', function () {
+        inp.style.height = 'auto'; inp.style.height = Math.min(160, inp.scrollHeight) + 'px';
+        $('su-send').disabled = !inp.value.trim() || st.sending;
+      });
+      // Enter envia, Shift+Enter quebra linha (como no Mensagens).
+      inp.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(); } });
+      $('su-compose').addEventListener('submit', function (e) { e.preventDefault(); enviar(); });
+    }
+  }
+
+  function renderNew(pane) {
+    pane.innerHTML = '<div class="su-conv-head"><button type="button" class="su-back" data-back aria-label="Voltar">' + icon('chevron-left', 18) + '</button>' +
+      '<div class="su-conv-t"><b>Nova conversa</b><small>Respondemos por aqui</small></div></div>' +
+      '<form class="su-form" id="su-new-form"><h2>Sobre o que é?</h2><p>Escolha o assunto e conte o que aconteceu.</p>' +
+      '<div class="su-topics">' + TOPICS.map(function (t) {
+        return '<button type="button" class="su-topic' + (st.topic === t[0] ? ' is-on' : '') + '" data-topic="' + t[0] + '">' +
+          '<span class="su-topic-ic">' + icon(t[2], 16) + '</span><span class="su-topic-label">' + t[1] + '</span><span class="su-check">' + icon('check', 13) + '</span></button>';
+      }).join('') + '</div>' +
+      '<div class="su-lab">O que aconteceu</div>' +
+      '<textarea id="su-desc" maxlength="2000" placeholder="Quanto mais detalhe, mais rápido a gente resolve. Se for sobre um agendamento, informe o código LV-0000."></textarea>' +
+      '<div class="su-count"><span id="su-desc-n">0</span>/2000</div>' +
+      '<div class="su-err" id="su-new-err" hidden></div>' +
+      '<button type="submit" class="su-submit" id="su-submit">Enviar</button></form>';
+    $('su-desc').addEventListener('input', function () { $('su-desc-n').textContent = this.value.length; });
+    $('su-new-form').addEventListener('submit', function (e) { e.preventDefault(); criar(); });
+  }
+
+  // ── Ações ────────────────────────────────────────────────────────────────
+  // Assinatura da conversa aberta: só redesenha quando chega mensagem ou muda
+  // o estado. Redesenhar a cada busca tirava o foco de quem estava digitando.
+  function assinatura() {
+    var t = st.tickets.filter(function (x) { return x.id === st.open; })[0];
+    return t ? (t.messages || []).length + ':' + t.status : '';
+  }
+  function carregar() {
+    var antes = assinatura();
+    return api(BASE).then(function (x) {
+      if (Array.isArray(x.d)) st.tickets = x.d;
+      st.loaded = true;
+      renderList();
+      if (st.view === 'conv' && assinatura() !== antes) {
+        var focado = document.activeElement && document.activeElement.id === 'su-input';
+        renderPane();
+        if (focado && $('su-input')) $('su-input').focus();
+      }
+    });
+  }
+
+  function abrir(id) { st.open = id; st.view = 'conv'; renderList(); renderPane(); }
+  function nova() { st.view = 'new'; st.topic = null; renderList(); renderPane(); }
+  function voltar() { st.view = 'blank'; st.open = null; renderList(); renderPane(); }
+
+  function erroNova(msg) { var e = $('su-new-err'); e.textContent = msg || ''; e.hidden = !msg; }
+  function criar() {
+    var desc = $('su-desc').value.trim();
+    if (!st.topic) return erroNova('Escolha o assunto da conversa.');
+    if (desc.length < 10) return erroNova('Conte um pouco mais (pelo menos 10 caracteres).');
+    erroNova(null);
+    var b = $('su-submit'); b.disabled = true; b.textContent = 'Enviando…';
+    api(BASE, { method: 'POST', body: JSON.stringify({ category: st.topic, description: desc }) }).then(function (x) {
+      if (x.ok && x.d.ok) {
+        st.tickets.unshift(x.d.ticket);
+        abrir(x.d.ticket.id);
+        return;
+      }
+      b.disabled = false; b.textContent = 'Enviar';
+      erroNova(x.d.error || 'Não foi possível abrir a conversa agora. Tente de novo em instantes.');
+    }).catch(function () { b.disabled = false; b.textContent = 'Enviar'; erroNova('Falha de conexão. Tente de novo.'); });
+  }
+
+  function enviar() {
+    var inp = $('su-input'); if (!inp) return;
+    var body = inp.value.trim(); if (!body || st.sending) return;
+    st.sending = true; $('su-send').disabled = true;
+    api(BASE + '/' + st.open + '/message', { method: 'POST', body: JSON.stringify({ body: body }) }).then(function (x) {
+      st.sending = false;
+      if (x.ok && x.d.ok) {
+        inp.value = '';
+        st.tickets = st.tickets.map(function (t) { return t.id === x.d.ticket.id ? Object.assign({}, t, x.d.ticket) : t; });
+        renderList(); renderPane();
+      } else {
+        $('su-send').disabled = false;
+        alertaInline(x.d.error || 'Não foi possível enviar.');
+      }
+    }).catch(function () { st.sending = false; $('su-send').disabled = false; alertaInline('Falha de conexão.'); });
+  }
+  function alertaInline(msg) {
+    var th = $('su-thread'); if (!th) return;
+    var d = document.createElement('div'); d.className = 'su-closed'; d.style.background = '#fdecec'; d.style.color = '#8a2f2f';
+    d.textContent = msg; th.appendChild(d); th.scrollTop = th.scrollHeight;
+  }
+
+  // Encerrar em dois toques: o primeiro pede confirmação no próprio botão.
+  function encerrar(btn) {
+    if (!btn.dataset.armed) { btn.dataset.armed = '1'; btn.textContent = 'Encerrar mesmo?'; setTimeout(function () { if (btn.isConnected) { delete btn.dataset.armed; btn.textContent = 'Encerrar'; } }, 3500); return; }
+    btn.disabled = true;
+    api(BASE + '/' + st.open + '/close', { method: 'PATCH' }).then(function (x) {
+      if (x.ok) {
+        st.tickets = st.tickets.map(function (t) { return t.id === st.open ? Object.assign({}, t, { status: 'resolved' }) : t; });
+        renderList(); renderPane();
+      } else { btn.disabled = false; }
+    });
+  }
+
+  document.addEventListener('click', function (e) {
+    var t;
+    if ((t = e.target.closest('[data-open]'))) return abrir(Number(t.dataset.open));
+    if (e.target.closest('[data-new]')) return nova();
+    if (e.target.closest('[data-back]')) return voltar();
+    if ((t = e.target.closest('[data-end]'))) return encerrar(t);
+    if ((t = e.target.closest('[data-topic]'))) {
+      st.topic = t.dataset.topic;
+      document.querySelectorAll('.su-topic').forEach(function (b) { b.classList.toggle('is-on', b.dataset.topic === st.topic); });
+    }
+  });
+
+  // A resposta da Loov chega em segundo plano: com uma conversa aberta e em
+  // andamento a tela busca de 5 em 5 s; sem conversa aberta, de 30 em 30 s.
+  (function ciclo() {
+    var aberta = st.view === 'conv' && st.tickets.some(function (t) { return t.id === st.open && t.status !== 'resolved'; });
+    setTimeout(function () { carregar().finally(ciclo); }, aberta ? 5000 : 30000);
+  })();
+
+  if (window.feather) feather.replace();
+
+  // ?nova=1 abre direto a nova conversa (atalho dos menus).
+  carregar().then(function () {
+    if (/[?&]nova=1/.test(location.search)) nova();
+    else if (window.innerWidth >= 880 && st.tickets.length) {
+      // Abre a conversa em andamento mais recente; só cai numa encerrada se não houver outra.
+      var alvo = st.tickets.filter(function (t) { return t.status !== 'resolved'; })[0] || st.tickets[0];
+      abrir(alvo.id);
+    }
+    else renderPane();
+  });
+  renderPane();
+})();
+</script>
