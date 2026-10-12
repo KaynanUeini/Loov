@@ -29,6 +29,33 @@ class SupportAgentService
     { autonomous: false }.merge(draft_result || { error: true })
   end
 
+  # Botão "IA" do painel admin: escreve uma sugestão de resposta pra equipe
+  # revisar, editar e aprovar. Nunca publica sozinha, e ignora o "já
+  # respondido" de propósito: a equipe aperta o botão justamente quando quer
+  # uma resposta além da automática. O resultado (ou o motivo de não ter
+  # saído) fica em agent_draft, que o painel mostra no card do chamado.
+  def rascunho_para_admin
+    if ENV["ANTHROPIC_API_KEY"].to_s.strip.empty?
+      return guardar_rascunho("[A IA não está configurada no servidor (ANTHROPIC_API_KEY).]")
+    end
+    prompt = build_prompt(build_thread_context, load_knowledge_base) + <<~EXTRA
+
+      ATENÇÃO — PEDIDO DA EQUIPE LOOV: quem pede agora é a equipe, não o cliente.
+      Escreva SEMPRE um rascunho em "draft" (should_escalate=false), mesmo que o
+      caso precise de decisão humana: a equipe vai revisar antes de enviar. Se
+      depender de algo que você não sabe, escreva a resposta deixando [entre
+      colchetes] o que a equipe precisa completar.
+    EXTRA
+    raw = call_claude(prompt)
+    return guardar_rascunho("[A IA não respondeu agora. Tente de novo em instantes.]") if raw.nil?
+    parsed = parse_response(raw)
+    return guardar_rascunho("[A resposta da IA veio num formato inesperado. Tente de novo.]") if parsed.nil?
+    guardar_rascunho(parsed[:draft].presence || "[A IA não sugeriu resposta: #{parsed[:reason] || 'sem motivo informado'}]")
+  rescue => e
+    Rails.logger.error("[SupportAgent] rascunho_para_admin ##{@ticket.id}: #{e.class}: #{e.message}")
+    guardar_rascunho("[Erro ao gerar o rascunho: #{e.class}]")
+  end
+
   def generate_draft
     Rails.logger.info("[SupportAgent] generate_draft start ticket=##{@ticket.id} cat=#{@ticket.category}")
 
@@ -107,6 +134,11 @@ class SupportAgentService
   end
 
   private
+
+  def guardar_rascunho(texto)
+    @ticket.update_columns(agent_draft: texto, agent_drafted_at: Time.current, agent_sent: false)
+    { draft: texto }
+  end
 
   # ── AÇÕES AUTÔNOMAS ────────────────────────────────────────────────────────
   def try_autonomous_action

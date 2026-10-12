@@ -78,29 +78,14 @@ module Admin
     end
 
     # ── Dispara o agente — agora usa service.run que executa ações autônomas
+    # Botão "IA": pede um rascunho pra equipe revisar. Roda em segundo plano
+    # (RascunhoAdminJob); o painel recarrega e mostra o rascunho no chamado.
     def run_agent
-      ticket  = SupportTicket.find(params[:id])
-      service = SupportAgentService.new(ticket)
-      result  = service.run
-
-      if result[:autonomous]
-        # Agente executou ação real — retorna o ticket atualizado
-        render json: {
-          ok:         true,
-          autonomous: true,
-          action:     result[:action],
-          message:    "Agente executou: #{result[:action]}. Ticket atualizado.",
-          ticket:     ticket.reload.slice(:id, :status, :agent_sent)
-        }
-      elsif result[:error]
-        render json: { ok: false, message: "Erro no agente: #{result[:error]}" }
-      elsif result[:escalate]
-        render json: { ok: false, escalate: true, message: "Agente indica escalação: #{result[:reason]}" }
-      elsif result[:draft]
-        render json: { ok: true, draft: ticket.reload.agent_draft }
-      else
-        render json: { ok: false, message: "Agente não conseguiu gerar resposta." }
-      end
+      ticket = SupportTicket.find(params[:id])
+      ticket.update_columns(agent_draft: nil, agent_drafted_at: nil)
+      RascunhoAdminJob.perform_later(ticket.id)
+      render json: { ok: true, pending: true }
+    end
     end
   end
 end

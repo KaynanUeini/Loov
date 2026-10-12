@@ -782,14 +782,29 @@
     const ta=document.getElementById('reply-'+id);
     if(box&&ta){ta.value=box.textContent.trim();ta.focus();}
   };
+  // O rascunho é gerado em segundo plano (pode levar uns segundos): o botão
+  // fica girando e a lista é consultada até o rascunho aparecer no chamado.
   window.runAgent = async function(id, btn) {
     btn.disabled=true; btn.innerHTML='<i class="fas fa-circle-notch spin"></i>';
-    const r=await fetch(`/admin/support_tickets/${id}/run_agent`,{method:'POST',headers:{'X-CSRF-Token':CSRF}});
-    const d=await r.json();
-    btn.disabled=false; btn.innerHTML='<i class="fas fa-robot"></i> IA';
-    if(d.ok){toast('Rascunho gerado.');loadSupport();}
-    else if(d.escalate){toast('Agente indica escalação: '+d.message,'err');}
-    else{toast(d.message||'Agente não gerou rascunho.','err');}
+    const fim = () => { btn.disabled=false; btn.innerHTML='<i class="fas fa-robot"></i> IA'; };
+    try {
+      const r=await fetch(`/admin/support_tickets/${id}/run_agent`,{method:'POST',headers:{'X-CSRF-Token':CSRF}});
+      const d=await r.json();
+      if(!d.ok){ fim(); toast(d.message||'Não foi possível pedir o rascunho.','err'); return; }
+      toast('Gerando rascunho da IA…');
+      const limite=Date.now()+60000;
+      while(Date.now()<limite){
+        await new Promise(res=>setTimeout(res,3000));
+        const lista=await fetch('/admin/support_tickets').then(x=>x.json()).catch(()=>[]);
+        const t=(lista||[]).find(x=>x.id===id);
+        if(t && t.agent_draft){
+          fim(); loadSupport();
+          toast(t.agent_draft.startsWith('[') ? 'A IA não gerou um rascunho utilizável — veja o aviso no chamado.' : 'Rascunho gerado. Revise e aprove no chamado.', t.agent_draft.startsWith('[') ? 'err' : undefined);
+          return;
+        }
+      }
+      fim(); toast('A IA está demorando. Recarregue a lista em instantes.','err');
+    } catch(e) { fim(); toast('Falha de conexão.','err'); }
   };
 
   window.openCeoAssistant = function() {
