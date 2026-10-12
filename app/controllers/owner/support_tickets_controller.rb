@@ -50,17 +50,12 @@ module Owner
         from_admin: false
       )
 
-      # ── Dispara agente autônomo imediatamente ─────────────────────────────
-      # Para categorias de cancelamento/disponível, age sem esperar admin
-      begin
-        service = SupportAgentService.new(ticket)
-        result  = service.run
-        Rails.logger.info("[SupportTickets] Agente rodou no ticket ##{ticket.id}: #{result.inspect}")
-      rescue => e
-        Rails.logger.error("[SupportTickets] Erro ao rodar agente no ticket ##{ticket.id}: #{e.message}")
-      end
-
+      responder_depois(ticket)
       render json: { ok: true, ticket: serialize_ticket(ticket.reload) }
+    rescue => e
+      Rails.logger.error("[SupportTickets#create] #{e.class}: #{e.message}")
+      render json: { ok: false, error: "Não foi possível abrir o chamado agora. Tente de novo em instantes." },
+             status: :internal_server_error
     end
 
     def message
@@ -68,13 +63,7 @@ module Owner
       ticket.messages.create!(user: current_user, body: params[:body], from_admin: false)
       ticket.update_columns(status: "in_progress", updated_at: Time.current)
 
-      # Re-dispara agente após nova mensagem do owner
-      begin
-        service = SupportAgentService.new(ticket.reload)
-        service.run
-      rescue => e
-        Rails.logger.error("[SupportTickets] Erro agente resposta ticket ##{ticket.id}: #{e.message}")
-      end
+      responder_depois(ticket)
 
       render json: { ok: true, ticket: serialize_ticket(ticket.reload) }
     rescue ActiveRecord::RecordNotFound
@@ -92,6 +81,13 @@ module Owner
     end
 
     private
+
+    # O agente (IA) responde em segundo plano: ver ResponderChamadoJob.
+    def responder_depois(ticket)
+      ResponderChamadoJob.perform_later(ticket.id)
+    rescue => e
+      Rails.logger.error("[SupportTickets] agente não enfileirado ##{ticket.id}: #{e.message}")
+    end
 
     def ensure_owner_or_attendant
       unless current_user&.owner? || current_user&.attendant?

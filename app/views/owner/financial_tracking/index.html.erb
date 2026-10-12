@@ -1,1091 +1,433 @@
 <% content_for :page_title, "IA insights" %>
+<%#
+  IA insights — porte da OwnerAiInsightsScreen do app (mesmos endpoints:
+  /owner/ai_insights, /status, /input). A tela responde uma pergunta: o que
+  eu faço esta semana. Por isso a ordem é a do app — a decisão primeiro, em
+  manchete sobre a única superfície escura; o porquê logo abaixo, em texto
+  corrido; o panorama das áreas (quantas subindo, estáveis, caindo) antes do
+  detalhe; e a configuração da PRÓXIMA análise por último, que é onde
+  configuração pertence. A versão anterior abria com um formulário e cartões
+  que viravam, e o dono passava por duas coisas administrativas antes de
+  achar a única frase que dizia o que fazer.
+
+  Tela grande (referência wiemer.store + Apple): a leitura ocupa a coluna
+  principal com largura de texto confortável, e "Orientar a próxima análise"
+  vira uma coluna lateral fixa — fica à mão sem interromper a leitura.
+%>
+<script src="/vendor/feather-4.29.2.min.js"></script>
 
 <style>
-  .ai-page { max-width: 1100px; margin: 0 auto; padding: 56px 24px 96px; }
+  .ia { background: var(--cream); color: var(--ink); min-height: 100vh; }
+  .ia *, .ia *::before, .ia *::after { box-sizing: border-box; }
+  .ia [hidden] { display: none !important; }
+  .ia button { font-family: inherit; cursor: pointer; }
+  .ia svg.feather { display: block; flex-shrink: 0; }
+  .ia-wrap { max-width: 1180px; margin: 0 auto; padding: 88px 20px 96px; }
 
-  .ai-hero { text-align: left; margin-bottom: 36px; }
-  .ai-hero .loov-h1 { margin-bottom: 14px !important; }
-  .ai-hero .loov-lead { margin: 0; max-width: 640px; }
+  /* Cabeçalho */
+  .ia-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 28px; }
+  .ia-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; color: var(--coral-500); text-transform: uppercase; }
+  .ia-title { margin: 6px 0 0; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 34px; letter-spacing: -1px; line-height: 1.05; }
+  .ia-sub { margin: 10px 0 0; max-width: 560px; color: var(--graphite); font-size: 15px; line-height: 1.5; }
+  .ia-refresh { display: inline-flex; align-items: center; gap: 8px; padding: 11px 18px; border: 1px solid var(--stone); border-radius: 100px; background: var(--paper); color: var(--ink); font-size: 14px; font-weight: 600; transition: background .15s, border-color .15s; white-space: nowrap; }
+  .ia-refresh:hover { background: var(--sand); }
 
-  .ai-toolbar {
-    display: flex; align-items: center; justify-content: space-between;
-    flex-wrap: wrap; gap: 14px; margin-bottom: 20px;
-  }
-  .ai-toolbar-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .ai-toolbar-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .ia-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; }
 
-  .ai-status-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 5px 12px; border-radius: 100px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; font-weight: 700; letter-spacing: 1.4px;
-    text-transform: uppercase;
-    border: 1px solid var(--stone);
-    background: var(--paper); color: var(--graphite);
-  }
-  .ai-status-badge .dot {
-    width: 7px; height: 7px; border-radius: 50%;
-    background: var(--ash);
-  }
-  .ai-status-badge[data-state="processing"] {
-    background: var(--coral-50); color: var(--coral-700); border-color: var(--coral-100);
-  }
-  .ai-status-badge[data-state="processing"] .dot {
-    background: var(--coral-500);
-    animation: ai-pulse 1.2s ease-in-out infinite;
-  }
-  .ai-status-badge[data-state="ready"] {
-    background: #d6ecde; color: #2d6b42; border-color: #b5d8c1;
-  }
-  .ai-status-badge[data-state="ready"] .dot { background: #2d6b42; }
-  .ai-status-badge[data-state="error"] {
-    background: #fdecec; color: var(--rose-500); border-color: #f5cccc;
-  }
-  .ai-status-badge[data-state="error"] .dot { background: var(--rose-500); }
-  @keyframes ai-pulse {
-    0%,100% { opacity: 1; transform: scale(1); }
-    50%     { opacity: .35; transform: scale(.65); }
-  }
+  /* Avisos */
+  .ia-banner { display: flex; gap: 12px; padding: 16px 18px; border-radius: 16px; margin-bottom: 20px; font-size: 14px; line-height: 1.5; }
+  .ia-banner b { display: block; margin-bottom: 2px; }
+  .ia-banner a { display: inline-block; margin-top: 8px; font-weight: 600; color: inherit; text-decoration: underline; }
+  .ia-banner--rose { background: #fdecec; border: 1px solid #f5cccc; color: #8a2f2f; }
+  .ia-banner--err { background: #fdecec; border: 1px solid #f5cccc; color: #8a2f2f; }
 
-  .ai-cycle-meta {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; letter-spacing: 1.2px;
-    color: var(--graphite); text-transform: uppercase;
-  }
-  .ai-cycle-meta strong { color: var(--ink); font-weight: 700; }
+  /* Decisão — a única superfície escura */
+  .ia-decision { position: relative; overflow: hidden; background: var(--ink); color: var(--cream); border-radius: 28px; padding: 28px 26px 22px; }
+  .ia-decision::after { content: ""; position: absolute; right: -80px; top: -80px; width: 240px; height: 240px; border-radius: 50%; background: radial-gradient(circle, rgba(220,120,82,.28), transparent 70%); pointer-events: none; }
+  .ia-dec-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+  .ia-dec-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; color: var(--coral-300, #f0a888); }
+  .ia-fresh { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 100px; background: rgba(93,195,159,.16); color: #8fe0c2; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.4px; }
+  .ia-fresh i { width: 6px; height: 6px; border-radius: 50%; background: #5dc39f; }
+  .ia-dec-text { position: relative; margin: 0; font-family: 'Space Grotesk', sans-serif; font-weight: 500; letter-spacing: -.3px; color: var(--cream); }
+  .ia-dec-text strong { color: #fff; font-weight: 700; }
+  .ia-dec-text.s1 { font-size: 27px; line-height: 1.32; }
+  .ia-dec-text.s2 { font-size: 21px; line-height: 1.45; }
+  .ia-dec-text.s3 { font-size: 17px; line-height: 1.6; }
+  .ia-alert { display: flex; gap: 10px; margin-top: 18px; padding: 14px 16px; border-radius: 16px; background: rgba(214,177,74,.10); border: 1px solid rgba(214,177,74,.28); color: var(--amber-500, #d6b14a); }
+  .ia-alert b { display: block; font-size: 12px; letter-spacing: .4px; margin-bottom: 3px; }
+  .ia-alert p { margin: 0; color: var(--sand); font-size: 14px; line-height: 1.5; }
+  .ia-alert p strong { color: #fff; }
+  .ia-dec-rule { height: 1px; background: rgba(250,250,246,.12); margin: 20px 0 12px; }
+  .ia-dec-meta { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: .6px; color: rgba(250,250,246,.55); }
 
-  .ai-banner {
-    border-radius: 16px; padding: 16px 20px;
-    display: flex; align-items: flex-start; gap: 14px;
-    margin-bottom: 20px;
-  }
-  .ai-banner--rose {
-    background: #fdecec; border: 1px solid #f5cccc;
-    color: #6e2828;
-  }
-  .ai-banner--rose .ai-banner-icon { color: var(--rose-500); }
-  .ai-banner-icon {
-    flex: 0 0 auto; width: 36px; height: 36px; border-radius: 12px;
-    display: inline-flex; align-items: center; justify-content: center;
-    font-size: 16px; background: rgba(200,80,80,0.12);
-  }
-  .ai-banner-body { flex: 1; min-width: 0; }
-  .ai-banner-title {
-    font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700; font-size: 15px;
-    margin: 0 0 4px;
-  }
-  .ai-banner-text { font-size: 13.5px; line-height: 1.5; margin: 0; }
-  .ai-banner-link {
-    display: inline-flex; align-items: center; gap: 6px;
-    margin-top: 10px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; font-weight: 700; letter-spacing: 1.2px;
-    text-transform: uppercase; text-decoration: none;
-    color: var(--rose-500);
-  }
-  .ai-banner-link:hover { color: #6e2828; }
+  /* Por quê */
+  .ia-why { padding: 4px 4px 0; }
+  .ia-why-eyebrow, .ia-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.6px; color: var(--ash); text-transform: uppercase; }
+  .ia-why p { margin: 10px 0 0; font-size: 16px; line-height: 1.65; color: var(--graphite); max-width: 68ch; }
+  .ia-why p strong { color: var(--ink); }
 
-  .ai-input-card {
-    background: var(--paper);
-    border: 1px solid var(--stone);
-    border-radius: 18px;
-    padding: 22px;
-    margin-bottom: 24px;
-  }
-  .ai-input-head {
-    display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
-  }
-  .ai-input-icon {
-    width: 28px; height: 28px; border-radius: 9px;
-    background: var(--coral-50); border: 1px solid var(--coral-100);
-    color: var(--coral-700);
-    display: inline-flex; align-items: center; justify-content: center;
-    font-size: 13px;
-  }
-  .ai-input-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; font-weight: 700; letter-spacing: 1.4px;
-    color: var(--ink); text-transform: uppercase;
-  }
-  .ai-input-optional {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; letter-spacing: 0.8px;
-    color: var(--ash); text-transform: uppercase;
-  }
-  .ai-input-saved {
-    margin-left: auto;
-    background: var(--coral-50); color: var(--coral-700);
-    border: 1px solid var(--coral-100);
-    padding: 3px 10px; border-radius: 100px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px;
-    text-transform: uppercase;
-    display: none;
-  }
-  .ai-input-saved[data-shown="true"] { display: inline-flex; align-items: center; gap: 4px; }
+  /* Áreas */
+  .ia-block-head { display: flex; align-items: baseline; justify-content: space-between; margin: 6px 4px 12px; }
+  .ia-block-title { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -.4px; }
+  .ia-block-hint { font-size: 12px; color: var(--ash); }
+  .ia-pulse { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .ia-pulse-item { display: flex; align-items: baseline; gap: 8px; padding: 12px 16px; border-radius: 16px; background: var(--paper); border: 1px solid var(--stone); }
+  .ia-pulse-item b { font-family: 'Space Grotesk', sans-serif; font-size: 26px; line-height: 1; letter-spacing: -.5px; }
+  .ia-pulse-item span { font-size: 13px; color: var(--graphite); }
+  .ia-dims { display: grid; gap: 10px; }
+  .ia-dim { background: var(--paper); border: 1px solid var(--stone); border-radius: 18px; overflow: hidden; transition: border-color .15s, box-shadow .15s; }
+  .ia-dim.is-open { border-color: var(--coral-100); box-shadow: 0 6px 24px rgba(40,30,20,.06); }
+  .ia-dim-head { display: flex; align-items: center; gap: 12px; width: 100%; padding: 16px 18px; border: 0; background: transparent; text-align: left; color: var(--ink); }
+  .ia-dim-head:hover { background: rgba(0,0,0,.015); }
+  .ia-dim-arrow { width: 30px; height: 30px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+  .ia-dim-name { flex: 1; font-size: 15px; font-weight: 600; }
+  .ia-dim-status { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 1.2px; }
+  .ia-dim-chev { color: var(--ash); transition: transform .2s; }
+  .ia-dim.is-open .ia-dim-chev { transform: rotate(180deg); }
+  .ia-dim-body { padding: 0 18px 18px 60px; }
+  .ia-dim-body p { margin: 0; font-size: 15px; line-height: 1.65; color: var(--graphite); }
+  .ia-dim-body p strong { color: var(--ink); }
 
-  .ai-input-textarea {
-    width: 100%; resize: vertical;
-    background: var(--cream);
-    border: 1px solid var(--stone);
-    border-radius: 12px;
-    padding: 12px 14px;
-    font-family: 'Inter', sans-serif;
-    font-size: 14px; line-height: 1.55;
-    color: var(--ink);
-    min-height: 88px; outline: none;
-    transition: border-color .15s ease, box-shadow .15s ease;
-  }
-  .ai-input-textarea:focus {
-    border-color: var(--coral-500);
-    box-shadow: 0 0 0 3px rgba(220,120,82,0.08);
-  }
-  .ai-input-textarea::placeholder { color: var(--ash); }
+  /* Estados (gerando, vazio, carregando) */
+  .ia-state { text-align: center; padding: 48px 24px; border-radius: 28px; background: var(--paper); border: 1px solid var(--stone); }
+  .ia-state-ic { width: 64px; height: 64px; margin: 0 auto 16px; border-radius: 50%; background: var(--coral-50); border: 1px solid var(--coral-100); color: var(--coral-500); display: flex; align-items: center; justify-content: center; }
+  .ia-state-ic.is-pulse { animation: ia-pulse 1.8s ease-in-out infinite; }
+  @keyframes ia-pulse { 0%, 100% { opacity: .45; transform: scale(.96); } 50% { opacity: 1; transform: scale(1); } }
+  .ia-state h2 { margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 22px; letter-spacing: -.4px; }
+  .ia-state p { margin: 10px auto 0; max-width: 440px; font-size: 15px; line-height: 1.55; color: var(--graphite); }
+  .ia-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin-top: 22px; padding: 14px 24px; border: 0; border-radius: 100px; background: var(--coral-500); color: var(--cream); font-size: 15px; font-weight: 600; transition: transform .15s, background .15s; }
+  .ia-primary:hover { background: var(--coral-700); }
+  .ia-primary:active { transform: scale(.98); }
+  .ia-primary[disabled] { opacity: .55; cursor: default; }
+  .ia-skel { border-radius: 28px; height: 220px; background: linear-gradient(90deg, var(--sand) 25%, var(--paper) 50%, var(--sand) 75%); background-size: 200% 100%; animation: ia-shimmer 1.4s infinite; }
+  .ia-skel.sm { height: 64px; border-radius: 18px; margin-top: 12px; }
+  @keyframes ia-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 
-  .ai-input-foot {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-top: 10px; gap: 10px; flex-wrap: wrap;
-  }
-  .ai-input-count {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; color: var(--ash);
-  }
+  /* Orientar a próxima análise */
+  .ia-foco { background: var(--paper); border: 1px solid var(--stone); border-radius: 22px; padding: 18px; }
+  .ia-foco-head { display: flex; align-items: center; gap: 10px; color: var(--graphite); }
+  .ia-foco-head b { flex: 1; color: var(--ink); font-size: 15px; }
+  .ia-saved { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 100px; background: var(--sand); font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; color: var(--graphite); }
+  .ia-foco p { margin: 12px 0; font-size: 13.5px; line-height: 1.55; color: var(--graphite); }
+  .ia-foco textarea { width: 100%; min-height: 96px; padding: 12px 14px; border: 1px solid var(--stone); border-radius: 14px; background: var(--cream); color: var(--ink); font: 14px/1.5 Inter, sans-serif; resize: vertical; }
+  .ia-foco textarea:focus { outline: none; border-color: var(--coral-500); }
+  .ia-foco-meta { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+  .ia-count { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ash); }
+  .ia-ghost { padding: 8px 14px; border: 1px solid var(--stone); border-radius: 100px; background: transparent; color: var(--graphite); font-size: 13px; font-weight: 600; }
+  .ia-ghost:hover { background: var(--sand); }
+  .ia-foco .ia-primary { width: 100%; margin-top: 16px; }
+  .ia-howto { margin-top: 14px; padding: 0 4px; font-size: 12.5px; line-height: 1.55; color: var(--ash); }
 
-  .ai-section-eyebrow {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 12px; flex-wrap: wrap;
-    margin: 32px 0 14px;
+  @media (min-width: 980px) {
+    .ia-wrap { padding: 104px 32px 112px; }
+    .ia-title { font-size: 52px; letter-spacing: -1.8px; }
+    .ia-grid { grid-template-columns: minmax(0, 1fr) 340px; gap: 40px; align-items: start; }
+    .ia-side { position: sticky; top: 96px; }
+    /* No computador o botão já está na coluna lateral, sempre à vista. */
+    .ia-refresh { display: none; }
+    .ia-decision { padding: 40px 40px 28px; }
+    .ia-dec-text.s1 { font-size: 34px; }
+    .ia-dec-text.s2 { font-size: 25px; }
+    .ia-dec-text.s3 { font-size: 19px; }
+    .ia-dims { grid-template-columns: 1fr 1fr; align-items: start; }
   }
-  .ai-section-title {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px; letter-spacing: 1.6px; font-weight: 700;
-    color: var(--ink); text-transform: uppercase;
-  }
-  .ai-section-meta {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10.5px; letter-spacing: 1.2px;
-    color: var(--ash); text-transform: uppercase;
-  }
-
-  .ai-flip-grid {
-    display: grid; gap: 16px;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  }
-
-  .ai-flip-card {
-    perspective: 1200px;
-    min-height: 240px;
-    cursor: pointer;
-    background: transparent;
-    border: none;
-    padding: 0;
-    text-align: left;
-    width: 100%;
-    font-family: inherit;
-  }
-  .ai-flip-inner {
-    position: relative; width: 100%; min-height: 240px; height: 100%;
-    transition: transform .55s cubic-bezier(.4,.0,.2,1);
-    transform-style: preserve-3d;
-  }
-  .ai-flip-card.flipped .ai-flip-inner { transform: rotateY(180deg); }
-
-  .ai-flip-face {
-    position: absolute; inset: 0;
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-    background: var(--paper);
-    border: 1px solid var(--stone);
-    border-radius: 18px;
-    padding: 20px;
-    box-shadow: 0 2px 6px rgba(25,20,15,0.04);
-    display: flex; flex-direction: column;
-    overflow: hidden;
-  }
-  .ai-flip-face--back {
-    transform: rotateY(180deg);
-    background: var(--ink);
-    color: var(--cream);
-    border-color: var(--ink);
-  }
-
-  .ai-flip-front-head {
-    display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
-  }
-  .ai-flip-icon {
-    width: 32px; height: 32px; border-radius: 10px;
-    border: 1px solid;
-    display: inline-flex; align-items: center; justify-content: center;
-    font-size: 14px;
-  }
-  .ai-flip-front-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10.5px; letter-spacing: 1.4px; font-weight: 700;
-    color: var(--ink); text-transform: uppercase;
-  }
-  /* Tamanho ajustado pra cada card poder mostrar números OU frases curtas
-     da análise sem cortar. Antes 28px estava grande pra textos. */
-  .ai-flip-front-value {
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 16px; font-weight: 600; letter-spacing: -0.2px;
-    color: var(--ink); line-height: 1.4;
-    margin: 4px 0 10px;
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-line-clamp: 6;
-    -webkit-box-orient: vertical;
-    word-break: normal;
-    overflow-wrap: anywhere;
-  }
-  /* Quando o conteúdo é curto (≤20 chars, número), volta pro display grande */
-  .ai-flip-front-value.is-numeric {
-    font-size: 26px; font-weight: 700; letter-spacing: -0.5px;
-    line-height: 1.05;
-    -webkit-line-clamp: unset;
-    display: block;
-  }
-  .ai-flip-front-foot {
-    margin-top: auto;
-    display: flex; align-items: center; gap: 8px;
-    flex-wrap: wrap;
-  }
-  .ai-flip-delta {
-    display: inline-flex; align-items: center; gap: 4px;
-    padding: 3px 10px; border-radius: 100px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; font-weight: 700; letter-spacing: 1px;
-    border: 1px solid;
-  }
-  .ai-flip-delta--up { color: #2d6b42; background: #d6ecde; border-color: #b5d8c1; }
-  .ai-flip-delta--down { color: var(--rose-500); background: #fdecec; border-color: #f5cccc; }
-  .ai-flip-delta--flat { color: var(--graphite); background: var(--sand); border-color: var(--stone); }
-
-  .ai-flip-hint {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9.5px; letter-spacing: 1px;
-    color: var(--ash); text-transform: uppercase;
-    margin-left: auto;
-  }
-
-  .ai-flip-back-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; letter-spacing: 1.4px; font-weight: 700;
-    color: var(--coral-500); text-transform: uppercase;
-    margin-bottom: 10px;
-  }
-  .ai-flip-back-text {
-    font-family: 'Inter', sans-serif;
-    font-size: 13.5px; line-height: 1.6;
-    color: var(--cream);
-    overflow: auto;
-    flex: 1;
-  }
-  .ai-flip-back-text strong { color: #f1c0a8; font-weight: 600; }
-  .ai-flip-back-foot {
-    margin-top: 12px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9.5px; letter-spacing: 1px;
-    color: var(--ash); text-transform: uppercase;
-  }
-
-  .ai-insight-list {
-    display: flex; flex-direction: column; gap: 12px;
-  }
-  .ai-insight-item {
-    background: var(--paper);
-    border: 1px solid var(--stone);
-    border-radius: 14px;
-    padding: 18px 20px;
-  }
-  .ai-insight-item-title {
-    font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700; font-size: 15.5px;
-    color: var(--ink); margin: 0 0 6px;
-    letter-spacing: -0.2px;
-  }
-  .ai-insight-item-body {
-    font-size: 13.5px; line-height: 1.6;
-    color: var(--graphite); margin: 0;
-  }
-  .ai-insight-item-body strong { color: var(--ink); font-weight: 600; }
-  .ai-insight-item-tags {
-    display: flex; flex-wrap: wrap; gap: 6px;
-    margin-top: 10px;
-  }
-
-  .ai-decision-card {
-    background: var(--ink);
-    border-radius: 18px;
-    padding: 22px 24px;
-    color: var(--cream);
-    margin-bottom: 16px;
-    position: relative; overflow: hidden;
-  }
-  .ai-decision-card::after {
-    content: ''; position: absolute;
-    right: -100px; top: -60px;
-    width: 280px; height: 280px;
-    background: radial-gradient(circle, var(--coral-500) 0%, transparent 60%);
-    opacity: 0.2; pointer-events: none;
-  }
-  .ai-decision-head {
-    display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
-    position: relative;
-  }
-  .ai-decision-icon {
-    width: 28px; height: 28px; border-radius: 9px;
-    background: rgba(220,120,82,0.18);
-    border: 1px solid rgba(220,120,82,0.42);
-    color: var(--coral-500);
-    display: inline-flex; align-items: center; justify-content: center;
-    font-size: 13px;
-  }
-  .ai-decision-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10.5px; letter-spacing: 1.6px; font-weight: 700;
-    color: var(--coral-500); text-transform: uppercase;
-  }
-  .ai-decision-text {
-    font-size: 14.5px; line-height: 1.6;
-    color: var(--cream); margin: 0;
-    position: relative;
-  }
-  .ai-decision-text strong { color: #f1c0a8; font-weight: 600; }
-
-  .ai-empty {
-    background: var(--paper);
-    border: 1px dashed var(--stone);
-    border-radius: 22px;
-    padding: 56px 32px;
-    text-align: center;
-  }
-  .ai-empty-icon {
-    width: 64px; height: 64px;
-    margin: 0 auto 18px;
-    border-radius: 18px;
-    background: var(--coral-50);
-    border: 1px solid var(--coral-100);
-    color: var(--coral-700);
-    display: inline-flex; align-items: center; justify-content: center;
-    font-size: 28px;
-  }
-  .ai-empty-title {
-    font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700; font-size: 22px;
-    color: var(--ink); margin: 0 0 8px;
-    letter-spacing: -0.4px;
-  }
-  .ai-empty-text {
-    font-size: 14px; color: var(--graphite);
-    margin: 0 auto 24px; max-width: 440px; line-height: 1.55;
-  }
-
-  .ai-skeleton-grid {
-    display: grid; gap: 16px;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  }
-  .ai-skeleton-card {
-    background: var(--paper);
-    border: 1px solid var(--stone);
-    border-radius: 18px;
-    padding: 20px;
-    min-height: 200px;
-    display: flex; flex-direction: column; gap: 12px;
-  }
-  .ai-skeleton-line {
-    height: 14px; border-radius: 7px;
-    background: linear-gradient(90deg, var(--sand) 0%, var(--stone) 50%, var(--sand) 100%);
-    background-size: 200% 100%;
-    animation: ai-shimmer 1.4s ease-in-out infinite;
-  }
-  .ai-skeleton-line.lg { height: 28px; width: 60%; }
-  .ai-skeleton-line.sm { height: 10px; width: 40%; }
-  @keyframes ai-shimmer {
-    0%   { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-  }
-
-  .ai-error-card {
-    background: #fdecec;
-    border: 1px solid #f5cccc;
-    border-radius: 18px;
-    padding: 22px 24px;
-    color: #6e2828;
-    margin-bottom: 20px;
-  }
-  .ai-error-head {
-    display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
-  }
-  .ai-error-icon {
-    width: 28px; height: 28px; border-radius: 9px;
-    background: rgba(200,80,80,0.18);
-    color: var(--rose-500);
-    display: inline-flex; align-items: center; justify-content: center;
-    font-size: 14px;
-  }
-  .ai-error-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10.5px; letter-spacing: 1.4px; font-weight: 700;
-    color: var(--rose-500); text-transform: uppercase;
-  }
-  .ai-error-text { font-size: 13.5px; line-height: 1.55; margin: 0; }
-
-  .ai-hidden { display: none !important; }
-
-  .ai-btn-disabled {
-    opacity: 0.55; pointer-events: none; cursor: not-allowed;
-  }
-
-  .ai-footer-note {
-    text-align: center; margin-top: 32px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10.5px; letter-spacing: 0.8px;
-    color: var(--ash); text-transform: uppercase;
-  }
-
-  @media (max-width: 720px) {
-    .ai-page { padding: 40px 16px 64px; }
-    .ai-flip-front-value { font-size: 14.5px; }
-    .ai-flip-front-value.is-numeric { font-size: 24px; }
-    .ai-decision-card { padding: 18px; }
+  @media (max-width: 560px) {
+    .ia-head { flex-direction: column; align-items: flex-start; }
+    .ia-dim-body { padding-left: 18px; }
   }
 </style>
 
-<div class="ai-page">
-  <div class="ai-hero loov-hero loov-hero--left">
-    <div class="loov-eyebrow"><span class="dot"></span>IA INSIGHTS</div>
-    <h1 class="loov-h1">Seu negócio, <span class="accent">analisado</span>.</h1>
-    <p class="loov-lead">Análise gerada por IA do faturamento, retenção e crescimento — com decisões concretas para o ciclo atual.</p>
-  </div>
-
-  <div id="ai-unresolved-banner" class="ai-banner ai-banner--rose ai-hidden">
-    <div class="ai-banner-icon">!</div>
-    <div class="ai-banner-body">
-      <p class="ai-banner-title">Resolva pendências antes de gerar a análise</p>
-      <p class="ai-banner-text" id="ai-unresolved-text">Há atendimentos de dias anteriores aguardando confirmação. Sem isso os números ficam imprecisos.</p>
-      <a href="/" class="ai-banner-link">Ir pro Dashboard &rarr;</a>
-    </div>
-  </div>
-
-  <div class="ai-toolbar">
-    <div class="ai-toolbar-left">
-      <span id="ai-status-badge" class="ai-status-badge" data-state="idle">
-        <span class="dot"></span><span id="ai-status-label">Carregando</span>
-      </span>
-      <span id="ai-cycle-label" class="ai-cycle-meta"></span>
-    </div>
-    <div class="ai-toolbar-right">
-      <button id="ai-generate-btn" type="button" class="loov-btn-primary loov-btn-sm">
-        <span id="ai-generate-btn-label">Gerar análise</span>
-      </button>
-    </div>
-  </div>
-
-  <div id="ai-error-banner" class="ai-error-card ai-hidden">
-    <div class="ai-error-head">
-      <div class="ai-error-icon">!</div>
-      <div class="ai-error-label">Erro</div>
-    </div>
-    <p class="ai-error-text" id="ai-error-message">Não foi possível gerar a análise.</p>
-  </div>
-
-  <div class="ai-input-card">
-    <div class="ai-input-head">
-      <div class="ai-input-icon">&#9678;</div>
-      <span class="ai-input-label">Foco desta análise</span>
-      <span class="ai-input-optional">opcional</span>
-      <span id="ai-input-saved-pill" class="ai-input-saved">SALVO</span>
-    </div>
-    <textarea id="ai-owner-input" class="ai-input-textarea"
-              maxlength="300"
-              placeholder="Ex: preciso reduzir custos, estou com muita ociosidade, quero entender por que clientes somem..."></textarea>
-    <div class="ai-input-foot">
-      <span class="ai-input-count"><span id="ai-input-count">0</span>/300</span>
-      <button id="ai-input-save-btn" type="button" class="loov-btn-secondary loov-btn-sm" disabled>
-        Salvar foco
-      </button>
-    </div>
-  </div>
-
-  <div id="ai-decision-card" class="ai-decision-card ai-hidden">
-    <div class="ai-decision-head">
-      <div class="ai-decision-icon">&#9889;</div>
-      <span class="ai-decision-label">Decisão prioritária</span>
-    </div>
-    <p class="ai-decision-text" id="ai-decision-text"></p>
-  </div>
-
-  <div id="ai-loading-skeleton" class="ai-hidden">
-    <div class="ai-section-eyebrow">
-      <span class="ai-section-title">Processando análise</span>
-      <span class="ai-section-meta">isso pode levar até 1 minuto</span>
-    </div>
-    <div class="ai-skeleton-grid">
-      <div class="ai-skeleton-card">
-        <div class="ai-skeleton-line sm"></div>
-        <div class="ai-skeleton-line lg"></div>
-        <div class="ai-skeleton-line"></div>
-        <div class="ai-skeleton-line" style="width: 75%;"></div>
+<div class="ia">
+  <div class="ia-wrap">
+    <div class="ia-head">
+      <div>
+        <div class="ia-eyebrow">Análise</div>
+        <h1 class="ia-title">IA insights</h1>
+        <p class="ia-sub">O que fazer esta semana no seu lava-rápido, a partir das vendas, serviços, clientes e agenda.</p>
       </div>
-      <div class="ai-skeleton-card">
-        <div class="ai-skeleton-line sm"></div>
-        <div class="ai-skeleton-line lg"></div>
-        <div class="ai-skeleton-line"></div>
-        <div class="ai-skeleton-line" style="width: 60%;"></div>
-      </div>
-      <div class="ai-skeleton-card">
-        <div class="ai-skeleton-line sm"></div>
-        <div class="ai-skeleton-line lg"></div>
-        <div class="ai-skeleton-line"></div>
-        <div class="ai-skeleton-line" style="width: 80%;"></div>
-      </div>
+      <button type="button" class="ia-refresh" id="ia-refresh" hidden><i data-feather="refresh-cw" style="width:15px;height:15px"></i>Gerar nova análise</button>
+    </div>
+
+    <div class="ia-banner ia-banner--rose" id="ia-unresolved" hidden>
+      <i data-feather="alert-triangle" style="width:18px;height:18px"></i>
+      <div><b>Resolva as pendências antes de gerar a análise</b><span id="ia-unresolved-text"></span><br><a href="/">Ir pro painel →</a></div>
+    </div>
+    <div class="ia-banner ia-banner--err" id="ia-error" hidden>
+      <i data-feather="alert-circle" style="width:18px;height:18px"></i>
+      <div><b>Não deu certo</b><span id="ia-error-text"></span></div>
+    </div>
+
+    <div class="ia-grid">
+      <main>
+        <div id="ia-loading"><div class="ia-skel"></div><div class="ia-skel sm"></div><div class="ia-skel sm"></div></div>
+
+        <div class="ia-state" id="ia-generating" hidden>
+          <div class="ia-state-ic is-pulse"><i data-feather="cpu" style="width:26px;height:26px"></i></div>
+          <h2>Lendo seu negócio</h2>
+          <p>Cruzando vendas, serviços, clientes e agenda. Leva até um minuto e você pode sair desta página.</p>
+        </div>
+
+        <div class="ia-state" id="ia-empty" hidden>
+          <div class="ia-state-ic"><i data-feather="cpu" style="width:24px;height:24px"></i></div>
+          <h2>Diagnóstico do seu negócio</h2>
+          <p>A IA cruza vendas, serviços, clientes e agenda e devolve uma decisão concreta pra semana, com o porquê e a leitura de cada área.</p>
+          <button type="button" class="ia-primary" data-generate><i data-feather="cpu" style="width:16px;height:16px"></i>Gerar análise</button>
+        </div>
+
+        <div id="ia-result" hidden>
+          <section class="ia-decision" aria-labelledby="ia-dec-eyebrow">
+            <div class="ia-dec-top">
+              <span class="ia-dec-eyebrow" id="ia-dec-eyebrow">A DECISÃO DESTA SEMANA</span>
+              <span class="ia-fresh" id="ia-fresh" hidden><i></i>NOVA</span>
+            </div>
+            <p class="ia-dec-text" id="ia-dec-text"></p>
+            <div class="ia-alert" id="ia-alert" hidden>
+              <i data-feather="alert-triangle" style="width:15px;height:15px"></i>
+              <div><b>Atenção paralela</b><p id="ia-alert-text"></p></div>
+            </div>
+            <div class="ia-dec-rule"></div>
+            <div class="ia-dec-meta" id="ia-dec-meta"></div>
+          </section>
+
+          <section class="ia-why" id="ia-why" hidden style="margin-top:28px">
+            <div class="ia-why-eyebrow">Por quê</div>
+            <p id="ia-why-text"></p>
+          </section>
+
+          <section style="margin-top:32px">
+            <div class="ia-block-head">
+              <span class="ia-block-title">Como cada área está</span>
+              <span class="ia-block-hint">clique pra ler</span>
+            </div>
+            <div class="ia-pulse" id="ia-pulse"></div>
+            <div class="ia-dims" id="ia-dims"></div>
+          </section>
+        </div>
+      </main>
+
+      <aside class="ia-side">
+        <div class="ia-foco" id="ia-foco">
+          <div class="ia-foco-head">
+            <i data-feather="target" style="width:15px;height:15px"></i>
+            <b>Orientar a próxima análise</b>
+            <span class="ia-saved" id="ia-saved" hidden><i data-feather="check" style="width:10px;height:10px"></i>salvo</span>
+          </div>
+          <p>Conte o que está te incomodando e a próxima análise olha pra isso primeiro.</p>
+          <textarea id="ia-foco-input" maxlength="300" placeholder="Ex: preciso reduzir custos, estou com muita ociosidade…"></textarea>
+          <div class="ia-foco-meta">
+            <span class="ia-count"><span id="ia-count">0</span>/300</span>
+            <button type="button" class="ia-ghost" id="ia-save" hidden>Salvar foco</button>
+          </div>
+          <button type="button" class="ia-primary" data-generate id="ia-gen-side"><i data-feather="refresh-cw" style="width:15px;height:15px"></i><span>Gerar nova análise</span></button>
+        </div>
+        <p class="ia-howto">A análise é refeita a cada ciclo. Gerar uma nova agora troca a atual pela leitura mais recente dos seus números.</p>
+      </aside>
     </div>
   </div>
-
-  <div id="ai-empty-state" class="ai-empty ai-hidden">
-    <div class="ai-empty-icon">&#9881;</div>
-    <h2 class="ai-empty-title">Sem análise ainda</h2>
-    <p class="ai-empty-text">A IA cruza vendas, serviços, clientes e agenda e traz decisões concretas pra você aplicar. Leva cerca de 1 minuto.</p>
-    <button type="button" class="loov-btn-primary loov-btn-lg" data-ai-action="generate">
-      Gerar análise
-    </button>
-  </div>
-
-  <div id="ai-flip-section" class="ai-hidden">
-    <div class="ai-section-eyebrow">
-      <span class="ai-section-title">Análise detalhada</span>
-      <span class="ai-section-meta">toque para virar</span>
-    </div>
-    <div id="ai-flip-grid" class="ai-flip-grid"></div>
-  </div>
-
-  <div id="ai-insights-section" class="ai-hidden">
-    <div class="ai-section-eyebrow">
-      <span class="ai-section-title">Insights</span>
-      <span class="ai-section-meta" id="ai-insights-count"></span>
-    </div>
-    <div id="ai-insights-list" class="ai-insight-list"></div>
-  </div>
-
-  <div id="ai-footer-note" class="ai-footer-note ai-hidden"></div>
 </div>
 
-<script>
+<script nonce="<%= csp_nonce %>">
 (function () {
-  var endpoints = {
-    show:   '/owner/ai_insights',
-    status: '/owner/ai_insights/status',
-    create: '/owner/ai_insights',
-    input:  '/owner/ai_insights/input'
+  var SECTIONS = [
+    { key: 'sales', label: 'Faturamento' }, { key: 'services', label: 'Serviços' },
+    { key: 'clients', label: 'Clientes' }, { key: 'demand', label: 'Demanda' },
+    { key: 'retention', label: 'Retenção' }, { key: 'growth', label: 'Crescimento' }
+  ];
+  // A cor significa DIREÇÃO (igual ao app), e a seta repete a informação pra
+  // quem não distingue verde de vermelho.
+  var STATUS = {
+    up:     { icon: 'arrow-up',   color: '#2d8a64', bg: 'rgba(93,195,159,.14)', label: 'SUBINDO' },
+    down:   { icon: 'arrow-down', color: '#c85050', bg: 'rgba(200,80,80,.10)', label: 'CAINDO' },
+    stable: { icon: 'minus',      color: '#8b857b', bg: 'rgba(0,0,0,.05)',      label: 'ESTÁVEL' }
   };
-
-  var state = {
-    status:     'loading',
-    data:       null,
-    polling:    false,
-    pollTimer:  null,
-    inputDirty: false,
-    saving:     false,
-    flipped:    {}
-  };
-
-  function csrfToken() {
-    var m = document.querySelector('meta[name="csrf-token"]');
-    return m ? m.content : '';
-  }
-
-  function jsonFetch(url, opts) {
-    opts = opts || {};
-    var headers = Object.assign({
-      'Accept':       'application/json',
-      'Content-Type': 'application/json',
-      'X-CSRF-Token': csrfToken()
-    }, opts.headers || {});
-    return fetch(url, Object.assign({}, opts, { headers: headers, credentials: 'same-origin' }));
-  }
-
+  var CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content;
+  var st = { analysis: null, generating: false, openDim: null, savedInput: false, dirty: false };
   function $(id) { return document.getElementById(id); }
-  function show(el) { if (el) el.classList.remove('ai-hidden'); }
-  function hide(el) { if (el) el.classList.add('ai-hidden'); }
-  function setText(id, txt) { var el = $(id); if (el) el.textContent = txt == null ? '' : String(txt); }
-
-  function escapeHtml(s) {
-    return String(s == null ? '' : s)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
-
-  function boldifyNumbers(text) {
-    var safe = escapeHtml(text);
-    return safe.replace(/(R\$\s*[\d.,]+|[\d.,]+\s*%)/g, '<strong>$1</strong>');
-  }
-
-  function setStatusBadge(stateName, label) {
-    var badge = $('ai-status-badge');
-    if (!badge) return;
-    badge.setAttribute('data-state', stateName);
-    setText('ai-status-label', label);
-  }
-
-  function setGenerateButton(mode, opts) {
+  function icon(n, s) { return window.feather && feather.icons[n] ? feather.icons[n].toSvg({ width: s, height: s }) : ''; }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  // Valores em R$ e % em negrito, como no app.
+  function bold(t) { return esc(t).replace(/(R\$\s*[\d.,]+|[\d.,]+\s*%)/g, '<strong>$1</strong>'); }
+  function api(url, opts) {
     opts = opts || {};
-    var btn = $('ai-generate-btn');
-    var lbl = $('ai-generate-btn-label');
-    if (!btn || !lbl) return;
-    btn.classList.remove('ai-btn-disabled');
-    btn.disabled = false;
-    if (mode === 'processing') {
-      lbl.textContent = 'Gerando...';
-      btn.disabled = true;
-      btn.classList.add('ai-btn-disabled');
-    } else if (mode === 'update') {
-      lbl.textContent = 'Atualizar';
-    } else if (mode === 'locked') {
-      lbl.textContent = 'Resolver pendências';
-      btn.disabled = true;
-      btn.classList.add('ai-btn-disabled');
-    } else {
-      lbl.textContent = 'Gerar análise';
-    }
+    return fetch(url, Object.assign({ credentials: 'same-origin' }, opts, {
+      headers: Object.assign({ Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF }, opts.headers || {})
+    }));
   }
 
-  // ── Section / metric configuration ────────────────────────────────────────
+  // Legado: cache antigo trazia o alerta embutido no texto da decisão.
+  var ALERTA = /Aten[çc][ãa]o paralela\s*:/i;
+  function splitDecisao(t) {
+    t = String(t || '').trim();
+    var m = t.match(ALERTA);
+    if (!m || m.index === 0) return { principal: t, alerta: null };
+    return { principal: t.slice(0, m.index).trim(), alerta: t.slice(m.index + m[0].length).trim() };
+  }
+  // A fonte acompanha o comprimento: curta é manchete, longa é leitura.
+  function escala(len) { return len <= 110 ? 's1' : len <= 240 ? 's2' : 's3'; }
 
-  var SECTION_CFG = {
-    sales:     { label: 'Faturamento',  icon: '↗', color: 'var(--coral-500)', tint: 'rgba(220,120,82,0.12)', border: 'rgba(220,120,82,0.42)' },
-    services:  { label: 'Servicos',     icon: '⚒', color: 'var(--pool-500)',  tint: 'rgba(75,142,192,0.14)', border: 'rgba(75,142,192,0.42)' },
-    clients:   { label: 'Clientes',     icon: '☆', color: 'var(--graphite)',  tint: 'rgba(87,81,72,0.12)',   border: 'rgba(87,81,72,0.30)' },
-    demand:    { label: 'Demanda',      icon: '⏱', color: 'var(--amber-500)', tint: 'rgba(214,177,74,0.18)', border: 'rgba(214,177,74,0.50)' },
-    retention: { label: 'Retencao',     icon: '↻', color: 'var(--mint-500)',  tint: 'rgba(93,195,159,0.18)', border: 'rgba(93,195,159,0.45)' },
-    growth:    { label: 'Crescimento',  icon: '↗', color: 'var(--pool-500)',  tint: 'rgba(75,142,192,0.14)', border: 'rgba(75,142,192,0.42)' }
-  };
+  function view(name) {
+    $('ia-loading').hidden    = name !== 'loading';
+    $('ia-generating').hidden = name !== 'generating';
+    $('ia-empty').hidden      = name !== 'empty';
+    $('ia-result').hidden     = name !== 'result';
+    $('ia-refresh').hidden    = name !== 'result';
+    $('ia-gen-side').hidden   = name !== 'result';
+    $('ia-gen-side').disabled = st.generating;
+  }
+  function erro(msg) { $('ia-error').hidden = !msg; $('ia-error-text').textContent = msg ? ' ' + msg : ''; }
 
-  function statusToDelta(status) {
-    if (status === 'up')   return { cls: 'up',   icon: '↑', label: 'Subindo' };
-    if (status === 'down') return { cls: 'down', icon: '↓', label: 'Caindo' };
-    return { cls: 'flat', icon: '=',  label: 'Estavel' };
+  function render() {
+    var a = st.analysis;
+    var d = splitDecisao(a.decisao_prioritaria);
+    var dec = $('ia-dec-text');
+    dec.className = 'ia-dec-text ' + escala(d.principal.length);
+    dec.innerHTML = bold(d.principal);
+    var alerta = (a.alerta_pipeline && a.alerta_pipeline.mensagem) || d.alerta;
+    $('ia-alert').hidden = !alerta;
+    $('ia-alert-text').innerHTML = alerta ? bold(alerta) : '';
+    $('ia-fresh').hidden = a.cached !== false;
+    $('ia-dec-meta').textContent = 'Gerada em ' + (a.generated_at || '—') +
+      (a.next_refresh ? '  ·  próxima ' + a.next_refresh : '') + (a.days_remaining > 0 ? ' (' + a.days_remaining + 'd)' : '');
+    $('ia-why').hidden = !a.cycle_summary;
+    $('ia-why-text').innerHTML = bold(a.cycle_summary || '');
+
+    // Panorama antes do detalhe.
+    var vals = SECTIONS.map(function (s) { return ((a.sections || {})[s.key] || {}).status || 'stable'; });
+    var up = vals.filter(function (v) { return v === 'up'; }).length;
+    var down = vals.filter(function (v) { return v === 'down'; }).length;
+    var flat = vals.length - up - down;
+    var partes = [];
+    if (up)   partes.push([up, up === 1 ? 'área subindo' : 'áreas subindo', STATUS.up.color]);
+    if (down) partes.push([down, 'caindo', STATUS.down.color]);
+    if (flat) partes.push([flat, flat === 1 ? 'estável' : 'estáveis', STATUS.stable.color]);
+    $('ia-pulse').innerHTML = partes.map(function (p) {
+      return '<div class="ia-pulse-item"><b style="color:' + p[2] + '">' + p[0] + '</b><span>' + p[1] + '</span></div>';
+    }).join('');
+    renderDims();
   }
 
-  function buildFlipCards(data) {
-    var grid = $('ai-flip-grid');
-    if (!grid) return;
-    grid.innerHTML = '';
-
-    var sections = (data && data.sections) || {};
-    var keys = Object.keys(SECTION_CFG);
-    var anyContent = keys.some(function (k) {
-      var s = sections[k];
-      return s && (typeof s === 'string' ? s.trim() : (s.text || '').trim());
-    });
-
-    if (!anyContent) {
-      hide($('ai-flip-section'));
-      return;
-    }
-
-    keys.forEach(function (key) {
-      var cfg = SECTION_CFG[key];
-      var section = sections[key] || {};
-      var text = typeof section === 'string' ? section : (section.text || '');
-      var status = (typeof section === 'object' && section.status) || 'stable';
-      if (!text || !text.trim()) return;
-
-      var delta = statusToDelta(status);
-      var preview = text.split(/(?<=[.!?])\s/)[0] || text;
-      if (preview.length > 110) preview = preview.slice(0, 107) + '...';
-      // Numérico/curto vira display grande; texto longo fica em formato legível
-      var isNumericPreview = preview.length <= 20 && /^[\sR$0-9.,%+\-]+$/.test(preview);
-      var frontValueClass = isNumericPreview ? 'ai-flip-front-value is-numeric' : 'ai-flip-front-value';
-
-      var card = document.createElement('button');
-      card.type = 'button';
-      card.className = 'ai-flip-card';
-      card.setAttribute('data-key', key);
-      card.setAttribute('aria-label', cfg.label);
-
-      card.innerHTML =
-        '<div class="ai-flip-inner">' +
-          '<div class="ai-flip-face ai-flip-face--front">' +
-            '<div class="ai-flip-front-head">' +
-              '<span class="ai-flip-icon" style="background:' + cfg.tint + ';border-color:' + cfg.border + ';color:' + cfg.color + ';">' + cfg.icon + '</span>' +
-              '<span class="ai-flip-front-label">' + escapeHtml(cfg.label.toUpperCase()) + '</span>' +
-            '</div>' +
-            '<div class="' + frontValueClass + '">' + boldifyNumbers(preview) + '</div>' +
-            '<div class="ai-flip-front-foot">' +
-              '<span class="ai-flip-delta ai-flip-delta--' + delta.cls + '">' + delta.icon + ' ' + escapeHtml(delta.label) + '</span>' +
-              '<span class="ai-flip-hint">virar</span>' +
-            '</div>' +
-          '</div>' +
-          '<div class="ai-flip-face ai-flip-face--back">' +
-            '<div class="ai-flip-back-label">' + escapeHtml(cfg.label.toUpperCase()) + ' &middot; ANALISE</div>' +
-            '<div class="ai-flip-back-text">' + boldifyNumbers(text) + '</div>' +
-            '<div class="ai-flip-back-foot">toque para voltar</div>' +
-          '</div>' +
-        '</div>';
-
-      card.addEventListener('click', function () {
-        card.classList.toggle('flipped');
-      });
-
-      grid.appendChild(card);
-    });
-
-    show($('ai-flip-section'));
+  function renderDims() {
+    var a = st.analysis;
+    $('ia-dims').innerHTML = SECTIONS.map(function (s) {
+      var sec = (a.sections || {})[s.key] || {};
+      var cfg = STATUS[sec.status] || STATUS.stable;
+      var open = st.openDim === s.key;
+      return '<div class="ia-dim' + (open ? ' is-open' : '') + '">' +
+        '<button type="button" class="ia-dim-head" data-dim="' + s.key + '" aria-expanded="' + open + '">' +
+          '<span class="ia-dim-arrow" style="background:' + cfg.bg + ';color:' + cfg.color + '">' + icon(cfg.icon, 14) + '</span>' +
+          '<span class="ia-dim-name">' + s.label + '</span>' +
+          '<span class="ia-dim-status" style="color:' + cfg.color + '">' + cfg.label + '</span>' +
+          '<span class="ia-dim-chev">' + icon('chevron-down', 16) + '</span>' +
+        '</button>' +
+        (open ? '<div class="ia-dim-body"><p>' + bold(sec.text || 'Sem dados para esta área.') + '</p></div>' : '') +
+      '</div>';
+    }).join('');
   }
-
-  function buildInsightsList(data) {
-    var list = $('ai-insights-list');
-    if (!list) return;
-    list.innerHTML = '';
-
-    var items = [];
-    if (data && Array.isArray(data.insights)) {
-      items = data.insights;
-    } else {
-      if (data && data.cycle_summary) {
-        items.push({ title: 'Resumo do ciclo', body: data.cycle_summary, tags: ['ciclo'] });
-      }
-    }
-
-    if (!items.length) {
-      hide($('ai-insights-section'));
-      return;
-    }
-
-    items.forEach(function (raw) {
-      var item;
-      if (typeof raw === 'string') {
-        item = { title: '', body: raw, tags: [] };
-      } else {
-        item = {
-          title: raw.title || '',
-          body:  raw.body  || raw.text || '',
-          tags:  Array.isArray(raw.tags) ? raw.tags : []
-        };
-      }
-
-      var node = document.createElement('div');
-      node.className = 'ai-insight-item';
-      var tagsHtml = item.tags.map(function (t) {
-        return '<span class="loov-pill loov-pill--neutral">' + escapeHtml(t) + '</span>';
-      }).join('');
-
-      node.innerHTML =
-        (item.title ? '<h3 class="ai-insight-item-title">' + escapeHtml(item.title) + '</h3>' : '') +
-        '<p class="ai-insight-item-body">' + boldifyNumbers(item.body) + '</p>' +
-        (tagsHtml ? '<div class="ai-insight-item-tags">' + tagsHtml + '</div>' : '');
-
-      list.appendChild(node);
-    });
-
-    setText('ai-insights-count', items.length + ' INSIGHT' + (items.length === 1 ? '' : 'S'));
-    show($('ai-insights-section'));
-  }
-
-  function applyDecision(data) {
-    var card = $('ai-decision-card');
-    var text = data && (data.decisao_prioritaria || (data.metrics && data.metrics.decision));
-    if (text) {
-      $('ai-decision-text').innerHTML = boldifyNumbers(text);
-      show(card);
-    } else {
-      hide(card);
-    }
-  }
-
-  function applyCycleLabel(data) {
-    if (!data) { setText('ai-cycle-label', ''); return; }
-    var bits = [];
-    if (data.cycle_label)   bits.push(data.cycle_label);
-    if (data.generated_at)  bits.push('Gerado em ' + data.generated_at);
-    if (data.next_refresh)  bits.push('Proximo: ' + data.next_refresh + (data.days_remaining ? ' (' + data.days_remaining + 'd)' : ''));
-    var el = $('ai-cycle-label');
-    if (el) el.innerHTML = bits.map(function (b, i) {
-      return (i === 0 ? '<strong>' + escapeHtml(b) + '</strong>' : escapeHtml(b));
-    }).join(' &middot; ');
-  }
-
-  function applyOwnerInput(data) {
-    var ta = $('ai-owner-input');
-    var hasSaved = !!(data && (data.has_input || data.owner_input));
-    if (ta && !state.inputDirty) {
-      ta.value = (data && data.owner_input) || '';
-      updateInputCount();
-    }
-    var pill = $('ai-input-saved-pill');
-    if (pill) pill.setAttribute('data-shown', hasSaved ? 'true' : 'false');
-    var btn = $('ai-input-save-btn');
-    if (btn) {
-      var len = ta ? ta.value.trim().length : 0;
-      btn.disabled = (len === 0) || (!state.inputDirty && hasSaved);
-    }
-  }
-
-  function updateInputCount() {
-    var ta = $('ai-owner-input');
-    var cnt = $('ai-input-count');
-    if (!ta || !cnt) return;
-    cnt.textContent = String(ta.value.length);
-  }
-
-  // ── Render orchestration ──────────────────────────────────────────────────
-
-  function renderState() {
-    var s = state.status;
-    var data = state.data;
-
-    if (s === 'unresolved') {
-      show($('ai-unresolved-banner'));
-      setGenerateButton('locked');
-      setStatusBadge('error', 'Bloqueado');
-    } else {
-      hide($('ai-unresolved-banner'));
-    }
-
-    if (s === 'loading') {
-      setStatusBadge('idle', 'Carregando');
-      setGenerateButton('processing');
-      hide($('ai-empty-state'));
-      hide($('ai-flip-section'));
-      hide($('ai-insights-section'));
-      hide($('ai-decision-card'));
-      hide($('ai-error-banner'));
-      hide($('ai-footer-note'));
-      hide($('ai-loading-skeleton'));
-      return;
-    }
-
-    if (s === 'processing') {
-      setStatusBadge('processing', 'Processando');
-      setGenerateButton('processing');
-      show($('ai-loading-skeleton'));
-      hide($('ai-empty-state'));
-      hide($('ai-flip-section'));
-      hide($('ai-insights-section'));
-      hide($('ai-decision-card'));
-      hide($('ai-error-banner'));
-      hide($('ai-footer-note'));
-      return;
-    }
-
-    if (s === 'error') {
-      setStatusBadge('error', 'Erro');
-      setGenerateButton(data && (data.sections || data.metrics) ? 'update' : 'idle');
-      show($('ai-error-banner'));
-      hide($('ai-loading-skeleton'));
-      hide($('ai-empty-state'));
-      return;
-    }
-
-    if (s === 'idle' || s === 'needs_generation' || s === 'unresolved') {
-      hide($('ai-loading-skeleton'));
-      hide($('ai-flip-section'));
-      hide($('ai-insights-section'));
-      hide($('ai-decision-card'));
-      hide($('ai-footer-note'));
-      if (s === 'unresolved') return;
-      setStatusBadge('idle', 'Sem analise');
-      setGenerateButton('idle');
-      show($('ai-empty-state'));
-      hide($('ai-error-banner'));
-      return;
-    }
-
-    if (s === 'ready') {
-      setStatusBadge('ready', 'Pronto');
-      setGenerateButton('update');
-      hide($('ai-loading-skeleton'));
-      hide($('ai-empty-state'));
-      hide($('ai-error-banner'));
-      applyDecision(data);
-      buildFlipCards(data);
-      buildInsightsList(data);
-      applyCycleLabel(data);
-      applyOwnerInput(data);
-      var note = $('ai-footer-note');
-      if (note && data && data.generated_at) {
-        note.textContent = 'Analise gerada em ' + data.generated_at;
-        show(note);
-      } else {
-        hide(note);
-      }
-      return;
-    }
-  }
-
-  function applyResponse(json) {
-    var s = json && json.status;
-    if (s === 'ready') {
-      state.status = 'ready';
-      state.data   = json;
-    } else if (s === 'processing') {
-      state.status = 'processing';
-      startPolling();
-    } else if (s === 'error') {
-      state.status = 'error';
-      state.data   = json;
-      var msg = json.message || json.error_message || 'Nao foi possivel gerar a analise.';
-      setText('ai-error-message', msg);
-    } else {
-      state.status = 'idle';
-      state.data   = null;
-    }
-    applyCycleLabel(json);
-    applyOwnerInput(json);
-    renderState();
-  }
-
-  // ── Polling ───────────────────────────────────────────────────────────────
-
-  function startPolling() {
-    if (state.polling) return;
-    state.polling = true;
-    var tick = function () {
-      jsonFetch(endpoints.status)
-        .then(function (r) { return r.json(); })
-        .then(function (json) {
-          if (json.status === 'processing') {
-            state.pollTimer = setTimeout(tick, 4000);
-          } else {
-            state.polling = false;
-            state.pollTimer = null;
-            applyResponse(json);
-          }
-        })
-        .catch(function () {
-          state.pollTimer = setTimeout(tick, 4000);
-        });
-    };
-    state.pollTimer = setTimeout(tick, 4000);
-    renderState();
-  }
-
-  function stopPolling() {
-    state.polling = false;
-    if (state.pollTimer) { clearTimeout(state.pollTimer); state.pollTimer = null; }
-  }
-
-  // ── Actions ───────────────────────────────────────────────────────────────
-
-  function loadInitial() {
-    state.status = 'loading';
-    renderState();
-    jsonFetch(endpoints.show)
-      .then(function (r) { return r.json(); })
-      .then(applyResponse)
-      .catch(function () {
-        state.status = 'error';
-        setText('ai-error-message', 'Falha ao carregar a analise. Verifique sua conexao.');
-        renderState();
-      });
-  }
-
-  function generate(force) {
-    var ta = $('ai-owner-input');
-    var inputText = ta ? ta.value.trim() : '';
-    var preflight = (state.inputDirty && inputText)
-      ? saveInput(inputText, true)
-      : Promise.resolve();
-
-    preflight.then(function () {
-      stopPolling();
-      state.status = 'processing';
-      hide($('ai-error-banner'));
-      renderState();
-
-      var url = endpoints.create + (force ? '?force=true' : '');
-      return jsonFetch(url, { method: 'POST' });
-    }).then(function (res) {
-      return res.json().then(function (json) { return { ok: res.ok, status: res.status, json: json }; });
-    }).then(function (out) {
-      if (!out.ok) {
-        if (out.json && out.json.code === 'unresolved_past') {
-          state.status = 'unresolved';
-          state.data = null;
-          setText('ai-unresolved-text', out.json.error || 'Resolva pendencias no Dashboard antes de gerar a analise.');
-          renderState();
-          return;
-        }
-        state.status = 'error';
-        setText('ai-error-message', (out.json && (out.json.error || out.json.message)) || 'Nao foi possivel gerar a analise.');
-        renderState();
-        return;
-      }
-      applyResponse(out.json);
-    }).catch(function () {
-      state.status = 'error';
-      setText('ai-error-message', 'Falha de conexao. Tente novamente.');
-      renderState();
-    });
-  }
-
-  function saveInput(text, silent) {
-    state.saving = true;
-    var btn = $('ai-input-save-btn');
-    if (btn) { btn.disabled = true; btn.textContent = 'Salvando...'; }
-    return jsonFetch(endpoints.input, {
-      method: 'POST',
-      body:   JSON.stringify({ input: text })
-    }).then(function (r) {
-      if (!r.ok) throw new Error('save failed');
-      return r.json();
-    }).then(function () {
-      state.saving = false;
-      state.inputDirty = false;
-      var pill = $('ai-input-saved-pill');
-      if (pill) pill.setAttribute('data-shown', 'true');
-      if (btn) { btn.textContent = 'Salvar foco'; btn.disabled = true; }
-    }).catch(function () {
-      state.saving = false;
-      if (btn) { btn.textContent = 'Salvar foco'; btn.disabled = false; }
-      if (!silent) {
-        state.status = 'error';
-        setText('ai-error-message', 'Nao foi possivel salvar o foco. Tente novamente.');
-        renderState();
-      }
-    });
-  }
-
-  // ── Wiring ────────────────────────────────────────────────────────────────
-
-  document.addEventListener('DOMContentLoaded', function () {
-    var genBtn = $('ai-generate-btn');
-    if (genBtn) {
-      genBtn.addEventListener('click', function () {
-        var hasData = state.data && (state.data.sections || state.data.metrics);
-        generate(!!hasData);
-      });
-    }
-
-    document.querySelectorAll('[data-ai-action="generate"]').forEach(function (el) {
-      el.addEventListener('click', function () { generate(false); });
-    });
-
-    var ta = $('ai-owner-input');
-    if (ta) {
-      ta.addEventListener('input', function () {
-        state.inputDirty = true;
-        updateInputCount();
-        var btn = $('ai-input-save-btn');
-        if (btn) btn.disabled = ta.value.trim().length === 0;
-        var pill = $('ai-input-saved-pill');
-        if (pill) pill.setAttribute('data-shown', 'false');
-      });
-    }
-
-    var saveBtn = $('ai-input-save-btn');
-    if (saveBtn) {
-      saveBtn.addEventListener('click', function () {
-        var text = ta ? ta.value.trim() : '';
-        if (!text) return;
-        saveInput(text, false);
-      });
-    }
-
-    loadInitial();
+  $('ia-dims').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-dim]'); if (!b) return;
+    // Uma área aberta por vez: seis abertas viram parede de texto.
+    st.openDim = st.openDim === b.dataset.dim ? null : b.dataset.dim;
+    renderDims();
   });
 
-  window.addEventListener('beforeunload', stopPolling);
+  function aplicar(data) {
+    st.analysis = data;
+    st.savedInput = !!data.has_input;
+    $('ia-saved').hidden = !st.savedInput;
+    view('result');
+    render();
+  }
+
+  function carregar() {
+    view('loading');
+    // /ai_insights (e não /status) na abertura: marca a análise como já vista,
+    // então o selo "NOVA" só aparece logo depois de gerar.
+    api('/owner/ai_insights').then(function (r) {
+      if (!r.ok) throw new Error('http');
+      return r.json();
+    }).then(function (d) {
+      if (d.status === 'ready') return aplicar(d);
+      if (d.status === 'processing') { gerando(); return poll(); }
+      if (d.status === 'error') erro(d.message || 'Não foi possível gerar a análise.');
+      view('empty');
+    }).catch(function () {
+      erro('Não foi possível carregar a análise. Confira a conexão e recarregue a página.');
+      view('empty');
+    });
+  }
+
+  function gerando() { st.generating = true; view('generating'); }
+
+  // O servidor gera em segundo plano e responde "processing" na hora.
+  function poll() {
+    var limite = Date.now() + 120000;
+    (function passo() {
+      setTimeout(function () {
+        api('/owner/ai_insights/status').then(function (r) { return r.ok ? r.json() : { status: 'processing' }; })
+          .catch(function () { return { status: 'processing' }; })
+          .then(function (d) {
+            if (d.status === 'ready') { st.generating = false; return aplicar(d); }
+            if (d.status === 'error') { st.generating = false; erro(d.message || 'Não foi possível gerar a análise.'); return view(st.analysis ? 'result' : 'empty'); }
+            if (Date.now() > limite) { st.generating = false; erro('Está demorando mais que o normal. Recarregue a página em instantes.'); return view(st.analysis ? 'result' : 'empty'); }
+            passo();
+          });
+      }, 3000);
+    })();
+  }
+
+  function salvarFoco() {
+    var t = $('ia-foco-input').value.trim();
+    if (!t) return Promise.resolve();
+    return api('/owner/ai_insights/input', { method: 'POST', body: JSON.stringify({ input: t }) }).then(function (r) {
+      if (r.ok) { st.savedInput = true; st.dirty = false; $('ia-saved').hidden = false; $('ia-save').hidden = true; }
+    }).catch(function () {});
+  }
+
+  function gerar() {
+    if (st.generating) return;
+    erro(null);
+    $('ia-unresolved').hidden = true;
+    var pre = st.dirty ? salvarFoco() : Promise.resolve();
+    pre.then(function () {
+      gerando();
+      return api('/owner/ai_insights?force=true', { method: 'POST' });
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d }; });
+    }).then(function (x) {
+      if (!x.ok) {
+        st.generating = false;
+        if (x.d.code === 'unresolved_past') {
+          $('ia-unresolved').hidden = false;
+          $('ia-unresolved-text').textContent = ' ' + (x.d.error || '');
+        } else {
+          erro(x.d.error || 'Não foi possível gerar a análise.');
+        }
+        return view(st.analysis ? 'result' : 'empty');
+      }
+      if (x.d.status === 'ready') { st.generating = false; return aplicar(x.d); }
+      if (x.d.status === 'error') { st.generating = false; erro(x.d.message || 'Não foi possível gerar a análise.'); return view(st.analysis ? 'result' : 'empty'); }
+      poll();
+    }).catch(function () {
+      st.generating = false;
+      erro('Falha de conexão. Tente novamente.');
+      view(st.analysis ? 'result' : 'empty');
+    });
+  }
+
+  document.querySelectorAll('[data-generate]').forEach(function (b) { b.addEventListener('click', gerar); });
+  $('ia-refresh').addEventListener('click', gerar);
+  $('ia-foco-input').addEventListener('input', function () {
+    var t = this.value;
+    $('ia-count').textContent = t.length;
+    st.dirty = true;
+    $('ia-saved').hidden = true;
+    // Salvar só faz sentido quando já existe uma análise (o servidor guarda o
+    // foco nela); antes disso o foco vai junto com o "Gerar análise".
+    $('ia-save').hidden = !(t.trim() && st.analysis);
+  });
+  $('ia-save').addEventListener('click', salvarFoco);
+
+  if (window.feather) feather.replace();
+  carregar();
 })();
 </script>

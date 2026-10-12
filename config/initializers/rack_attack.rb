@@ -20,7 +20,7 @@ class Rack::Attack
   # ── THROTTLE — Criação de tickets de suporte ────────────────────────────
   # Máximo 5 tickets por hora por IP
   throttle("support_tickets/ip", limit: 5, period: 1.hour) do |req|
-    req.ip if req.path.include?("/owner/support_tickets") && req.post?
+    req.ip if req.path.match?(%r{\A/(owner|client)/support_tickets\z}) && req.post?
   end
 
   # ── THROTTLE — Agendamentos ─────────────────────────────────────────────
