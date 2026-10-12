@@ -9,6 +9,26 @@ class AiInsight < ApplicationRecord
   def ready?      = status == "ready"
   def error?      = status == "error"
 
+  # ── Ciclos da análise ────────────────────────────────────────────────────
+  # Abrem no dia 15 e no último dia do mês: os dois momentos em que o dono
+  # fecha a quinzena e o mês, com o caixa e os custos do período na mão. O
+  # aviso pro dono (AiInsightReminders) sai nesses mesmos dias. Uma regra só,
+  # usada pelo controller, pelo serviço e pelo aviso — antes cada um tinha a
+  # sua cópia, com ciclo começando no dia 1.
+  def self.inicio_do_ciclo(dia = Date.current)
+    return dia if dia == dia.end_of_month
+    dia.day >= 15 ? dia.change(day: 15) : dia.prev_month.end_of_month
+  end
+
+  def self.proximo_ciclo(dia = Date.current)
+    return dia.next_month.change(day: 15) if dia == dia.end_of_month
+    dia.day < 15 ? dia.change(day: 15) : dia.end_of_month
+  end
+
+  def self.dia_de_ciclo?(dia = Date.current)
+    dia.day == 15 || dia == dia.end_of_month
+  end
+
   def self.current_for(car_wash)
     where(car_wash: car_wash, insight_type: "unified")
       .order(generated_at: :desc)

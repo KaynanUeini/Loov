@@ -1,5 +1,5 @@
 module Internal
-  # Gatilho do lembrete da véspera, chamado pelo GitHub Actions
+  # Gatilho do lembrete da véspera (e do aviso da análise de IA), chamado pelo GitHub Actions
   # (.github/workflows/lembretes-vespera.yml).
   #
   # Herda de ActionController::Base, não de ApplicationController: não tem
@@ -15,7 +15,16 @@ module Internal
       token = request.authorization.to_s.delete_prefix("Bearer ").strip
       return head :unauthorized unless ActiveSupport::SecurityUtils.secure_compare(token, secret)
 
-      render json: AppointmentReminders.run!
+      # Aviso da análise de IA pega carona no mesmo gatilho diário (só faz
+      # algo no dia 15 e no último dia do mês). Os workflows do GitHub só são
+      # editados pelo site, então um gatilho novo exigiria mexer lá.
+      ia = begin
+        AiInsightReminders.run!
+      rescue => e
+        Rails.logger.error("[Internal::Reminders] aviso de IA falhou: #{e.message}")
+        { ai_reminders: "erro" }
+      end
+      render json: AppointmentReminders.run!.merge(ia)
     end
   end
 end

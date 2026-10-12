@@ -81,6 +81,29 @@ module Owner
         end
       end
 
+      # ── 1b. Ciclo da análise de IA aberto (apenas owner) ─────────────────────
+      # Fica na central enquanto o ciclo atual não tiver análise (até 3 dias
+      # depois de abrir), pra quem não viu o push.
+      if current_user.owner? && car_wash
+        inicio = AiInsight.inicio_do_ciclo
+        ultima = AiInsight.current_for(car_wash)
+        gerou  = ultima&.ready? && ultima.generated_at.to_date >= inicio
+        if !gerou && (Date.current - inicio).to_i <= 3
+          txt = AiInsightReminders.texto(car_wash, inicio)
+          key = "ai_cycle-#{inicio}"
+          notifications << {
+            id:         key,
+            type:       "ai_insights_cycle",
+            title:      txt[:title],
+            desc:       txt[:body],
+            route:      "OwnerAiInsights",
+            params:     {},
+            created_at: inicio.in_time_zone("America/Sao_Paulo").change(hour: 18).iso8601,
+            read:       reads.key?(key)
+          }
+        end
+      end
+
       # ── 2. Aprovações pendentes (apenas owner) ──────────────────────────────
       if current_user.owner? && car_wash
         car_wash.pending_changes.where(status: "pending").order(created_at: :desc).each do |pc|

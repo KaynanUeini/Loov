@@ -111,17 +111,11 @@ class AiInsightsService
   # ── CICLO ─────────────────────────────────────────────────────────────────────
 
   def current_cycle_start
-    today = Date.current
-    today.day >= 15 ? Date.new(today.year, today.month, 15) : Date.new(today.year, today.month, 1)
+    AiInsight.inicio_do_ciclo
   end
 
   def next_cycle_date
-    today = Date.current
-    if today.day < 15
-      Date.new(today.year, today.month, 15).strftime("%d/%m/%Y")
-    else
-      (Date.new(today.year, today.month, 1) >> 1).strftime("%d/%m/%Y")
-    end
+    AiInsight.proximo_ciclo.strftime("%d/%m/%Y")
   end
 
   def days_until_next_cycle

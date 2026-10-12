@@ -124,8 +124,10 @@ Requisito:
 - Se você tem menos que 30, aguarde acumular mais atendimentos e volte depois.
 
 Como funciona o ciclo:
-- A análise é gerada automaticamente duas vezes por mês: no dia 1 (fechamento do mês anterior)
-  e no dia 15 (acompanhamento do mês em curso).
+- Um novo ciclo de análise abre duas vezes por mês: no dia 15 (meio do mês) e no último dia
+  do mês (fechamento). Nesses dias o dono recebe uma notificação pedindo pra lançar os custos
+  do mês no Financeiro e gerar a nova análise — com os custos em dia, a análise fica mais
+  completa.
 - Fora desses momentos, a análise em cache é exibida até o próximo ciclo.
 - Para gerar manualmente fora do ciclo, clique no botão "Gerar análise agora".
 
@@ -310,7 +312,7 @@ Categorias disponíveis ao abrir chamado:
 ### Não consigo gerar AI Insights
 - O sistema exige pelo menos 30 agendamentos com status "compareceu" para gerar a análise.
 - Se você tem menos que 30 atendimentos, aguarde acumular mais e volte depois.
-- A análise só é gerada automaticamente nos ciclos (dia 1 e dia 15 do mês).
+- Um novo ciclo abre no dia 15 e no último dia do mês, com notificação pro dono gerar a análise.
 
 ### Cliente não me encontra na busca
 - Verifique se seu endereço está correto e completo em "Meu Negócio".
