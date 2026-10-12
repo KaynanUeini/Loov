@@ -77,7 +77,6 @@ module Admin
       render json: { ok: true }
     end
 
-    # ── Dispara o agente — agora usa service.run que executa ações autônomas
     # Botão "IA": pede um rascunho pra equipe revisar. Roda em segundo plano
     # (RascunhoAdminJob); o painel recarrega e mostra o rascunho no chamado.
     def run_agent
@@ -85,7 +84,6 @@ module Admin
       ticket.update_columns(agent_draft: nil, agent_drafted_at: nil)
       RascunhoAdminJob.perform_later(ticket.id)
       render json: { ok: true, pending: true }
-    end
     end
   end
 end
