@@ -291,7 +291,7 @@
         '<div class="ob-card-t"><div class="ob-card-name' + (name ? '' : ' is-ph') + '">' + esc(name || 'Seu lava-rápido') + '</div>' +
         '<div class="ob-card-sub">' + esc(hood || 'Bairro · Cidade') + '</div></div>' +
         (hrs ? '<span class="ob-card-badge' + (open ? '' : ' is-off') + '">' + (open ? 'Aberto' : 'Fechado') + '</span>' : '') + '</div>' +
-      '<div class="ob-card-meta"><span>' + icon('star', 12) + 'Novo</span><span>' + icon('clock', 12) + esc(hrs || 'Horário') + '</span><span>' + icon('layers', 12) + st.capacity + (st.capacity === 1 ? ' carro' : ' carros') + ' por vez</span></div>' +
+      '<div class="ob-card-meta"><span>' + icon('clock', 12) + esc(hrs || 'Horário') + '</span><span>' + icon('layers', 12) + st.capacity + (st.capacity === 1 ? ' carro' : ' carros') + ' por vez</span></div>' +
       '<div class="ob-card-svcs">' + (svcs.length ? svcs.slice(0, 3).map(function (s) {
           var p = parsePrice(s.price);
           return '<div class="ob-card-svc"><span>' + esc(titleCase(s.title)) + (s.duration ? ' · ' + esc(s.duration) + ' min' : '') + '</span><b>' + (p > 0 ? money(p) : '—') + '</b></div>';

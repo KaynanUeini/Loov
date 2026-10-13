@@ -85,7 +85,6 @@
   .ch-lm-helper-strong { color: var(--coral-500); font-weight: 600; }
   .ch-lm-cur { font-size: 16px; line-height: 1; letter-spacing: 0; font-weight: 600; }
   .ch-lm-rate { position: absolute; top: 12px; right: 12px; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 100px; background: rgba(250,250,246,.08); font-size: 11px; font-weight: 600; }
-  .ch-lm-rate.is-new { color: rgba(250,250,246,.55); font-weight: 400; letter-spacing: .3px; }
   .ch-shelf { position: relative; }
   .ch-shelf-nav { display: none; gap: 8px; }
   .ch-arrow { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--stone); background: var(--paper); color: var(--ink); display: flex; align-items: center; justify-content: center; transition: background .15s, border-color .15s, opacity .15s; }
@@ -178,7 +177,6 @@
   .ch-card-name { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 20px; line-height: 1.15; letter-spacing: -0.03em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .ch-card-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 6px; font-size: 13.5px; color: var(--graphite); }
   .ch-card-meta .ch-star { display: inline-flex; align-items: center; gap: 3px; color: var(--ink); font-weight: 600; }
-  .ch-card-meta .ch-new { color: var(--coral-700); font-weight: 600; }
   .ch-card-svcs { margin-top: 12px; font-size: 13px; color: var(--graphite); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ch-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 16px; }
   .ch-card-price { font-size: 13px; color: var(--graphite); }
@@ -561,8 +559,7 @@
           (street ? '<div class="ch-lm-sub">' + esc(street) + '</div>' : '') +
           '<div class="ch-lm-sub">' + esc(cw.bairro || cw.cidade || '—') + (differs ? ' · <span class="ch-lm-cd">às ' + time + '</span>' : '') + '</div>' +
         '</div></div>' +
-        '<div class="ch-lm-rate' + (reviews ? '' : ' is-new') + '">' + icon('star', 10, { color: reviews ? 'var(--coral-500)' : 'rgba(250,250,246,.45)' }) +
-          (reviews ? rating.toFixed(1).replace('.', ',') : 'Novo') + '</div>' +
+        (reviews ? '<div class="ch-lm-rate">' + icon('star', 10, { color: 'var(--coral-500)' }) + rating.toFixed(1).replace('.', ',') + '</div>' : '') +
       '</a>';
     }).join('') + '</div>';
     var track = $('ch-lm-track');
@@ -632,7 +629,7 @@
     var dist = fmtDistance(cw.distance_km);
     var svcs = pricedServices(cw);
     var meta = [cw.bairro ? esc(cw.bairro) : null, dist,
-      reviews ? '<span class="ch-star">' + icon('star', 13, { color: '#d6a419', fill: '#d6a419' }) + rating.toFixed(1).replace('.', ',') + ' <span style="color:var(--graphite);font-weight:400">(' + reviews + ')</span></span>' : '<span class="ch-new">Novo</span>'
+      reviews ? '<span class="ch-star">' + icon('star', 13, { color: '#d6a419', fill: '#d6a419' }) + rating.toFixed(1).replace('.', ',') + ' <span style="color:var(--graphite);font-weight:400">(' + reviews + ')</span></span>' : null
     ].filter(Boolean).join(' · ');
     var titles = (cw.services || []).map(function (x) { return x.title; }).filter(Boolean);
     var body = feature

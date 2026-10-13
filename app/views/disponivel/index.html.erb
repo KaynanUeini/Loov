@@ -93,7 +93,6 @@
   .dp-chev { color: rgba(250,250,246,.35); transition: transform .2s; }
   .dp-card:hover .dp-chev { transform: translateX(3px); color: rgba(250,250,246,.6); }
   .dp-rate { flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 100px; background: rgba(250,250,246,.08); font-size: 11px; font-weight: 600; }
-  .dp-rate.is-new { color: rgba(250,250,246,.55); font-weight: 400; letter-spacing: .3px; }
 
   .dp-state { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 56px var(--pad) 80px; }
   .dp-state img { width: 72%; max-width: 320px; height: auto; margin-bottom: 6px; }
@@ -420,7 +419,7 @@
         '<div class="dp-shop-txt"><div class="dp-shop-name">' + esc(cw.name) + '</div>' +
         '<div class="dp-shop-meta">' + esc(meta) + (differs ? ' · <span class="dp-when">às ' + fmtTime(it.slots[0]) + (mins > 0 && mins < 1000 ? ' (em ' + mins + 'min)' : '') + '</span>' : '') + '</div></div>' +
         (cw.favorited ? '<span class="dp-fav" title="Favorito">' + icon('heart', 13) + '</span>' : '') +
-        '<span class="dp-rate' + (reviews ? '' : ' is-new') + '">' + icon('star', 10, { color: reviews ? 'var(--coral-500)' : 'rgba(250,250,246,.45)' }) + (reviews ? rating.toFixed(1).replace('.', ',') : 'Novo') + '</span>' +
+        (reviews ? '<span class="dp-rate">' + icon('star', 10, { color: 'var(--coral-500)' }) + rating.toFixed(1).replace('.', ',') + '</span>' : '') +
         '<span class="dp-chev">' + icon('chevron-right', 20) + '</span></div>' +
     '</button>';
   }
