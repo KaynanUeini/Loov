@@ -8,8 +8,9 @@
       busca nunca some ao rolar).
     · Modo busca (Spotify): recentes guardados no navegador; ao vivo por
       nome/bairro, e por serviço só com 5+ letras ("lava" acharia todos).
-    · Last minute: horário em comum numa pílula ao lado do título, legenda
-      "começa em X min · N vagas"; cards escuros com preço e distância.
+    · Last minute: horário em comum numa faixa acima do carrossel
+      ("atendimentos começam às 14:30 · em X min"); cards escuros com preço
+      e distância.
     · Categorias com seleção múltipla (E, não OU) e filtros de ordem.
     · Perto de você: lista estilo Spotify, favoritar otimista com reversão.
 
@@ -78,11 +79,18 @@
   .ch-lm-name { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; line-height: 18px; letter-spacing: -0.3px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .ch-lm-sub { margin-top: 3px; font-size: 11px; color: rgba(250,250,246,.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ch-lm-cd { color: var(--coral-500); font-weight: 600; }
-  /* Horário em comum ao lado do título: o dado vira objeto que o olho acha
-     sozinho (Uber "chega às", Apple Wallet). O card fica com o que muda. */
-  .ch-lm-pill { display: inline-flex; align-items: center; gap: 5px; margin-left: 2px; padding: 4px 10px; border-radius: 999px; background: var(--coral-500); color: var(--cream); font-size: 14px; font-weight: 600; letter-spacing: -0.2px; }
-  .ch-lm-pill[hidden] { display: none; }
-  .ch-lm-helper-strong { color: var(--coral-500); font-weight: 600; }
+  /* Faixa do horário em comum, uma vez só acima do carrossel (todos
+     começam na mesma hora; repetir em cada card seria ruído). Superfície
+     clara Loov (paper + borda stone, como os blocos da wiemer), relógio em
+     círculo coral (Apple Wallet), rótulo mono dizendo o que o número é e
+     o "em X min" à direita (ETA do Uber). */
+  .ch-lm-strip { display: flex; align-items: center; gap: 12px; max-width: 420px; margin: 0 20px 14px; padding: 12px 14px; background: var(--paper); border: 1px solid var(--stone); border-radius: 18px; }
+  .ch-lm-strip[hidden] { display: none; }
+  .ch-lm-strip-ic { flex: 0 0 36px; height: 36px; border-radius: 50%; background: var(--coral-500); color: var(--cream); display: flex; align-items: center; justify-content: center; }
+  .ch-lm-strip-txt { flex: 1; min-width: 0; }
+  .ch-lm-strip-lab { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1.6px; color: var(--graphite); }
+  .ch-lm-strip-time { margin-top: 2px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 24px; line-height: 28px; letter-spacing: -0.8px; color: var(--ink); }
+  .ch-lm-strip-chip { flex-shrink: 0; padding: 5px 10px; border-radius: 999px; background: var(--coral-50); color: var(--coral-700); font-size: 12px; font-weight: 600; }
   .ch-lm-cur { font-size: 16px; line-height: 1; letter-spacing: 0; font-weight: 600; }
   .ch-lm-rate { position: absolute; top: 12px; right: 12px; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 100px; background: rgba(250,250,246,.08); font-size: 11px; font-weight: 600; }
   .ch-shelf { position: relative; }
@@ -308,7 +316,7 @@
     <div id="ch-home-view" class="ch-home-view">
       <section id="ch-lm" class="is-off">
         <div class="ch-sec-head">
-          <h2 class="ch-sec-title"><i data-feather="zap" style="width:18px;height:18px;color:var(--coral-500)"></i>Last minute<span class="ch-lm-pill" id="ch-lm-pill" hidden></span></h2>
+          <h2 class="ch-sec-title"><i data-feather="zap" style="width:18px;height:18px;color:var(--coral-500)"></i>Last minute</h2>
           <div style="display:flex;align-items:center;gap:16px">
             <a href="/disponivel" class="ch-link" id="ch-lm-all">Ver todos →</a>
             <div class="ch-shelf-nav" id="ch-lm-nav">
@@ -318,6 +326,11 @@
           </div>
         </div>
         <p class="ch-helper" id="ch-lm-helper">Vagas abertas nos próximos 30 min perto de você.</p>
+        <div class="ch-lm-strip" id="ch-lm-strip" hidden>
+          <div class="ch-lm-strip-ic"><i data-feather="clock" style="width:16px;height:16px"></i></div>
+          <div class="ch-lm-strip-txt"><div class="ch-lm-strip-lab">ATENDIMENTOS COMEÇAM ÀS</div><div class="ch-lm-strip-time" id="ch-lm-strip-time"></div></div>
+          <span class="ch-lm-strip-chip" id="ch-lm-strip-chip"></span>
+        </div>
         <div id="ch-lm-body"></div>
       </section>
 
@@ -500,8 +513,8 @@
       return t > now;
     });
   }
-  // Horário mais frequente entre as vagas — sobe pro cabeçalho. Card só repete
-  // horário quando foge dele (mesma regra da página Disponível e do app).
+  // Horário mais frequente entre as vagas — vai pra faixa acima do carrossel.
+  // Card só repete horário quando foge dele (mesma regra da página Disponível e do app).
   function commonSlot(list) {
     var count = {}, best = null;
     list.forEach(function (it) {
@@ -525,15 +538,15 @@
     if (!state.coords) return;
     $('ch-lm-all').href = '/disponivel' + qs();
     var list = vagasAgora(), body = $('ch-lm-body');
-    var comum = commonSlot(list), pill = $('ch-lm-pill'), helper = $('ch-lm-helper');
+    var comum = commonSlot(list), strip = $('ch-lm-strip'), helper = $('ch-lm-helper');
     if (comum) {
-      pill.innerHTML = icon('clock', 12) + hm(new Date(comum));
-      pill.hidden = false;
       var cm = Math.max(0, Math.ceil((new Date(comum).getTime() - Date.now()) / 60000));
-      helper.innerHTML = '<span class="ch-lm-helper-strong">' + (cm <= 0 ? 'Começa agora' : 'Começa em ' + cm + ' min') + '</span> · ' +
-        list.length + (list.length === 1 ? ' vaga' : ' vagas') + ' perto de você';
+      $('ch-lm-strip-time').textContent = hm(new Date(comum));
+      $('ch-lm-strip-chip').textContent = cm <= 0 ? 'agora' : 'em ' + cm + ' min';
+      strip.hidden = false;
+      helper.textContent = list.length + (list.length === 1 ? ' vaga livre' : ' vagas livres') + ' perto de você.';
     } else {
-      pill.hidden = true;
+      strip.hidden = true;
       helper.textContent = 'Vagas abertas nos próximos 30 min perto de você.';
     }
     var keepScroll = $('ch-lm-track') ? $('ch-lm-track').scrollLeft : 0;
