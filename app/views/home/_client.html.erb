@@ -39,14 +39,15 @@
   .ch-loc:hover:not([disabled]) { background: var(--stone); }
   .ch-loc[disabled] { cursor: default; }
   /* Mão do cumprimento acena uma vez e para (como o Slack ao entrar):
-     gira a partir do pulso, < 1s. Com "reduzir movimento", fica parada. */
+     três balanços largos a partir do pulso, depois descanso. Com
+     "reduzir movimento", fica parada. Mesma curva do app. */
   .ch-wave { display: inline-block; transform-origin: 70% 80%; }
-  .ch-wave.is-waving { animation: ch-wave 0.9s ease-in-out 0.4s 1; }
+  .ch-wave.is-waving { animation: ch-wave 1.8s linear 0.5s 1; }
   @keyframes ch-wave {
-    0%, 100% { transform: rotate(0); }
-    15% { transform: rotate(16deg); }  30% { transform: rotate(-8deg); }
-    45% { transform: rotate(16deg); }  60% { transform: rotate(-4deg); }
-    80% { transform: rotate(10deg); }
+    0%, 60%, 100% { transform: rotate(0); }
+    10% { transform: rotate(22deg); }  20% { transform: rotate(-10deg); }
+    30% { transform: rotate(22deg); }  40% { transform: rotate(-6deg); }
+    50% { transform: rotate(14deg); }
   }
   @media (prefers-reduced-motion: reduce) { .ch-wave.is-waving { animation: none; } }
   .ch-hello { margin: 14px 0 22px !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: clamp(30px, 4.4vw, 60px); line-height: 1.02; letter-spacing: -0.045em; color: var(--ink); }
@@ -519,6 +520,15 @@
   // re-renderiza a cada 15s, por isso a mão é um span à parte que não é
   // recriado (recriar reiniciaria o aceno).
   function waveOnce() {
+    // Aba aberta em segundo plano: espera ela aparecer pra acenar.
+    if (document.visibilityState !== 'visible') {
+      document.addEventListener('visibilitychange', function f() {
+        if (document.visibilityState !== 'visible') return;
+        document.removeEventListener('visibilitychange', f);
+        waveOnce();
+      });
+      return;
+    }
     try {
       if (sessionStorage.getItem('loov_acenou')) return;
       sessionStorage.setItem('loov_acenou', '1');
