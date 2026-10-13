@@ -180,8 +180,15 @@
     })).then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d }; }); });
   }
   function last(t) { var m = t.messages || []; return m[m.length - 1]; }
-  // Resposta nova = a última mensagem é da Loov e a conversa segue aberta.
-  function temResposta(t) { var l = last(t); return t.status !== 'resolved' && l && l.from_admin; }
+  // Resposta nova = da Loov e ainda não vista (o servidor guarda quando a
+  // conversa foi aberta, no site ou no app).
+  function temResposta(t) { return !!t.unread_reply && !(st.view === 'conv' && st.open === t.id); }
+  // Abriu a conversa (ou chegou resposta com ela aberta): marca como vista.
+  function marcarVista(t) {
+    if (!t || !t.unread_reply) return;
+    t.unread_reply = false;
+    api(BASE + '/' + t.id + '/seen', { method: 'POST' });
+  }
 
   // ── Lista ────────────────────────────────────────────────────────────────
   function renderList() {
@@ -288,6 +295,7 @@
     return api(BASE).then(function (x) {
       if (Array.isArray(x.d)) st.tickets = x.d;
       st.loaded = true;
+      if (st.view === 'conv') marcarVista(st.tickets.filter(function (t) { return t.id === st.open; })[0]);
       renderList();
       if (st.view === 'conv' && assinatura() !== antes) {
         var focado = document.activeElement && document.activeElement.id === 'su-input';
@@ -297,7 +305,11 @@
     });
   }
 
-  function abrir(id) { st.open = id; st.view = 'conv'; renderList(); renderPane(); }
+  function abrir(id) {
+    st.open = id; st.view = 'conv';
+    marcarVista(st.tickets.filter(function (t) { return t.id === id; })[0]);
+    renderList(); renderPane();
+  }
   function nova() { st.view = 'new'; st.topic = null; renderList(); renderPane(); }
   function voltar() { st.view = 'blank'; st.open = null; renderList(); renderPane(); }
 

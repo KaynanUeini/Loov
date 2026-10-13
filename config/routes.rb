@@ -86,6 +86,7 @@ Rails.application.routes.draw do
       member do
         post  :message
         patch :close
+        post  :seen
       end
     end
   end
@@ -176,6 +177,7 @@ Rails.application.routes.draw do
       member do
         post  :message
         patch :close
+        post  :seen
       end
     end
 

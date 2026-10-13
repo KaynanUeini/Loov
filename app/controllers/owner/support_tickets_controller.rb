@@ -5,27 +5,24 @@ module Owner
     before_action :ensure_owner_or_attendant
 
     def index
-      tickets = current_user.support_tickets.recent
-      render json: tickets.map { |t|
-        {
-          id:              t.id,
-          category:        t.category,
-          status:          t.status,
-          created_at:      t.created_at.strftime("%d/%m %H:%M"),
-          updated_at:      t.updated_at.strftime("%d/%m %H:%M"),
-          messages:        t.messages.chronological.map { |m|
-            {
-              body:       m.body,
-              from_admin: m.from_admin?,
-              author:     m.from_admin? ? "Suporte Loov" : current_user.full_name&.split&.first || "Você",
-              created_at: m.created_at.strftime("%d/%m %H:%M")
-            }
-          },
-          agent_draft:      t.agent_draft,
-          agent_drafted_at: t.agent_drafted_at&.strftime("%d/%m %H:%M"),
-          agent_sent:       t.agent_sent
-        }
-      }
+      tickets = current_user.support_tickets.recent.includes(:messages)
+      render json: tickets.map { |t| serialize_ticket(t) }
+    end
+
+    # POST .../support_tickets/:id/seen — a pessoa abriu a conversa. Marca a
+    # última resposta da Loov como vista (mesma chave da central de
+    # notificações do dono), pra "Nova resposta" sumir no site e no app.
+    def seen
+      ticket = current_user.support_tickets.find(params[:id])
+      last   = ticket.messages.chronological.last
+      if last&.from_admin?
+        nr = NotificationRead.find_or_initialize_by(user: current_user, key: chave_resposta(ticket, last))
+        nr.read_at = Time.current
+        nr.save!
+      end
+      render json: { ok: true }
+    rescue ActiveRecord::RecordNotFound
+      render json: { ok: false, error: "Conversa não encontrada." }, status: :not_found
     end
 
     def create
@@ -95,23 +92,32 @@ module Owner
       end
     end
 
+    def chave_resposta(ticket, message)
+      "support_reply-#{ticket.id}-#{message.id}"
+    end
+
     def serialize_ticket(t)
+      msgs = t.messages.sort_by(&:created_at)
+      last = msgs.last
+      @lidas ||= current_user.notification_reads.where("key LIKE 'support_reply-%'").pluck(:key).to_set
       {
         id:         t.id,
         category:   t.category,
         status:     t.status,
         created_at: t.created_at.strftime("%d/%m %H:%M"),
-        messages:   t.messages.chronological.map { |m|
+        updated_at: t.updated_at.strftime("%d/%m %H:%M"),
+        # Resposta da Loov que a pessoa ainda não abriu (ver #seen).
+        unread_reply: t.status != "resolved" && !!last&.from_admin? && !@lidas.include?(chave_resposta(t, last)),
+        messages:   msgs.map { |m|
           {
             body:       m.body,
             from_admin: m.from_admin?,
             author:     m.from_admin? ? "Suporte Loov" : current_user.full_name&.split&.first || "Você",
             created_at: m.created_at.strftime("%d/%m %H:%M")
           }
-        },
-        agent_draft:      t.agent_draft,
-        agent_drafted_at: t.agent_drafted_at&.strftime("%d/%m %H:%M"),
-        agent_sent:       t.agent_sent
+        }
+        # Sem agent_draft: é o rascunho interno da equipe (pode trazer notas
+        # como "[Escalado: …]") e só o painel admin deve ver.
       }
     end
   end

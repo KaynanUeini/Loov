@@ -603,17 +603,15 @@
   if (supportBtn) {
     supportBtn.addEventListener('click', () => { window.location.href = '/suporte'; });
 
+    // Aviso no ícone: alguma resposta da Loov ainda não vista (unread_reply,
+    // marcado como visto ao abrir a conversa no site ou no app).
     function pollSupportBadge() {
       fetch('/owner/support_tickets', { headers: { Accept: 'application/json' } })
         .then(r => r.json()).then(tickets => {
-          const open = tickets.find(t => t.status !== 'resolved');
-          if (open && open.messages.some(m => m.from_admin)) {
-            const lastAdmin = open.messages.filter(m => m.from_admin).pop();
-            const lastOwner = open.messages.filter(m => !m.from_admin).pop();
-            const hasNew = lastAdmin && (!lastOwner || new Date(lastAdmin.created_at) > new Date(lastOwner.created_at));
-            if (hasNew) { supportBtn.classList.add('has-reply'); supportBadge.textContent='1'; supportBadge.classList.add('visible'); return; }
-          }
-          supportBtn.classList.remove('has-reply'); supportBadge.classList.remove('visible');
+          const n = (Array.isArray(tickets) ? tickets : []).filter(t => t.unread_reply).length;
+          supportBtn.classList.toggle('has-reply', n > 0);
+          supportBadge.textContent = n > 9 ? '9+' : String(n);
+          supportBadge.classList.toggle('visible', n > 0);
         }).catch(() => {});
     }
 
