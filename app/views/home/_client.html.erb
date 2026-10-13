@@ -38,6 +38,17 @@
   .ch-loc { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 14px 0 12px; border: 0; background: var(--sand); border-radius: 100px; color: var(--ink); font-size: 13px; font-weight: 600; transition: background .15s; }
   .ch-loc:hover:not([disabled]) { background: var(--stone); }
   .ch-loc[disabled] { cursor: default; }
+  /* Mão do cumprimento acena uma vez e para (como o Slack ao entrar):
+     gira a partir do pulso, < 1s. Com "reduzir movimento", fica parada. */
+  .ch-wave { display: inline-block; transform-origin: 70% 80%; }
+  .ch-wave.is-waving { animation: ch-wave 0.9s ease-in-out 0.4s 1; }
+  @keyframes ch-wave {
+    0%, 100% { transform: rotate(0); }
+    15% { transform: rotate(16deg); }  30% { transform: rotate(-8deg); }
+    45% { transform: rotate(16deg); }  60% { transform: rotate(-4deg); }
+    80% { transform: rotate(10deg); }
+  }
+  @media (prefers-reduced-motion: reduce) { .ch-wave.is-waving { animation: none; } }
   .ch-hello { margin: 14px 0 22px !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: clamp(30px, 4.4vw, 60px); line-height: 1.02; letter-spacing: -0.045em; color: var(--ink); }
   .ch-search-row { display: flex; align-items: center; gap: 6px; }
   .ch-search-row { max-width: 760px; }
@@ -299,7 +310,7 @@
       <span id="ch-loc-ic"></span>
       <span id="ch-loc-text">Localizando...</span>
     </button>
-    <h1 class="ch-hello" id="ch-greet"></h1>
+    <h1 class="ch-hello"><span id="ch-greet"></span> <span class="ch-wave" id="ch-wave" aria-hidden="true">👋</span></h1>
     <div class="ch-search-row">
       <label class="ch-search">
         <i data-feather="search" style="width:18px;height:18px;color:var(--graphite)"></i>
@@ -502,7 +513,17 @@
   }
   function renderGreeting() {
     var h = new Date().getHours();
-    $('ch-greet').textContent = FIRST_NAME ? greeting(h) + ', ' + FIRST_NAME + ' 👋' : greeting(h) + ' 👋';
+    $('ch-greet').textContent = FIRST_NAME ? greeting(h) + ', ' + FIRST_NAME : greeting(h);
+  }
+  // Aceno do 👋: uma vez por sessão do navegador, ao abrir a home. O texto
+  // re-renderiza a cada 15s, por isso a mão é um span à parte que não é
+  // recriado (recriar reiniciaria o aceno).
+  function waveOnce() {
+    try {
+      if (sessionStorage.getItem('loov_acenou')) return;
+      sessionStorage.setItem('loov_acenou', '1');
+    } catch (e) {}
+    $('ch-wave').classList.add('is-waving');
   }
 
   // ── Render: Last minute ───────────────────────────────────────────────────
@@ -871,7 +892,7 @@
   function boot() {
     if (window.feather) feather.replace({ 'stroke-width': 2 });
     state.visible = pageSize();
-    renderGreeting(); renderLoc(); renderCategories(); renderFilters(); renderList();
+    renderGreeting(); waveOnce(); renderLoc(); renderCategories(); renderFilters(); renderList();
     initLocation();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
