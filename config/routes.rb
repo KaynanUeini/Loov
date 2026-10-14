@@ -72,6 +72,8 @@ Rails.application.routes.draw do
     resources :reviews,    only: [:create]
     resources :favorites,  only: [:index, :create, :destroy]
     get 'loyalty_cards', to: 'loyalty_cards#index'
+    get  'tour',      to: 'tours#show'
+    post 'tour/seen', to: 'tours#seen'
 
     resources :notifications, only: [:index] do
       member do

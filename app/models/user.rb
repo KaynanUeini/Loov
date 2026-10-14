@@ -139,6 +139,24 @@ class User < ApplicationRecord
             stripe_card_holder: nil, stripe_card_exp_month: nil, stripe_card_exp_year: nil)
   end
 
+  # ── Tour da home ────────────────────────────────────────────────────────
+  # Last Minute + Perto de você explicados na home: só pra quem criou a conta a
+  # partir do lançamento dele. Quem já usava a Loov não vê. Visto fica num
+  # NotificationRead, então vale pro app e pro site juntos.
+  TOUR_HOME_DESDE = Time.zone.parse("2026-10-13 21:00")
+  TOUR_HOME_CHAVE = "tour_home".freeze
+
+  def mostrar_tour_home?
+    client? && created_at >= TOUR_HOME_DESDE &&
+      !NotificationRead.exists?(user_id: id, key: TOUR_HOME_CHAVE)
+  end
+
+  def concluir_tour_home!
+    nr = NotificationRead.find_or_initialize_by(user_id: id, key: TOUR_HOME_CHAVE)
+    nr.read_at = Time.current
+    nr.save!
+  end
+
   # ── Limite de agendamentos e faltas ──────────────────────────────────────
   # O agendamento comum não tem custo pro cliente; sem regra, um só cliente
   # podia prender vários horários de graça e não aparecer. A régua é em

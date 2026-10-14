@@ -303,6 +303,32 @@
   @media (prefers-reduced-motion: reduce) {
     .ch-skel i, .ch-fav.pop svg { animation: none; }
   }
+
+  /* Tour da home — "luz apagada": a página escurece e só a seção explicada
+     fica acesa (coach mark do Instagram/Nubank). O recorte é um bloco com
+     sombra gigante, então os cantos ficam arredondados como os cards e ele
+     desliza de uma seção pra outra em vez de piscar. Balão claro Loov com
+     contador mono em cima (wiemer), título display e texto corrido. */
+  .ch-tour { position: fixed; inset: 0; z-index: 300; cursor: pointer; }
+  .ch-tour-hole { position: fixed; border-radius: 22px; box-shadow: 0 0 0 200vmax rgba(26,22,18,.82); outline: 1.5px solid rgba(221,120,82,.55); pointer-events: none; transition: top .45s ease, left .45s ease, width .45s ease, height .45s ease; }
+  .ch-tour-hand { position: fixed; font-size: 34px; line-height: 1; pointer-events: none; animation: ch-tour-tap 1.2s ease-in-out infinite; }
+  .ch-tour-hand.is-down { animation-name: ch-tour-tap-down; }
+  @keyframes ch-tour-tap { 0%, 70%, 100% { transform: translateY(0); } 35% { transform: translateY(-10px); } }
+  @keyframes ch-tour-tap-down { 0%, 70%, 100% { transform: translateY(0); } 35% { transform: translateY(10px); } }
+  .ch-tour-card { position: fixed; width: min(420px, calc(100vw - 40px)); background: var(--paper); border-radius: 22px; padding: 20px; box-shadow: 0 12px 40px rgba(0,0,0,.28); cursor: default; animation: ch-tour-in .26s ease-out; }
+  @keyframes ch-tour-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .ch-tour-count { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.6px; color: var(--coral-700); }
+  .ch-tour-title { margin: 6px 0 8px; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 19px; line-height: 23px; letter-spacing: -0.4px; color: var(--ink); }
+  .ch-tour-card p { margin: 0; font-size: 14px; line-height: 20px; color: var(--graphite); }
+  .ch-tour-card p + p { margin-top: 8px; }
+  .ch-tour-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 18px; }
+  .ch-tour-skip { background: none; border: 0; padding: 8px 0; font: inherit; font-size: 14px; font-weight: 600; color: var(--graphite); cursor: pointer; }
+  .ch-tour-skip[hidden] { display: none; }
+  .ch-tour-btn { border: 0; border-radius: 999px; padding: 12px 22px; background: var(--ink); color: var(--cream); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+  @media (prefers-reduced-motion: reduce) {
+    .ch-tour-hand, .ch-tour-card { animation: none; }
+    .ch-tour-hole { transition: none; }
+  }
 </style>
 
 <div class="ch" id="ch">
@@ -350,11 +376,13 @@
       <div class="ch-cats" id="ch-cats" role="group" aria-label="Categorias"></div>
       <button type="button" class="ch-cat-clear" id="ch-cat-clear"><i data-feather="x" style="width:12px;height:12px"></i><span>Limpar filtro</span></button>
 
-      <div class="ch-sec-head"><h2 class="ch-sec-title">Perto de você</h2><span class="ch-count" id="ch-count"></span></div>
-      <div class="ch-filters" id="ch-filters"></div>
+      <div id="ch-perto">
+        <div class="ch-sec-head"><h2 class="ch-sec-title">Perto de você</h2><span class="ch-count" id="ch-count"></span></div>
+        <div class="ch-filters" id="ch-filters"></div>
 
-      <div id="ch-error"></div>
-      <div id="ch-list"></div>
+        <div id="ch-error"></div>
+        <div id="ch-list"></div>
+      </div>
     </div>
   </main>
 
@@ -390,6 +418,8 @@
   var COORDS_KEY = 'loov_last_coords';
   var FIRST_NAME = <%= raw first_name.to_s.to_json %>;
   var CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content;
+  // Tour da home: só contas novas, uma vez (visto vale pro app também).
+  var TOUR_HOME = <%= current_user.mostrar_tour_home? ? 'true' : 'false' %>;
 
   // ── Estado ────────────────────────────────────────────────────────────────
   var state = {
@@ -469,7 +499,7 @@
       .finally(renderLastMinute);
   }
 
-  function load(silent) { return Promise.all([loadShops(silent), loadDisponiveis()]); }
+  function load(silent) { return Promise.all([loadShops(silent), loadDisponiveis()]).then(talvezIniciarTour); }
 
   // ── Localização: URL → cache → GPS (o cache solta a tela na hora) ─────────
   function setCoords(c) {
@@ -898,6 +928,112 @@
   setInterval(function () { renderLastMinute(); renderGreeting(); }, 15000);
   // Voltar pra aba recarrega (o app recarrega ao ganhar foco).
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && !state.locating) load(true); });
+
+  // ── Tour da home ──────────────────────────────────────────────────────────
+  // Mesmos textos do app. Começa quando o Last Minute já está na tela (sem
+  // localização ele nem aparece — aí o tour espera e não conta como visto).
+  var TOUR_PASSOS = [
+    { alvo: 'ch-lm', titulo: 'Last Minute: lavar agora, sem planejar', texto: [
+      'Aqui aparecem os lava-rápidos perto de você com vaga começando nos próximos minutos. A cada meia hora entram novas vagas, então sempre vale dar uma olhada.',
+      'Escolha um card, garanta a vaga pelo app e é só chegar no horário.'] },
+    { alvo: 'ch-perto', max: 360, titulo: 'Perto de você: os lava-rápidos da sua região', texto: [
+      'Todos os lava-rápidos ao seu redor, começando pelos mais próximos. Toque em um pra ver serviços e preços e agendar no dia e horário que preferir.',
+      'Use os filtros pra achar o ideal e o ♡ pra guardar seus favoritos.'] }
+  ];
+  var tour = { passo: -1, agendado: false, el: null };
+
+  function talvezIniciarTour() {
+    if (!TOUR_HOME || tour.agendado || !state.coords || state.loading || !state.shops.length || state.searchMode) return;
+    tour.agendado = true;
+    setTimeout(function () {
+      if (state.searchMode || document.visibilityState !== 'visible') { tour.agendado = false; return; }
+      montarTour(); irPara(0, false);
+    }, 900);
+  }
+  function montarTour() {
+    var el = document.createElement('div');
+    el.className = 'ch-tour'; el.id = 'ch-tour';
+    el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'ch-tour-t');
+    el.innerHTML = '<div class="ch-tour-hole" id="ch-tour-hole"></div><div class="ch-tour-hand" id="ch-tour-hand" aria-hidden="true">👆</div>' +
+      '<div class="ch-tour-card" id="ch-tour-card"><div class="ch-tour-count" id="ch-tour-count"></div><h3 class="ch-tour-title" id="ch-tour-t"></h3><div id="ch-tour-body"></div>' +
+      '<div class="ch-tour-actions"><button type="button" class="ch-tour-skip" id="ch-tour-skip">Pular</button><button type="button" class="ch-tour-btn" id="ch-tour-next"></button></div></div>';
+    document.body.appendChild(el);
+    document.documentElement.style.overflow = 'hidden';
+    tour.el = el;
+    // Toque no escuro avança; dentro do balão, só os botões.
+    el.addEventListener('click', function (e) {
+      if (e.target.id === 'ch-tour-skip') return fecharTour();
+      if (e.target.closest('.ch-tour-card') && e.target.id !== 'ch-tour-next') return;
+      avancarTour();
+    });
+    document.addEventListener('keydown', teclaTour);
+    window.addEventListener('resize', posicionarTour);
+    // O recorte acompanha a rolagem: a página pode estar deslizando
+    // (scroll suave) quando o passo abre.
+    window.addEventListener('scroll', rolouTour, { passive: true });
+  }
+  function rolouTour() {
+    if (tour.raf) return;
+    tour.raf = requestAnimationFrame(function () { tour.raf = 0; posicionarTour(); });
+  }
+  function teclaTour(e) { if (e.key === 'Escape') fecharTour(); }
+  function irPara(i, suave) {
+    tour.passo = i;
+    var alvo = $(TOUR_PASSOS[i].alvo);
+    var nav = 96; // navbar fixa + respiro
+    var y = alvo.getBoundingClientRect().top + window.scrollY - nav;
+    window.scrollTo({ top: Math.max(0, y), behavior: suave ? 'smooth' : 'auto' });
+    $('ch-tour-card').style.visibility = 'hidden';
+    $('ch-tour-hand').style.visibility = 'hidden';
+    setTimeout(function () {
+      var p = TOUR_PASSOS[i];
+      $('ch-tour-count').textContent = (i + 1) + ' DE ' + TOUR_PASSOS.length;
+      $('ch-tour-t').textContent = p.titulo;
+      $('ch-tour-body').innerHTML = p.texto.map(function (t) { return '<p>' + esc(t) + '</p>'; }).join('');
+      $('ch-tour-skip').hidden = i === TOUR_PASSOS.length - 1;
+      $('ch-tour-next').textContent = i === TOUR_PASSOS.length - 1 ? 'Entendi' : 'Próximo';
+      posicionarTour();
+      var card = $('ch-tour-card');
+      card.style.visibility = ''; $('ch-tour-hand').style.visibility = '';
+      card.style.animation = 'none'; void card.offsetWidth; card.style.animation = '';
+      $('ch-tour-next').focus({ preventScroll: true });
+    }, suave ? 500 : 60);
+  }
+  function posicionarTour() {
+    if (tour.passo < 0) return;
+    var p = TOUR_PASSOS[tour.passo], r = $(p.alvo).getBoundingClientRect(), pad = 8;
+    var W = window.innerWidth, H = window.innerHeight;
+    var hole = { x: Math.max(6, r.left - pad), y: Math.max(6, r.top - pad), w: Math.min(W - 12, r.width + pad * 2) };
+    hole.h = Math.min(r.height, p.max || Infinity) + pad * 2;
+    var h = $('ch-tour-hole').style;
+    h.left = hole.x + 'px'; h.top = hole.y + 'px'; h.width = hole.w + 'px'; h.height = hole.h + 'px';
+    var card = $('ch-tour-card'), hand = $('ch-tour-hand');
+    // Balão embaixo do recorte; se não couber, em cima; se nem assim,
+    // encostado na base da tela (pode cobrir a borda de baixo do recorte).
+    var ch = card.offsetHeight, abaixo = hole.y + hole.h + 44;
+    var embaixo = abaixo + ch + 16 <= H || hole.y - 44 - ch < 16;
+    var left = Math.min(Math.max(20, hole.x), W - card.offsetWidth - 20);
+    card.style.left = left + 'px';
+    card.style.top = embaixo ? Math.min(abaixo, H - ch - 16) + 'px' : '';
+    card.style.bottom = embaixo ? '' : (H - hole.y + 44) + 'px';
+    hand.textContent = embaixo ? '👆' : '👇';
+    hand.classList.toggle('is-down', !embaixo);
+    hand.style.left = (hole.x + Math.min(48, hole.w / 4)) + 'px';
+    hand.style.top = (embaixo ? hole.y + hole.h - 6 : hole.y - 40) + 'px';
+  }
+  function avancarTour() {
+    if (tour.passo < TOUR_PASSOS.length - 1) irPara(tour.passo + 1, true); else fecharTour();
+  }
+  function fecharTour() {
+    TOUR_HOME = false; tour.passo = -1;
+    if (tour.el) tour.el.remove();
+    document.documentElement.style.overflow = '';
+    document.removeEventListener('keydown', teclaTour);
+    window.removeEventListener('resize', posicionarTour);
+    window.removeEventListener('scroll', rolouTour);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    fetch('/client/tour/seen', { method: 'POST', credentials: 'same-origin', headers: { Accept: 'application/json', 'X-CSRF-Token': CSRF } }).catch(function () {});
+  }
 
   function boot() {
     if (window.feather) feather.replace({ 'stroke-width': 2 });
