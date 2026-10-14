@@ -105,7 +105,10 @@
   .lh-app-chip { white-space: nowrap; font-size: 11.5px; font-weight: 600; padding: 7px 11px; border-radius: 99px; border: 1px solid var(--stone); color: var(--ink); background: var(--paper); }
   .lh-app-chip.is-on { background: var(--coral-500); border-color: var(--coral-500); color: #fff; }
   .lh-app-row { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 16px; background: var(--paper); border: 1px solid var(--stone); margin-bottom: 9px; }
-  .lh-app-av { flex: 0 0 40px; height: 40px; border-radius: 12px; background: var(--coral-50); color: var(--coral-700); display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-weight: 700; }
+  /* Logo da loja (shared/_loov_logos): o mesmo emblema da home do cliente,
+     do app e do Disponível. O SVG tem forma própria, então o slot é neutro. */
+  .lh-app-av { flex: 0 0 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
+  .lh-app-av svg, .lh-item-av svg { width: 100%; height: 100%; display: block; }
   .lh-app-name { font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .lh-app-sub { font-size: 11.5px; color: var(--graphite); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .lh-status { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 1px; padding: 4px 7px; border-radius: 6px; flex-shrink: 0; }
@@ -166,7 +169,16 @@
   .lh-item { display: grid; grid-template-columns: 56px 52px minmax(0, 1fr) auto auto; align-items: center; gap: 18px; padding: 20px 8px; border-bottom: 1px solid var(--stone); text-decoration: none; color: var(--ink) !important; border-radius: 0; transition: background .2s ease, padding .2s ease; }
   .lh-item:hover { background: var(--paper); padding-left: 16px; padding-right: 16px; }
   .lh-item-n { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--ash); }
-  .lh-item-av { width: 52px; height: 52px; border-radius: 16px; background: var(--coral-50); color: var(--coral-700); display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 20px; }
+  .lh-item-av { width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; }
+  /* Localização sob demanda: o pedido só aparece quando a pessoa quer ver
+     os mais perto (pedir ao abrir a página queimaria a permissão — um "não"
+     aqui vale pro site inteiro, inclusive a home depois do cadastro). */
+  .lh-near-btn { display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 20px; border-radius: 999px; border: 1px solid var(--ink); background: transparent; color: var(--ink); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; transition: background .2s ease, color .2s ease; }
+  .lh-near-btn:hover { background: var(--ink); color: var(--cream); }
+  .lh-near-btn[disabled] { opacity: .6; cursor: progress; }
+  .lh-near-btn[hidden] { display: none; }
+  .lh-near-note { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: .5px; color: var(--graphite); }
+  .lh-near-note[hidden] { display: none; }
   .lh-item-name { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 21px; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .lh-item-addr { font-size: 14.5px; color: var(--graphite); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .lh-item-go { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--stone); display: flex; align-items: center; justify-content: center; transition: background .2s ease, border-color .2s ease, color .2s ease; }
@@ -267,7 +279,7 @@
               <% phone_shops.each do |cw| %>
                 <% open = @open_car_wash_ids&.include?(cw.id) %>
                 <div class="lh-app-row">
-                  <div class="lh-app-av"><%= cw.name.to_s[0]&.upcase %></div>
+                  <div class="lh-app-av" data-logo="<%= cw.name %>"></div>
                   <div style="min-width:0;flex:1;">
                     <div class="lh-app-name"><%= cw.name %></div>
                     <div class="lh-app-sub"><%= cw.try(:bairro).presence || cw.try(:cidade).presence || "Perto de você" %></div>
@@ -278,7 +290,7 @@
             <% else %>
               <% [["Lava-rápido do bairro", "Aberto"], ["Estética automotiva", "Aberto"], ["Lava jato express", "Aberto"]].each do |n, _| %>
                 <div class="lh-app-row">
-                  <div class="lh-app-av"><%= n[0] %></div>
+                  <div class="lh-app-av" data-logo="<%= n %>"></div>
                   <div style="min-width:0;flex:1;"><div class="lh-app-name"><%= n %></div><div class="lh-app-sub">Perto de você</div></div>
                   <span class="lh-status is-open">ABERTO</span>
                 </div>
@@ -362,10 +374,17 @@
         <div class="lh-near-head">
           <div>
             <div class="lh-eyebrow lh-reveal">Na Loov agora</div>
-            <h2 class="lh-h2 lh-reveal" data-delay="1">Perto de você.</h2>
+            <h2 class="lh-h2 lh-reveal" data-delay="1" id="lh-near-title">Lava-rápidos na Loov.</h2>
+          </div>
+          <div class="lh-reveal" data-delay="1">
+            <button type="button" class="lh-near-btn" id="lh-near-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              <span>Ver os mais perto de mim</span>
+            </button>
+            <span class="lh-near-note" id="lh-near-note" hidden>ORDENADO PELA SUA LOCALIZAÇÃO</span>
           </div>
         </div>
-        <div class="lh-list lh-reveal" data-delay="2">
+        <div class="lh-list lh-reveal" data-delay="2" id="lh-near-list">
           <% shops.each_with_index do |cw, i| %>
             <%
               open = @open_car_wash_ids&.include?(cw.id)
@@ -374,7 +393,7 @@
             %>
             <a href="<%= car_wash_path(cw) %>" class="lh-item">
               <span class="lh-item-n"><%= format("%02d", i + 1) %></span>
-              <span class="lh-item-av"><%= cw.name.to_s[0]&.upcase %></span>
+              <span class="lh-item-av" data-logo="<%= cw.name %>"></span>
               <span style="min-width:0;">
                 <span class="lh-item-name" style="display:block;"><%= cw.name %></span>
                 <span class="lh-item-addr" style="display:block;"><%= addr %></span>
@@ -437,9 +456,85 @@
   <%= render "shared/site_footer", audience: :visitor %>
 </div>
 
+<%= render "shared/loov_logos" %>
 <script>
   (function () {
     var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // Logos das lojas (mesmo emblema da home do cliente e do app).
+    function pintarLogos(root) {
+      (root || document).querySelectorAll('[data-logo]').forEach(function (el) {
+        el.innerHTML = LoovLogos.logoOf({ name: el.getAttribute('data-logo') });
+      });
+    }
+    pintarLogos();
+
+    // ── Perto de você sob demanda ────────────────────────────────────────
+    // Sem localização a lista não tem ordem de distância, então o título não
+    // promete "perto de você". O pedido de permissão só sai no botão. Quem
+    // já deu permissão (ou já tem posição guardada pela home) vê ordenado
+    // direto, sem pedir de novo.
+    var nearBtn = document.getElementById('lh-near-btn');
+    var nearList = document.getElementById('lh-near-list');
+    var COORDS_KEY = 'loov_last_coords';
+    function escH(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+    function fmtKm(km) { var n = parseFloat(km); if (isNaN(n)) return null; return n < 1 ? Math.round(n * 1000) + ' m' : n.toFixed(1).replace('.', ',') + ' km'; }
+    function ordenarPerto(c) {
+      return fetch('/car_washes.json?latitude=' + c.latitude + '&longitude=' + c.longitude, { headers: { Accept: 'application/json' } })
+        .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+        .then(function (list) {
+          if (!Array.isArray(list) || !list.length) throw new Error();
+          var top = list.filter(function (cw) { return cw.distance_km != null; }).slice(0, 6);
+          if (!top.length) throw new Error();
+          var go = nearList.querySelector('.lh-item-go');
+          go = go ? go.outerHTML : '';
+          nearList.innerHTML = top.map(function (cw, i) {
+            var rua = [cw.logradouro, cw.numero].filter(Boolean).join(', ');
+            var addr = [rua, cw.bairro].filter(Boolean).join(' · ') || cw.address || '';
+            var dist = fmtKm(cw.distance_km);
+            return '<a href="/car_washes/' + encodeURIComponent(cw.id) + '" class="lh-item">' +
+              '<span class="lh-item-n">' + String(i + 1).padStart(2, '0') + '</span>' +
+              '<span class="lh-item-av" data-logo="' + escH(cw.name) + '"></span>' +
+              '<span style="min-width:0;"><span class="lh-item-name" style="display:block;">' + escH(cw.name) + '</span>' +
+              '<span class="lh-item-addr" style="display:block;">' + escH(dist ? dist + ' · ' + addr : addr) + '</span></span>' +
+              '<span class="lh-status ' + (cw.open_now ? 'is-open' : 'is-closed') + '">' + (cw.open_now ? 'ABERTO' : 'FECHADO') + '</span>' +
+              go + '</a>';
+          }).join('');
+          pintarLogos(nearList);
+          document.getElementById('lh-near-title').textContent = 'Perto de você.';
+          nearBtn.hidden = true;
+          document.getElementById('lh-near-note').hidden = false;
+        });
+    }
+    function guardar(c) { try { localStorage.setItem(COORDS_KEY, JSON.stringify({ lat: c.latitude, lng: c.longitude })); } catch (e) {} }
+    function localizar() {
+      if (!navigator.geolocation) return;
+      nearBtn.disabled = true;
+      nearBtn.querySelector('span').textContent = 'Localizando...';
+      navigator.geolocation.getCurrentPosition(function (pos) {
+        var c = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+        guardar(c);
+        ordenarPerto(c).catch(restaurarBtn);
+      }, restaurarBtn, { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
+    }
+    // Recusou ou falhou: a lista fica como está, sem mensagem de erro.
+    function restaurarBtn() {
+      nearBtn.disabled = false;
+      nearBtn.querySelector('span').textContent = 'Ver os mais perto de mim';
+    }
+    if (nearBtn && nearList) {
+      if (!navigator.geolocation) nearBtn.hidden = true;
+      nearBtn.addEventListener('click', localizar);
+      var guardada = null;
+      try { var g = JSON.parse(localStorage.getItem(COORDS_KEY) || 'null'); if (g) guardada = { latitude: g.lat, longitude: g.lng }; } catch (e) {}
+      if (guardada) {
+        ordenarPerto(guardada).catch(function () {});
+      } else if (navigator.permissions && navigator.permissions.query) {
+        navigator.permissions.query({ name: 'geolocation' }).then(function (st) {
+          if (st.state === 'granted') localizar();
+        }).catch(function () {});
+      }
+    }
 
     // Revelar ao rolar.
     var els = document.querySelectorAll('.lh-reveal, #lh-dash');
