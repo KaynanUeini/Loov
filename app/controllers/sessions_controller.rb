@@ -2,6 +2,7 @@ class SessionsController < Devise::SessionsController
   respond_to :json, :html
 
   skip_before_action :verify_authenticity_token, if: :json_request?
+  before_action :barrar_excesso_de_erros, only: :create
 
   def after_sign_in_path_for(resource)
     flash.clear
@@ -33,11 +34,13 @@ class SessionsController < Devise::SessionsController
 
       if user.nil?
         Rails.logger.warn("[Sessions] login falhou — user não encontrado (email=#{email.inspect})")
+        LoginGuard.falhou!(request.remote_ip, email)
         render json: { error: 'E-mail ou senha inválidos.' }, status: :unauthorized and return
       end
 
       unless user.valid_password?(password)
         Rails.logger.warn("[Sessions] login falhou — senha incorreta (user_id=#{user.id} email=#{email.inspect})")
+        LoginGuard.falhou!(request.remote_ip, email)
         render json: { error: 'E-mail ou senha inválidos.' }, status: :unauthorized and return
       end
 
@@ -49,9 +52,29 @@ class SessionsController < Devise::SessionsController
     end
 
     super
+    LoginGuard.sucesso!(login_email) if warden.authenticated?(:user)
   end
 
   private
+
+  # Senha errada demais no mesmo e-mail (ou no mesmo IP): segura um tempo.
+  # O erro do site (HTML) é contado no hook do Warden em
+  # config/initializers/login_guard.rb; o do app (JSON), no create acima.
+  def barrar_excesso_de_erros
+    return unless LoginGuard.bloqueado?(request.remote_ip, login_email)
+
+    if json_request?
+      render json: { error: LoginGuard::MENSAGEM }, status: :too_many_requests
+    else
+      self.resource = resource_class.new(email: login_email)
+      flash.now[:alert] = LoginGuard::MENSAGEM
+      render :new, status: :too_many_requests
+    end
+  end
+
+  def login_email
+    params.dig(:user, :email).to_s.strip.downcase
+  end
 
   def json_request?
     request.format.json?

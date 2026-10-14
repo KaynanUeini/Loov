@@ -4,17 +4,12 @@
 
 class Rack::Attack
 
-  # ── THROTTLE — Login brute force ────────────────────────────────────────
-  # Máximo 5 tentativas de login por IP a cada 20 minutos
-  throttle("logins/ip", limit: 5, period: 20.minutes) do |req|
+  # ── THROTTLE — Login (teto geral por IP) ────────────────────────────────
+  # Só contra rajada automatizada. Senha errada tem trava própria e mais
+  # justa (LoginGuard: só erros contam, login certo zera). Teto alto porque
+  # muita gente divide o mesmo IP de operadora (CGNAT).
+  throttle("logins/ip", limit: 30, period: 5.minutes) do |req|
     req.ip if req.path == "/users/sign_in" && req.post?
-  end
-
-  # Máximo 3 tentativas por email por hora (evita enumeração de contas)
-  throttle("logins/email", limit: 3, period: 1.hour) do |req|
-    if req.path == "/users/sign_in" && req.post?
-      req.params.dig("user", "email")&.downcase&.strip
-    end
   end
 
   # ── THROTTLE — Criação de tickets de suporte ────────────────────────────
