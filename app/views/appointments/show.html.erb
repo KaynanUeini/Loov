@@ -51,7 +51,7 @@
         <div class="loov-card-icon" style="width:36px;height:36px;border-radius:10px;margin:0;font-size:13px;"><i class="fas fa-tag"></i></div>
         <div>
           <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.4px;color:var(--ash);text-transform:uppercase;">Valor</div>
-          <div style="font-size:14.5px;font-weight:600;color:var(--ink);">R$ <%= sprintf('%.2f', @appointment.service.price.to_f) %></div>
+          <div style="font-size:14.5px;font-weight:600;color:var(--ink);">R$ <%= sprintf('%.2f', @appointment.effective_price) %></div>
         </div>
       </div>
     </div>

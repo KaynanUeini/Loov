@@ -166,6 +166,33 @@
   .gm-ibtn:disabled { opacity: .5; cursor: wait; }
   .gm-empty { color: var(--ash); font-size: 13px; margin: 4px 0 10px; }
 
+  /* ── Preço no Last Minute ──
+     Bloco claro no topo da aba (mesma superfície da capacidade), com o
+     ajuste rápido em pílulas — um toque recalcula todas as lavagens, como
+     o seletor de velocidade do Spotify. Cada lavagem mostra o próprio
+     preço do Last Minute em mono, logo abaixo do preço normal. */
+  .gm-lm { background: var(--cream); border: 1px solid var(--stone); border-radius: 14px; padding: 14px; margin-bottom: 14px; }
+  .gm-lm-t { display: flex; align-items: center; gap: 8px; color: var(--ink); font-size: 14.5px; font-weight: 600; }
+  .gm-lm-t svg { color: var(--coral-500); }
+  .gm-lm .gm-hint { margin-top: 4px; }
+  .gm-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .gm-pill {
+    border: 1px solid var(--stone); background: var(--paper); color: var(--ink);
+    border-radius: 999px; padding: 7px 13px; font-size: 12.5px; font-weight: 600;
+    font-variant-numeric: tabular-nums; cursor: pointer; transition: border-color .15s, background .15s, color .15s;
+  }
+  .gm-pill:hover { border-color: var(--graphite); }
+  .gm-pill.on { background: var(--ink); border-color: var(--ink); color: var(--cream); }
+  .gm-lm-warn {
+    display: flex; gap: 8px; align-items: flex-start; margin-top: 12px;
+    background: #fbf3dc; border: 1px solid #ecd9a0; color: #6b5414;
+    border-radius: 12px; padding: 10px 12px; font-size: 12.5px; line-height: 1.45;
+  }
+  .gm-lm-warn svg { flex-shrink: 0; margin-top: 1px; }
+  .gm-item-lm { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: .4px; color: var(--graphite); margin-top: 4px; }
+  .gm-item-lm b { color: var(--coral-700); font-weight: 500; }
+  [data-lm-field][hidden] { display: none !important; }
+
   .gm-add {
     width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
     border: 1.5px dashed rgba(220,120,82,.28); border-radius: 14px; padding: 13px;
@@ -421,6 +448,28 @@
     ? feather.icons[name].toSvg({ width: size, height: size, 'stroke-width': 2 }) : '';
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
   const money = n => 'R$ ' + (parseFloat(n) || 0).toFixed(2).replace('.', ',');
+
+  // Last Minute só vende lavagem — mesma regra de Service.last_minute.
+  const isLm = s => s.category === 'Lavagem' || (!s.category && /lavagem/i.test(s.title || ''));
+  // Preço efetivo no Last Minute e a diferença em % sobre o agendamento.
+  const lmPrice = s => s.lm !== '' ? parseFloat(s.lm) : parseFloat(s.price);
+  const lmPct = s => {
+    const p = parseFloat(s.price);
+    return p > 0 ? Math.round((lmPrice(s) / p - 1) * 100) : 0;
+  };
+  const LM_STEPS = [-20, -10, 0, 10, 20, 30];
+  const LM_ALERTA = 30; // acima disso, aviso (não bloqueio)
+  // Ajuste aplicado em reais redondos (R$ 45, não R$ 44,73). As comparações
+  // usam o mesmo arredondamento: +30% em R$ 65 dá R$ 85 (+31% exato) e
+  // ainda conta como "+30%".
+  const lmAjustado = (price, pct) => {
+    const p = parseFloat(price);
+    if (pct === 0 || !(p > 0)) return '';
+    const v = Math.max(1, Math.round(p * (1 + pct / 100))).toFixed(2);
+    return v === p.toFixed(2) ? '' : v;
+  };
+  const lmNoPasso = (s, pct) => (s.lm === '' ? '' : Number(s.lm).toFixed(2)) === lmAjustado(s.price, pct);
+  const lmAcimaDoAlerta = s => s.lm !== '' && parseFloat(s.lm) > Math.max(1, Math.round(parseFloat(s.price) * (1 + LM_ALERTA / 100)));
   let localSeq = 0;
   const lid = () => `_l${++localSeq}`;
 
@@ -453,6 +502,7 @@
       services: (d.services || []).map(s => ({
         _l: lid(), id: s.id, title: s.title || '', category: s.category || '',
         description: s.description || '', price: String(s.price ?? ''), duration: String(s.duration ?? ''),
+        lm: s.last_minute_price != null ? String(s.last_minute_price) : '',
         _destroy: false,
       })),
     };
@@ -634,14 +684,23 @@
     services() {
       const svcs = activeSvcs();
       let html = svcs.length ? '' : `<div class="gm-empty">Nenhum serviço cadastrado.</div>`;
+      html += lmBlock(svcs.filter(isLm));
       svcs.forEach(s => {
         const desc = s.description ? ` · ${esc(s.description.slice(0, 40))}` : '';
+        let lmLine = '';
+        if (isLm(s)) {
+          // Se veio de uma pílula, mostra o passo (+30%), não o exato (+31%).
+          const pct = LM_STEPS.find(p => p !== 0 && lmNoPasso(s, p)) ?? lmPct(s);
+          lmLine = `<div class="gm-item-lm">LAST MINUTE · ${pct === 0 ? 'MESMO PREÇO'
+            : `<b>${money(lmPrice(s))}</b> (${pct > 0 ? '+' : ''}${pct}%)`}</div>`;
+        }
         html += `
           <div class="gm-item${ui.editSvc === s._l ? ' editing' : ''}">
             <div class="gm-item-info">
               <div class="gm-item-top"><span class="gm-item-t">${esc(s.title)}</span>
                 ${s.category ? `<span class="gm-badge">${esc(s.category)}</span>` : ''}</div>
               <div class="gm-item-s">${money(s.price)} · ${esc(s.duration)} min${desc}</div>
+              ${lmLine}
             </div>
             <div class="gm-acts">
               <button type="button" class="gm-ibtn" data-edit-svc="${s._l}" title="Editar" aria-label="Editar ${esc(s.title)}">${ic('edit-2', 14)}</button>
@@ -729,9 +788,33 @@
       </div>`;
   }
 
+  // Bloco do topo da aba: explica o Last Minute e aplica um ajuste em todas
+  // as lavagens de uma vez. Preço é livre (o cliente compara as lojas lado a
+  // lado); acima de +30% só aparece um aviso.
+  function lmBlock(lms) {
+    if (!lms.length) return '';
+    const comum = LM_STEPS.find(p => lms.every(s => lmNoPasso(s, p))) ?? null;
+    const alto = lms.some(lmAcimaDoAlerta);
+    return `
+      <div class="gm-lm">
+        <div class="gm-lm-t">${ic('zap', 15)} Preço no Last Minute</div>
+        <div class="gm-hint">Suas lavagens aparecem no Last Minute quando você tem vaga nos próximos
+          30 minutos. Você pode cobrar diferente do agendamento: mais pela urgência, ou menos pra
+          encher um horário que ficaria vazio.</div>
+        <div class="gm-pills" role="group" aria-label="Ajuste do Last Minute em todas as lavagens">
+          ${LM_STEPS.map(p => `<button type="button" class="gm-pill${comum === p ? ' on' : ''}" data-lm-pct="${p}"
+            aria-pressed="${comum === p}">${p === 0 ? 'Mesmo preço' : (p > 0 ? '+' : '') + p + '%'}</button>`).join('')}
+        </div>
+        ${comum === null ? `<div class="gm-hint">Preços ajustados por serviço. Edite uma lavagem pra mudar só ela.</div>` : ''}
+        ${alto ? `<div class="gm-lm-warn">${ic('alert-triangle', 14)}<span>Preços muito acima do agendamento
+          costumam vender menos no Last Minute: o cliente vê os lava-rápidos lado a lado.</span></div>` : ''}
+      </div>`;
+  }
+
   function svcForm(s) {
-    const v = s || { title: '', category: '', description: '', price: '', duration: '' };
+    const v = s || { title: '', category: '', description: '', price: '', duration: '', lm: '' };
     const price = v.price !== '' ? String(v.price).replace('.', ',') : '';
+    const lm = v.lm ? String(v.lm).replace('.', ',') : '';
     return `
       <div class="gm-form" data-svc-form="${s ? s._l : 'new'}">
         <div class="gm-row">
@@ -750,6 +833,11 @@
             <input class="gm-input" data-s="price" value="${esc(price)}" placeholder="50,00" inputmode="decimal"></div>
           <div class="gm-field"><label class="gm-label">Duração (min)</label>
             <input class="gm-input" data-s="duration" value="${esc(v.duration)}" placeholder="60" inputmode="numeric"></div>
+        </div>
+        <div data-lm-field${isLm(v) ? '' : ' hidden'}>
+          <label class="gm-label">Preço no Last Minute (R$)</label>
+          <input class="gm-input" data-s="lm" value="${esc(lm)}" placeholder="Igual ao agendamento" inputmode="decimal">
+          <div class="gm-hint">Deixe vazio pra cobrar o mesmo do agendamento.</div>
         </div>
         <div class="gm-form-acts">
           <button type="button" class="gm-btn primary" data-svc-ok>${ic('check', 14)} Confirmar</button>
@@ -788,6 +876,17 @@
 
   // ── Eventos ───────────────────────────────────────────────────────────
   const root = document.querySelector('.gm');
+
+  // No formulário do serviço, o campo do Last Minute só aparece pra
+  // lavagem (o que entra no Last Minute) — acompanha categoria e nome.
+  root.addEventListener('change', lmCampo);
+  root.addEventListener('input', lmCampo);
+  function lmCampo(e) {
+    const form = e.target.closest('[data-svc-form]');
+    if (!form || !['category', 'title'].includes(e.target.dataset.s)) return;
+    const q = k => form.querySelector(`[data-s=${k}]`).value;
+    form.querySelector('[data-lm-field]').hidden = !isLm({ category: q('category'), title: q('title') });
+  }
 
   root.addEventListener('input', e => {
     const f = e.target.dataset.f;
@@ -874,6 +973,13 @@
     }
 
     // Serviços
+    if (d.lmPct !== undefined) {
+      // Ajuste rápido: recalcula o Last Minute de todas as lavagens
+      // (lmAjustado). 0 = mesmo preço do agendamento.
+      const pct = Number(d.lmPct);
+      activeSvcs().filter(isLm).forEach(s => { s.lm = lmAjustado(s.price, pct); });
+      render(); return;
+    }
     if (d.add === 'svc')   { ui.addSvc = true; ui.editSvc = null; render(); return; }
     if (d.editSvc)         { ui.addSvc = false; ui.editSvc = ui.editSvc === d.editSvc ? null : d.editSvc; render(); return; }
     if ('svcCancel' in d)  { ui.addSvc = false; ui.editSvc = null; render(); return; }
@@ -930,7 +1036,15 @@
     if (!title)                 return toast('error', 'Informe o nome do serviço.');
     if (isNaN(p) || p < 0)      return toast('error', 'Informe um preço válido.');
     if (isNaN(dur) || dur < 1)  return toast('error', 'Informe uma duração válida em minutos.');
-    const data = { title, category, description, price: p.toFixed(2), duration: String(dur) };
+    // Preço do Last Minute: vazio ou igual ao normal = sem preço próprio.
+    let lm = '';
+    const lmRaw = isLm({ category, title }) ? g('lm').trim() : '';
+    if (lmRaw) {
+      const v = parseFloat(lmRaw.replace(/\./g, '').replace(',', '.'));
+      if (isNaN(v) || v <= 0) return toast('error', 'Informe um preço válido pro Last Minute.');
+      if (v.toFixed(2) !== p.toFixed(2)) lm = v.toFixed(2);
+    }
+    const data = { title, category, description, price: p.toFixed(2), duration: String(dur), lm };
     if (form.dataset.svcForm === 'new') {
       st.services.push({ _l: lid(), id: null, _destroy: false, ...data });
       ui.addSvc = false;
@@ -1089,7 +1203,8 @@
     });
     st.services.forEach((s, i) => {
       if (!s.id && s._destroy) return;
-      const a = { title: s.title, category: s.category, description: s.description, price: parseFloat(s.price), duration: parseInt(s.duration, 10) };
+      const a = { title: s.title, category: s.category, description: s.description, price: parseFloat(s.price), duration: parseInt(s.duration, 10),
+                  last_minute_price: s.lm === '' ? '' : parseFloat(s.lm) };
       if (s.id) a.id = s.id;
       if (s._destroy) a._destroy = '1';
       svcs[i] = a;

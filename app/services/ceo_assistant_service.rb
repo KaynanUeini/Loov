@@ -103,11 +103,11 @@ class CeoAssistantService
     volume_month = Appointment
       .where(status: "attended")
       .where(scheduled_at: @month_start..@month_end)
-      .joins(:service).sum("services.price").to_f.round(2)
+      .joins(:service).sum(Appointment::GROSS_PRICE_SQL).to_f.round(2)
 
     volume_total = Appointment
       .where(status: "attended")
-      .joins(:service).sum("services.price").to_f.round(2)
+      .joins(:service).sum(Appointment::GROSS_PRICE_SQL).to_f.round(2)
 
     # Disponíveis
     disp_count_month  = Appointment.where(appointment_type: "disponivel").where(scheduled_at: @month_start..@month_end).count
@@ -120,7 +120,7 @@ class CeoAssistantService
     owners_without_disp = CarWash.where(active: true).count - owners_with_disp
 
     # Ticket médio
-    avg_ticket = Appointment.where(status: "attended").joins(:service).average("services.price").to_f.round(2) rescue 0
+    avg_ticket = Appointment.where(status: "attended").joins(:service).average(Appointment::GROSS_PRICE_SQL).to_f.round(2) rescue 0
 
     {
       commission_this_month:    commission_month,
@@ -200,13 +200,13 @@ class CeoAssistantService
     top_cws = CarWash.joins(appointments: :service)
       .where(appointments: { status: "attended" })
       .group("car_washes.id", "car_washes.name")
-      .order(Arel.sql("SUM(services.price) DESC"))
+      .order(Arel.sql("SUM(COALESCE(appointments.price_override, services.price)) DESC"))
       .limit(5)
-      .pluck("car_washes.name", "SUM(services.price)", "COUNT(appointments.id)")
+      .pluck("car_washes.name", "SUM(COALESCE(appointments.price_override, services.price))", "COUNT(appointments.id)")
       .map { |name, rev, cnt| { name: name, revenue: rev.to_f.round(2), appointments: cnt.to_i } }
 
     # Concentração: % do volume no top 3
-    total_vol = Appointment.where(status: "attended").joins(:service).sum("services.price").to_f
+    total_vol = Appointment.where(status: "attended").joins(:service).sum(Appointment::GROSS_PRICE_SQL).to_f
     top3_vol  = top_cws.first(3).sum { |c| c[:revenue] }
     concentration_pct = total_vol > 0 ? (top3_vol / total_vol * 100).round(1) : 0
 

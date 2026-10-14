@@ -89,7 +89,7 @@ class DisponivelController < ApplicationController
         car_wash:    cw,
         services:    fitting,
         slots:       [slot],
-        min_price:   fitting.map { |s| s.price.to_f }.min,
+        min_price:   fitting.map(&:preco_last_minute).min,
         distance_km: distance_km
       }
     end
@@ -143,7 +143,10 @@ class DisponivelController < ApplicationController
               {
                 id:          svc.id,
                 title:       svc.title,
-                price:       svc.price.to_f,
+                price:       svc.preco_last_minute,
+                # Preço do agendamento comum, pra tela mostrar o desconto
+                # (riscado) quando o Last Minute sai mais barato.
+                regular_price: svc.price.to_f,
                 duration:    svc.duration,
                 category:    svc.category,
                 description: svc.description
@@ -182,7 +185,7 @@ class DisponivelController < ApplicationController
       return
     end
 
-    @total_price = @service.price.to_f
+    @total_price = @service.preco_last_minute
     @prepayment  = (@total_price * Appointment::PREPAYMENT_PCT).round(2)
     @remaining   = (@total_price - @prepayment).round(2)
     @has_card    = current_user.has_payment_method?
@@ -242,7 +245,10 @@ class DisponivelController < ApplicationController
         scheduled_at:          slot,
         status:                "pending_acceptance",
         appointment_type:      "disponivel",
-        acceptance_expires_at: expires_at
+        acceptance_expires_at: expires_at,
+        # Preço do Last Minute congelado na reserva: se o dono mudar depois,
+        # o cliente paga o que viu.
+        price_override:        (service.preco_last_minute if service.preco_last_minute_proprio?)
       )
       # Valores informativos (pré-pagamento teórico, comissão) — úteis para DRE/relatórios
       appointment.calculate_disponivel_amounts!

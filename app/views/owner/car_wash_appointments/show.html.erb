@@ -116,7 +116,7 @@
         <div class="appt-detail-icon"><i class="fas fa-tag"></i></div>
         <div class="appt-detail-content">
           <div class="appt-detail-label">Preço</div>
-          <div class="appt-detail-value">R$ <%= number_with_precision(@appointment.service.price, precision: 2) %></div>
+          <div class="appt-detail-value">R$ <%= number_with_precision(@appointment.effective_price, precision: 2) %></div>
         </div>
       </div>
       <% end %>

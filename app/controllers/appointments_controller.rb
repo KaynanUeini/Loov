@@ -321,7 +321,7 @@ class AppointmentsController < ApplicationController
         service: {
           id:       a.service.id,
           title:    a.service.title,
-          price:    a.service.price,
+          price:    a.effective_price,
           duration: a.service.duration
         }
       }

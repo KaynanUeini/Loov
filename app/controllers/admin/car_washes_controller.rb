@@ -16,7 +16,7 @@ module Admin
           active:       cw.active,
           services:     cw.services.count,
           appointments: cw.appointments.count,
-          revenue:      cw.appointments.where(status: "attended").joins(:service).sum("services.price").to_f
+          revenue:      cw.appointments.where(status: "attended").joins(:service).sum(Appointment::GROSS_PRICE_SQL).to_f
         }
       }
     end
@@ -36,7 +36,7 @@ module Admin
         avg_rating:         reviews.any? ? reviews.average(:rating).to_f.round(1) : nil,
         review_count:       reviews.count,
         total_appointments: cw.appointments.count,
-        total_revenue:      cw.appointments.where(status: "attended").joins(:service).sum("services.price").to_f
+        total_revenue:      cw.appointments.where(status: "attended").joins(:service).sum(Appointment::GROSS_PRICE_SQL).to_f
       }
     end
 

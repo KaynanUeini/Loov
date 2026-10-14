@@ -80,7 +80,7 @@ class HomeController < ApplicationController
         @today_revenue  = @car_wash.appointments
                             .where(scheduled_at: today_start..today_end, status: "attended")
                             .joins(:service)
-                            .sum("services.price - COALESCE(appointments.commission_amount, 0)").to_f
+                            .sum("COALESCE(appointments.price_override, services.price) - COALESCE(appointments.commission_amount, 0)").to_f
         @upcoming_count = @car_wash.appointments
                             .where(status: "confirmed")
                             .where(scheduled_at: Time.current..7.days.from_now)
@@ -152,7 +152,7 @@ class HomeController < ApplicationController
           car_wash:    cw,
           slot:        available_slot,
           services:    cabem,
-          min_price:   cabem.map { |s| s.price.to_f }.min,
+          min_price:   cabem.map(&:preco_last_minute).min,
           distance_km: cw.distance_to([lat, lon], :km).round(1)
         }
       end

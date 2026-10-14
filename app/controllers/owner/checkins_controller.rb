@@ -70,7 +70,7 @@ module Owner
         car_wash.appointments
           .where(scheduled_at: d_start..d_end, status: "attended")
           .joins(:service)
-          .sum("services.price - COALESCE(appointments.commission_amount, 0)").to_f
+          .sum("COALESCE(appointments.price_override, services.price) - COALESCE(appointments.commission_amount, 0)").to_f
       end.sum / 7.0
 
       services = car_wash.services.order(:title).map do |s|

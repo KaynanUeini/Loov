@@ -55,6 +55,19 @@ class Service < ApplicationRecord
   validates :price, numericality: { greater_than_or_equal_to: 0 }
   validates :duration, numericality: { greater_than: 0 }
   validates :category, inclusion: { in: CATEGORIES }, allow_blank: true
+  validates :last_minute_price, numericality: { greater_than: 0 }, allow_nil: true
+
+  # Preço no Last Minute. O dono pode cobrar diferente do agendamento comum
+  # (mais caro pela urgência e pela taxa da Loov, ou mais barato pra encher
+  # horário vago) — livre, o cliente compara as lojas lado a lado. Sem preço
+  # próprio, vale o do agendamento comum.
+  def preco_last_minute
+    (last_minute_price.presence || price).to_f
+  end
+
+  def preco_last_minute_proprio?
+    last_minute_price.present? && last_minute_price.to_f != price.to_f
+  end
 
   # Versão em Ruby do scope acima, pra validar um serviço já em memória sem ida
   # ao banco. As duas precisam concordar.

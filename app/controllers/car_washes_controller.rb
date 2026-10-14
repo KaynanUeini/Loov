@@ -258,7 +258,8 @@ class CarWashesController < ApplicationController
           category:    s.category,
           description: s.description,
           price:       s.price.to_f,
-          duration:    s.duration
+          duration:    s.duration,
+          last_minute_price: s.last_minute_price&.to_f
         }
       }
     }
@@ -604,6 +605,7 @@ class CarWashesController < ApplicationController
             description: sv.description,
             price:       sv.price.to_f,
             duration:    sv.duration,
+            last_minute_price: sv.last_minute_price&.to_f,
           }
         },
       }
@@ -628,7 +630,7 @@ class CarWashesController < ApplicationController
         :name, :address, :cep, :logradouro, :numero, :bairro, :cidade, :uf,
         :latitude, :longitude, :capacity_per_slot,
         operating_hours_attributes: [:id, :day_of_week, :opens_at, :closes_at, :capacity, :_destroy],
-        services_attributes: [:id, :title, :description, :price, :duration, :category, :_destroy]
+        services_attributes: [:id, :title, :description, :price, :duration, :category, :last_minute_price, :_destroy]
         )
     end
   end
