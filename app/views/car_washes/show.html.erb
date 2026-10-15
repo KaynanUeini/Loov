@@ -517,7 +517,7 @@
       '<div class="cw-info"><div class="cw-info-head"><span class="cw-info-lab">Horários</span>' +
         '<span class="cw-now ' + (open ? 'is-open' : 'is-closed') + '"><i></i>' + (open ? 'Aberto agora' : 'Fechado agora') + '</span></div>' + hours + '</div>' +
       '<div class="cw-info"><div class="cw-info-lab">Endereço</div>' +
-        '<div class="cw-addr">' + esc(CW.logradouro || CW.address || '—') + '</div>' +
+        '<div class="cw-addr">' + esc(CW.logradouro ? CW.logradouro + (CW.numero ? ', ' + CW.numero : '') : CW.address || '—') + '</div>' +
         (sub.trim() ? '<div class="cw-addr-sub">' + esc(sub) + '</div>' : '') +
         (CW.distance_km != null ? '<div class="cw-addr-dist">a ' + Number(CW.distance_km).toFixed(1).replace('.', ',') + ' km de você</div>' : '') +
         (hasCoords ? '<div class="cw-minimap" id="' + mapId + '"></div>' : '') +
