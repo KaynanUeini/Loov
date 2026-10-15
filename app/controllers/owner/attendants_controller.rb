@@ -52,7 +52,10 @@ module Owner
         {
           id:         inv.id,
           email:      inv.email,
-          created_at: inv.created_at.iso8601
+          created_at: inv.created_at.iso8601,
+          # Link de aceite: a Equipe no site mostra pra copiar e mandar pelo
+          # WhatsApp quando o e-mail não chega.
+          accept_url: accept_owner_attendant_invitations_url(token: inv.token)
         }
       end
 

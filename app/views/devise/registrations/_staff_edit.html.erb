@@ -1,0 +1,198 @@
+<%#
+  Perfil do dono e do atendente — porte do "Mais" do app do dono
+  (OwnerMaisScreen), no mesmo esqueleto da Conta do cliente: mesmos estilos
+  (_account_styles), mesma tela de Privacidade e segurança e mesma folha de
+  Sair.
+
+    · Esquerda: nome como título, cartão escuro com a pessoa e o papel, e o
+      lava-rápido logo abaixo (abre o Gerenciar).
+    · Direita: as funções do painel agrupadas como no app (Funcionalidades,
+      Suporte, Conta). Atendente vê só o que pode abrir.
+
+  Só entra o que o site tem: Notificações, Aprovações, Fidelidade e
+  Mensagens ainda existem só no app.
+%>
+<%
+  sa   = @staff_account
+  cw   = sa[:car_wash]
+  dono = sa[:owner]
+  first_name = sa[:full_name].to_s.split.first.presence || "Você"
+  feat = []
+  if cw
+    feat << { icon: "settings", label: "Gerenciar lava-rápido", desc: "Horários, serviços e capacidade", href: manage_car_wash_path(cw[:id]) }
+  end
+  feat << { icon: "calendar",    label: "Agenda",       desc: "Agendamentos de hoje e dos próximos dias", href: owner_car_wash_appointments_path }
+  feat << { icon: "dollar-sign", label: "Financeiro",   desc: dono ? "Faturamento, custos e relatório do mês" : "Lançar os custos do mês",
+            href: dono ? owner_monthly_costs_path : edit_owner_monthly_costs_path }
+  if dono
+    feat << { icon: "cpu",   label: "IA insights",  desc: "Análise do mês gerada pela IA",      href: owner_financial_tracking_path }
+    feat << { icon: "users", label: "Funcionários", desc: "Convide e revogue acessos da equipe", href: owner_attendant_invitations_path }
+  end
+%>
+<script src="/vendor/feather-4.29.2.min.js"></script>
+
+<%= render "devise/registrations/account_styles" %>
+<style>
+  /* Cartão da pessoa: o mesmo fundo escuro da Conta do cliente, com a
+     inicial em coral e o papel em pílula — igual ao cartão do "Mais". */
+  .st-id { position: relative; overflow: hidden; display: flex; align-items: center; gap: 14px; margin: 0 20px 20px; padding: 22px 20px; border-radius: 20px; background: var(--ink); color: var(--cream); }
+  .st-id::after { content: ""; position: absolute; top: -30px; right: -30px; width: 130px; height: 130px; border-radius: 50%; background: var(--coral-500); opacity: .18; }
+  .st-av { position: relative; flex: 0 0 52px; height: 52px; border-radius: 50%; background: var(--coral-500); color: var(--cream); display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px; }
+  .st-who { position: relative; flex: 1; min-width: 0; }
+  .st-who b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 18px; letter-spacing: -0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .st-who small { display: block; margin-top: 2px; font-size: 12.5px; color: #9e9688; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .st-role { display: inline-block; margin-top: 8px; padding: 2px 8px; border-radius: 8px; border: 1px solid rgba(221,120,82,.4); background: rgba(221,120,82,.18); color: var(--coral-300, #e8a48a); font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; }
+  .ac-veh .st-store { flex: 0 0 40px; height: 40px; border-radius: 12px; background: var(--coral-50); color: var(--coral-500); display: flex; align-items: center; justify-content: center; }
+  /* Rótulo de grupo em mono (FUNCIONALIDADES · SUPORTE · CONTA), como no app. */
+  .st-group { padding: 6px 20px 8px; }
+  .ac-item-ic.is-coral { background: var(--coral-50); color: var(--coral-500); }
+  .ac-item:hover .ac-item-ic.is-coral { background: var(--coral-100); }
+  @media (min-width: 960px) {
+    .ac-split .st-id { margin-left: 0; margin-right: 0; }
+    .st-group { padding: 0 4px 8px; }
+    .ac-list + .st-group { margin-top: 22px; }
+  }
+</style>
+
+<div class="ac">
+  <section class="ac-view is-on" id="ac-main">
+    <div class="ac-wrap ac-split">
+      <div class="ac-left">
+        <div class="ac-title"><div class="ac-mono">Perfil</div><h1><%= first_name %></h1></div>
+        <div class="st-id">
+          <span class="st-av" aria-hidden="true"><%= first_name.first.upcase %></span>
+          <span class="st-who">
+            <b><%= sa[:full_name].presence || "Painel do operador" %></b>
+            <small><%= sa[:email] %></small>
+            <span class="st-role"><%= dono ? "DONO" : "ATENDENTE" %></span>
+          </span>
+        </div>
+
+        <div class="ac-sec"><h2>Seu lava-rápido</h2></div>
+        <% if cw %>
+          <a class="ac-veh" href="<%= manage_car_wash_path(cw[:id]) %>">
+            <span class="st-store"><i data-feather="map-pin" style="width:18px;height:18px"></i></span>
+            <span class="ac-veh-t"><b><%= cw[:name] %></b><small><%= cw[:address].presence || "Endereço não cadastrado" %></small></span>
+            <span class="ac-veh-go"><i data-feather="chevron-right" style="width:18px;height:18px"></i></span>
+          </a>
+        <% elsif dono %>
+          <a class="ac-veh" href="<%= new_car_wash_path %>">
+            <span class="st-store"><i data-feather="plus" style="width:18px;height:18px"></i></span>
+            <span class="ac-veh-t"><b>Cadastrar seu lava-rápido</b><small>Endereço, horários e serviços</small></span>
+            <span class="ac-veh-go"><i data-feather="chevron-right" style="width:18px;height:18px"></i></span>
+          </a>
+        <% end %>
+      </div>
+
+      <div class="ac-right">
+        <div class="ac-mono st-group">Funcionalidades</div>
+        <div class="ac-list">
+          <% feat.each do |it| %>
+            <a class="ac-item" href="<%= it[:href] %>">
+              <span class="ac-item-ic is-coral"><i data-feather="<%= it[:icon] %>" style="width:18px;height:18px"></i></span>
+              <span class="ac-item-t"><b><%= it[:label] %></b><small><%= it[:desc] %></small></span>
+              <i data-feather="chevron-right" class="ac-chev" style="width:16px;height:16px"></i>
+            </a>
+          <% end %>
+        </div>
+
+        <div class="ac-mono st-group">Suporte</div>
+        <div class="ac-list">
+          <a class="ac-item" href="<%= suporte_path %>">
+            <span class="ac-item-ic is-coral"><i data-feather="life-buoy" style="width:18px;height:18px"></i></span>
+            <span class="ac-item-t"><b>Abrir chamado</b><small>Dúvidas, problemas técnicos ou financeiros</small></span>
+            <i data-feather="chevron-right" class="ac-chev" style="width:16px;height:16px"></i>
+          </a>
+        </div>
+
+        <div class="ac-mono st-group">Conta</div>
+        <div class="ac-list">
+          <button type="button" class="ac-item" data-open="seguranca">
+            <span class="ac-item-ic is-coral"><i data-feather="shield" style="width:18px;height:18px"></i></span>
+            <span class="ac-item-t"><b>Privacidade e segurança</b><small>E-mail, senha e exclusão da conta</small></span>
+            <i data-feather="chevron-right" class="ac-chev" style="width:16px;height:16px"></i>
+          </button>
+          <button type="button" class="ac-item ac-logout" data-sheet="sair">
+            <span class="ac-item-ic"><i data-feather="log-out" style="width:17px;height:17px"></i></span>
+            <span class="ac-item-t"><b>Sair da conta</b><small><%= sa[:email] %></small></span>
+          </button>
+        </div>
+        <div class="ac-version">LOOV · v1.0.0</div>
+      </div>
+    </div>
+  </section>
+
+  <%# Dono não exclui sozinho: vira pedido pra equipe (User#excluir_conta!).
+      Atendente sai da equipe e a conta fica anônima. %>
+  <%= render "devise/registrations/account_security", security_errors: security_errors, danger: (dono ? {
+        title: "Excluir minha conta e o lava-rápido",
+        text: "Como há clientes com horário marcado e pagamentos do Last Minute, a exclusão é feita pela equipe Loov. Ao pedir, abrimos uma conversa no Suporte e avisamos quando estiver concluída.",
+        ask: "Pedir exclusão da conta", confirm: "Sim, pedir a exclusão" } : {
+        title: "Excluir minha conta",
+        text: "Seus dados pessoais são apagados e você sai da equipe do lava-rápido. Não dá pra desfazer.",
+        ask: "Excluir minha conta", confirm: "Sim, excluir de vez" }) %>
+
+  <%= render "devise/registrations/account_logout", logout_text: "Pra voltar, é só entrar de novo com seu e-mail e senha. O lava-rápido, a agenda e a equipe continuam como estão." %>
+
+  <div class="ac-toast" id="ac-toast" role="status" aria-live="polite"></div>
+</div>
+
+<script>
+(function () {
+  var FLASH = <%= raw json_escape({ notice: flash[:notice], alert: flash[:alert] }.to_json) %>;
+  var OPEN_VIEW = <%= raw json_escape(open_view.to_json) %>;
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function icon(n, size) { return window.feather && feather.icons[n] ? feather.icons[n].toSvg({ width: size, height: size }) : ''; }
+
+  var toastT = null;
+  function toast(text, err) {
+    var t = $('ac-toast');
+    t.className = 'ac-toast is-on' + (err ? ' is-err' : '');
+    t.innerHTML = icon(err ? 'x-circle' : 'check-circle', 15) + '<span>' + esc(text) + '</span>';
+    clearTimeout(toastT); toastT = setTimeout(function () { t.classList.remove('is-on'); }, 3500);
+  }
+
+  var lastFocus = null;
+  function openSheet(name) {
+    lastFocus = document.activeElement;
+    var s = $('sh-' + name); s.classList.add('is-on'); s.setAttribute('aria-hidden', 'false');
+    var first = s.querySelector('button'); if (first) setTimeout(function () { first.focus(); }, 50);
+  }
+  function closeSheets() {
+    document.querySelectorAll('.ac-sheet-bg.is-on').forEach(function (s) { s.classList.remove('is-on'); s.setAttribute('aria-hidden', 'true'); });
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+
+  // Privacidade e segurança é tela própria (#seguranca); o voltar do
+  // navegador volta pro Perfil.
+  function showView(v, push) {
+    ['main', 'seguranca'].forEach(function (k) { $('ac-' + k).classList.toggle('is-on', k === v); });
+    if (push) history.pushState({ v: v }, '', v === 'main' ? location.pathname + location.search : '#' + v);
+    window.scrollTo(0, 0);
+  }
+  window.addEventListener('popstate', function (e) { closeSheets(); showView((e.state && e.state.v) || 'main', false); });
+
+  document.addEventListener('click', function (e) {
+    var t;
+    if ((t = e.target.closest('[data-sheet]'))) { openSheet(t.dataset.sheet); return; }
+    if ((t = e.target.closest('[data-open]'))) { showView(t.dataset.open, true); return; }
+    if (e.target.closest('[data-back]')) { history.back(); return; }
+    if (e.target.closest('[data-close]') || e.target.classList.contains('ac-sheet-bg')) { closeSheets(); return; }
+    if (e.target.closest('#sec-danger-ask')) { $('sec-danger').classList.add('is-asking'); return; }
+    if (e.target.closest('#sec-danger-no')) { $('sec-danger').classList.remove('is-asking'); return; }
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSheets(); });
+  $('sec-form').addEventListener('submit', function () { var b = $('sec-save'); b.disabled = true; b.innerHTML = '<span class="ac-spin"></span>'; });
+
+  if (window.feather) feather.replace();
+  var hash = location.hash.replace('#', '');
+  // Senha errada: o Devise devolve a página no endereço do POST (/users),
+  // que não abre com GET. Volta pro endereço do Perfil.
+  var base = location.pathname === '/users' ? '/users/edit' : location.pathname + location.search;
+  history.replaceState({ v: 'main' }, '', base);
+  if (OPEN_VIEW) showView(OPEN_VIEW, true);
+  else if (hash === 'seguranca') showView(hash, true);
+  if (FLASH.notice) toast(FLASH.notice); else if (FLASH.alert) toast(FLASH.alert, true);
+})();
+</script>

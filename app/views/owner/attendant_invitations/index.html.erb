@@ -1,181 +1,351 @@
+<%#
+  Equipe — porte do OwnerFuncionariosScreen do app, com a mesma API
+  (/owner/attendants): convidar por e-mail, criar acesso direto, remover o
+  acesso de quem já está na equipe e cancelar convite pendente.
+
+  Cabeçalho e números no mesmo desenho da Agenda (mono coral + título
+  grande). No desktop as duas formas de chamar alguém ficam à esquerda e a
+  equipe à direita; no celular empilha, como no app. Formulários e
+  confirmações abrem na folha da Conta (sobe no celular, centraliza no
+  desktop). O link do convite pendente fica à mão pra copiar e mandar pelo
+  WhatsApp quando o e-mail não chega.
+%>
+<script src="/vendor/feather-4.29.2.min.js"></script>
+
 <style>
-  .invite-form-row { display: flex; gap: 12px; align-items: stretch; flex-wrap: wrap; }
-  .invite-form-row .loov-input { flex: 1; min-width: 220px; margin-bottom: 0; }
-  .invite-list { display: flex; flex-direction: column; gap: 12px; }
-  .invite-item {
-    background: var(--paper); border: 1px solid var(--stone);
-    border-radius: 14px; overflow: hidden;
-    transition: border-color 0.2s ease;
+  .loov-nav { background: var(--cream) !important; }
+  .eq { background: var(--cream); color: var(--ink); min-height: 100vh; padding-top: 60px; }
+  .eq *, .eq *::before, .eq *::after { box-sizing: border-box; }
+  .eq button { font-family: inherit; line-height: normal; cursor: pointer; }
+  .eq svg.feather { display: block; flex-shrink: 0; }
+  .eq-wrap { width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 20px 80px; }
+  .eq-mono { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ash); }
+
+  .eq-head { padding: 28px 0 22px; }
+  .eq-head .eq-mono { color: var(--coral-500); }
+  .eq-head h1 {
+    margin: 6px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700;
+    font-size: clamp(40px, 6vw, 76px); line-height: .95; letter-spacing: -0.045em; color: var(--ink) !important;
   }
-  .invite-item:hover { border-color: var(--coral-100); }
-  .invite-item-main {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 14px; padding: 14px 18px;
+  .eq-head p { margin: 12px 0 0; max-width: 46ch; font-size: 14px; line-height: 20px; color: var(--graphite); }
+
+  /* Números da equipe: tipografia no lugar de cards, como na Agenda. */
+  .eq-stats { display: grid; grid-template-columns: repeat(2, 1fr); border-top: 1px solid var(--stone); border-bottom: 1px solid var(--stone); margin-bottom: 26px; }
+  .eq-stat { padding: 16px 0 16px 20px; border-left: 1px solid var(--stone); }
+  .eq-stat:first-child { border-left: none; padding-left: 0; }
+  .eq-stat b { display: block; margin-top: 6px; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: clamp(24px, 3vw, 36px); letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+
+  /* Chamadas: convidar (coral, a principal) e acesso direto (neutra). */
+  .eq-cta { width: 100%; display: flex; align-items: center; gap: 12px; margin-bottom: 10px; padding: 16px; text-align: left; border-radius: 18px; border: 1px solid var(--stone); background: var(--paper); color: var(--ink); transition: border-color .15s, box-shadow .2s, transform .15s; }
+  .eq-cta:hover { border-color: var(--ink); box-shadow: 0 10px 24px -18px rgba(40,35,28,.5); }
+  .eq-cta.is-main { background: var(--coral-50); border-color: var(--coral-100); }
+  .eq-cta.is-main:hover { border-color: var(--coral-500); }
+  .eq-cta-ic { flex: 0 0 40px; height: 40px; border-radius: 12px; background: var(--sand); color: var(--ink); display: flex; align-items: center; justify-content: center; }
+  .eq-cta.is-main .eq-cta-ic { background: var(--coral-500); color: var(--cream); }
+  .eq-cta-t { flex: 1; min-width: 0; }
+  .eq-cta-t b { display: block; font-size: 14px; font-weight: 600; }
+  .eq-cta-t small { display: block; margin-top: 2px; font-size: 12px; line-height: 16px; color: var(--graphite); }
+  .eq-cta > svg { color: var(--graphite); }
+  .eq-cta.is-main > svg { color: var(--coral-500); }
+
+  .eq-sec { display: flex; align-items: baseline; justify-content: space-between; margin: 22px 0 10px; }
+  .eq-left > .eq-sec:first-child, .eq-right > .eq-sec:first-child { margin-top: 0; }
+  .eq-right { margin-top: 26px; }
+  .eq-list { background: var(--paper); border: 1px solid var(--stone); border-radius: 18px; overflow: hidden; }
+  .eq-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--stone); }
+  .eq-row:last-child { border-bottom: 0; }
+  .eq-av { flex: 0 0 38px; height: 38px; border-radius: 50%; background: var(--coral-50); color: var(--coral-700); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; }
+  .eq-av.is-pending { background: #fef5e2; color: var(--amber-500, #c98a1b); }
+  .eq-row-t { flex: 1; min-width: 0; }
+  .eq-row-t b { display: block; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .eq-row-t small { display: block; margin-top: 1px; font-size: 12px; color: var(--graphite); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .eq-act { flex: 0 0 34px; height: 34px; border: 0; border-radius: 50%; background: transparent; color: var(--graphite); display: flex; align-items: center; justify-content: center; transition: background .15s, color .15s; }
+  .eq-act:hover { background: var(--sand); color: var(--ink); }
+  .eq-act.is-danger:hover { background: rgba(200,80,80,.10); color: var(--rose-500, #c0392b); }
+  .eq-act.is-done { color: var(--coral-500); }
+  .eq-empty { display: flex; align-items: center; gap: 10px; padding: 18px 16px; color: var(--graphite); font-size: 13px; }
+  .eq-empty svg { color: var(--ash); }
+  .eq-loading { padding: 24px 16px; display: flex; justify-content: center; }
+
+  /* Folhas — o mesmo desenho das folhas da Conta. */
+  .eq-sheet-bg { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; background: rgba(25,20,15,.5); opacity: 0; pointer-events: none; transition: opacity .2s; }
+  .eq-sheet-bg.is-on { opacity: 1; pointer-events: auto; }
+  .eq-sheet { width: 100%; max-width: 480px; max-height: 92vh; overflow-y: auto; background: var(--paper); border-radius: 28px 28px 0 0; padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateY(24px); transition: transform .25s; }
+  .eq-sheet-bg.is-on .eq-sheet { transform: none; }
+  .eq-handle { width: 40px; height: 4px; margin: 10px auto 0; border-radius: 2px; background: var(--stone); }
+  .eq-sheet-h { display: flex; justify-content: space-between; align-items: center; padding: 20px 20px 4px; }
+  .eq-sheet-h h2 { margin: 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 20px; letter-spacing: -0.3px; color: var(--ink) !important; }
+  .eq-x { border: 0; background: transparent; color: var(--graphite); padding: 6px; border-radius: 50%; }
+  .eq-x:hover { background: var(--sand); }
+  .eq-sheet-b { padding: 8px 20px 12px; }
+  .eq-sheet-b > p { margin: 0 0 18px; font-size: 13px; line-height: 19px; color: var(--graphite); }
+  .eq-f { margin-bottom: 16px; }
+  .eq-f label { display: block; margin-bottom: 6px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; color: var(--ash); text-transform: uppercase; }
+  .eq-f input { display: block; width: 100%; padding: 12px 14px !important; border: 1px solid transparent !important; border-radius: 14px !important; background: var(--sand) !important; box-shadow: none !important; outline: none; font: inherit; font-size: 15px; font-weight: 500; color: var(--ink); transition: border-color .15s, box-shadow .15s; }
+  .eq-f input:focus { border-color: var(--coral-500) !important; box-shadow: 0 0 0 4px rgba(221,120,82,.14) !important; }
+  .eq-f .eq-help { margin-top: 6px; font-size: 11.5px; color: var(--graphite); }
+  .eq-save { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px; padding: 16px; border: 0; border-radius: 100px; background: var(--coral-500); color: var(--cream); font-size: 14px; font-weight: 600; transition: opacity .15s; }
+  .eq-save[disabled] { opacity: .7; cursor: default; }
+  .eq-confirm { text-align: center; padding: 26px 22px 6px; }
+  .eq-confirm-ic { width: 52px; height: 52px; margin: 0 auto 14px; border-radius: 50%; background: rgba(200,80,80,.12); border: 1px solid rgba(200,80,80,.25); color: var(--rose-500, #c0392b); display: flex; align-items: center; justify-content: center; }
+  .eq-confirm h2 { margin: 0 0 6px !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 600; font-size: 19px; color: var(--ink) !important; }
+  .eq-confirm p { margin: 0; font-size: 13px; line-height: 19px; color: var(--graphite); }
+  .eq-confirm p b { color: var(--ink); }
+  .eq-danger { width: 100%; display: flex; align-items: center; justify-content: center; margin-top: 20px; padding: 13px; border: 0; border-radius: 100px; background: var(--rose-500, #c0392b); color: var(--cream); font-size: 14px; font-weight: 600; }
+  .eq-danger[disabled] { opacity: .7; cursor: default; }
+  .eq-ghost { width: 100%; margin-top: 8px; padding: 12px; border: 0; border-radius: 100px; background: transparent; color: var(--graphite); font-size: 13px; font-weight: 600; }
+  .eq-ghost:hover { background: var(--sand); }
+  .eq-spin { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(250,250,246,.35); border-top-color: var(--cream); animation: eqspin .8s linear infinite; }
+  .eq-spin.is-dark { border-color: var(--stone); border-top-color: var(--coral-500); }
+  @keyframes eqspin { to { transform: rotate(360deg); } }
+
+  .eq-toast { position: fixed; left: 20px; right: 20px; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); z-index: 70; max-width: 440px; margin: 0 auto; display: flex; align-items: center; gap: 10px; padding: 14px; border-radius: 14px; border: 1px solid var(--coral-100); background: var(--coral-50); color: var(--coral-700); font-size: 13px; font-weight: 600; box-shadow: 0 14px 36px -16px rgba(40,35,28,.45); transform: translateY(16px); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+  .eq-toast.is-on { opacity: 1; transform: none; }
+  .eq-toast.is-err { background: #f6d4d4; border-color: #e89999; color: var(--rose-500, #c0392b); }
+
+  @media (min-width: 720px) {
+    .eq-sheet-bg { align-items: center; }
+    .eq-sheet { border-radius: 28px; }
+    .eq-handle { display: none; }
   }
-  .invite-item-left { flex: 1; min-width: 0; }
-  .invite-email {
-    font-family: 'Space Grotesk', sans-serif; font-size: 15px;
-    color: var(--ink); font-weight: 600;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  @media (min-width: 960px) {
+    .eq-wrap { padding-left: 32px; padding-right: 32px; }
+    .eq-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 40px; align-items: start; }
+    .eq-left { position: sticky; top: 84px; }
+    .eq-right { margin-top: 0; }
   }
-  .invite-meta { font-size: 12.5px; color: var(--ash); margin-top: 2px; }
-  .invite-item-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-  .invite-link-wrap {
-    padding: 12px 18px;
-    border-top: 1px solid var(--stone);
-    background: var(--sand);
-  }
-  .invite-link-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; font-weight: 600; letter-spacing: 1.4px;
-    text-transform: uppercase; color: var(--graphite);
-    margin-bottom: 6px;
-  }
-  .invite-link-url {
-    font-size: 12px; color: var(--graphite);
-    word-break: break-all; line-height: 1.5;
-    display: flex; align-items: flex-start; gap: 8px;
-    font-family: 'JetBrains Mono', monospace;
-  }
-  .btn-copy {
-    background: var(--paper); border: 1px solid var(--stone);
-    border-radius: 8px; padding: 5px 10px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; font-weight: 600; letter-spacing: 1px;
-    color: var(--graphite); cursor: pointer;
-    transition: all 0.15s ease;
-    white-space: nowrap; flex-shrink: 0;
-    text-transform: uppercase;
-  }
-  .btn-copy:hover { border-color: var(--coral-500); color: var(--coral-700); }
-  .btn-copy.copied { border-color: var(--coral-500); color: var(--coral-700); background: var(--coral-50); }
-  .btn-danger-sm {
-    background: transparent; color: var(--rose-500);
-    border: 1px solid #f5cccc; border-radius: 8px;
-    padding: 6px 12px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; font-weight: 600; letter-spacing: 1.2px;
-    cursor: pointer; transition: all 0.2s ease;
-    text-transform: uppercase;
-  }
-  .btn-danger-sm:hover { background: #fdecec; border-color: var(--rose-500); }
-  .empty-state {
-    text-align: center; padding: 36px 16px;
-    display: flex; flex-direction: column; align-items: center; gap: 10px;
-  }
-  .empty-state-icon {
-    width: 52px; height: 52px; border-radius: 14px;
-    background: var(--coral-50); border: 1px solid var(--coral-100);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px; color: var(--coral-700);
-  }
-  .empty-state-text { font-size: 14px; color: var(--graphite); }
-  .flash-msg {
-    display: flex; align-items: center; gap: 10px;
-    padding: 12px 18px; border-radius: 12px;
-    font-size: 14px; margin-bottom: 22px;
-  }
-  .flash-success { background: #d6ecde; border: 1px solid #b5d8c1; color: #2d6b42; }
-  .flash-error   { background: #fdecec; border: 1px solid #f5cccc; color: var(--rose-500); }
-  .section-mini-title {
-    display: flex; align-items: center; gap: 10px;
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 18px; font-weight: 700; color: var(--ink);
-    letter-spacing: -0.2px;
-    margin: 0 0 18px;
-  }
-  .section-mini-title i { color: var(--coral-500); font-size: 14px; }
 </style>
 
-<div class="loov-page loov-page--narrow">
+<div class="eq">
+  <div class="eq-wrap">
+    <header class="eq-head">
+      <div class="eq-mono">Equipe</div>
+      <h1>Funcionários.</h1>
+      <p>Quem atende no balcão entra com a própria conta: faz check-in, vê a agenda e lança custos. Faturamento e lucro ficam só com você.</p>
+    </header>
 
-  <div class="loov-hero">
-    <div class="loov-eyebrow"><span class="dot"></span>Equipe</div>
-    <h1 class="loov-h1">Seus <span class="accent">atendentes</span>.</h1>
-    <p class="loov-lead">Convide membros para a equipe e acompanhe os convites enviados.</p>
-  </div>
-
-  <% if flash[:notice] %>
-  <div class="flash-msg flash-success"><i class="fas fa-circle-check"></i><span><%= flash[:notice] %></span></div>
-  <% end %>
-  <% if flash[:alert] %>
-  <div class="flash-msg flash-error"><i class="fas fa-circle-exclamation"></i><span><%= flash[:alert] %></span></div>
-  <% end %>
-
-  <div class="loov-card" style="margin-bottom: 18px;">
-    <div class="section-mini-title">
-      <i class="fas fa-envelope"></i> Convidar atendente
+    <div class="eq-stats">
+      <div class="eq-stat"><div class="eq-mono">Com acesso</div><b id="eq-n-on">–</b></div>
+      <div class="eq-stat"><div class="eq-mono">Convites pendentes</div><b id="eq-n-pend">–</b></div>
     </div>
-    <%= form_with url: owner_attendant_invitations_path, method: :post, local: true do %>
-      <div class="invite-form-row">
-        <%= text_field_tag :email, nil, placeholder: "email@atendente.com", class: "loov-input", type: "email", required: true %>
-        <%= submit_tag "Enviar convite", class: "loov-btn-primary" %>
+
+    <div class="eq-grid">
+      <div class="eq-left">
+        <div class="eq-sec"><span class="eq-mono">Adicionar</span></div>
+        <button type="button" class="eq-cta is-main" data-sheet="convite">
+          <span class="eq-cta-ic"><i data-feather="mail" style="width:17px;height:17px"></i></span>
+          <span class="eq-cta-t"><b>Convidar por e-mail</b><small>O funcionário recebe um link e cria a senha dele.</small></span>
+          <i data-feather="chevron-right" style="width:18px;height:18px"></i>
+        </button>
+        <button type="button" class="eq-cta" data-sheet="direto">
+          <span class="eq-cta-ic"><i data-feather="user-plus" style="width:17px;height:17px"></i></span>
+          <span class="eq-cta-t"><b>Criar acesso direto</b><small>Você define a senha na hora, sem precisar de e-mail.</small></span>
+          <i data-feather="chevron-right" style="width:18px;height:18px"></i>
+        </button>
       </div>
-    <% end %>
-  </div>
 
-  <div class="loov-card">
-    <div class="section-mini-title">
-      <i class="fas fa-users"></i> Convites
-    </div>
-
-    <% if @invitations.any? %>
-    <div class="invite-list">
-      <% @invitations.each do |inv| %>
-      <div class="invite-item">
-        <div class="invite-item-main">
-          <div class="invite-item-left">
-            <div class="invite-email"><%= inv.email %></div>
-            <div class="invite-meta">
-              Enviado <%= time_ago_in_words(inv.created_at) %> atrás
-              <% if inv.accepted? && inv.attendant %>
-                · <%= inv.attendant.display_name %>
-              <% end %>
-            </div>
-          </div>
-          <div class="invite-item-right">
-            <span class="loov-pill <%= inv.accepted? ? 'loov-pill--success' : 'loov-pill--warn' %>">
-              <i class="fas fa-circle" style="font-size: 4px;"></i>
-              <%= inv.accepted? ? 'Aceito' : 'Pendente' %>
-            </span>
-            <% unless inv.accepted? %>
-              <%= button_to "Remover", owner_attendant_invitation_path(inv), method: :delete, class: "btn-danger-sm", data: { confirm: "Remover este convite?" } %>
-            <% end %>
-          </div>
+      <div class="eq-right">
+        <div class="eq-sec"><span class="eq-mono" id="eq-l-on">Ativos</span></div>
+        <div class="eq-list" id="eq-on"><div class="eq-loading"><span class="eq-spin is-dark"></span></div></div>
+        <div id="eq-pend-wrap" hidden>
+          <div class="eq-sec"><span class="eq-mono" id="eq-l-pend">Convites pendentes</span></div>
+          <div class="eq-list" id="eq-pend"></div>
         </div>
-        <% unless inv.accepted? %>
-        <div class="invite-link-wrap">
-          <div class="invite-link-label">Link do convite</div>
-          <div class="invite-link-url">
-            <span id="link-<%= inv.id %>"><%= accept_owner_attendant_invitations_url(token: inv.token) %></span>
-            <button class="btn-copy" onclick="copyLink('<%= inv.id %>', '<%= accept_owner_attendant_invitations_url(token: inv.token) %>', this)">
-              <i class="fas fa-copy"></i> Copiar
-            </button>
-          </div>
-        </div>
-        <% end %>
       </div>
-      <% end %>
     </div>
-    <% else %>
-    <div class="empty-state">
-      <div class="empty-state-icon"><i class="fas fa-user-plus"></i></div>
-      <div class="empty-state-text">Nenhum convite enviado ainda.</div>
-    </div>
-    <% end %>
   </div>
 
+  <%# ── Folha: convidar por e-mail ─────────────────────────────────── %>
+  <div class="eq-sheet-bg" id="sh-convite" aria-hidden="true">
+    <div class="eq-sheet" role="dialog" aria-modal="true" aria-labelledby="sh-convite-t">
+      <div class="eq-handle"></div>
+      <div class="eq-sheet-h"><h2 id="sh-convite-t">Convidar funcionário</h2><button type="button" class="eq-x" data-close aria-label="Fechar"><i data-feather="x" style="width:20px;height:20px"></i></button></div>
+      <form class="eq-sheet-b" id="f-convite" novalidate>
+        <p>Mandamos um e-mail com o link. Ele cria a senha e já entra na equipe.</p>
+        <div class="eq-f"><label for="cv-email">E-mail</label><input id="cv-email" type="email" autocomplete="off" placeholder="email@funcionario.com"></div>
+        <button type="submit" class="eq-save" id="cv-save">Enviar convite</button>
+      </form>
+    </div>
+  </div>
+
+  <%# ── Folha: acesso direto ───────────────────────────────────────── %>
+  <div class="eq-sheet-bg" id="sh-direto" aria-hidden="true">
+    <div class="eq-sheet" role="dialog" aria-modal="true" aria-labelledby="sh-direto-t">
+      <div class="eq-handle"></div>
+      <div class="eq-sheet-h"><h2 id="sh-direto-t">Criar acesso direto</h2><button type="button" class="eq-x" data-close aria-label="Fechar"><i data-feather="x" style="width:20px;height:20px"></i></button></div>
+      <form class="eq-sheet-b" id="f-direto" novalidate>
+        <p>Pra quando o funcionário está do seu lado: você define a senha e passa pra ele.</p>
+        <div class="eq-f"><label for="dr-name">Nome completo</label><input id="dr-name" autocomplete="off" placeholder="Nome do funcionário"></div>
+        <div class="eq-f"><label for="dr-email">E-mail</label><input id="dr-email" type="email" autocomplete="off" placeholder="email@funcionario.com"></div>
+        <div class="eq-f"><label for="dr-pass">Senha</label><input id="dr-pass" type="text" autocomplete="off" placeholder="Mínimo de 8 caracteres"><div class="eq-help">Ele pode trocar depois em Perfil › Privacidade e segurança.</div></div>
+        <button type="submit" class="eq-save" id="dr-save">Criar funcionário</button>
+      </form>
+    </div>
+  </div>
+
+  <%# ── Folha: remover acesso / cancelar convite ───────────────────── %>
+  <div class="eq-sheet-bg" id="sh-remover" aria-hidden="true">
+    <div class="eq-sheet" role="dialog" aria-modal="true" aria-labelledby="sh-remover-t">
+      <div class="eq-handle"></div>
+      <div class="eq-confirm">
+        <div class="eq-confirm-ic"><i data-feather="user-x" style="width:22px;height:22px"></i></div>
+        <h2 id="sh-remover-t"></h2>
+        <p id="rm-text"></p>
+        <button type="button" class="eq-danger" id="rm-go"></button>
+        <button type="button" class="eq-ghost" data-close>Voltar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="eq-toast" id="eq-toast" role="status" aria-live="polite"></div>
 </div>
 
 <script>
-function copyLink(id, url, btn) {
-  navigator.clipboard.writeText(url).then(function() {
-    btn.textContent = '✓ Copiado';
-    btn.classList.add('copied');
-    setTimeout(function() {
-      btn.innerHTML = '<i class="fas fa-copy"></i> Copiar';
-      btn.classList.remove('copied');
-    }, 2500);
+(function () {
+  var CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content;
+  var FLASH = <%= raw json_escape({ notice: flash[:notice], alert: flash[:alert] }.to_json) %>;
+  var state = { attendants: [], pending: [] }, target = null;
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function icon(n, size) { return window.feather && feather.icons[n] ? feather.icons[n].toSvg({ width: size, height: size }) : ''; }
+  function initials(v) {
+    var p = String(v || '').split(/[\s.@_-]+/).filter(Boolean);
+    if (!p.length) return '?';
+    return p.length === 1 ? p[0].slice(0, 2).toUpperCase() : (p[0][0] + p[1][0]).toUpperCase();
+  }
+  function api(path, method, body) {
+    return fetch('/owner/attendants' + path, {
+      method: method || 'GET', credentials: 'same-origin',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF },
+      body: body ? JSON.stringify(body) : undefined
+    }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, data: d }; }); });
+  }
+
+  var toastT = null;
+  function toast(text, err) {
+    var t = $('eq-toast');
+    t.className = 'eq-toast is-on' + (err ? ' is-err' : '');
+    t.innerHTML = icon(err ? 'x-circle' : 'check-circle', 15) + '<span>' + esc(text) + '</span>';
+    clearTimeout(toastT); toastT = setTimeout(function () { t.classList.remove('is-on'); }, 3500);
+  }
+
+  // ── Lista ────────────────────────────────────────────────────────────
+  function render() {
+    var a = state.attendants, p = state.pending;
+    $('eq-n-on').textContent = a.length;
+    $('eq-n-pend').textContent = p.length;
+    $('eq-l-on').textContent = 'Ativos' + (a.length ? ' · ' + a.length : '');
+    $('eq-on').innerHTML = a.length ? a.map(function (x) {
+      var name = x.full_name || x.email;
+      return '<div class="eq-row"><span class="eq-av">' + esc(initials(name)) + '</span>' +
+        '<span class="eq-row-t"><b>' + esc(name) + '</b>' + (x.full_name ? '<small>' + esc(x.email) + '</small>' : '') + '</span>' +
+        '<button type="button" class="eq-act is-danger" data-rm="attendant" data-id="' + x.user_id + '" data-label="' + esc(name) + '" title="Remover acesso" aria-label="Remover acesso de ' + esc(name) + '">' + icon('x', 16) + '</button></div>';
+    }).join('') : '<div class="eq-empty">' + icon('users', 18) + '<span>Nenhum funcionário com acesso ainda.</span></div>';
+
+    $('eq-pend-wrap').hidden = !p.length;
+    $('eq-l-pend').textContent = 'Convites pendentes · ' + p.length;
+    $('eq-pend').innerHTML = p.map(function (x) {
+      return '<div class="eq-row"><span class="eq-av is-pending">' + icon('clock', 15) + '</span>' +
+        '<span class="eq-row-t"><b>' + esc(x.email) + '</b><small>Aguardando aceite</small></span>' +
+        (x.accept_url ? '<button type="button" class="eq-act" data-copy="' + esc(x.accept_url) + '" title="Copiar link do convite" aria-label="Copiar link do convite">' + icon('link', 16) + '</button>' : '') +
+        '<button type="button" class="eq-act is-danger" data-rm="invitation" data-id="' + x.id + '" data-label="' + esc(x.email) + '" title="Cancelar convite" aria-label="Cancelar convite de ' + esc(x.email) + '">' + icon('x', 16) + '</button></div>';
+    }).join('');
+  }
+  function load() {
+    return api('', 'GET').then(function (res) {
+      if (!res.ok) { $('eq-on').innerHTML = '<div class="eq-empty">' + icon('alert-circle', 18) + '<span>' + esc(res.data.error || 'Não foi possível carregar.') + '</span></div>'; return; }
+      state.attendants = Array.isArray(res.data.attendants) ? res.data.attendants : [];
+      state.pending = Array.isArray(res.data.pending) ? res.data.pending : [];
+      render();
+    }).catch(function () { toast('Falha de conexão.', true); });
+  }
+
+  // ── Folhas ───────────────────────────────────────────────────────────
+  var lastFocus = null;
+  function openSheet(name) {
+    lastFocus = document.activeElement;
+    var s = $('sh-' + name); s.classList.add('is-on'); s.setAttribute('aria-hidden', 'false');
+    var first = s.querySelector('input, .eq-danger'); if (first) setTimeout(function () { first.focus(); }, 50);
+  }
+  function closeSheets() {
+    document.querySelectorAll('.eq-sheet-bg.is-on').forEach(function (s) { s.classList.remove('is-on'); s.setAttribute('aria-hidden', 'true'); });
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+  function busy(btn, on, label) { btn.disabled = on; btn.innerHTML = on ? '<span class="eq-spin"></span>' : label; }
+
+  $('f-convite').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var email = $('cv-email').value.trim().toLowerCase(), btn = $('cv-save');
+    if (!email || email.indexOf('@') < 0) { toast('Informe um e-mail válido.', true); $('cv-email').focus(); return; }
+    busy(btn, true);
+    api('', 'POST', { email: email }).then(function (res) {
+      busy(btn, false, 'Enviar convite');
+      if (!res.ok) { toast(res.data.error || 'Não foi possível convidar.', true); return; }
+      $('cv-email').value = ''; closeSheets();
+      // Convite criado mesmo se o e-mail falhar: o link fica na lista pra copiar.
+      if (res.data.mail_sent === false) toast('Convite criado, mas o e-mail não saiu. Copie o link e envie você.', true);
+      else toast('Convite enviado para ' + email + '.');
+      load();
+    }).catch(function () { busy(btn, false, 'Enviar convite'); toast('Falha de conexão.', true); });
   });
-}
+
+  $('f-direto').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var name = $('dr-name').value.trim(), email = $('dr-email').value.trim().toLowerCase(), pass = $('dr-pass').value, btn = $('dr-save');
+    if (!name) { toast('Informe o nome.', true); $('dr-name').focus(); return; }
+    if (!email || email.indexOf('@') < 0) { toast('Informe um e-mail válido.', true); $('dr-email').focus(); return; }
+    if (pass.length < 8) { toast('A senha precisa ter ao menos 8 caracteres.', true); $('dr-pass').focus(); return; }
+    busy(btn, true);
+    api('/direct', 'POST', { email: email, full_name: name, password: pass }).then(function (res) {
+      busy(btn, false, 'Criar funcionário');
+      if (!res.ok) { toast(res.data.error || 'Não foi possível criar.', true); return; }
+      $('dr-name').value = ''; $('dr-email').value = ''; $('dr-pass').value = '';
+      closeSheets(); toast('Funcionário criado. Ele já pode entrar com esse e-mail e senha.');
+      load();
+    }).catch(function () { busy(btn, false, 'Criar funcionário'); toast('Falha de conexão.', true); });
+  });
+
+  function askRemove(type, id, label) {
+    target = { type: type, id: id, label: label };
+    var inv = type === 'invitation';
+    $('sh-remover-t').textContent = inv ? 'Cancelar convite?' : 'Remover acesso?';
+    $('rm-text').innerHTML = esc(inv ? 'O link de aceite para de funcionar.' : 'O funcionário deixa de ter acesso ao seu lava-rápido.') + '<br><b>' + esc(label) + '</b>';
+    $('rm-go').textContent = inv ? 'Cancelar convite' : 'Remover acesso';
+    openSheet('remover');
+  }
+  $('rm-go').addEventListener('click', function () {
+    if (!target) return;
+    var t = target, btn = $('rm-go'), label = btn.textContent;
+    busy(btn, true);
+    api(t.type === 'invitation' ? '/invitations/' + t.id : '/' + t.id, 'DELETE').then(function (res) {
+      busy(btn, false, label);
+      if (!res.ok) { toast(res.data.error || 'Não foi possível remover.', true); return; }
+      closeSheets(); toast(t.type === 'invitation' ? 'Convite cancelado.' : 'Acesso removido.');
+      load();
+    }).catch(function () { busy(btn, false, label); toast('Falha de conexão.', true); });
+  });
+
+  function copy(url, btn) {
+    var done = function () {
+      btn.innerHTML = icon('check', 16); btn.classList.add('is-done'); toast('Link copiado. É só colar no WhatsApp.');
+      setTimeout(function () { btn.innerHTML = icon('link', 16); btn.classList.remove('is-done'); }, 2500);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, function () { window.prompt('Copie o link do convite:', url); });
+    else window.prompt('Copie o link do convite:', url);
+  }
+
+  document.addEventListener('click', function (e) {
+    var t;
+    if ((t = e.target.closest('[data-sheet]'))) { openSheet(t.dataset.sheet); return; }
+    if ((t = e.target.closest('[data-rm]'))) { askRemove(t.dataset.rm, t.dataset.id, t.dataset.label); return; }
+    if ((t = e.target.closest('[data-copy]'))) { copy(t.dataset.copy, t); return; }
+    if (e.target.closest('[data-close]') || e.target.classList.contains('eq-sheet-bg')) { closeSheets(); return; }
+  });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSheets(); });
+
+  if (window.feather) feather.replace();
+  load();
+  if (FLASH.notice) toast(FLASH.notice); else if (FLASH.alert) toast(FLASH.alert, true);
+})();
 </script>

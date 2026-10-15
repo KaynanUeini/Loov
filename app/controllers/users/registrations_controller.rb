@@ -11,6 +11,8 @@ class Users::RegistrationsController < Devise::RegistrationsController
   # Página "Conta" do cliente (porte da ClientProfileScreen do app). Também no
   # update: se trocar a senha falhar, o Devise renderiza o edit de novo.
   before_action :load_client_account, only: [:edit, :update]
+  # Perfil do dono e do atendente (porte do "Mais" do app do dono).
+  before_action :load_staff_account, only: [:edit, :update]
 
   # Excluir pelo site segue a mesma regra do app (User#excluir_conta!). O
   # destroy padrão do Devise apagava a linha e, em cascata, os atendimentos
@@ -55,6 +57,22 @@ class Users::RegistrationsController < Devise::RegistrationsController
       card_display:   u.card_display,
       attended_count: u.appointments.where(status: "attended").count,
       favorites_count: u.favorite_car_washes.count
+    }
+  end
+
+  def load_staff_account
+    return unless current_user&.owner? || current_user&.attendant?
+    u  = current_user
+    cw = u.linked_car_wash
+    @staff_account = {
+      email:     u.email,
+      full_name: u.full_name,
+      owner:     u.owner?,
+      car_wash:  cw && {
+        id:      cw.id,
+        name:    cw.name,
+        address: cw.logradouro.present? ? [[cw.logradouro, cw.numero.presence].compact.join(", "), cw.bairro.presence].compact.join(" · ") : cw.address
+      }
     }
   end
 

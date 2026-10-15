@@ -1,0 +1,12 @@
+  <div class="ac-sheet-bg" id="sh-sair" aria-hidden="true">
+    <div class="ac-sheet" role="dialog" aria-modal="true" aria-labelledby="sh-sair-t">
+      <div class="ac-handle"></div>
+      <div class="ac-confirm">
+        <div class="ac-confirm-ic"><i data-feather="log-out" style="width:22px;height:22px"></i></div>
+        <h2 id="sh-sair-t">Sair da conta?</h2>
+        <p><%= logout_text %></p>
+        <%= button_to "Sair", destroy_user_session_path, method: :delete, class: "ac-danger", form: { data: { turbo: false } } %>
+        <button type="button" class="ac-ghost" data-close>Continuar conectado</button>
+      </div>
+    </div>
+  </div>
