@@ -128,6 +128,8 @@
   .dp-svc { margin-top: 18px; max-height: 220px; overflow: auto; }
   .dp-svc h3 { margin: 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 600; font-size: 18px; letter-spacing: -0.3px; color: var(--ink) !important; }
   .dp-svc .price { margin-top: 4px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.5px; color: var(--coral-500); }
+  /* Last Minute mais barato que o agendamento: preço normal riscado ao lado. */
+  .dp-svc .price .dp-old { margin-right: 8px; font-family: 'Inter', sans-serif; font-weight: 400; font-size: 15px; letter-spacing: 0; color: var(--ash); }
   .dp-svc .price small { font-family: 'Inter', sans-serif; font-weight: 400; font-size: 14px; letter-spacing: 0; color: var(--graphite); }
   .dp-svc p { margin: 12px 0 0; font-size: 14px; line-height: 20px; color: var(--graphite); white-space: pre-line; }
   /* Divisão do pagamento: o que sai do cartão AGORA vem primeiro e maior —
@@ -550,7 +552,7 @@
         (dist ? '<span class="sep">·</span><span class="s">' + icon('map-pin', 13, { color: 'var(--coral-500)' }) + dist + '</span>' : '') + '</div>' +
       (svcs.length > 1 ? '<div class="dp-sh-label">Escolha o serviço</div><div class="dp-pills" role="group" aria-label="Serviços">' +
         svcs.map(function (s) { return '<button type="button" class="dp-pill" data-svc="' + s.id + '" aria-pressed="' + (svc && s.id === svc.id) + '">' + esc(s.title) + '</button>'; }).join('') + '</div>' : '') +
-      (svc ? '<div class="dp-svc"><h3>' + esc(svc.title) + '</h3><div class="price">R$ ' + money(svc.price, 2) + '<small>' + dur + '</small></div>' +
+      (svc ? '<div class="dp-svc"><h3>' + esc(svc.title) + '</h3><div class="price">' + (Number(svc.regular_price) > Number(svc.price) ? '<s class="dp-old">R$ ' + money(svc.regular_price, 2) + '</s>' : '') + 'R$ ' + money(svc.price, 2) + '<small>' + dur + '</small></div>' +
         '<p>' + esc(svc.description && svc.description.trim() ? svc.description : 'Este lava-rápido não cadastrou uma descrição detalhada. Confirme os itens incluídos ao chegar.') + '</p></div>' : '') +
       payBlock(svc, cw) +
       '<p class="dp-hint">Os ' + PCT_LABEL + ' ficam reservados no cartão e só são cobrados se o lava-rápido aceitar em até 3 min. ' +

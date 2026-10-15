@@ -25,7 +25,7 @@ class PaymentsController < ApplicationController
 
     charge = Stripe::Charge.create(
       customer: customer.id,
-      amount: (@appointment.service.price * 100).to_i,
+      amount: (@appointment.effective_price * 100).to_i,
       description: "Pagamento para agendamento ##{@appointment.id}",
       currency: 'brl'
     )
@@ -33,7 +33,7 @@ class PaymentsController < ApplicationController
     @payment = Payment.create!(
       appointment: @appointment,
       stripe_charge_id: charge.id,
-      amount: @appointment.service.price
+      amount: @appointment.effective_price
     )
 
     @appointment.update(status: 'confirmed')

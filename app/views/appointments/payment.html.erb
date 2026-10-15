@@ -49,7 +49,7 @@
     <div class="pay-summary-row">
       <i class="fas fa-money-bill-wave"></i>
       <span class="pay-summary-label">Preço</span>
-      <span class="pay-summary-value" style="color:var(--coral-700);font-weight:700;">R$ <%= @appointment.service.price.to_f.round(2) %></span>
+      <span class="pay-summary-value" style="color:var(--coral-700);font-weight:700;">R$ <%= @appointment.effective_price.round(2) %></span>
     </div>
   </div>
 

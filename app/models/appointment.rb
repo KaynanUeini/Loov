@@ -182,6 +182,17 @@ class Appointment < ApplicationRecord
     price_override.present? ? price_override.to_f : service.price.to_f
   end
 
+  # O dono mexeu no preço deste atendimento (check-in)? price_override também
+  # guarda o preço do Last Minute congelado na reserva — isso não é ajuste
+  # manual. Na reserva do Last Minute o sinal foi calculado sobre o preço
+  # daquele momento, então dá pra reconstruí-lo sem coluna extra.
+  def preco_ajustado?
+    return false if price_override.blank?
+    return true unless disponivel? && prepayment_amount.to_f.positive?
+
+    (price_override.to_f - prepayment_amount.to_f / PREPAYMENT_PCT).abs > 0.05
+  end
+
   # Calcula e armazena os valores de pré-pagamento e comissão
   def calculate_disponivel_amounts!
     total = effective_price

@@ -144,6 +144,11 @@ module Owner
       return render json: { error: "Serviço não encontrado." }, status: :not_found unless service
 
       price = params[:price_override].present? ? params[:price_override].to_f : nil
+      # Reserva do Last Minute trocando de lavagem sem preço digitado: vale o
+      # preço do Last Minute do serviço novo, não o do agendamento comum.
+      if price.nil? && @appointment.disponivel? && service.preco_last_minute_proprio?
+        price = service.preco_last_minute
+      end
       @appointment.update!(service: service, price_override: price)
       render json: { ok: true }.merge(serialize_appointment(@appointment))
     rescue => e
@@ -377,7 +382,7 @@ module Owner
         service_id:       a.service_id,
         price:            a.effective_price,
         price_original:   a.service.price.to_f,
-        price_overridden: a.price_override.present?,
+        price_overridden: a.preco_ajustado?,
         walk_in:          a.walk_in?,
         status:           a.status,
         status_label:     status_label(a.status),

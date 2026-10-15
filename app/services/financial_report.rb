@@ -119,7 +119,7 @@ class FinancialReport
           service:     a.service&.title || "Serviço removido",
           category:    a.service&.category,
           channel:     channel_for(a),
-          price_adjusted: a.price_override.present?,
+          price_adjusted: a.preco_ajustado?,
           gross:       gross.round(2),
           commission:  commission.round(2),
           net:         (gross - commission).round(2),

@@ -73,6 +73,8 @@ module Owner
             description: s.description,
             price:       s.price.to_f,
             duration:    s.duration,
+            last_minute_pct:   s.last_minute_pct,
+            last_minute_price: s.preco_last_minute,
           }
         }
       }
@@ -83,7 +85,7 @@ module Owner
         :name, :cep, :logradouro, :numero, :bairro, :cidade, :uf, :address,
         :capacity_per_slot, :latitude, :longitude,
         operating_hours_attributes: [:id, :day_of_week, :opens_at, :closes_at, :capacity, :_destroy],
-        services_attributes:        [:id, :title, :category, :description, :price, :duration, :_destroy]
+        services_attributes:        [:id, :title, :category, :description, :price, :duration, :last_minute_pct, :_destroy]
       )
 
       attendant_change = current_user.attendant?
@@ -293,7 +295,8 @@ module Owner
         services: car_wash.services.order(:id).map { |s|
           { id: s.id, title: s.title.to_s, category: s.category.to_s,
             description: s.description.to_s,
-            price: s.price.to_f.round(2), duration: s.duration.to_i }
+            price: s.price.to_f.round(2), duration: s.duration.to_i,
+            last_minute_pct: s.last_minute_pct.to_i }
         },
       }
     end
@@ -381,6 +384,7 @@ module Owner
         field_changes << "título de \"#{old_s[:title]}\" para \"#{s[:title]}\""                     if old_s[:title]    != s[:title]
         field_changes << "categoria de \"#{old_s[:category]}\" para \"#{s[:category]}\""            if old_s[:category] != s[:category]
         field_changes << "descrição"                                                                 if old_s[:description] != s[:description]
+        field_changes << "Last Minute de #{format_pct(old_s[:last_minute_pct])} para #{format_pct(s[:last_minute_pct])}" if old_s[:last_minute_pct] != s[:last_minute_pct]
         next if field_changes.empty?
         changes << { kind: :service_changed, title: s[:title], details: field_changes }
       end
@@ -399,6 +403,11 @@ module Owner
     # dizer isso evita o dono ler "3 → " e achar que zerou.
     def capacity_text(value)
       value.present? ? value.to_s : "padrão do lava-rápido"
+    end
+
+    def format_pct(v)
+      v = v.to_i
+      v.zero? ? "mesmo preço" : format("%+d%%", v)
     end
 
     def format_money(v)
