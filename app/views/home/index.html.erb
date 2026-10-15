@@ -555,7 +555,7 @@
   .owner-dash-btn-coral:disabled { opacity:.6; cursor:wait; }
 
   /* ── Toast (mantém visual existente) ── */
-  .toast-container { position:fixed; bottom:28px; left:50%; transform:translateX(-50%); z-index:300; display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none; }
+  .toast-container { position:fixed; bottom:28px; left:50%; transform:translateX(-50%); z-index:1700; display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none; }
   .toast { display:inline-flex; align-items:center; gap:8px; padding:10px 18px; border-radius:100px; font-family:'Inter',sans-serif; font-size:.78rem; font-weight:600; backdrop-filter:blur(16px); box-shadow:0 8px 24px rgba(40,35,28,.18); opacity:0; transform:translateY(12px); animation:toastIn .3s ease forwards; pointer-events:none; }
   .toast.success { background:rgba(221,120,82,.12); border:1px solid rgba(221,120,82,.3); color:var(--od-coral-700); }
   .toast.error   { background:rgba(200,80,80,.12); border:1px solid rgba(200,80,80,.3); color:var(--od-rose-500); }
@@ -589,39 +589,145 @@
   .activation-dismiss { background:none; border:none; color:var(--od-ash); font-size:.7rem; cursor:pointer; padding:0; }
   .activation-dismiss:hover { color:var(--od-graphite); }
 
-  /* ── Drawers existentes (aprovações + pendências) ── */
-  .drawer-overlay { position:fixed; inset:0; z-index:50; background:rgba(40,35,28,.45); backdrop-filter:blur(6px); opacity:0; pointer-events:none; transition:opacity .25s ease; }
-  .drawer-overlay.open { opacity:1; pointer-events:all; }
-  .side-drawer { position:fixed; top:0; right:0; bottom:0; z-index:51; width:min(400px,94vw); background:var(--od-paper); display:flex; flex-direction:column; transform:translateX(100%); transition:transform .32s cubic-bezier(.32,.72,0,1); box-shadow:-20px 0 60px rgba(40,35,28,.18); }
-  .side-drawer.open { transform:translateX(0); }
-  .drawer-hdr { padding:20px; border-bottom:1px solid var(--od-stone); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
-  .drawer-title { font-family:'JetBrains Mono',monospace; font-size:.65rem; font-weight:700; letter-spacing:.16em; text-transform:uppercase; display:flex; align-items:center; gap:8px; color:var(--od-ink); }
-  .drawer-title.yellow { color:var(--od-amber-500); border-left:2px solid var(--od-amber-500); padding-left:10px; }
-  .drawer-title.orange { color:var(--od-rose-500); border-left:2px solid var(--od-rose-500); padding-left:10px; }
-  .drawer-title-badge { border-radius:100px; font-size:.6rem; font-weight:700; padding:2px 7px; }
-  .drawer-title.yellow .drawer-title-badge { background:var(--od-amber-500); color:var(--od-cream); }
-  .drawer-title.orange .drawer-title-badge { background:var(--od-rose-500); color:var(--od-cream); }
-  .drawer-close { background:none; border:1px solid var(--od-stone); border-radius:8px; width:30px; height:30px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--od-graphite); font-size:.75rem; transition:all .15s; }
-  .drawer-close:hover { border-color:var(--od-rose-500); color:var(--od-rose-500); }
-  .drawer-body { overflow-y:auto; flex:1; padding:12px; }
-  .drawer-body::-webkit-scrollbar { width:4px; }
-  .drawer-body::-webkit-scrollbar-thumb { background:var(--od-stone); border-radius:99px; }
-  .drawer-empty { padding:32px 16px; text-align:center; color:var(--od-ash); font-size:.78rem; }
+  /* ── Folhas do painel: Aprovações, Mensagens e Fidelidade ──
+     Mesmo desenho das folhas da Conta e da Equipe: sobe de baixo no
+     celular, centraliza no desktop; cabeçalho mono coral + título Space
+     Grotesk; ícones Feather como no app. Ficam acima da barra do site e do
+     convite "Ativar alertas" (1500); abaixo só o pedido Last Minute (2000). */
+  .lx-bg { position:fixed; inset:0; z-index:1600; display:flex; align-items:flex-end; justify-content:center; background:rgba(25,20,15,.5); opacity:0; pointer-events:none; transition:opacity .2s; }
+  .lx-bg.open { opacity:1; pointer-events:auto; }
+  .lx-sheet { width:100%; max-width:480px; max-height:92vh; display:flex; flex-direction:column; background:var(--paper); color:var(--ink); border-radius:28px 28px 0 0; transform:translateY(24px); transition:transform .25s; box-shadow:0 30px 80px -30px rgba(25,20,15,.45); }
+  .lx-sheet.is-wide { max-width:560px; }
+  .lx-bg.open .lx-sheet { transform:none; }
+  .lx-sheet *, .lx-sheet *::before, .lx-sheet *::after { box-sizing:border-box; }
+  .lx-sheet button { font-family:inherit; line-height:normal; cursor:pointer; }
+  .lx-sheet svg.feather { display:block; flex-shrink:0; }
+  .lx-handle { width:40px; height:4px; margin:10px auto 0; border-radius:2px; background:var(--stone); flex-shrink:0; }
+  .lx-h { display:flex; align-items:flex-start; gap:12px; padding:18px 20px 12px; flex-shrink:0; }
+  .lx-h-t { flex:1; min-width:0; }
+  .lx-eyebrow { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:1.6px; text-transform:uppercase; color:var(--coral-500); }
+  .lx-h h2 { margin:4px 0 0 !important; font-family:'Space Grotesk',sans-serif !important; font-weight:700; font-size:24px; letter-spacing:-0.6px; line-height:1.1; color:var(--ink) !important; display:flex; align-items:center; gap:10px; }
+  .lx-count { min-width:26px; height:26px; padding:0 8px; border-radius:13px; background:var(--coral-500); color:var(--cream); font-family:'Inter',sans-serif; font-size:12px; font-weight:600; letter-spacing:0; display:inline-flex; align-items:center; justify-content:center; }
+  .lx-x { flex:0 0 36px; height:36px; border:0; border-radius:50%; background:var(--sand); color:var(--ink); display:flex; align-items:center; justify-content:center; transition:background .15s; }
+  .lx-x:hover { background:var(--stone); }
+  .lx-b { flex:1; min-height:0; overflow-y:auto; padding:4px 20px 16px; }
+  .lx-foot { flex-shrink:0; padding:12px 20px calc(18px + env(safe-area-inset-bottom,0px)); border-top:1px solid var(--stone); background:var(--paper); border-radius:0 0 28px 28px; }
+  .lx-label { display:block; margin:18px 0 8px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--ash); }
+  .lx-label:first-child { margin-top:4px; }
+  .lx-note { display:flex; gap:8px; align-items:flex-start; padding:11px 12px; border-radius:12px; background:var(--coral-50); color:var(--coral-700); font-size:12.5px; line-height:18px; }
+  .lx-note svg { margin-top:2px; }
+  .lx-note.is-quiet { background:var(--sand); color:var(--graphite); }
+  .lx-primary { width:100%; display:flex; align-items:center; justify-content:center; gap:8px; padding:15px; border:0; border-radius:100px; background:var(--coral-500); color:var(--cream); font-size:14px; font-weight:600; transition:opacity .15s, background .15s; }
+  .lx-primary:hover { background:var(--coral-700); }
+  .lx-primary[disabled] { opacity:.55; cursor:default; background:var(--coral-500); }
+  .lx-err { display:flex; gap:8px; align-items:center; margin-top:12px; padding:11px 12px; border-radius:12px; background:#f6d4d4; color:var(--rose-500,#c0392b); font-size:13px; font-weight:600; }
+  .lx-err[hidden] { display:none; }
+  .lx-spin { width:18px; height:18px; border-radius:50%; border:2.5px solid rgba(250,250,246,.35); border-top-color:var(--cream); animation:lxspin .8s linear infinite; }
+  .lx-spin.is-dark { border-color:var(--stone); border-top-color:var(--coral-500); }
+  @keyframes lxspin { to { transform:rotate(360deg); } }
+  .lx-empty { display:flex; flex-direction:column; align-items:center; gap:6px; padding:36px 16px 28px; text-align:center; color:var(--graphite); font-size:13px; }
+  .lx-empty .lx-empty-ic { width:60px; height:60px; margin-bottom:8px; border-radius:50%; background:var(--coral-50); border:1px solid var(--coral-100); color:var(--coral-500); display:flex; align-items:center; justify-content:center; }
+  .lx-empty b { font-family:'Space Grotesk',sans-serif; font-size:17px; color:var(--ink); }
+  .lx-sheet .lx-input, .lx-sheet .lx-textarea { display:block; width:100%; padding:12px 14px !important; border:1px solid transparent !important; border-radius:14px !important; background:var(--sand) !important; box-shadow:none !important; outline:none; font:inherit; font-size:15px; color:var(--ink); transition:border-color .15s, box-shadow .15s; }
+  .lx-sheet .lx-input:focus, .lx-sheet .lx-textarea:focus { border-color:var(--coral-500) !important; box-shadow:0 0 0 4px rgba(221,120,82,.14) !important; }
+  .lx-textarea { resize:none; height:112px; line-height:1.45; }
+  .lx-counter { margin-top:6px; text-align:right; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--ash); }
+  .lx-counter.is-near { color:var(--coral-700); }
+  .lx-av { flex:0 0 36px; height:36px; border-radius:50%; background:var(--coral-50); color:var(--coral-700); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:600; }
 
-  .approval-card { background:var(--od-paper); border:1px solid var(--od-stone); border-radius:12px; padding:12px 14px; margin-bottom:8px; transition:opacity .2s,transform .2s; position:relative; overflow:hidden; }
-  .approval-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:2px; background:var(--od-amber-500); opacity:.5; }
-  .approval-card.removing { opacity:0; transform:translateX(16px); }
-  .approval-card-header { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:6px; }
-  .approval-card-desc { font-size:.8rem; color:var(--od-ink); line-height:1.4; flex:1; }
-  .approval-card-meta { font-size:.66rem; color:var(--od-ash); margin-bottom:8px; }
-  .approval-toggle { background:rgba(214,177,74,.12); border:1px solid rgba(214,177,74,.25); color:var(--od-amber-500); border-radius:6px; width:22px; height:22px; font-size:.6rem; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; transition:background .15s; }
-  .approval-toggle:hover { background:rgba(214,177,74,.2); }
-  .approval-detail { display:none; background:var(--od-sand); border:1px solid var(--od-stone); border-radius:8px; padding:10px; margin-bottom:8px; font-size:.74rem; line-height:1.6; color:var(--od-graphite); }
-  .approval-actions { display:flex; gap:6px; }
-  .btn-approve { flex:1; background:rgba(221,120,82,.1); border:1px solid rgba(221,120,82,.25); color:var(--od-coral-700); border-radius:7px; font-size:.72rem; font-weight:700; cursor:pointer; padding:6px 0; transition:all .15s; }
-  .btn-approve:hover { background:rgba(221,120,82,.18); }
-  .btn-reject { flex:1; background:rgba(200,80,80,.08); border:1px solid rgba(200,80,80,.2); color:var(--od-rose-500); border-radius:7px; font-size:.72rem; font-weight:700; cursor:pointer; padding:6px 0; transition:all .15s; }
-  .btn-reject:hover { background:rgba(200,80,80,.15); }
+  /* Aprovações (OwnerMudancasPendentesScreen) */
+  .apv { margin-top:12px; padding:16px; border:1px solid var(--stone); border-radius:18px; background:var(--paper); transition:opacity .2s, transform .2s; }
+  .apv.removing { opacity:0; transform:translateY(-6px); }
+  .apv-top { display:flex; align-items:center; gap:10px; }
+  .apv-who { flex:1; min-width:0; }
+  .apv-who b { display:block; font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .apv-who small { display:block; margin-top:1px; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--ash); }
+  .apv-badge { flex-shrink:0; padding:3px 8px; border-radius:8px; background:var(--sand); color:var(--graphite); font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:1px; }
+  .apv-title { margin-top:12px; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:15px; letter-spacing:-0.2px; }
+  .apv-desc { margin:4px 0 0; font-size:13px; line-height:19px; color:var(--graphite); }
+  .apv-more { display:inline-flex; align-items:center; gap:4px; margin-top:10px; padding:0; border:0; background:none; color:var(--coral-700); font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:1.1px; }
+  .apv-more:hover { color:var(--coral-500); }
+  .apv-diff { margin-top:10px; border-radius:12px; background:var(--cream); border:1px solid var(--stone); overflow:hidden; }
+  .apv-diff[hidden] { display:none; }
+  .apv-sec { padding:8px 12px 2px; font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:1px; color:var(--ash); text-transform:uppercase; }
+  .apv-row { display:flex; justify-content:space-between; gap:12px; padding:9px 12px; border-top:1px solid var(--stone); font-size:12.5px; }
+  .apv-sec + .apv-row { border-top:0; }
+  .apv-row span:first-child { color:var(--graphite); }
+  .apv-row span:last-child { color:var(--ink); font-weight:600; text-align:right; font-variant-numeric:tabular-nums; }
+  .apv-acts, .apv-confirm-acts { display:flex; gap:8px; margin-top:14px; }
+  .apv-acts button, .apv-confirm-acts button { flex:1; display:flex; align-items:center; justify-content:center; gap:6px; padding:11px; border-radius:100px; font-size:13px; font-weight:600; transition:background .15s, border-color .15s; }
+  .apv-no { border:1px solid rgba(200,80,80,.3); background:transparent; color:var(--rose-500,#c0392b); }
+  .apv-no:hover { background:rgba(200,80,80,.06); }
+  .apv-yes { border:0; background:var(--coral-500); color:var(--cream); }
+  .apv-yes:hover { background:var(--coral-700); }
+  .apv-yes.is-danger { background:var(--rose-500,#c0392b); }
+  .apv-back { border:1px solid var(--stone); background:transparent; color:var(--graphite); }
+  .apv-back:hover { background:var(--sand); }
+  .apv-confirm { display:none; margin-top:14px; padding-top:14px; border-top:1px solid var(--stone); }
+  .apv-confirm p { margin:0; font-size:13px; line-height:19px; color:var(--ink); }
+  .apv[data-ask] .apv-acts { display:none; }
+  .apv[data-ask] .apv-confirm { display:block; }
+  .apv button[disabled] { opacity:.6; cursor:default; }
+
+  /* Mensagens (OwnerMensagensScreen) */
+  .lx-seg { display:flex; padding:4px; gap:2px; border-radius:999px; background:var(--sand); border:1px solid var(--stone); }
+  .lx-seg button { flex:1; height:38px; border:0; border-radius:999px; background:transparent; color:var(--graphite); font-size:13px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:6px; transition:background .15s, color .15s; }
+  .lx-seg button:hover { color:var(--ink); }
+  .lx-seg button[aria-pressed="true"] { background:var(--coral-500); color:var(--cream); box-shadow:0 2px 6px rgba(220,120,82,.25); }
+  .lx-seg-help { margin:8px 2px 0; font-size:12px; line-height:17px; color:var(--graphite); }
+  .msg-list { border:1px solid var(--stone); border-radius:16px; overflow:hidden; max-height:236px; overflow-y:auto; }
+  .msg-row { width:100%; display:flex; align-items:center; gap:12px; padding:10px 14px; border:0; border-bottom:1px solid var(--stone); background:transparent; text-align:left; color:var(--ink); }
+  .msg-row:last-child { border-bottom:0; }
+  button.msg-row:hover { background:var(--cream); }
+  .msg-row-t { flex:1; min-width:0; }
+  .msg-row-t b { display:block; font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .msg-row-t small { display:block; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--ash); }
+  .msg-radio { flex:0 0 20px; height:20px; border-radius:50%; border:2px solid var(--stone); display:flex; align-items:center; justify-content:center; transition:border-color .15s; }
+  .msg-row[aria-checked="true"] .msg-radio { border-color:var(--coral-500); }
+  .msg-row[aria-checked="true"] .msg-radio::after { content:''; width:10px; height:10px; border-radius:50%; background:var(--coral-500); }
+  .msg-row[aria-checked="true"] { background:var(--coral-50); }
+  .msg-none { display:flex; align-items:center; gap:10px; padding:16px 14px; color:var(--graphite); font-size:13px; }
+
+  /* Fidelidade (OwnerLoyaltyScreen) */
+  .loy-status { display:flex; align-items:center; gap:12px; padding:14px 16px; border-radius:16px; border:1px solid var(--stone); background:var(--cream); transition:background .2s, border-color .2s; }
+  .loy-status.is-on { background:var(--coral-50); border-color:var(--coral-100); }
+  .loy-status-t { flex:1; min-width:0; }
+  .loy-status-t small { display:block; font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:1px; color:var(--ash); }
+  .loy-status-t b { display:block; margin-top:2px; font-size:14px; font-weight:600; }
+  .loy-status.is-on .loy-status-t b { color:var(--coral-700); }
+  .loy-switch { position:relative; flex:0 0 50px; height:30px; border:0; border-radius:15px; background:var(--stone); transition:background .2s; }
+  .loy-switch::after { content:''; position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:50%; background:#fff; box-shadow:0 2px 4px rgba(25,20,15,.2); transition:transform .2s; }
+  .loy-switch[aria-checked="true"] { background:var(--coral-500); }
+  .loy-switch[aria-checked="true"]::after { transform:translateX(20px); }
+  .loy-cfg { display:flex; align-items:center; gap:12px; }
+  .loy-cfg-t { flex:1; min-width:0; }
+  .loy-cfg-t b { display:block; font-size:14px; font-weight:600; }
+  .loy-cfg-t small { display:block; margin-top:1px; font-size:12px; color:var(--graphite); }
+  .loy-step { display:flex; align-items:center; gap:4px; padding:4px; border-radius:999px; background:var(--sand); }
+  .loy-step button { width:34px; height:34px; border:0; border-radius:50%; background:var(--paper); color:var(--ink); display:flex; align-items:center; justify-content:center; box-shadow:0 1px 2px rgba(25,20,15,.08); }
+  .loy-step button[disabled] { opacity:.35; cursor:default; }
+  .loy-step input { width:44px; padding:0 !important; border:0 !important; background:transparent !important; box-shadow:none !important; text-align:center; font-family:'Space Grotesk',sans-serif; font-size:18px; font-weight:600; color:var(--ink); outline:none; -moz-appearance:textfield; }
+  .loy-step input::-webkit-outer-spin-button, .loy-step input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+  /* Prévia: o mesmo cartão de carimbos que o cliente vê na Conta. */
+  .loy-card { padding:18px; border-radius:20px; background:var(--ink); color:var(--cream); }
+  .loy-card-h { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .loy-card-h b { display:block; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:15px; }
+  .loy-card-h small { display:block; margin-top:2px; font-size:12px; color:#bdb5a6; }
+  .loy-card-badge { flex-shrink:0; padding:4px 10px; border-radius:100px; background:rgba(221,120,82,.18); color:var(--coral-300,#e8a48a); font-family:'JetBrains Mono',monospace; font-size:10.5px; }
+  .loy-stamps { display:flex; gap:4px; margin-top:14px; }
+  .loy-stamps i { flex:1; height:26px; border-radius:6px; background:rgba(255,255,255,.08); display:flex; align-items:center; justify-content:center; color:var(--cream); }
+  .loy-stamps i.is-on { background:var(--coral-500); }
+  .loy-card-cap { margin-top:10px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.6px; color:#9e9688; }
+  .loy-how { margin:0; padding:0; list-style:none; display:grid; gap:10px; }
+  .loy-how li { display:flex; gap:10px; align-items:flex-start; font-size:12.5px; line-height:18px; color:var(--graphite); }
+  .loy-how-ic { flex:0 0 28px; height:28px; border-radius:9px; background:var(--sand); color:var(--coral-500); display:flex; align-items:center; justify-content:center; }
+
+  @media (min-width:720px) {
+    .lx-bg { align-items:center; padding:24px; }
+    .lx-sheet { border-radius:28px; max-height:88vh; }
+    .lx-handle { display:none; }
+    .lx-h { padding-top:24px; }
+  }
 
   /* ── Header buttons (sino + msg + loyalty) - estilos dos extras ── */
   .owner-dash-icon-btn {
@@ -642,113 +748,10 @@
   }
   .owner-dash-icon-btn .od-mini-badge.visible { display:flex; }
 
-  /* ── Modais legados (mensagem / loyalty config) — estilos preservados ── */
-  .msg-modal-overlay,
-  .loyalty-modal-overlay,
-  .cancel-modal-overlay {
-    position:fixed; inset:0; z-index:200;
-    background:rgba(25,20,15,.5); backdrop-filter:blur(6px);
-    display:none; align-items:center; justify-content:center; padding:1rem;
-  }
-  .msg-modal-overlay.open,
-  .loyalty-modal-overlay.open,
+  /* ── Modal de cancelamento (legado) ── */
+  .cancel-modal-overlay { position:fixed; inset:0; z-index:200; background:rgba(25,20,15,.5); backdrop-filter:blur(6px); display:none; align-items:center; justify-content:center; padding:1rem; }
   .cancel-modal-overlay.open { display:flex; }
-  .msg-modal,
-  .loyalty-modal,
-  .cancel-modal {
-    background:var(--od-paper); border:1px solid var(--od-stone); border-radius:20px;
-    width:100%; max-width:440px;
-    display:flex; flex-direction:column; overflow:hidden;
-  }
-  .cancel-modal { max-width:400px; padding:1.5rem; }
-  .msg-modal-hdr,
-  .loyalty-modal-hdr {
-    padding:1.125rem 1.25rem; border-bottom:1px solid var(--od-stone);
-    display:flex; align-items:center; justify-content:space-between;
-  }
-  .msg-modal-title,
-  .loyalty-modal-title {
-    font-family:'JetBrains Mono',monospace; font-size:.65rem; font-weight:700;
-    letter-spacing:.15em; text-transform:uppercase; color:var(--od-coral-500);
-    display:flex; align-items:center; gap:.5rem;
-  }
-  .loyalty-modal-title { color:var(--od-amber-500); }
-  .msg-modal-close {
-    background:none; border:1px solid var(--od-stone); border-radius:8px;
-    width:30px; height:30px; display:flex; align-items:center; justify-content:center;
-    cursor:pointer; color:var(--od-graphite); font-size:.78rem; transition:all .15s;
-  }
-  .msg-modal-close:hover { border-color:var(--od-rose-500); color:var(--od-rose-500); }
-  .msg-modal-body,
-  .loyalty-modal-body { padding:1.25rem; display:flex; flex-direction:column; gap:.875rem; }
-  .msg-field-label {
-    font-family:'JetBrains Mono',monospace;
-    font-size:.6rem; font-weight:700; letter-spacing:.14em;
-    text-transform:uppercase; color:var(--od-ash); display:block; margin-bottom:.375rem;
-  }
-  .msg-target-row { display:flex; gap:.5rem; }
-  .msg-target-btn {
-    flex:1; padding:.625rem; border-radius:10px; border:1px solid var(--od-stone);
-    background:transparent; color:var(--od-graphite); font-family:'Inter',sans-serif;
-    font-size:.78rem; cursor:pointer; transition:all .15s; text-align:center;
-  }
-  .msg-target-btn.active {
-    border-color:var(--od-coral-500); color:var(--od-coral-700);
-    background:var(--od-coral-50);
-  }
-  .msg-select {
-    width:100%; background:var(--od-cream); border:1px solid var(--od-stone); border-radius:10px;
-    color:var(--od-ink); font-family:'Inter',sans-serif; font-size:.85rem;
-    padding:.75rem 1rem; outline:none; cursor:pointer; display:none;
-  }
-  .msg-textarea {
-    width:100%; background:var(--od-cream); border:1px solid var(--od-stone); border-radius:10px;
-    color:var(--od-ink); font-family:'Inter',sans-serif; font-size:.85rem;
-    padding:.75rem 1rem; outline:none; resize:none; height:100px;
-    transition:border-color .2s;
-  }
-  .msg-textarea:focus { border-color:var(--od-coral-500); }
-  .msg-textarea::placeholder { color:var(--od-ash); }
-  .msg-char-count { font-size:.66rem; color:var(--od-ash); text-align:right; margin-top:-.5rem; }
-  .msg-error {
-    font-size:.72rem; color:var(--od-rose-500); padding:.5rem .75rem;
-    background:rgba(200,80,80,.08); border:1px solid rgba(200,80,80,.2);
-    border-radius:8px; display:none;
-  }
-  .msg-send-btn {
-    width:100%; background:var(--od-coral-500); border:none; border-radius:12px;
-    color:var(--od-cream); font-family:'Inter',sans-serif; font-size:.85rem;
-    font-weight:700; padding:.85rem; cursor:pointer; transition:background .15s;
-    display:flex; align-items:center; justify-content:center; gap:.4rem;
-  }
-  .msg-send-btn:hover { background:var(--od-coral-700); }
-  .msg-send-btn:disabled { opacity:.5; cursor:not-allowed; }
-
-  .loyalty-toggle-row {
-    display:flex; align-items:center; justify-content:space-between;
-    padding:.875rem 1rem; background:var(--od-sand);
-    border:1px solid var(--od-stone); border-radius:12px;
-  }
-  .loyalty-toggle-label { font-size:.85rem; color:var(--od-ink); }
-  .loyalty-toggle-sub { font-size:.7rem; color:var(--od-ash); margin-top:2px; }
-  .toggle-switch { position:relative; width:40px; height:22px; cursor:pointer; }
-  .toggle-switch input { opacity:0; width:0; height:0; }
-  .toggle-slider {
-    position:absolute; inset:0; background:var(--od-stone); border-radius:100px;
-    border:1px solid var(--od-stone); transition:.3s;
-  }
-  .toggle-slider:before {
-    content:''; position:absolute; width:16px; height:16px;
-    border-radius:50%; background:var(--od-paper); bottom:2px; left:2px; transition:.3s;
-  }
-  .toggle-switch input:checked + .toggle-slider { background:var(--od-coral-50); border-color:var(--od-coral-100); }
-  .toggle-switch input:checked + .toggle-slider:before { background:var(--od-coral-500); transform:translateX(18px); }
-  .loyalty-save-btn {
-    width:100%; background:var(--od-amber-500); border:none; border-radius:12px;
-    color:var(--od-cream); font-family:'Inter',sans-serif; font-size:.85rem;
-    font-weight:700; padding:.85rem; cursor:pointer; transition:background .15s;
-  }
-  .loyalty-save-btn:hover { background:#b8973d; }
+  .cancel-modal { background:var(--od-paper); border:1px solid var(--od-stone); border-radius:20px; width:100%; max-width:400px; display:flex; flex-direction:column; overflow:hidden; padding:1.5rem; }
   .cancel-modal-title {
     font-family:'JetBrains Mono',monospace; font-size:.62rem; font-weight:700;
     letter-spacing:.16em; text-transform:uppercase; color:var(--od-rose-500);
@@ -786,15 +789,16 @@
   }
 </style>
 
-<%# ── Drawers (aprovações + pendências legacy) ───────────────────────── %>
-<div class="drawer-overlay" id="approval-overlay"></div>
-<div class="side-drawer" id="approval-drawer">
-  <div class="drawer-hdr">
-    <div class="drawer-title yellow"><i class="fas fa-clock"></i>Aprovações pendentes<span class="drawer-title-badge" id="drawer-badge">0</span></div>
-    <button class="drawer-close" id="drawer-close"><i class="fas fa-xmark"></i></button>
-  </div>
-  <div class="drawer-body" id="drawer-body">
-    <div class="drawer-empty"><i class="fas fa-check-circle" style="display:block;font-size:1.5rem;margin-bottom:8px;color:var(--od-ash);"></i>Nenhuma alteração pendente.</div>
+<%# ── Folha: Aprovações (porte da OwnerMudancasPendentesScreen) ───────── %>
+<script src="/vendor/feather-4.29.2.min.js"></script>
+<div class="lx-bg" id="approval-overlay" aria-hidden="true">
+  <div class="lx-sheet is-wide" id="approval-drawer" role="dialog" aria-modal="true" aria-labelledby="apv-t">
+    <div class="lx-handle"></div>
+    <div class="lx-h">
+      <div class="lx-h-t"><div class="lx-eyebrow">Fluxo de aprovação</div><h2 id="apv-t">Aprovações <span class="lx-count" id="drawer-badge" hidden>0</span></h2></div>
+      <button type="button" class="lx-x" id="drawer-close" aria-label="Fechar"><i data-feather="x" style="width:18px;height:18px"></i></button>
+    </div>
+    <div class="lx-b" id="drawer-body"><div class="lx-empty"><span class="lx-spin is-dark"></span></div></div>
   </div>
 </div>
 
@@ -814,81 +818,82 @@
   </div>
 </div>
 
-<%# ── MODAL LOYALTY (config do programa, owner only) ── %>
+<%# ── Folha: Programa de fidelidade (porte da OwnerLoyaltyScreen) ────── %>
 <% if current_user.owner? %>
-<div class="loyalty-modal-overlay" id="loyalty-modal-overlay">
-  <div class="loyalty-modal">
-    <div class="loyalty-modal-hdr">
-      <div class="loyalty-modal-title"><i class="fas fa-star"></i>Programa de Fidelidade</div>
-      <button class="msg-modal-close" id="loyalty-modal-close"><i class="fas fa-xmark"></i></button>
+<div class="lx-bg" id="loyalty-modal-overlay" aria-hidden="true">
+  <div class="lx-sheet" role="dialog" aria-modal="true" aria-labelledby="loy-t">
+    <div class="lx-handle"></div>
+    <div class="lx-h">
+      <div class="lx-h-t"><div class="lx-eyebrow">Recompensa</div><h2 id="loy-t">Programa de fidelidade</h2></div>
+      <button type="button" class="lx-x" id="loyalty-modal-close" aria-label="Fechar"><i data-feather="x" style="width:18px;height:18px"></i></button>
     </div>
-    <div class="loyalty-modal-body">
-      <div class="loyalty-toggle-row">
-        <div>
-          <div class="loyalty-toggle-label">Ativar programa</div>
-          <div class="loyalty-toggle-sub">Clientes acumulam visitas e ganham recompensas</div>
+    <div class="lx-b">
+      <div class="loy-status" id="loy-status">
+        <div class="loy-status-t"><small>STATUS DO PROGRAMA</small><b id="loy-status-v">Ativo</b></div>
+        <button type="button" class="loy-switch" id="loyalty-active" role="switch" aria-checked="true" aria-label="Programa ativo"></button>
+      </div>
+      <div class="lx-note is-quiet" id="loy-status-note" style="margin-top:10px"></div>
+
+      <span class="lx-label">Configuração</span>
+      <div class="loy-cfg">
+        <div class="loy-cfg-t"><b>Visitas para a recompensa</b><small>Entre 1 e 50 visitas</small></div>
+        <div class="loy-step">
+          <button type="button" id="loy-minus" aria-label="Menos uma visita"><i data-feather="minus" style="width:16px;height:16px"></i></button>
+          <input type="number" id="loyalty-visits" min="1" max="50" value="5" inputmode="numeric" aria-label="Visitas">
+          <button type="button" id="loy-plus" aria-label="Mais uma visita"><i data-feather="plus" style="width:16px;height:16px"></i></button>
         </div>
-        <label class="toggle-switch">
-          <input type="checkbox" id="loyalty-active" checked>
-          <span class="toggle-slider"></span>
-        </label>
       </div>
-      <div>
-        <label class="msg-field-label">Visitas necessárias para a recompensa</label>
-        <input type="number" id="loyalty-visits" min="1" max="50" value="5"
-          class="owner-dash-field-input">
+      <span class="lx-label">O que o cliente ganha</span>
+      <input type="text" class="lx-input" id="loyalty-reward" maxlength="120" placeholder="Ex.: Lavagem simples grátis, 20% de desconto">
+      <div class="lx-counter" id="loy-count">0/120</div>
+
+      <span class="lx-label">Como o cliente vê</span>
+      <div class="loy-card">
+        <div class="loy-card-h"><div><b><%= @car_wash&.name || "Seu lava-rápido" %></b><small id="loy-prev-reward"></small></div><span class="loy-card-badge" id="loy-prev-badge"></span></div>
+        <div class="loy-stamps" id="loy-prev-stamps"></div>
+        <div class="loy-card-cap" id="loy-prev-cap"></div>
       </div>
-      <div>
-        <label class="msg-field-label">Descrição da recompensa</label>
-        <input type="text" id="loyalty-reward" maxlength="120"
-          placeholder="Ex: Lavagem simples grátis, 20% de desconto..."
-          class="owner-dash-field-input">
-        <div style="font-size:.66rem;color:var(--od-ash);margin-top:.375rem;">Isso aparece para o cliente ao atingir a meta</div>
-      </div>
-      <div id="loyalty-error" style="display:none;font-size:.72rem;color:var(--od-rose-500);padding:.5rem .75rem;background:rgba(200,80,80,.08);border:1px solid rgba(200,80,80,.2);border-radius:8px;"></div>
-      <button class="loyalty-save-btn" id="loyalty-save-btn" onclick="saveLoyaltyProgram()">
-        <i class="fas fa-check"></i> Salvar configuração
-      </button>
+
+      <span class="lx-label">Como funciona</span>
+      <ul class="loy-how">
+        <li><span class="loy-how-ic"><i data-feather="calendar" style="width:14px;height:14px"></i></span>Cada visita concluída conta um carimbo no cartão do cliente.</li>
+        <li><span class="loy-how-ic"><i data-feather="award" style="width:14px;height:14px"></i></span><span id="loy-how-goal"></span></li>
+        <li><span class="loy-how-ic"><i data-feather="bell" style="width:14px;height:14px"></i></span>O cliente é avisado quando está perto de completar.</li>
+        <li><span class="loy-how-ic"><i data-feather="refresh-cw" style="width:14px;height:14px"></i></span>Depois da recompensa, o cartão zera e começa um novo ciclo.</li>
+      </ul>
+      <div class="lx-err" id="loyalty-error" hidden></div>
     </div>
+    <div class="lx-foot"><button type="button" class="lx-primary" id="loyalty-save-btn">Salvar alterações</button></div>
   </div>
 </div>
 <% end %>
 
-<%# ── MODAL MENSAGEM AO CLIENTE ── %>
-<div class="msg-modal-overlay" id="msg-modal-overlay">
-  <div class="msg-modal">
-    <div class="msg-modal-hdr">
-      <div class="msg-modal-title"><i class="fas fa-paper-plane"></i>Enviar mensagem</div>
-      <button class="msg-modal-close" id="msg-modal-close"><i class="fas fa-xmark"></i></button>
+<%# ── Folha: Mensagens (porte da OwnerMensagensScreen) ─────────────── %>
+<div class="lx-bg" id="msg-modal-overlay" aria-hidden="true">
+  <div class="lx-sheet" role="dialog" aria-modal="true" aria-labelledby="msg-t">
+    <div class="lx-handle"></div>
+    <div class="lx-h">
+      <div class="lx-h-t"><div class="lx-eyebrow">Comunicação</div><h2 id="msg-t">Mensagens</h2></div>
+      <button type="button" class="lx-x" id="msg-modal-close" aria-label="Fechar"><i data-feather="x" style="width:18px;height:18px"></i></button>
     </div>
-    <div class="msg-modal-body">
-      <div>
-        <label class="msg-field-label">Destinatário</label>
-        <div class="msg-target-row">
-          <button class="msg-target-btn active" id="msg-target-all" onclick="setMsgTarget('all')">
-            <i class="fas fa-users" style="margin-right:.3rem;"></i>Todos de hoje
-          </button>
-          <button class="msg-target-btn" id="msg-target-user" onclick="setMsgTarget('user')">
-            <i class="fas fa-user" style="margin-right:.3rem;"></i>Cliente específico
-          </button>
-        </div>
+    <div class="lx-b">
+      <span class="lx-label">Enviar para</span>
+      <div class="lx-seg" role="group" aria-label="Destinatário">
+        <button type="button" id="msg-target-all" aria-pressed="true"><i data-feather="radio" style="width:14px;height:14px"></i>Aviso geral do dia</button>
+        <button type="button" id="msg-target-user" aria-pressed="false"><i data-feather="message-circle" style="width:14px;height:14px"></i>Mensagem direta</button>
       </div>
-      <div id="msg-client-wrap">
-        <label class="msg-field-label">Selecionar cliente</label>
-        <select class="msg-select" id="msg-client-select">
-          <option value="">Carregando...</option>
-        </select>
-      </div>
-      <div>
-        <label class="msg-field-label">Mensagem</label>
-        <textarea class="msg-textarea" id="msg-body" placeholder="Ex: Chegue 10 minutos antes, por favor." maxlength="300" oninput="updateMsgCount()"></textarea>
-        <div class="msg-char-count"><span id="msg-count">0</span>/300</div>
-      </div>
-      <div class="msg-error" id="msg-error"></div>
-      <button class="msg-send-btn" id="msg-send-btn" onclick="sendOwnerMessage()">
-        <i class="fas fa-paper-plane"></i> Enviar mensagem
-      </button>
+      <p class="lx-seg-help" id="msg-target-help"></p>
+
+      <span class="lx-label" id="msg-list-label">Clientes de hoje</span>
+      <div class="msg-list" id="msg-client-list"><div class="msg-none"><span class="lx-spin is-dark"></span></div></div>
+
+      <span class="lx-label">Mensagem</span>
+      <textarea class="lx-textarea" id="msg-body" maxlength="300" placeholder="Ex.: Chegue 10 minutos antes, por favor."></textarea>
+      <div class="lx-counter" id="msg-counter"><span id="msg-count">0</span>/300</div>
+      <div class="lx-note is-quiet" style="margin-top:12px"><i data-feather="info" style="width:14px;height:14px"></i><span>Só clientes com horário marcado hoje recebem. A mensagem chega como notificação no app e no site.</span></div>
+      <div class="lx-err" id="msg-error" hidden></div>
     </div>
+    <div class="lx-foot"><button type="button" class="lx-primary" id="msg-send-btn">Enviar mensagem</button></div>
   </div>
 </div>
 
@@ -1863,105 +1868,166 @@
       renderApprovalDrawer(data);
     } catch(e) {}
   }
+  // Ícone Feather em string (o painel usa Font Awesome; as folhas novas,
+  // Feather, como o app).
+  const fi = (n, s = 16) => (window.feather && feather.icons[n]) ? feather.icons[n].toSvg({ width: s, height: s }) : '';
+
+  // Folhas do painel: abrir/fechar com foco e trava de rolagem.
+  let lxLastFocus = null;
+  function lxOpen(id) {
+    lxLastFocus = document.activeElement;
+    const bg = document.getElementById(id);
+    bg.classList.add('open'); bg.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => bg.querySelector('.lx-x')?.focus(), 60);
+  }
+  function lxClose(id) {
+    const bg = document.getElementById(id);
+    if (!bg || !bg.classList.contains('open')) return;
+    bg.classList.remove('open'); bg.setAttribute('aria-hidden', 'true');
+    if (!document.querySelector('.lx-bg.open')) document.body.style.overflow = '';
+    lxLastFocus?.focus?.();
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') document.querySelectorAll('.lx-bg.open').forEach(bg => lxClose(bg.id));
+  });
+  document.querySelectorAll('.lx-bg').forEach(bg => bg.addEventListener('click', e => { if (e.target === bg) lxClose(bg.id); }));
+
+  // ── APROVAÇÕES (OwnerMudancasPendentesScreen) ─────────────────────────
+  const APV_MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const APV_LABELS = {
+    rent:'Aluguel', salaries:'Salários', utilities:'Energia/Água', water:'Água', electricity:'Luz',
+    products:'Produtos', maintenance:'Manutenção', other_fixed:'Outros fixos', other_variable:'Outros variáveis',
+    notes:'Observações', name:'Nome', cep:'CEP', logradouro:'Logradouro', numero:'Número', bairro:'Bairro',
+    cidade:'Cidade', uf:'UF', address:'Endereço', capacity_per_slot:'Capacidade por horário',
+    latitude:'Latitude', longitude:'Longitude'
+  };
+  const APV_MONEY = new Set(['rent','salaries','utilities','water','electricity','products','maintenance','other_fixed','other_variable']);
+  const brl = v => 'R$ ' + (parseFloat(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const apvVal = (k, v) => (v === null || v === undefined || v === '') ? '—' : (APV_MONEY.has(k) ? brl(v) : String(v));
+  const apvRow = (l, v) => `<div class="apv-row"><span>${escapeHtml(l)}</span><span>${escapeHtml(v)}</span></div>`;
+
+  function apvMeta(pc) {
+    if (pc.change_type === 'monthly_costs') {
+      const y = pc.payload?.year, m = pc.payload?.month;
+      return { badge: 'CUSTOS', title: (y && m) ? `Custos de ${APV_MONTHS[m - 1]}/${y}` : 'Custos mensais' };
+    }
+    if (pc.change_type === 'manage_car_wash') return { badge: 'LAVA-RÁPIDO', title: 'Gerenciar lava-rápido' };
+    return { badge: String(pc.change_type || 'ALTERAÇÃO').toUpperCase(), title: 'Alteração' };
+  }
+  // O que muda — as mesmas linhas do app (CostDiffBody / CarWashDiffBody).
+  function apvDiff(pc) {
+    const p = pc.payload || {};
+    let html = '';
+    if (pc.change_type === 'monthly_costs') {
+      const cp = p.cost_params || {};
+      const keys = Object.keys(cp).filter(k => cp[k] !== '' && cp[k] != null);
+      if (keys.length) html += keys.map(k => apvRow(APV_LABELS[k] || k, apvVal(k, cp[k]))).join('');
+      const d = p.custom_lines_diff || {};
+      const line = l => apvRow((l.name || `Linha #${l.id}`) + (l.cost_type ? (l.cost_type === 'fixed' ? ' · fixo' : ' · variável') : ''), typeof l.amount === 'number' ? brl(l.amount) : '—');
+      [['Adicionadas', d.added], ['Modificadas', d.updated]].forEach(([t, ls]) => {
+        if (Array.isArray(ls) && ls.length) html += `<div class="apv-sec">${t}</div>` + ls.map(line).join('');
+      });
+      if (Array.isArray(d.deleted) && d.deleted.length) html += `<div class="apv-sec">Removidas</div>` + d.deleted.map(id => apvRow(`Linha #${id}`, 'removida')).join('');
+      if (!d.added && !d.updated && Array.isArray(p.custom_lines) && p.custom_lines.length) html += `<div class="apv-sec">Linhas customizadas</div>` + p.custom_lines.map(line).join('');
+    } else if (pc.change_type === 'manage_car_wash') {
+      const cw = p.car_wash_params || {};
+      Object.keys(cw).forEach(k => {
+        if (k === 'operating_hours_attributes' || k === 'services_attributes') return;
+        html += apvRow(APV_LABELS[k] || k, apvVal(k, cw[k]));
+      });
+      const n1 = Object.keys(cw.operating_hours_attributes || {}).length;
+      const n2 = Object.keys(cw.services_attributes || {}).length;
+      if (n1) html += apvRow('Horários', `${n1} alteraç${n1 > 1 ? 'ões' : 'ão'}`);
+      if (n2) html += apvRow('Serviços', `${n2} alteraç${n2 > 1 ? 'ões' : 'ão'}`);
+    }
+    return html || `<div class="apv-row"><span>Sem detalhes disponíveis.</span><span></span></div>`;
+  }
+
+  let apvList = [];
   function renderApprovalDrawer(data) {
+    apvList = data;
     const body = document.getElementById('drawer-body');
     const badge = document.getElementById('drawer-badge');
-    badge.textContent = data.length;
+    badge.textContent = data.length; badge.hidden = !data.length;
     if (!data.length) {
-      body.innerHTML = '<div class="drawer-empty"><i class="fas fa-check-circle" style="display:block;font-size:1.5rem;margin-bottom:8px;color:var(--od-ash);"></i>Nenhuma alteração pendente.</div>';
+      body.innerHTML = `<div class="lx-empty"><span class="lx-empty-ic">${fi('check-circle', 26)}</span><b>Tudo em dia</b><span>Nenhuma alteração esperando sua aprovação.</span></div>`;
       return;
     }
-    body.innerHTML = '';
-    data.forEach(pc => {
-      const did = `detail-${pc.id}`;
-      const card = document.createElement('div');
-      card.className = 'approval-card'; card.id = `acard-${pc.id}`;
-      card.innerHTML = `
-        <div class="approval-card-header">
-          <div class="approval-card-desc">${escapeHtml(pc.description)}</div>
-          <button class="approval-toggle" onclick="toggleDetail('${did}')"><i class="fas fa-plus" id="icon-${did}"></i></button>
-        </div>
-        <div class="approval-card-meta"><i class="fas fa-user" style="margin-right:4px;color:var(--od-stone);"></i>${escapeHtml(pc.attendant)} · ${escapeHtml(pc.created_at)}</div>
-        <div id="${did}" class="approval-detail">${formatPayload(pc.change_type, pc.payload)}</div>
-        <div class="approval-actions">
-          <button class="btn-approve" onclick="approveChange(${pc.id},this)"><i class="fas fa-check"></i> Aprovar</button>
-          <button class="btn-reject" onclick="rejectChange(${pc.id},this)"><i class="fas fa-xmark"></i> Rejeitar</button>
-        </div>
-      `;
-      body.appendChild(card);
-    });
-  }
-  const costLabels = { rent:'Aluguel', salaries:'Salários', utilities:'Energia/Água', products:'Produtos', maintenance:'Manutenção', other_fixed:'Outros fixos', other_variable:'Outros variáveis', notes:'Observações' };
-  function formatPayload(ct, payload) {
-    if (!payload) return '<em style="color:var(--od-ash)">Sem detalhes.</em>';
-    if (ct === 'monthly_costs') {
-      const cp = payload.cost_params || {};
-      const month = payload.month ? `${String(payload.month).padStart(2,'0')}/${payload.year}` : '';
-      let rows = `<div style="font-size:.62rem;color:var(--od-amber-500);margin-bottom:6px;font-weight:700;letter-spacing:.1em;">CUSTOS — ${month}</div>`;
-      rows += Object.entries(cp).map(([k,v]) => {
-        if (v==='' || v==null) return '';
-        const label = costLabels[k] || k;
-        const val = k==='notes'
-          ? `<span style="color:var(--od-graphite)">${escapeHtml(v||'—')}</span>`
-          : `<span style="color:var(--od-graphite)">R$ ${parseFloat(v).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>`;
-        return `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--od-stone);"><span style="color:var(--od-ash)">${label}</span>${val}</div>`;
+    const keepOpen = new Set([...body.querySelectorAll('.apv-diff:not([hidden])')].map(d => d.closest('.apv').dataset.id));
+    body.innerHTML = `<div class="lx-note">${fi('info', 14)}<span>Mudanças feitas por atendentes ficam aqui até você decidir. Aprovar aplica na hora.</span></div>` +
+      data.map(pc => {
+        const m = apvMeta(pc), open = keepOpen.has(String(pc.id));
+        return `<article class="apv" id="acard-${pc.id}" data-id="${pc.id}">
+          <div class="apv-top"><span class="lx-av">${escapeHtml((pc.attendant || '?').trim()[0]?.toUpperCase() || '?')}</span>
+            <div class="apv-who"><b>${escapeHtml(pc.attendant)}</b><small>${escapeHtml(pc.created_at)}</small></div>
+            <span class="apv-badge">${escapeHtml(m.badge)}</span></div>
+          <div class="apv-title">${escapeHtml(m.title)}</div>
+          <p class="apv-desc">${escapeHtml(pc.description)}</p>
+          <button type="button" class="apv-more" data-apv="more" aria-expanded="${open}">${open ? 'OCULTAR O QUE MUDA' : 'VER O QUE MUDA'}${fi(open ? 'chevron-up' : 'chevron-down', 13)}</button>
+          <div class="apv-diff"${open ? '' : ' hidden'}>${apvDiff(pc)}</div>
+          <div class="apv-acts">
+            <button type="button" class="apv-no" data-apv="ask-reject">${fi('x', 14)}Rejeitar</button>
+            <button type="button" class="apv-yes" data-apv="ask-approve">${fi('check', 14)}Aprovar</button>
+          </div>
+          <div class="apv-confirm"><p></p>
+            <div class="apv-confirm-acts"><button type="button" class="apv-back" data-apv="back">Voltar</button><button type="button" class="apv-yes" data-apv="go"></button></div>
+          </div>
+        </article>`;
       }).join('');
-      return rows;
-    }
-    return `<pre style="font-size:.66rem;color:var(--od-graphite);white-space:pre-wrap;margin:0;">${escapeHtml(JSON.stringify(payload,null,2))}</pre>`;
   }
-  function removeCard(cardEl, cb) { cardEl.classList.add('removing'); setTimeout(cb, 220); }
-  window.toggleDetail = function(id) {
-    const el=document.getElementById(id), icon=document.getElementById('icon-'+id);
-    if(!el) return;
-    const open = el.style.display === 'none' || !el.style.display;
-    el.style.display = open ? 'block' : 'none';
-    icon.className = open ? 'fas fa-minus' : 'fas fa-plus';
-  };
-  window.approveChange = async function(id, btn) {
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>'; }
-    try {
-      await fetch(`/owner/pending_changes/${id}/approve`, {
-        method:'PATCH',
-        headers:{ 'X-CSRF-Token':CSRF, 'Content-Type':'application/json' }
-      });
-      const card = document.getElementById(`acard-${id}`);
-      if (card) removeCard(card, () => loadApprovals());
-      else loadApprovals();
-      showToast('Alteração aprovada.', 'success');
-    } catch(e) {
-      showToast('Erro ao aprovar.', 'error');
-      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Aprovar'; }
+  // Confirmação dentro do próprio cartão, como o Alert do app: aprovar
+  // aplica na hora e rejeitar descarta — os dois pedem um segundo toque.
+  document.getElementById('drawer-body')?.addEventListener('click', e => {
+    const b = e.target.closest('[data-apv]'); if (!b) return;
+    const card = b.closest('.apv'), id = card.dataset.id, pc = apvList.find(x => String(x.id) === id);
+    const act = b.dataset.apv;
+    if (act === 'more') {
+      const d = card.querySelector('.apv-diff'), open = d.hidden;
+      d.hidden = !open; b.setAttribute('aria-expanded', open);
+      b.innerHTML = (open ? 'OCULTAR O QUE MUDA' : 'VER O QUE MUDA') + fi(open ? 'chevron-up' : 'chevron-down', 13);
+    } else if (act === 'ask-approve' || act === 'ask-reject') {
+      const ok = act === 'ask-approve', who = pc?.attendant || 'o atendente';
+      card.dataset.ask = ok ? 'approve' : 'reject';
+      card.querySelector('.apv-confirm p').textContent = ok
+        ? `A alteração de ${who} será aplicada agora.`
+        : `A alteração de ${who} será descartada.`;
+      const go = card.querySelector('[data-apv="go"]');
+      go.textContent = ok ? 'Sim, aprovar' : 'Sim, rejeitar';
+      go.classList.toggle('is-danger', !ok);
+      go.focus();
+    } else if (act === 'back') {
+      delete card.dataset.ask;
+    } else if (act === 'go') {
+      decideChange(id, card.dataset.ask, b);
     }
-  };
-  window.rejectChange = async function(id, btn) {
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>'; }
+  });
+  async function decideChange(id, kind, btn) {
+    const label = btn.textContent;
+    card_busy(btn, true);
     try {
-      await fetch(`/owner/pending_changes/${id}/reject`, {
-        method:'PATCH',
-        headers:{ 'X-CSRF-Token':CSRF, 'Content-Type':'application/json' }
+      const res = await fetch(`/owner/pending_changes/${id}/${kind}`, {
+        method: 'PATCH', headers: { 'X-CSRF-Token': CSRF, 'Content-Type': 'application/json', Accept: 'application/json' }
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) throw new Error(data.error || data.message);
       const card = document.getElementById(`acard-${id}`);
-      if (card) removeCard(card, () => loadApprovals());
-      else loadApprovals();
-      showToast('Alteração rejeitada.', 'error');
-    } catch(e) {
-      showToast('Erro ao rejeitar.', 'error');
-      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-xmark"></i> Rejeitar'; }
+      if (card) { card.classList.add('removing'); setTimeout(loadApprovals, 220); } else loadApprovals();
+      showToast(kind === 'approve' ? 'Alteração aprovada e aplicada.' : 'Alteração rejeitada.', 'success');
+    } catch (e) {
+      showToast(e.message || (kind === 'approve' ? 'Erro ao aprovar.' : 'Erro ao rejeitar.'), 'error');
+      card_busy(btn, false, label);
     }
-  };
-  window.openApprovalDrawer = function() {
-    document.getElementById('approval-drawer').classList.add('open');
-    document.getElementById('approval-overlay').classList.add('open');
-    document.body.style.overflow = 'hidden';
-  };
-  function closeApprovalDrawer() {
-    document.getElementById('approval-drawer').classList.remove('open');
-    document.getElementById('approval-overlay').classList.remove('open');
-    document.body.style.overflow = '';
   }
-  document.getElementById('drawer-close')?.addEventListener('click', closeApprovalDrawer);
-  document.getElementById('approval-overlay')?.addEventListener('click', closeApprovalDrawer);
+  function card_busy(btn, on, label) {
+    btn.closest('.apv').querySelectorAll('button').forEach(b => b.disabled = on);
+    btn.innerHTML = on ? '<span class="lx-spin"></span>' : escapeHtml(label);
+  }
+  // Mantidas: outros pontos do painel ainda chamam por esses nomes.
+  window.approveChange = (id) => decideChange(id, 'approve', document.querySelector(`#acard-${id} [data-apv="go"]`));
+  window.rejectChange  = (id) => decideChange(id, 'reject',  document.querySelector(`#acard-${id} [data-apv="go"]`));
+  window.openApprovalDrawer = function() { lxOpen('approval-overlay'); loadApprovals(); };
+  document.getElementById('drawer-close')?.addEventListener('click', () => lxClose('approval-overlay'));
 
   // ── ACTIVATION CHECKLIST DISMISS ─────────────────────────────────────
   window.dismissActivation = function() {
@@ -1979,114 +2045,157 @@
     });
   }
 
-  // ── MENSAGEM AO CLIENTE (modal legado preservado) ───────────────────
-  let msgTarget = 'all';
+  // ── MENSAGENS (OwnerMensagensScreen) ──────────────────────────────────
+  // Aviso geral vai pra todos com horário hoje; mensagem direta, pra um
+  // cliente escolhido na lista de hoje. Mesma API do app.
+  let msgTarget = 'all', msgClients = [], msgPick = null;
   window.openMsgModal = function() {
-    document.getElementById('msg-modal-overlay').classList.add('open');
-    document.body.style.overflow = 'hidden';
     document.getElementById('msg-body').value = '';
-    document.getElementById('msg-count').textContent = '0';
-    document.getElementById('msg-error').style.display = 'none';
+    document.getElementById('msg-error').hidden = true;
+    msgPick = null;
+    updateMsgCount();
     setMsgTarget('all');
+    lxOpen('msg-modal-overlay');
     loadMsgClients();
   };
-  function closeMsgModal() {
-    document.getElementById('msg-modal-overlay').classList.remove('open');
-    document.body.style.overflow = '';
-  }
   window.setMsgTarget = function(t) {
     msgTarget = t;
-    document.getElementById('msg-target-all').classList.toggle('active', t==='all');
-    document.getElementById('msg-target-user').classList.toggle('active', t==='user');
-    document.getElementById('msg-client-wrap').style.display = t==='user' ? 'block' : 'none';
-    document.getElementById('msg-client-select').style.display = t==='user' ? 'block' : 'none';
+    document.getElementById('msg-target-all').setAttribute('aria-pressed', t === 'all');
+    document.getElementById('msg-target-user').setAttribute('aria-pressed', t === 'user');
+    renderMsgClients();
   };
   window.updateMsgCount = function() {
-    const v = document.getElementById('msg-body').value.length;
-    document.getElementById('msg-count').textContent = v;
+    const n = document.getElementById('msg-body').value.length;
+    document.getElementById('msg-count').textContent = n;
+    document.getElementById('msg-counter').classList.toggle('is-near', n >= 270);
   };
+  function msgSplit(c) { const [name, time] = String(c.name || '').split(' · '); return { name: name || 'Cliente', time: time || '' }; }
+  function renderMsgClients() {
+    const list = document.getElementById('msg-client-list');
+    const n = msgClients.length;
+    document.getElementById('msg-target-help').textContent = msgTarget === 'all'
+      ? (n ? `Vai para ${n === 1 ? 'o cliente' : `os ${n} clientes`} com horário hoje.` : 'Ninguém com horário hoje ainda.')
+      : 'Escolha um cliente de hoje e escreva só pra ele.';
+    document.getElementById('msg-list-label').textContent = msgTarget === 'all' ? `Quem recebe${n ? ' · ' + n : ''}` : 'Escolha o cliente';
+    if (!n) {
+      list.innerHTML = `<div class="msg-none">${fi('calendar', 16)}<span>Nenhum cliente com horário confirmado hoje.</span></div>`;
+    } else if (msgTarget === 'all') {
+      list.innerHTML = msgClients.map(c => { const s = msgSplit(c); return `<div class="msg-row"><span class="lx-av">${escapeHtml(s.name[0].toUpperCase())}</span><span class="msg-row-t"><b>${escapeHtml(s.name)}</b><small>${escapeHtml(s.time)}</small></span></div>`; }).join('');
+    } else {
+      // Um cliente com dois horários hoje aparece uma vez só na escolha.
+      const seen = new Set(), unicos = msgClients.filter(c => !seen.has(c.id) && seen.add(c.id));
+      list.innerHTML = unicos.map(c => { const s = msgSplit(c), on = msgPick === c.id; return `<button type="button" class="msg-row" role="radio" aria-checked="${on}" data-msg-pick="${c.id}"><span class="lx-av">${escapeHtml(s.name[0].toUpperCase())}</span><span class="msg-row-t"><b>${escapeHtml(s.name)}</b><small>Horário às ${escapeHtml(s.time)}</small></span><span class="msg-radio"></span></button>`; }).join('');
+    }
+    document.getElementById('msg-send-btn').disabled = !n;
+  }
   async function loadMsgClients() {
-    const sel = document.getElementById('msg-client-select');
-    sel.innerHTML = '<option value="">Carregando...</option>';
+    msgClients = []; document.getElementById('msg-client-list').innerHTML = '<div class="msg-none"><span class="lx-spin is-dark"></span></div>';
     try {
-      const res = await fetch('/owner/messages/clients_today', { headers:{ Accept:'application/json' }});
+      const res = await fetch('/owner/messages/clients_today', { headers: { Accept: 'application/json' } });
       const data = await res.json();
-      sel.innerHTML = data.length
-        ? data.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')
-        : '<option value="">Nenhum cliente hoje</option>';
-    } catch(e) { sel.innerHTML = '<option value="">Erro ao carregar</option>'; }
+      msgClients = Array.isArray(data) ? data : [];
+    } catch (e) { msgClients = []; }
+    renderMsgClients();
   }
   window.sendOwnerMessage = async function() {
-    const body  = document.getElementById('msg-body').value.trim();
-    const errEl = document.getElementById('msg-error');
-    const btn   = document.getElementById('msg-send-btn');
-    const recip = msgTarget==='user' ? document.getElementById('msg-client-select').value : null;
-    errEl.style.display = 'none';
-    if (!body)  { errEl.textContent='Escreva uma mensagem antes de enviar.'; errEl.style.display='block'; return; }
-    if (msgTarget==='user' && !recip) { errEl.textContent='Selecione um cliente.'; errEl.style.display='block'; return; }
-    btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Enviando...';
+    const body = document.getElementById('msg-body').value.trim();
+    const errEl = document.getElementById('msg-error'), btn = document.getElementById('msg-send-btn');
+    const fail = t => { errEl.innerHTML = fi('alert-circle', 14) + '<span>' + escapeHtml(t) + '</span>'; errEl.hidden = false; };
+    errEl.hidden = true;
+    if (msgTarget === 'user' && !msgPick) return fail('Escolha o cliente que vai receber.');
+    if (!body) { document.getElementById('msg-body').focus(); return fail('Escreva a mensagem antes de enviar.'); }
+    btn.disabled = true; btn.innerHTML = '<span class="lx-spin"></span>';
     try {
       const payload = { target: msgTarget, body };
-      if (msgTarget==='user') payload.recipient_id = recip;
+      if (msgTarget === 'user') payload.recipient_id = msgPick;
       const res = await fetch('/owner/messages', {
-        method:'POST',
-        headers:{ 'X-CSRF-Token':CSRF, 'Content-Type':'application/json' },
+        method: 'POST', headers: { 'X-CSRF-Token': CSRF, 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify(payload)
       });
-      const data = await res.json();
-      if (data.ok) { closeMsgModal(); showToast('Mensagem enviada!', 'success'); }
-      else { errEl.textContent = data.error || 'Erro ao enviar.'; errEl.style.display='block'; }
-    } catch(e) { errEl.textContent='Erro de conexão.'; errEl.style.display='block'; }
-    btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar mensagem';
+      const data = await res.json().catch(() => ({}));
+      if (data.ok) { lxClose('msg-modal-overlay'); showToast(msgTarget === 'all' ? 'Aviso enviado aos clientes de hoje.' : 'Mensagem enviada.', 'success'); }
+      else fail(data.error || 'Erro ao enviar.');
+    } catch (e) { fail('Erro de conexão.'); }
+    btn.disabled = false; btn.textContent = 'Enviar mensagem';
   };
-  document.getElementById('msg-modal-close')?.addEventListener('click', closeMsgModal);
-  document.getElementById('msg-modal-overlay')?.addEventListener('click', e => {
-    if (e.target.id === 'msg-modal-overlay') closeMsgModal();
+  document.getElementById('msg-target-all')?.addEventListener('click', () => setMsgTarget('all'));
+  document.getElementById('msg-target-user')?.addEventListener('click', () => setMsgTarget('user'));
+  document.getElementById('msg-client-list')?.addEventListener('click', e => {
+    const b = e.target.closest('[data-msg-pick]'); if (!b) return;
+    msgPick = Number(b.dataset.msgPick); renderMsgClients();
+    document.getElementById('msg-error').hidden = true;
   });
+  document.getElementById('msg-body')?.addEventListener('input', updateMsgCount);
+  document.getElementById('msg-send-btn')?.addEventListener('click', sendOwnerMessage);
+  document.getElementById('msg-modal-close')?.addEventListener('click', () => lxClose('msg-modal-overlay'));
 
-  // ── LOYALTY CONFIG (modal legado preservado) ────────────────────────
+  // ── FIDELIDADE (OwnerLoyaltyScreen) ───────────────────────────────────
+  const LOY_MIN = 1, LOY_MAX = 50;
+  const loy = { active: true, visits: 5, exists: false };
+  function loyRender() {
+    const sw = document.getElementById('loyalty-active'); if (!sw) return;
+    const v = loy.visits, reward = document.getElementById('loyalty-reward').value.trim();
+    sw.setAttribute('aria-checked', loy.active);
+    document.getElementById('loy-status').classList.toggle('is-on', loy.active);
+    document.getElementById('loy-status-v').textContent = loy.active ? 'Ativo' : 'Pausado';
+    const note = document.getElementById('loy-status-note');
+    note.innerHTML = loy.active
+      ? fi('award', 14) + '<span>' + (loy.exists ? 'Clientes estão juntando carimbos pra ganhar a recompensa.' : 'Ao salvar, cada visita concluída passa a contar um carimbo.') + '</span>'
+      : fi('pause-circle', 14) + '<span>Pausado: as visitas não contam carimbo enquanto estiver assim.</span>';
+    document.getElementById('loyalty-visits').value = v;
+    document.getElementById('loy-minus').disabled = v <= LOY_MIN;
+    document.getElementById('loy-plus').disabled = v >= LOY_MAX;
+    document.getElementById('loy-count').textContent = document.getElementById('loyalty-reward').value.length + '/120';
+    // Prévia com 60% preenchido, como no app.
+    const filled = Math.floor(v * 0.6), shown = Math.min(v, 10);
+    let st = '';
+    for (let i = 0; i < shown; i++) st += `<i class="${i < filled ? 'is-on' : ''}">${i < filled ? fi('check', 13) : ''}</i>`;
+    document.getElementById('loy-prev-stamps').innerHTML = st;
+    document.getElementById('loy-prev-reward').textContent = reward || 'Descreva a recompensa';
+    document.getElementById('loy-prev-badge').textContent = `${filled}/${v}`;
+    document.getElementById('loy-prev-cap').textContent = `${filled} DE ${v} VISITAS (EXEMPLO)${v > 10 ? ' · MOSTRANDO 10' : ''}`;
+    document.getElementById('loy-how-goal').textContent = `Ao completar ${v} visita${v > 1 ? 's' : ''}, o cliente ganha a recompensa.`;
+  }
+  const loyClamp = n => Math.max(LOY_MIN, Math.min(LOY_MAX, parseInt(n, 10) || LOY_MIN));
   window.openLoyaltyModal = function() {
-    fetch('/owner/loyalty_program', { headers:{ Accept:'application/json' }})
-      .then(r => r.json()).then(data => {
-        if (data.exists) {
-          document.getElementById('loyalty-active').checked = data.active;
-          document.getElementById('loyalty-visits').value   = data.visits_required;
-          document.getElementById('loyalty-reward').value   = data.reward_description;
-        }
-        document.getElementById('loyalty-modal-overlay').classList.add('open');
-        document.body.style.overflow = 'hidden';
+    document.getElementById('loyalty-error').hidden = true;
+    fetch('/owner/loyalty_program', { headers: { Accept: 'application/json' } })
+      .then(r => r.json()).catch(() => ({}))
+      .then(data => {
+        loy.exists = !!data.exists;
+        loy.active = data.exists ? !!data.active : true;
+        loy.visits = data.exists ? loyClamp(data.visits_required) : 5;
+        document.getElementById('loyalty-reward').value = data.exists ? (data.reward_description || '') : '';
+        loyRender();
+        lxOpen('loyalty-modal-overlay');
       });
   };
-  function closeLoyaltyModal() {
-    document.getElementById('loyalty-modal-overlay').classList.remove('open');
-    document.body.style.overflow = '';
-  }
   window.saveLoyaltyProgram = async function() {
-    const btn   = document.getElementById('loyalty-save-btn');
-    const errEl = document.getElementById('loyalty-error');
-    const visits= parseInt(document.getElementById('loyalty-visits').value);
-    const reward= document.getElementById('loyalty-reward').value.trim();
-    const active= document.getElementById('loyalty-active').checked;
-    errEl.style.display = 'none';
-    if (!reward) { errEl.textContent='Descreva a recompensa.'; errEl.style.display='block'; return; }
-    if (!visits || visits < 1) { errEl.textContent='Informe o número de visitas (mínimo 1).'; errEl.style.display='block'; return; }
-    btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Salvando...';
+    const btn = document.getElementById('loyalty-save-btn'), errEl = document.getElementById('loyalty-error');
+    const reward = document.getElementById('loyalty-reward').value.trim();
+    const fail = t => { errEl.innerHTML = fi('alert-circle', 14) + '<span>' + escapeHtml(t) + '</span>'; errEl.hidden = false; };
+    errEl.hidden = true;
+    if (!reward) { document.getElementById('loyalty-reward').focus(); return fail('Diga o que o cliente ganha ao completar.'); }
+    btn.disabled = true; btn.innerHTML = '<span class="lx-spin"></span>';
     try {
       const res = await fetch('/owner/loyalty_program', {
-        method:'POST',
-        headers:{ 'X-CSRF-Token':CSRF, 'Content-Type':'application/json' },
-        body: JSON.stringify({ visits_required: visits, reward_description: reward, active })
+        method: 'POST', headers: { 'X-CSRF-Token': CSRF, 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ visits_required: loy.visits, reward_description: reward, active: loy.active })
       });
-      const data = await res.json();
-      if (data.ok) { closeLoyaltyModal(); showToast('Programa de fidelidade salvo!', 'success'); loadDashboard(true); }
-      else { errEl.textContent = data.error || 'Erro ao salvar.'; errEl.style.display='block'; }
-    } catch(e) { errEl.textContent='Erro de conexão.'; errEl.style.display='block'; }
-    btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Salvar configuração';
+      const data = await res.json().catch(() => ({}));
+      if (data.ok) { lxClose('loyalty-modal-overlay'); showToast('Programa de fidelidade salvo!', 'success'); loadDashboard(true); }
+      else fail(data.error || 'Erro ao salvar.');
+    } catch (e) { fail('Erro de conexão.'); }
+    btn.disabled = false; btn.textContent = 'Salvar alterações';
   };
-  document.getElementById('loyalty-modal-close')?.addEventListener('click', closeLoyaltyModal);
-  document.getElementById('loyalty-modal-overlay')?.addEventListener('click', e => {
-    if (e.target.id === 'loyalty-modal-overlay') closeLoyaltyModal();
-  });
+  document.getElementById('loyalty-active')?.addEventListener('click', () => { loy.active = !loy.active; loyRender(); });
+  document.getElementById('loy-minus')?.addEventListener('click', () => { loy.visits = loyClamp(loy.visits - 1); loyRender(); });
+  document.getElementById('loy-plus')?.addEventListener('click', () => { loy.visits = loyClamp(loy.visits + 1); loyRender(); });
+  document.getElementById('loyalty-visits')?.addEventListener('change', e => { loy.visits = loyClamp(e.target.value); loyRender(); });
+  document.getElementById('loyalty-reward')?.addEventListener('input', loyRender);
+  document.getElementById('loyalty-save-btn')?.addEventListener('click', saveLoyaltyProgram);
+  document.getElementById('loyalty-modal-close')?.addEventListener('click', () => lxClose('loyalty-modal-overlay'));
+  if (window.feather) feather.replace();
 
   // ── CANCEL MODAL LEGADO (mantido pra compatibilidade) ───────────────
   let _legacyCancelId = null;
