@@ -49,7 +49,7 @@
       </div>
       <div class="ac-right">
         <div class="ac-list">
-          <button type="button" class="ac-item" data-sheet="dados">
+          <button type="button" class="ac-item" data-open="dados">
             <span class="ac-item-ic"><i data-feather="user" style="width:18px;height:18px"></i></span>
             <span class="ac-item-t"><b>Dados pessoais</b><small>Nome, telefone e CPF</small></span>
             <i data-feather="chevron-right" class="ac-chev" style="width:16px;height:16px"></i>
@@ -98,6 +98,36 @@
     <%= render "shared/site_footer", audience: :client %>
   </section>
 
+  <%# ── Dados pessoais ──────────────────────────────────────────────
+       Era uma folha por cima da Conta; virou página como Veículo e
+       Segurança: itens iguais na lista abrem do mesmo jeito, o voltar do
+       navegador funciona e dá pra abrir direto por #dados. %>
+  <section class="ac-view" id="ac-dados">
+    <div class="sub is-split">
+      <div class="sub-head"><button type="button" class="sub-back" data-back aria-label="Voltar"><i data-feather="chevron-left" style="width:18px;height:18px"></i></button></div>
+      <div class="sub-body">
+        <div class="sec-side">
+        <div class="ac-mono">Dados pessoais</div>
+        <h1>Seu perfil.</h1>
+        <p class="sub-lead">É assim que o lava-rápido te identifica no agendamento.</p>
+        </div>
+
+        <div class="sec-main">
+        <div class="sec-card">
+          <h2>Nome e contato</h2>
+          <p>Nome e telefone são obrigatórios; o CPF é opcional.</p>
+          <div class="ac-f"><label>E-mail</label><div class="ac-ro"><span id="pd-email"></span><i data-feather="lock" style="width:13px;height:13px"></i></div>
+            <div class="ac-help">Pra trocar, vá em <button type="button" class="ac-link" data-open="seguranca">Privacidade e segurança</button>.</div></div>
+          <div class="ac-f"><label for="pd-name">Nome</label><input id="pd-name" autocomplete="name"></div>
+          <div class="ac-f"><label for="pd-phone">Telefone</label><input id="pd-phone" inputmode="tel" autocomplete="tel" placeholder="(11) 99999-9999"></div>
+          <div class="ac-f"><label for="pd-cpf">CPF</label><input id="pd-cpf" inputmode="numeric" placeholder="000.000.000-00"></div>
+        </div>
+        <div class="sub-bar"><button type="button" class="ac-save" id="pd-save">Salvar alterações</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <%# ── Meu veículo (ClientVehicleScreen) ─────────────────────────── %>
   <section class="ac-view" id="ac-veiculo">
     <div class="sub is-split">
@@ -132,19 +162,6 @@
         ask: "Excluir minha conta", confirm: "Sim, excluir de vez" } %>
 
   <%# ── Folha: Dados pessoais ─────────────────────────────────────── %>
-  <div class="ac-sheet-bg" id="sh-dados" aria-hidden="true">
-    <div class="ac-sheet" role="dialog" aria-modal="true" aria-labelledby="sh-dados-t">
-      <div class="ac-handle"></div>
-      <div class="ac-sheet-h"><h2 id="sh-dados-t">Editar perfil</h2><button type="button" class="ac-x" data-close aria-label="Fechar"><i data-feather="x" style="width:20px;height:20px"></i></button></div>
-      <div class="ac-sheet-b">
-        <div class="ac-f"><label>E-mail</label><div class="ac-ro"><span id="pd-email"></span><i data-feather="lock" style="width:13px;height:13px"></i></div></div>
-        <div class="ac-f"><label for="pd-name">Nome</label><input id="pd-name" autocomplete="name"></div>
-        <div class="ac-f"><label for="pd-phone">Telefone</label><input id="pd-phone" inputmode="tel" autocomplete="tel" placeholder="(11) 99999-9999"></div>
-        <div class="ac-f"><label for="pd-cpf">CPF</label><input id="pd-cpf" inputmode="numeric" placeholder="000.000.000-00"></div>
-        <button type="button" class="ac-save" id="pd-save">Salvar alterações</button>
-      </div>
-    </div>
-  </div>
 
   <%# ── Folha: Encerrar sessão ────────────────────────────────────── %>
   <%= render "devise/registrations/account_logout", logout_text: "Pra voltar, é só entrar de novo com seu e-mail e senha. Seus favoritos, cartão e agendamentos continuam salvos." %>
@@ -255,12 +272,6 @@
   var lastFocus = null;
   function openSheet(name) {
     lastFocus = document.activeElement;
-    if (name === 'dados') {
-      $('pd-email').textContent = A.email || '';
-      $('pd-name').value = A.full_name || '';
-      $('pd-phone').value = maskPhone(A.phone);
-      $('pd-cpf').value = A.cpf || '';
-    }
     var s = $('sh-' + name); s.classList.add('is-on'); s.setAttribute('aria-hidden', 'false');
     var first = s.querySelector('input, button'); if (first) setTimeout(function () { first.focus(); }, 50);
   }
@@ -289,15 +300,22 @@
         if (!res.ok) { toast(res.data.error || 'Erro ao salvar perfil.', true); return; }
         var p = res.data.profile || {};
         A.full_name = p.full_name || name; A.phone = p.phone; A.cpf = p.cpf;
-        renderMain(); closeSheets(); toast('Perfil atualizado com sucesso!');
+        renderMain(); history.back(); toast('Perfil atualizado com sucesso!');
       })
       .catch(function () { busy(btn, false, 'Salvar alterações'); toast('Erro ao salvar perfil.', true); });
   }
 
-  // ── Telas próprias (#veiculo, #seguranca) ────────────────────────────────
+  // ── Telas próprias (#dados, #veiculo, #seguranca) ────────────────────────
+  function initDados() {
+    $('pd-email').textContent = A.email || '';
+    $('pd-name').value = A.full_name || '';
+    $('pd-phone').value = maskPhone(A.phone);
+    $('pd-cpf').value = A.cpf || '';
+  }
   function showView(v, push) {
-    ['main', 'veiculo', 'seguranca'].forEach(function (k) { $('ac-' + k).classList.toggle('is-on', k === v); });
+    ['main', 'dados', 'veiculo', 'seguranca'].forEach(function (k) { $('ac-' + k).classList.toggle('is-on', k === v); });
     if (push) history.pushState({ v: v }, '', v === 'main' ? location.pathname + location.search : '#' + v);
+    if (v === 'dados') initDados();
     if (v === 'veiculo') initVehicle();
     window.scrollTo(0, 0);
   }
@@ -361,7 +379,7 @@
   });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') closeSheets();
-    if (e.key === 'Enter' && e.target.closest && e.target.closest('#sh-dados') && e.target.tagName === 'INPUT') saveDados();
+    if (e.key === 'Enter' && e.target.closest && e.target.closest('#ac-dados') && e.target.tagName === 'INPUT') saveDados();
     if (e.key === 'Enter' && (e.target.id === 'vh-model' || e.target.id === 'vh-plate')) { if (e.target.id === 'vh-model') $('vh-plate').focus(); else saveVehicle(); }
   });
   $('sec-form').addEventListener('submit', function () { var b = $('sec-save'); b.disabled = true; b.innerHTML = '<span class="ac-spin"></span>'; });
@@ -376,7 +394,7 @@
   var base = location.pathname === '/users' ? '/users/edit' : location.pathname + location.search;
   history.replaceState({ v: 'main' }, '', base);
   if (OPEN_VIEW) showView(OPEN_VIEW, true);
-  else if (hash === 'veiculo' || hash === 'seguranca') showView(hash, true);
+  else if (hash === 'dados' || hash === 'veiculo' || hash === 'seguranca') showView(hash, true);
   if (FLASH.notice) toast(FLASH.notice); else if (FLASH.alert) toast(FLASH.alert, true);
 })();
 </script>
