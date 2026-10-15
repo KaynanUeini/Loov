@@ -55,18 +55,19 @@ class Service < ApplicationRecord
   validates :price, numericality: { greater_than_or_equal_to: 0 }
   validates :duration, numericality: { greater_than: 0 }
   validates :category, inclusion: { in: CATEGORIES }, allow_blank: true
-  validates :last_minute_price, numericality: { greater_than: 0 }, allow_nil: true
+  # Ajuste do Last Minute em %, por serviço: livre pra cima e pra baixo. Os
+  # limites só evitam preço zerado e erro de digitação absurdo (10000%).
+  validates :last_minute_pct, numericality: { only_integer: true, greater_than: -100, less_than_or_equal_to: 1000 }
 
-  # Preço no Last Minute. O dono define um ajuste em % sobre o agendamento,
-  # pra todas as lavagens (car_washes.last_minute_pct): mais caro pela
-  # urgência e pela taxa da Loov, ou mais barato pra encher horário vago.
-  # Livre — o cliente compara as lojas lado a lado. Arredonda pra reais
-  # inteiros (R$ 75, não R$ 74,75). `last_minute_price` fixo por serviço,
-  # quando existir, vence o ajuste.
+  # Preço fixo por serviço (versão anterior) — substituído pelo ajuste em %.
+  self.ignored_columns += ["last_minute_price"]
+
+  # Preço no Last Minute: o preço do agendamento com o ajuste em % deste
+  # serviço. O dono pode subir uma lavagem (urgência, taxa da Loov), baixar
+  # outra (encher horário vago) e manter uma que já tem boa margem. Livre — o
+  # cliente compara as lojas lado a lado. Reais inteiros (R$ 75, não R$ 74,75).
   def preco_last_minute
-    return last_minute_price.to_f if last_minute_price.present?
-
-    pct = car_wash&.last_minute_pct.to_i
+    pct = last_minute_pct.to_i
     return price.to_f if pct.zero?
 
     [(price.to_f * (100 + pct) / 100.0).round, 1].max.to_f

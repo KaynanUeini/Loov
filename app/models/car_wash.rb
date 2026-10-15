@@ -16,9 +16,9 @@ class CarWash < ApplicationRecord
   validates :name,              presence: true
   validates :address,           presence: true
   validates :capacity_per_slot, presence: true, numericality: { greater_than: 0 }
-  # Ajuste do Last Minute em %: livre pra cima e pra baixo. Os limites só
-  # evitam preço zerado/negativo e erro de digitação absurdo (10000%).
-  validates :last_minute_pct, numericality: { only_integer: true, greater_than: -100, less_than_or_equal_to: 1000 }
+  # Ajuste geral do Last Minute (versão anterior) — agora é por serviço
+  # (services.last_minute_pct).
+  self.ignored_columns += ["last_minute_pct"]
 
   geocoded_by :geocoding_address
   after_validation :geocode, if: :should_geocode?

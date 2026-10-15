@@ -55,7 +55,7 @@ class DisponivelController < ApplicationController
     # são poucas, e o Last Minute aparece bem mais rápido na home.
     ActiveRecord::Associations::Preloader.new(records: dedup_car_washes, associations: :operating_hours).call
     cw_ids = dedup_car_washes.map(&:id)
-    services_by_cw = Service.last_minute.includes(:car_wash).where(car_wash_id: cw_ids).order(:price).group_by(&:car_wash_id)
+    services_by_cw = Service.last_minute.where(car_wash_id: cw_ids).order(:price).group_by(&:car_wash_id)
     max_duration = services_by_cw.values.flatten.map { |svc| svc.duration.to_i }.max.to_i
     occupancy_until = window_start + CarWash::JANELA_LAST_MINUTE + CarWash::PASSO_LAST_MINUTE.minutes +
                       [max_duration, CarWash::PASSO_LAST_MINUTE].max.minutes
