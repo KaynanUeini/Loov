@@ -125,9 +125,12 @@
   .sec-card h2 { margin: 0 0 4px !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 600; font-size: 16px; color: var(--ink) !important; }
   .sec-card > p { margin: 0 0 16px; font-size: 12.5px; line-height: 18px; color: var(--graphite); }
   .sec-div { height: 1px; background: var(--stone); margin: 4px 0 18px; }
-  .sec-danger { margin-top: 18px; padding: 18px; border-radius: 18px; border: 1px solid rgba(200,80,80,.25); background: #fdf6f6; }
-  .sec-danger h2 { margin: 0 0 4px !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 600; font-size: 16px; color: var(--rose-500, #c0392b) !important; }
-  .sec-danger p { margin: 0 0 14px; font-size: 12.5px; color: var(--graphite); }
+  /* Excluir conta: o mesmo cartão do "E-mail e senha". O vermelho fica só
+     nos botões que excluem (regra da Apple pra ação destrutiva), não no
+     bloco inteiro: é uma ação rara e não deve gritar mais que o formulário. */
+  .sec-danger { margin-top: 18px; padding: 18px; border-radius: 18px; border: 1px solid var(--stone); background: var(--paper); }
+  .sec-danger h2 { margin: 0 0 4px !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 600; font-size: 16px; color: var(--ink) !important; }
+  .sec-danger p { margin: 0 0 16px; font-size: 12.5px; line-height: 18px; color: var(--graphite); }
   .sec-danger .ac-danger { margin-top: 0; }
   .sec-danger-btn { padding: 11px 16px; border-radius: 100px; border: 1px solid rgba(200,80,80,.3); background: transparent; color: var(--rose-500, #c0392b); font-size: 13px; font-weight: 600; }
   .sec-danger-btn:hover { background: rgba(200,80,80,.06); }
@@ -162,6 +165,7 @@
     .sub.is-split .sub-body { display: grid; grid-template-columns: minmax(0, 440px) minmax(0, 520px); justify-content: space-between; gap: 64px; align-items: start; padding: 8px 0 0; }
     .sub.is-split .sec-side { position: sticky; top: 92px; }
     .sub.is-split .sec-card { margin-top: 0; padding: 24px; }
+    .sub.is-split .sec-danger { padding: 24px; }
     /* No computador o salvar fica no fim do formulário, não preso embaixo. */
     .sub.is-split .sub-bar { position: static; padding: 0; margin-top: 16px; background: none; }
     .sub.is-split .sub-bar .ac-save { max-width: none; }
