@@ -586,6 +586,7 @@ class CarWashesController < ApplicationController
         uf:                cw.uf,
         address:           cw.address,
         capacity_per_slot: cw.capacity_per_slot,
+        last_minute_pct:   cw.last_minute_pct,
         has_coordinates:   cw.has_valid_coordinates?,
         operating_hours:   cw.operating_hours.order(:day_of_week).map { |oh|
           {
@@ -628,7 +629,7 @@ class CarWashesController < ApplicationController
     def car_wash_params
       params.require(:car_wash).permit(
         :name, :address, :cep, :logradouro, :numero, :bairro, :cidade, :uf,
-        :latitude, :longitude, :capacity_per_slot,
+        :latitude, :longitude, :capacity_per_slot, :last_minute_pct,
         operating_hours_attributes: [:id, :day_of_week, :opens_at, :closes_at, :capacity, :_destroy],
         services_attributes: [:id, :title, :description, :price, :duration, :category, :last_minute_price, :_destroy]
         )

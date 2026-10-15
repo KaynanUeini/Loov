@@ -57,16 +57,23 @@ class Service < ApplicationRecord
   validates :category, inclusion: { in: CATEGORIES }, allow_blank: true
   validates :last_minute_price, numericality: { greater_than: 0 }, allow_nil: true
 
-  # Preço no Last Minute. O dono pode cobrar diferente do agendamento comum
-  # (mais caro pela urgência e pela taxa da Loov, ou mais barato pra encher
-  # horário vago) — livre, o cliente compara as lojas lado a lado. Sem preço
-  # próprio, vale o do agendamento comum.
+  # Preço no Last Minute. O dono define um ajuste em % sobre o agendamento,
+  # pra todas as lavagens (car_washes.last_minute_pct): mais caro pela
+  # urgência e pela taxa da Loov, ou mais barato pra encher horário vago.
+  # Livre — o cliente compara as lojas lado a lado. Arredonda pra reais
+  # inteiros (R$ 75, não R$ 74,75). `last_minute_price` fixo por serviço,
+  # quando existir, vence o ajuste.
   def preco_last_minute
-    (last_minute_price.presence || price).to_f
+    return last_minute_price.to_f if last_minute_price.present?
+
+    pct = car_wash&.last_minute_pct.to_i
+    return price.to_f if pct.zero?
+
+    [(price.to_f * (100 + pct) / 100.0).round, 1].max.to_f
   end
 
   def preco_last_minute_proprio?
-    last_minute_price.present? && last_minute_price.to_f != price.to_f
+    preco_last_minute != price.to_f
   end
 
   # Versão em Ruby do scope acima, pra validar um serviço já em memória sem ida
