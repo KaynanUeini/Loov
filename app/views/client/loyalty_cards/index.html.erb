@@ -5,11 +5,10 @@
   Mesmo desenho de Pagamentos (/client/profile/edit?tab=pagamento): título
   grande e respiro (wiemer), o cartão como objeto físico com grão, brilho que
   segue o cursor e verso (Apple Wallet). Do Kenz e do Reward Peak (Behance):
-  números grandes no resumo, uma cor por lava-rápido, carimbos com o prêmio
+  uma cor por lava-rápido, carimbos com o prêmio
   no último espaço, "Detalhes" que vira o cartão e uma vitrine de programas
   perto.
 
-    · Resumo: carimbos, recompensas ganhas e cartões ativos.
     · Cartão: carimbos (o último é o presente), "Faltam N" e, no verso, o
       histórico de visitas (data + serviço) e "Agendar e ganhar carimbo".
       Celular: carrossel com pontos; computador: grade.
@@ -24,9 +23,6 @@
   tema   = ->(id) { temas[id.to_i % temas.size] }
   sigla  = ->(nome) { nome.to_s.split(/\s+/).reject { |w| w.length < 2 }.first(2).map { |w| w[0] }.join.upcase.presence || "L" }
   quando = ->(iso) { t = Time.zone.parse(iso.to_s)&.in_time_zone("America/Sao_Paulo"); t ? "#{t.day} #{meses[t.month - 1]}" : "" }
-  carimbos    = @cards.sum { |c| c[:visits_total] }
-  recompensas = @cards.sum { |c| c[:rewards_earned].to_i }
-  perto       = @cards.count { |c| !c[:milestone] && c[:visits_required] - c[:filled] == 1 }
 %>
 <script src="/vendor/feather-4.29.2.min.js"></script>
 <%= render "shared/loov_logos" %>
@@ -49,14 +45,6 @@
   .fd-title { margin: 6px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: clamp(36px, 6vw, 72px); line-height: .98; letter-spacing: -0.04em; color: var(--ink) !important; }
   .fd-title em { font-style: normal; color: var(--coral-500); }
   .fd-lead { margin: 14px 0 0 !important; max-width: 46ch; font-size: 15px !important; line-height: 22px !important; color: var(--graphite) !important; }
-
-  /* ── Resumo em números grandes ─────────────────────────────────────── */
-  .fd-sum { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 28px; padding: 20px 4px; border-radius: 22px; background: var(--ink); color: var(--cream); position: relative; overflow: hidden; }
-  .fd-sum::after { content: ''; position: absolute; width: 260px; height: 260px; right: -80px; top: -150px; border-radius: 50%; background: radial-gradient(circle, rgba(221,120,82,.55), transparent 65%); filter: blur(10px); pointer-events: none; }
-  .fd-sum div { position: relative; z-index: 1; padding: 0 16px; border-left: 1px solid rgba(250,250,246,.12); }
-  .fd-sum div:first-child { border-left: 0; }
-  .fd-sum b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: clamp(30px, 6vw, 48px); line-height: 1; letter-spacing: -0.04em; }
-  .fd-sum small { display: block; margin-top: 8px; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 1.2px; text-transform: uppercase; color: rgba(250,250,246,.6); }
 
   .fd-sec { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 40px 0 14px; }
   .fd-sec h2 { margin: 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: clamp(22px, 3vw, 30px); letter-spacing: -0.03em; color: var(--ink) !important; }
@@ -220,10 +208,7 @@
       <div class="fd-eyebrow">Recompensas · Fidelidade</div>
       <% if @cards.any? %>
         <h1 class="fd-title">Seus <em>carimbos</em>.</h1>
-        <p class="fd-lead">
-          <%= @cards.size %> <%= @cards.size == 1 ? "cartão ativo" : "cartões ativos" %><% if perto.positive? %> · <%= perto %> a uma visita da recompensa<% end %>.
-          Cada lavagem concluída vira um carimbo; o último é o prêmio.
-        </p>
+        <p class="fd-lead">Cada lavagem concluída vira um carimbo; o último é o prêmio.</p>
       <% else %>
         <h1 class="fd-title">Lave. Carimbe. <em>Ganhe.</em></h1>
         <p class="fd-lead">Alguns lava-rápidos dão uma recompensa a cada tantas visitas. Seu cartão aparece aqui na primeira lavagem concluída num deles.</p>
@@ -231,12 +216,6 @@
     </div>
 
     <% if @cards.any? %>
-      <div class="fd-sum" aria-label="Resumo">
-        <div><b><%= carimbos %></b><small>Carimbos</small></div>
-        <div><b><%= recompensas %></b><small><%= recompensas == 1 ? "Recompensa" : "Recompensas" %></small></div>
-        <div><b><%= @cards.size %></b><small><%= @cards.size == 1 ? "Cartão" : "Cartões" %></small></div>
-      </div>
-
       <div class="fd-sec"><h2>Seus cartões</h2><small>Toque em detalhes</small></div>
       <div class="fd-cards<%= ' is-one' if @cards.size == 1 %>" id="fd-cards">
         <% @cards.each do |c| %>

@@ -62,7 +62,6 @@
   .cw-loy { display: flex; align-items: center; gap: 14px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--stone); color: var(--ink) !important; text-decoration: none; }
   .cw-loy-t { flex: 1; min-width: 0; }
   .cw-loy-t small { display: block; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .5px; text-transform: uppercase; color: var(--ash); }
-  .cw-loy-t small em { font-style: normal; color: var(--coral-700); }
   .cw-loy-t b { display: block; margin-top: 3px; font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 600; letter-spacing: -0.2px; line-height: 19px; }
   .cw-loy-st { flex-shrink: 0; display: grid; grid-template-columns: repeat(var(--cols), 16px); gap: 5px; }
   .cw-loy-st i { width: 16px; height: 16px; border-radius: 50%; border: 1.5px dashed var(--ash); display: flex; align-items: center; justify-content: center; }
@@ -487,16 +486,13 @@
       '</div>' + loyaltyBadge();
   }
 
-  // Programa de fidelidade do lava-rápido (null quando não tem). Cliente
-  // com cartão ali vê os carimbos dele preenchidos e a linha leva pra tela
-  // Fidelidade; quem ainda não tem vê o cartão vazio, como convite.
+  // Programa de fidelidade do lava-rápido (null quando não tem). O texto é
+  // sempre o do programa; o cartão do cliente aparece só nos carimbos
+  // preenchidos, e pra cliente a linha leva pra tela Fidelidade.
   function loyaltyBadge() {
     var L = CW.loyalty; if (!L) return '';
     var n = Number(L.visits_required) || 0, f = Number(L.filled) || 0, mine = IS_CLIENT && Number(L.visits_total) > 0;
-    var faltam = L.milestone ? 0 : n - f;
-    var label = !mine ? 'Fidelidade · a cada ' + n + (n === 1 ? ' visita' : ' visitas')
-      : L.milestone ? 'Seu cartão · <em>completo</em>'
-      : 'Seu cartão · ' + (faltam === 1 ? '<em>falta 1</em>' : 'faltam ' + faltam);
+    var label = 'Fidelidade · a cada ' + n + (n === 1 ? ' visita' : ' visitas');
     var stamps = '';
     if (n <= 12) {
       for (var i = 0; i < n; i++) {
