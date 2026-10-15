@@ -151,5 +151,16 @@
     .ac-right { padding-top: 24px; }
     .ac-list { margin-top: 0; padding: 4px 20px; background: var(--paper); border: 1px solid var(--stone); border-radius: 20px; }
     .ac-list + .ac-list { margin-top: 16px; }
+
+    /* Segurança em duas colunas (Apple ID / conta do Spotify): o contexto
+       fica à esquerda, parado enquanto a página rola; o formulário à
+       direita, sem esticar os campos. */
+    .sub.is-split { max-width: 1040px; padding-left: 32px; padding-right: 32px; }
+    .sub.is-split .sub-head { padding-left: 0; padding-right: 0; padding-top: 24px; }
+    .sub.is-split .sub-body { display: grid; grid-template-columns: minmax(0, 380px) minmax(0, 520px); justify-content: space-between; gap: 64px; align-items: start; padding: 8px 0 0; }
+    .sub.is-split .sec-side { position: sticky; top: 92px; }
+    .sub.is-split .sub-body h1 { font-size: 48px; letter-spacing: -1.6px; line-height: 1.05; }
+    .sub.is-split .sub-lead { margin-top: 14px; font-size: 15px; line-height: 22px; }
+    .sub.is-split .sec-card { margin-top: 0; padding: 24px; }
   }
 </style>

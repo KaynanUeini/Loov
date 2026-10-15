@@ -1,16 +1,23 @@
 <%# Privacidade e segurança (Devise: e-mail, senha, excluir). Locals:
     security_errors e danger (title, text, ask, confirm), que muda entre
-    cliente, dono e atendente. %>
+    cliente, dono e atendente.
+    Computador: duas colunas, o contexto (título e explicação) fixo à
+    esquerda e o formulário à direita, com os campos na largura de um
+    e-mail ou senha. Celular: uma coluna, como antes. %>
   <section class="ac-view" id="ac-seguranca">
-    <div class="sub">
+    <div class="sub is-split">
       <div class="sub-head"><button type="button" class="sub-back" data-back aria-label="Voltar"><i data-feather="chevron-left" style="width:18px;height:18px"></i></button></div>
       <div class="sub-body">
+        <div class="sec-side">
         <div class="ac-mono">Privacidade e segurança</div>
         <h1>Acesso à conta.</h1>
         <p class="sub-lead">Troque o e-mail de login ou a senha. Pra confirmar que é você, pedimos a senha atual.</p>
         <% if security_errors.any? %>
           <div class="ac-formerr" style="margin-top:18px"><i data-feather="alert-circle" style="width:14px;height:14px;flex-shrink:0"></i><span><%= security_errors.join(". ") %>.</span></div>
         <% end %>
+        </div>
+
+        <div class="sec-main">
         <%= form_for(resource, as: resource_name, url: registration_path(resource_name), html: { method: :put, class: "sec-card", id: "sec-form", data: { turbo: false } }) do |f| %>
           <h2>E-mail e senha</h2>
           <p>Deixe a nova senha em branco se quiser trocar só o e-mail.</p>
@@ -32,6 +39,7 @@
             <%= button_to danger[:confirm], registration_path(resource_name), method: :delete, class: "ac-danger", form: { data: { turbo: false } } %>
             <button type="button" class="ac-ghost" id="sec-danger-no">Manter minha conta</button>
           </div>
+        </div>
         </div>
       </div>
     </div>
