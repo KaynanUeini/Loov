@@ -231,6 +231,10 @@ class CarWashesController < ApplicationController
       # Mesma regra da listagem (Service.last_minute) — antes era duração
       # curta, e um lava-rápido só de polimento entrava por engano.
       disponivel_eligible: open_now && cw.services.any?(&:last_minute?),
+      # Programa de fidelidade ativo (selo na página do lava-rápido). Com
+      # cliente logado, já vem o cartão dele (quantas visitas tem ali).
+      loyalty:           (lp = cw.loyalty_program)&.active? ?
+                           lp.cartao_para(user_signed_in? && current_user.client? ? current_user : nil) : nil,
       reviews:           Review.where(car_wash_id: cw.id)
                                .order(created_at: :desc)
                                .limit(20)

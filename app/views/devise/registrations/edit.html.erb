@@ -4,8 +4,8 @@
   deles (_staff_edit) e o admin segue no formulário clássico (_classic_edit).
 
     · Nome como título, cartão escuro com LAVAGENS e FAVORITOS, carimbos de
-      fidelidade (só com visitas reais), Meu veículo, lista de ajustes e
-      Encerrar sessão.
+      fidelidade (só com visitas reais), Meu veículo, lista de ajustes (com
+      Fidelidade, que abre /client/loyalty_cards) e Encerrar sessão.
     · Dados pessoais: folha com nome, telefone e CPF (PATCH /client/profile,
       o mesmo do app). E-mail aparece trancado: muda em Privacidade e
       segurança, que pede a senha atual.
@@ -57,6 +57,11 @@
           <a class="ac-item" href="/client/favorites<%= request.query_string.present? ? "?#{request.query_string}" : '' %>">
             <span class="ac-item-ic"><i data-feather="heart" style="width:18px;height:18px"></i></span>
             <span class="ac-item-t"><b>Favoritos</b><small id="ac-fav-sub"></small></span>
+            <i data-feather="chevron-right" class="ac-chev" style="width:16px;height:16px"></i>
+          </a>
+          <a class="ac-item" href="/client/loyalty_cards<%= request.query_string.present? ? "?#{request.query_string}" : '' %>">
+            <span class="ac-item-ic"><i data-feather="gift" style="width:18px;height:18px"></i></span>
+            <span class="ac-item-t"><b>Fidelidade</b><small id="ac-loy-sub">Nenhum cartão ainda</small></span>
             <i data-feather="chevron-right" class="ac-chev" style="width:16px;height:16px"></i>
           </a>
           <a class="ac-item" href="/client/notifications">
@@ -217,6 +222,11 @@
       .then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; })
       .then(function (cards) {
         if (!Array.isArray(cards) || !cards.length) return;
+        // Resumo do item Fidelidade: quantos cartões e quantos a uma visita
+        // da recompensa (mesmo texto do app).
+        var perto = cards.filter(function (c) { return !c.milestone && c.visits_required - c.filled === 1; }).length;
+        $('ac-loy-sub').textContent = cards.length + (cards.length === 1 ? ' cartão' : ' cartões') +
+          (perto ? ' · ' + perto + ' perto da recompensa' : '');
         $('ac-loyal-wrap').innerHTML = '<div class="ac-sec"><h2>Carimbos</h2><small>' + cards.length + (cards.length === 1 ? ' ativo' : ' ativos') + '</small></div>' +
           '<div class="ac-loyal">' + cards.map(function (c) {
             var st = '';
