@@ -52,7 +52,7 @@
   .fd-sec small { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--ash); }
 
   /* ── Os cartões ────────────────────────────────────────────────────── */
-  .fd-cards { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 0 -20px; padding: 16px 20px 18px; scrollbar-width: none; }
+  .fd-cards { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 16px -20px 0; padding: 16px 20px 18px; scrollbar-width: none; }
   .fd-cards::-webkit-scrollbar { display: none; }
   .fd-cards > .lc { flex: 0 0 min(88%, 440px); scroll-snap-align: center; }
   .fd-cards.is-one > .lc { flex-basis: 100%; }
@@ -173,26 +173,16 @@
   .np-rw small { display: block; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--coral-500); }
   .np-rw span { display: block; margin-top: 3px; font-size: 13px; line-height: 17px; color: var(--graphite); }
 
-  /* ── Como funciona: 4 passos numerados ─────────────────────────────── */
-  .fd-how { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
-  .fd-how li { display: flex; gap: 14px; align-items: flex-start; padding: 16px; border-radius: 18px; background: var(--paper); border: 1px solid var(--stone); }
-  .fd-how-n { flex-shrink: 0; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--coral-500); padding-top: 2px; }
-  .fd-how b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; letter-spacing: -0.2px; color: var(--ink); }
-  .fd-how p { margin: 3px 0 0 !important; font-size: 13px !important; line-height: 18px !important; color: var(--graphite) !important; }
-
   @media (min-width: 720px) {
-    .fd-how { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .fd-ghost { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 48px; }
   }
   @media (min-width: 960px) {
     .fd-wrap { padding: 0 40px 80px; }
     .fd-head { padding-top: 28px; }
-    .fd-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; overflow: visible; margin: 0; padding: 10px 0 0; }
+    .fd-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; overflow: visible; margin: 32px 0 0; padding: 10px 0 0; }
     .fd-cards.is-one { grid-template-columns: minmax(0, 520px); }
     .fd-dots { display: none; }
     .fd-near { margin: 0; padding: 2px 0 8px; }
-    .fd-how { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-    .fd-how li { flex-direction: column; gap: 10px; }
     .lc-in { padding: 24px 24px 22px; }
   }
   @media (prefers-reduced-motion: reduce) {
@@ -216,7 +206,6 @@
     </div>
 
     <% if @cards.any? %>
-      <div class="fd-sec"><h2>Seus cartões</h2><small>Toque em detalhes</small></div>
       <div class="fd-cards<%= ' is-one' if @cards.size == 1 %>" id="fd-cards">
         <% @cards.each do |c| %>
           <%
@@ -323,14 +312,6 @@
         <% end %>
       </div>
     <% end %>
-
-    <div class="fd-sec"><h2>Como funciona</h2></div>
-    <ol class="fd-how">
-      <li><span class="fd-how-n">01</span><div><b>Ache o selo</b><p>Lava-rápidos com programa mostram o selo Fidelidade na página deles, com a recompensa.</p></div></li>
-      <li><span class="fd-how-n">02</span><div><b>Lave e carimbe</b><p>Cada lavagem concluída ali vira um carimbo no seu cartão.</p></div></li>
-      <li><span class="fd-how-n">03</span><div><b>Ganhe o prêmio</b><p>Na visita que completa o cartão, o lava-rápido te dá a recompensa.</p></div></li>
-      <li><span class="fd-how-n">04</span><div><b>Recomece</b><p>Depois disso o cartão zera e começa um novo ciclo.</p></div></li>
-    </ol>
   </div>
   <%= render "shared/site_footer", audience: :client %>
 </div>
