@@ -9,15 +9,15 @@
     · Direita: as funções do painel agrupadas como no app (Funcionalidades,
       Suporte, Conta). Atendente vê só o que pode abrir.
 
-  Só entra o que o site tem: Notificações, Aprovações, Fidelidade e
-  Mensagens ainda existem só no app.
+  Só entra o que o site tem: Aprovações, Fidelidade e Mensagens ainda
+  existem só no app.
 %>
 <%
   sa   = @staff_account
   cw   = sa[:car_wash]
   dono = sa[:owner]
   first_name = sa[:full_name].to_s.split.first.presence || "Você"
-  feat = []
+  feat = [{ icon: "bell", label: "Notificações", desc: "Central de alertas e avisos", href: owner_notifications_path, badge: "notif" }]
   if cw
     feat << { icon: "settings", label: "Gerenciar lava-rápido", desc: "Horários, serviços e capacidade", href: manage_car_wash_path(cw[:id]) }
   end
@@ -90,7 +90,8 @@
           <% feat.each do |it| %>
             <a class="ac-item" href="<%= it[:href] %>">
               <span class="ac-item-ic is-coral"><i data-feather="<%= it[:icon] %>" style="width:18px;height:18px"></i></span>
-              <span class="ac-item-t"><b><%= it[:label] %></b><small><%= it[:desc] %></small></span>
+              <span class="ac-item-t"><b><%= it[:label] %></b><small<%= it[:badge] ? raw(%( id="st-#{it[:badge]}-sub")) : "" %>><%= it[:desc] %></small></span>
+              <% if it[:badge] %><span class="ac-badge is-off" id="st-<%= it[:badge] %>-badge"></span><% end %>
               <i data-feather="chevron-right" class="ac-chev" style="width:16px;height:16px"></i>
             </a>
           <% end %>
@@ -184,6 +185,16 @@
   });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSheets(); });
   $('sec-form').addEventListener('submit', function () { var b = $('sec-save'); b.disabled = true; b.innerHTML = '<span class="ac-spin"></span>'; });
+
+  // Não lidas: mesmo endpoint que o "Mais" do app chama ao abrir.
+  fetch('<%= owner_notifications_path %>', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+    .then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; })
+    .then(function (list) {
+      var n = Array.isArray(list) ? list.filter(function (x) { return !x.read; }).length : 0;
+      if (!n) return;
+      $('st-notif-sub').textContent = n + ' não lida' + (n > 1 ? 's' : '');
+      var b = $('st-notif-badge'); b.textContent = n > 99 ? '99+' : n; b.classList.remove('is-off');
+    });
 
   if (window.feather) feather.replace();
   var hash = location.hash.replace('#', '');

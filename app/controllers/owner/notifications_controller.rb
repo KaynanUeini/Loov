@@ -4,9 +4,13 @@ module Owner
     before_action :authenticate_user!
     before_action :ensure_owner_or_attendant
 
-    # GET /owner/notifications
+    # GET /owner/notifications — JSON pro app; no site, a página da Central
+    # (porte da OwnerNotificacoesScreen) com a mesma lista embutida.
     def index
-      render json: build_notifications
+      respond_to do |format|
+        format.html { @notifications = build_notifications }
+        format.json { render json: build_notifications }
+      end
     end
 
     # PATCH /owner/notifications/:id/read
@@ -34,7 +38,10 @@ module Owner
 
     def ensure_owner_or_attendant
       return if current_user&.owner? || current_user&.attendant?
-      render json: { error: "Acesso negado." }, status: :forbidden
+      respond_to do |format|
+        format.html { redirect_to root_path, alert: "Acesso negado." }
+        format.json { render json: { error: "Acesso negado." }, status: :forbidden }
+      end
     end
 
     # Backfill heurístico: AttendantActivity legada sem `items` ainda tem o

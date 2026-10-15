@@ -1,0 +1,195 @@
+<%#
+  Notificações do dono e do atendente — porte da OwnerNotificacoesScreen do
+  app, com a mesma lista (Owner::NotificationsController#build_notifications)
+  embutida na página. Mesmo desenho da Central do cliente.
+
+    · Cabeçalho CENTRAL / Notificações; a bolinha coral com o nº de não lidas
+      e a faixa "N não lidas · MARCAR TODAS" marcam todas como lidas.
+    · Cartão: ícone e etiqueta pelo tipo (DISPONÍVEL, APROVAÇÃO, SUPORTE,
+      IA INSIGHTS, ATENDENTE), tempo relativo, ponto coral se não lida. Mudança
+      feita por atendente abre a lista do que mudou em "VER DETALHES".
+    · Tocar marca como lida e leva pra tela do assunto no site (Suporte,
+      IA insights, Gerenciar). Aprovações ainda não têm página no site: o
+      cartão só marca como lida.
+%>
+<script src="/vendor/feather-4.29.2.min.js"></script>
+
+<style>
+  .loov-nav { background: var(--cream) !important; }
+  .nt { background: var(--cream); color: var(--ink); min-height: 100vh; padding-top: 60px; }
+  .nt *, .nt *::before, .nt *::after { box-sizing: border-box; }
+  .nt button { font-family: inherit; line-height: normal; cursor: pointer; }
+  .nt svg.feather { display: block; }
+  .nt a { text-decoration: none; }
+  .nt-wrap { width: 100%; max-width: 760px; margin: 0 auto; }
+
+  .nt-head { display: flex; align-items: center; padding: 8px 16px; }
+  .nt-btn { flex: 0 0 40px; height: 40px; border-radius: 50%; border: 0; background: var(--sand); color: var(--ink) !important; display: flex; align-items: center; justify-content: center; transition: background .15s; }
+  a.nt-btn:hover { background: var(--stone); }
+  .nt-hc { flex: 1; text-align: center; }
+  .nt-hc small { display: block; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; color: var(--coral-500); }
+  .nt-hc h1 { margin: 2px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 20px; letter-spacing: -0.3px; color: var(--ink) !important; }
+  .nt-count { flex: 0 0 auto; min-width: 40px; height: 40px; padding: 0 10px; border: 0; border-radius: 20px; background: var(--coral-500); color: var(--cream); font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; transition: transform .15s; }
+  .nt-count:hover { transform: scale(1.05); }
+  .nt-count.is-off { visibility: hidden; }
+
+  .nt-strip { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 9px 16px; background: var(--coral-50); border-top: 1px solid var(--coral-100); border-bottom: 1px solid var(--coral-100); }
+  .nt-strip.is-off { display: none; }
+  .nt-strip i { width: 6px; height: 6px; border-radius: 50%; background: var(--coral-500); }
+  .nt-strip span { flex: 1; font-size: 12px; font-weight: 600; color: var(--coral-700); }
+  .nt-strip button { padding: 9px 12px; border: 1px solid var(--coral-500); border-radius: 100px; background: transparent; color: var(--coral-700); font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: .6px; transition: background .15s; }
+  .nt-strip button:hover { background: var(--coral-100); }
+  .nt-strip button[disabled] { opacity: .6; cursor: default; }
+
+  .nt-list { display: grid; gap: 10px; padding: 16px 16px 48px; }
+  .nt-card { background: var(--paper); border: 1px solid var(--stone); border-radius: 16px; padding: 14px; box-shadow: 0 2px 6px -4px rgba(40,35,28,.2); transition: border-color .15s, box-shadow .2s; }
+  .nt-card:hover { border-color: var(--ink); box-shadow: 0 12px 28px -22px rgba(40,35,28,.55); }
+  .nt-card.is-unread { border-color: var(--coral-100); }
+  .nt-top { display: flex; align-items: flex-start; gap: 12px; width: 100%; padding: 0; border: 0; background: transparent; text-align: left; color: var(--ink); }
+  .nt-ic { flex: 0 0 36px; height: 36px; border-radius: 50%; border: 1px solid; display: flex; align-items: center; justify-content: center; }
+  .nt-body { flex: 1; min-width: 0; }
+  .nt-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+  .nt-tag { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1.2px; }
+  .nt-time { display: flex; align-items: center; gap: 6px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ash); white-space: nowrap; }
+  .nt-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--coral-500); }
+  .nt-title { margin-bottom: 2px; font-size: 14px; font-weight: 600; }
+  .nt-desc { font-size: 12px; line-height: 17px; color: var(--graphite); }
+  .nt-card:not(.is-open) .nt-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nt-card:not(.is-open) .nt-desc { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .nt-more { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin-top: 10px; padding: 9px 0 0; border: 0; border-top: 1px solid var(--stone); background: transparent; color: var(--coral-700); font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.2px; }
+  .nt-more:hover { color: var(--coral-500); }
+
+  .nt-items { margin: 10px 0 0 48px; padding: 0; list-style: none; display: grid; gap: 6px; }
+  .nt-items li { position: relative; padding-left: 14px; font-size: 12.5px; line-height: 18px; color: var(--ink); }
+  .nt-items li::before { content: ""; position: absolute; left: 0; top: 7px; width: 5px; height: 5px; border-radius: 50%; background: var(--coral-500); }
+  .nt-empty { display: flex; flex-direction: column; align-items: center; padding: 60px 20px; text-align: center; }
+  .nt-empty-ic { width: 64px; height: 64px; margin-bottom: 14px; border-radius: 50%; background: var(--coral-50); border: 1px solid var(--coral-100); color: var(--coral-500); display: flex; align-items: center; justify-content: center; }
+  .nt-empty h2 { margin: 0 0 4px !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 18px; letter-spacing: -0.2px; color: var(--ink) !important; }
+  .nt-empty p { margin: 0; font-size: 13px; line-height: 18px; color: var(--ash); }
+
+  @media (min-width: 720px) {
+    .nt-head { padding: 28px 32px 8px; }
+    .nt-hc h1 { font-size: 28px; letter-spacing: -0.6px; }
+    .nt-strip { margin: 16px 32px 0; border: 1px solid var(--coral-100); border-radius: 14px; }
+    .nt-list { padding: 20px 32px 64px; gap: 12px; }
+    .nt-card { padding: 16px 18px; }
+  }
+</style>
+
+<div class="nt">
+  <div class="nt-wrap">
+    <div class="nt-head">
+      <a class="nt-btn" id="nt-back" href="/users/edit" aria-label="Voltar"><i data-feather="chevron-left" style="width:18px;height:18px"></i></a>
+      <div class="nt-hc"><small>CENTRAL</small><h1>Notificações</h1></div>
+      <button type="button" class="nt-count is-off" id="nt-count" data-markall aria-label="Marcar todas como lidas"></button>
+    </div>
+    <div class="nt-strip is-off" id="nt-strip"><i></i><span id="nt-strip-t"></span><button type="button" data-markall>MARCAR TODAS</button></div>
+    <div id="nt-body"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var LIST = <%= raw json_escape(@notifications.to_json) %>;
+  var CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content;
+  // Onde cada aviso leva no site (no app é a `route` de cada um).
+  var HREF = {
+    OwnerDisponivel:   '/',
+    OwnerAiInsights:   '<%= owner_financial_tracking_path %>',
+    OwnerSupport:      '<%= suporte_path %>',
+    OwnerGerenciar:    <%= raw json_escape((current_car_wash ? manage_car_wash_path(current_car_wash) : nil).to_json) %>
+  };
+  // Mesma tabela do app (TYPE_META).
+  var TYPE_META = {
+    disponivel:         { icon: 'zap',            color: 'var(--amber-500, #c98a1b)', bg: 'var(--sand)',     border: 'var(--stone)',     label: 'DISPONÍVEL' },
+    pending_change:     { icon: 'check-square',   color: 'var(--coral-500)',          bg: 'var(--coral-50)', border: 'var(--coral-100)', label: 'APROVAÇÃO' },
+    support_reply:      { icon: 'message-circle', color: 'var(--pool-500, #2f7bb5)',  bg: 'var(--pool-50, #eef5fa)', border: 'var(--pool-100, #d3e5f2)', label: 'SUPORTE' },
+    ai_insight:         { icon: 'cpu',            color: 'var(--coral-500)',          bg: 'var(--coral-50)', border: 'var(--coral-100)', label: 'IA INSIGHTS' },
+    ai_insights_cycle:  { icon: 'cpu',            color: 'var(--coral-500)',          bg: 'var(--coral-50)', border: 'var(--coral-100)', label: 'IA INSIGHTS' },
+    attendant_activity: { icon: 'edit-3',         color: 'var(--coral-500)',          bg: 'var(--coral-50)', border: 'var(--coral-100)', label: 'ATENDENTE' }
+  };
+  var FALLBACK = { icon: 'bell', color: 'var(--graphite)', bg: 'var(--sand)', border: 'var(--stone)', label: 'AVISO' };
+  var open = {}, marking = false;
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function icon(n, size) { return window.feather && feather.icons[n] ? feather.icons[n].toSvg({ width: size, height: size }) : ''; }
+  function relTime(iso) {
+    if (!iso) return '';
+    var t = new Date(iso), s = Math.floor((Date.now() - t.getTime()) / 1000);
+    if (s < 60) return 'agora';
+    if (s < 3600) return 'há ' + Math.floor(s / 60) + ' min';
+    if (s < 86400) return 'há ' + Math.floor(s / 3600) + 'h';
+    if (s < 604800) return 'há ' + Math.floor(s / 86400) + 'd';
+    return t.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  }
+  function post(url, method) {
+    return fetch(url, { method: method, credentials: 'same-origin', headers: { Accept: 'application/json', 'X-CSRF-Token': CSRF } });
+  }
+
+  function card(n) {
+    var m = TYPE_META[n.type] || FALLBACK, desc = n.desc || '', items = Array.isArray(n.items) ? n.items : [];
+    var canOpen = items.length > 0 || desc.length > 80, isOpen = !!open[n.id];
+    // Aberto com lista: a lista substitui o resumo, pra não repetir (igual ao app).
+    var showDesc = !isOpen || !items.length;
+    return '<article class="nt-card' + (n.read ? '' : ' is-unread') + (isOpen ? ' is-open' : '') + '">' +
+      '<button type="button" class="nt-top" data-tap="' + esc(n.id) + '">' +
+        '<span class="nt-ic" style="background:' + m.bg + ';border-color:' + m.border + ';color:' + m.color + '">' + icon(m.icon, 15) + '</span>' +
+        '<span class="nt-body"><span class="nt-meta"><span class="nt-tag" style="color:' + m.color + '">' + m.label + '</span>' +
+          '<span class="nt-time">' + relTime(n.created_at) + (n.read ? '' : '<span class="nt-dot" aria-label="não lida"></span>') + '</span></span>' +
+          '<span class="nt-title" style="display:block">' + esc(n.title) + '</span>' +
+          (showDesc ? '<span class="nt-desc">' + esc(desc) + '</span>' : '') + '</span>' +
+      '</button>' +
+      (isOpen && items.length ? '<ul class="nt-items">' + items.map(function (it) { return '<li>' + esc(it) + '</li>'; }).join('') + '</ul>' : '') +
+      (canOpen ? '<button type="button" class="nt-more" data-more="' + esc(n.id) + '" aria-expanded="' + isOpen + '">' + (isOpen ? 'OCULTAR DETALHES' : 'VER DETALHES') + icon(isOpen ? 'chevron-up' : 'chevron-down', 14) + '</button>' : '') +
+    '</article>';
+  }
+
+  function render() {
+    var unread = LIST.filter(function (n) { return !n.read; }).length;
+    var c = $('nt-count');
+    c.classList.toggle('is-off', !unread);
+    c.innerHTML = marking ? '…' : unread;
+    $('nt-strip').classList.toggle('is-off', !unread);
+    $('nt-strip-t').textContent = unread + (unread === 1 ? ' não lida' : ' não lidas');
+    $('nt-strip').querySelector('button').disabled = marking;
+    $('nt-body').innerHTML = LIST.length
+      ? '<div class="nt-list">' + LIST.map(card).join('') + '</div>'
+      : '<div class="nt-empty"><div class="nt-empty-ic">' + icon('bell-off', 28) + '</div><h2>Nada por aqui</h2><p>Você está em dia — sem notificações pendentes.</p></div>';
+  }
+
+  // Tocar: marca como lida (otimista) e leva pra tela do assunto.
+  function tap(id) {
+    var n = LIST.filter(function (x) { return x.id === id; })[0]; if (!n) return;
+    var go = HREF[n.route] || null;
+    if (!n.read) {
+      n.read = true; render();
+      var req = post('/owner/notifications/' + encodeURIComponent(n.id) + '/read', 'PATCH').catch(function () {});
+      // Espera a marcação antes de sair, senão a página seguinte ainda a vê não lida.
+      if (go) { req.then(function () { location.href = go; }); return; }
+    }
+    if (go) location.href = go;
+  }
+  function markAll() {
+    if (marking || LIST.every(function (n) { return n.read; })) return;
+    marking = true; render();
+    post('/owner/notifications/read_all', 'POST')
+      .then(function (r) { if (r.ok) LIST.forEach(function (n) { n.read = true; }); })
+      .catch(function () {})
+      .then(function () { marking = false; render(); });
+  }
+
+  document.addEventListener('click', function (e) {
+    var t;
+    if (e.target.closest('[data-markall]')) { markAll(); return; }
+    if ((t = e.target.closest('[data-more]'))) { var id = t.dataset.more; open[id] = !open[id]; render(); return; }
+    if ((t = e.target.closest('[data-tap]'))) { tap(t.dataset.tap); return; }
+  });
+  $('nt-back').addEventListener('click', function (e) {
+    if (document.referrer && document.referrer.indexOf(location.origin) === 0 && history.length > 1) { e.preventDefault(); history.back(); }
+  });
+
+  if (window.feather) feather.replace();
+  render();
+})();
+</script>
