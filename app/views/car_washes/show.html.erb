@@ -56,16 +56,22 @@
   .cw-stats-wrap { padding: 0 16px; margin-top: -32px; position: relative; }
   .cw-stats { background: var(--paper); border: 1px solid var(--stone); border-radius: 20px; padding: 20px; box-shadow: 0 2px 4px rgba(40,35,28,.04), 0 14px 32px -20px rgba(40,35,28,.35); }
   .cw-stats-top { display: flex; align-items: flex-start; gap: 14px; }
-  /* Selo de fidelidade: o programa do lava-rápido e, pro cliente logado, o
-     cartão dele ali. Faixa coral clara no pé do cartão, sem competir com o
-     nome e a nota. */
-  .cw-loy { display: flex; align-items: center; gap: 12px; margin-top: 16px; padding: 12px 14px; border-radius: 14px; background: var(--coral-50); border: 1px solid var(--coral-100); color: var(--ink) !important; text-decoration: none; }
-  a.cw-loy:hover { border-color: var(--coral-500); }
-  .cw-loy-ic { flex: 0 0 34px; height: 34px; border-radius: 10px; background: var(--coral-500); color: var(--cream); display: flex; align-items: center; justify-content: center; }
+  /* Fidelidade: uma linha do próprio cartão, separada pelo mesmo fio das
+     estatísticas, com o cartão de carimbos em miniatura (o mesmo desenho da
+     tela Fidelidade). Sem fundo próprio; o coral só no presente. */
+  .cw-loy { display: flex; align-items: center; gap: 14px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--stone); color: var(--ink) !important; text-decoration: none; }
   .cw-loy-t { flex: 1; min-width: 0; }
-  .cw-loy-t small { display: block; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 1.2px; color: var(--coral-700); }
-  .cw-loy-t b { display: block; margin-top: 1px; font-size: 13.5px; font-weight: 600; line-height: 18px; }
-  .cw-loy-me { flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 100px; background: #fde8b5; color: #7a6419; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .cw-loy-t small { display: block; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .5px; text-transform: uppercase; color: var(--ash); }
+  .cw-loy-t small em { font-style: normal; color: var(--coral-700); }
+  .cw-loy-t b { display: block; margin-top: 3px; font-family: 'Space Grotesk', sans-serif; font-size: 15px; font-weight: 600; letter-spacing: -0.2px; line-height: 19px; }
+  .cw-loy-st { flex-shrink: 0; display: grid; grid-template-columns: repeat(var(--cols), 16px); gap: 5px; }
+  .cw-loy-st i { width: 16px; height: 16px; border-radius: 50%; border: 1.5px dashed var(--ash); display: flex; align-items: center; justify-content: center; }
+  .cw-loy-st i.is-on { border: 0; background: var(--ink); }
+  .cw-loy-st i.is-gift { border: 1.5px solid var(--coral-500); color: var(--coral-500); }
+  .cw-loy-st i.is-gift.is-on { background: var(--coral-500); color: var(--cream); }
+  .cw-loy-st i svg { width: 9px; height: 9px; }
+  .cw-loy-go { flex-shrink: 0; color: var(--ash); display: flex; transition: transform .15s, color .15s; }
+  a.cw-loy:hover .cw-loy-go { color: var(--ink); transform: translateX(2px); }
   .cw-logo { flex: 0 0 52px; height: 52px; }
   .cw-logo svg { width: 100%; height: 100%; display: block; }
   .cw-title { margin: 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 22px; line-height: 1.15; letter-spacing: -0.5px; color: var(--ink) !important; }
@@ -482,15 +488,27 @@
   }
 
   // Programa de fidelidade do lava-rápido (null quando não tem). Cliente
-  // logado vê quantas visitas já tem ali e o selo leva pra tela Fidelidade.
+  // com cartão ali vê os carimbos dele preenchidos e a linha leva pra tela
+  // Fidelidade; quem ainda não tem vê o cartão vazio, como convite.
   function loyaltyBadge() {
     var L = CW.loyalty; if (!L) return '';
     var n = Number(L.visits_required) || 0, f = Number(L.filled) || 0, mine = IS_CLIENT && Number(L.visits_total) > 0;
-    var inner = '<span class="cw-loy-ic">' + icon('gift', 17) + '</span>' +
-      '<span class="cw-loy-t"><small>FIDELIDADE</small><b>A cada ' + n + (n === 1 ? ' visita' : ' visitas') + ': ' + esc(L.reward_description) + '</b></span>' +
-      (mine ? '<span class="cw-loy-me">' + icon('star', 11) + 'Você tem ' + f + '/' + n + '</span>' : '');
+    var faltam = L.milestone ? 0 : n - f;
+    var label = !mine ? 'Fidelidade · a cada ' + n + (n === 1 ? ' visita' : ' visitas')
+      : L.milestone ? 'Seu cartão · <em>completo</em>'
+      : 'Seu cartão · ' + (faltam === 1 ? '<em>falta 1</em>' : 'faltam ' + faltam);
+    var stamps = '';
+    if (n <= 12) {
+      for (var i = 0; i < n; i++) {
+        var on = mine && i < f, gift = i === n - 1;
+        stamps += '<i class="' + (on ? 'is-on' : '') + (gift ? ' is-gift' : '') + '">' + (gift ? icon('gift', 9) : '') + '</i>';
+      }
+      stamps = '<span class="cw-loy-st" style="--cols:' + (n <= 6 ? n : Math.ceil(n / 2)) + '" aria-hidden="true">' + stamps + '</span>';
+    }
+    var aria = 'Fidelidade, ' + L.reward_description + '. ' + (mine ? f + ' de ' + n + ' carimbos. ' : '');
+    var inner = '<span class="cw-loy-t"><small>' + label + '</small><b>' + esc(L.reward_description) + '</b></span>' + stamps;
     return IS_CLIENT
-      ? '<a class="cw-loy" href="/client/loyalty_cards' + location.search + '">' + inner + '</a>'
+      ? '<a class="cw-loy" href="/client/loyalty_cards' + location.search + '" aria-label="' + esc(aria + 'Ver meus cartões') + '">' + inner + '<span class="cw-loy-go">' + icon('chevron-right', 16) + '</span></a>'
       : '<div class="cw-loy">' + inner + '</div>';
   }
 
