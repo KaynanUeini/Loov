@@ -22,12 +22,9 @@
   .su [hidden] { display: none !important; }
   .su button { font-family: inherit; cursor: pointer; }
   .su svg.feather { display: block; flex-shrink: 0; }
-  .su-wrap { max-width: 1180px; margin: 0 auto; padding: 84px 20px 48px; }
+  .su-wrap { max-width: 1120px; margin: 0 auto; padding: 60px 20px 48px; }
 
   .su-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
-  .su-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; color: var(--coral-500); text-transform: uppercase; }
-  .su-title { margin: 6px 0 0; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 34px; letter-spacing: -1px; line-height: 1.05; }
-  .su-sub { margin: 10px 0 0; color: var(--graphite); font-size: 15px; line-height: 1.5; max-width: 520px; }
   .su-new { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border: 0; border-radius: 100px; background: var(--coral-500); color: var(--cream); font-size: 14px; font-weight: 600; white-space: nowrap; transition: background .15s, transform .15s; }
   .su-new:hover { background: var(--coral-700); }
   .su-new:active { transform: scale(.98); }
@@ -113,7 +110,7 @@
 
   /* Celular: uma coluna por vez */
   @media (max-width: 879px) {
-    .su-wrap { padding: 72px 0 0; }
+    .su-wrap { padding: 60px 0 0; }
     .su-head { padding: 0 20px; }
     .su-app { border-radius: 0; border-left: 0; border-right: 0; min-height: calc(100vh - 210px); }
     .su-app.is-pane .su-list { display: none; }
@@ -123,9 +120,8 @@
     .su-app.is-pane ~ * , .su-wrap:has(.su-app.is-pane) .su-head-new { display: none; }
   }
   @media (min-width: 880px) {
-    .su-wrap { padding-top: 100px; }
-    .su-title { font-size: 48px; letter-spacing: -1.6px; }
-    .su-app { grid-template-columns: 360px minmax(0, 1fr); height: calc(100vh - 290px); min-height: 520px; }
+    .su-wrap { padding-left: 40px; padding-right: 40px; }
+    .su-app { grid-template-columns: 360px minmax(0, 1fr); height: calc(100vh - 380px); min-height: 520px; }
     .su-list { border-right: 1px solid var(--stone); }
     .su-back { display: none; }
   }
@@ -135,9 +131,9 @@
   <div class="su-wrap">
     <div class="su-head">
       <div>
-        <div class="su-eyebrow">Suporte</div>
-        <h1 class="su-title">Fale com a Loov</h1>
-        <p class="su-sub">Respondemos por aqui mesmo. A conversa também aparece no app, e você recebe um aviso quando chega resposta.</p>
+        <%= render "shared/page_head", back_href: "/", back_id: "su-voltar", eyebrow: "Suporte",
+                   title: raw("Fale com a <em>Loov</em>."),
+                   lead: "Respondemos por aqui mesmo. A conversa também aparece no app, e você recebe um aviso quando chega resposta." %>
       </div>
       <button type="button" class="su-new su-head-new" data-new><i data-feather="edit-3" style="width:15px;height:15px"></i>Nova conversa</button>
     </div>
@@ -398,4 +394,11 @@
   });
   renderPane();
 })();
+  // Voltar: se veio de dentro do site, volta de verdade; senão, home.
+  (function () {
+    var b = document.getElementById('su-voltar');
+    if (b) b.addEventListener('click', function (e) {
+      if (document.referrer && document.referrer.indexOf(location.origin) === 0 && history.length > 1) { e.preventDefault(); history.back(); }
+    });
+  })();
 </script>

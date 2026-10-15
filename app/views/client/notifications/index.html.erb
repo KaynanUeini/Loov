@@ -19,27 +19,17 @@
   .nt button { font-family: inherit; line-height: normal; cursor: pointer; }
   .nt svg.feather { display: block; }
   .nt a { text-decoration: none; }
-  .nt-wrap { width: 100%; max-width: 760px; margin: 0 auto; }
+  .nt-wrap { width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 20px 64px; }
 
-  .nt-head { display: flex; align-items: center; padding: 8px 16px; }
-  .nt-btn { flex: 0 0 40px; height: 40px; border-radius: 50%; border: 0; background: var(--sand); color: var(--ink) !important; display: flex; align-items: center; justify-content: center; transition: background .15s; }
-  a.nt-btn:hover { background: var(--stone); }
-  .nt-hc { flex: 1; text-align: center; }
-  .nt-hc small { display: block; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; color: var(--coral-500); }
-  .nt-hc h1 { margin: 2px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 20px; letter-spacing: -0.3px; color: var(--ink) !important; }
-  .nt-count { flex: 0 0 auto; min-width: 40px; height: 40px; padding: 0 10px; border: 0; border-radius: 20px; background: var(--coral-500); color: var(--cream); font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; transition: transform .15s; }
-  .nt-count:hover { transform: scale(1.05); }
-  .nt-count.is-off { visibility: hidden; }
-
-  .nt-strip { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 9px 16px; background: var(--coral-50); border-top: 1px solid var(--coral-100); border-bottom: 1px solid var(--coral-100); }
+  /* "Marcar todas como lidas" logo abaixo da frase que diz quantas faltam. */
+  .nt-strip { margin-top: 18px; }
   .nt-strip.is-off { display: none; }
-  .nt-strip i { width: 6px; height: 6px; border-radius: 50%; background: var(--coral-500); }
-  .nt-strip span { flex: 1; font-size: 12px; font-weight: 600; color: var(--coral-700); }
-  .nt-strip button { padding: 9px 12px; border: 1px solid var(--coral-500); border-radius: 100px; background: transparent; color: var(--coral-700); font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: .6px; transition: background .15s; }
-  .nt-strip button:hover { background: var(--coral-100); }
+  .nt-strip button { display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; border: 1px solid var(--stone); border-radius: 100px; background: var(--paper); color: var(--ink); font-size: 13px; font-weight: 600; transition: border-color .15s, background .15s; }
+  .nt-strip button:hover { border-color: var(--ink); }
   .nt-strip button[disabled] { opacity: .6; cursor: default; }
 
-  .nt-list { display: grid; gap: 10px; padding: 16px 16px 48px; }
+  /* Lista na largura de leitura; o cabeçalho segue a largura da página. */
+  .nt-list { display: grid; gap: 10px; max-width: 760px; padding-top: 28px; }
   .nt-card { background: var(--paper); border: 1px solid var(--stone); border-radius: 16px; padding: 14px; box-shadow: 0 2px 6px -4px rgba(40,35,28,.2); transition: border-color .15s, box-shadow .2s; }
   .nt-card:hover { border-color: var(--ink); box-shadow: 0 12px 28px -22px rgba(40,35,28,.55); }
   .nt-card.is-unread { border-color: var(--coral-100); }
@@ -64,22 +54,17 @@
   .nt-empty p { margin: 0; font-size: 13px; line-height: 18px; color: var(--ash); }
 
   @media (min-width: 720px) {
-    .nt-head { padding: 28px 32px 8px; }
-    .nt-hc h1 { font-size: 28px; letter-spacing: -0.6px; }
-    .nt-strip { margin: 16px 32px 0; border: 1px solid var(--coral-100); border-radius: 14px; }
-    .nt-list { padding: 20px 32px 64px; gap: 12px; }
+    .nt-list { padding-top: 36px; gap: 12px; }
     .nt-card { padding: 16px 18px; }
   }
+  @media (min-width: 960px) { .nt-wrap { padding: 0 40px 80px; } }
 </style>
 
 <div class="nt">
   <div class="nt-wrap">
-    <div class="nt-head">
-      <a class="nt-btn" id="nt-back" href="/users/edit" aria-label="Voltar"><i data-feather="chevron-left" style="width:18px;height:18px"></i></a>
-      <div class="nt-hc"><small>CENTRAL</small><h1>Notificações</h1></div>
-      <button type="button" class="nt-count is-off" id="nt-count" data-markall aria-label="Marcar todas como lidas"></button>
-    </div>
-    <div class="nt-strip is-off" id="nt-strip"><i></i><span id="nt-strip-t"></span><button type="button" data-markall>MARCAR TODAS</button></div>
+    <%= render "shared/page_head", back_href: "/users/edit", back_id: "nt-back", eyebrow: "Central",
+               title: "Notificações", title_id: "nt-title", lead_id: "nt-lead" %>
+    <div class="nt-strip is-off" id="nt-strip"><button type="button" data-markall><i data-feather="check" style="width:14px;height:14px"></i><span>Marcar todas como lidas</span></button></div>
     <div id="nt-body"></div>
   </div>
   <%= render "shared/site_footer", audience: :client %>
@@ -132,11 +117,10 @@
 
   function render() {
     var unread = LIST.filter(function (n) { return !n.read; }).length;
-    var c = $('nt-count');
-    c.classList.toggle('is-off', !unread);
-    c.innerHTML = marking ? '…' : unread;
+    $('nt-title').innerHTML = LIST.length ? 'Suas <em>notificações</em>.' : 'Notificações';
+    $('nt-lead').textContent = !LIST.length ? ''
+      : unread ? unread + (unread === 1 ? ' não lida.' : ' não lidas.') : 'Você está em dia.';
     $('nt-strip').classList.toggle('is-off', !unread);
-    $('nt-strip-t').textContent = unread + (unread === 1 ? ' não lida' : ' não lidas');
     $('nt-strip').querySelector('button').disabled = marking;
     $('nt-body').innerHTML = LIST.length
       ? '<div class="nt-list">' + LIST.map(card).join('') + '</div>'

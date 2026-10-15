@@ -105,8 +105,10 @@
   .sub-back { width: 40px; height: 40px; border: 0; border-radius: 50%; background: var(--sand); color: var(--ink); display: flex; align-items: center; justify-content: center; }
   .sub-back:hover { background: var(--stone); }
   .sub-body { padding: 8px 20px 0; }
-  .sub-body h1 { margin: 6px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 34px; letter-spacing: -1px; color: var(--ink) !important; }
-  .sub-lead { margin: 8px 0 0; font-size: 14px; line-height: 20px; color: var(--graphite); }
+  /* Mesmo cabeçalho das páginas da conta (shared/page_head). */
+  .sub-body .sec-side > .ac-mono:first-child, .sub-body > .ac-mono:first-child { margin-top: 10px; }
+  .sub-body h1 { margin: 6px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: clamp(36px, 6vw, 72px); line-height: .98; letter-spacing: -0.04em; color: var(--ink) !important; }
+  .sub-lead { margin: 14px 0 0; max-width: 46ch; font-size: 15px; line-height: 22px; color: var(--graphite); }
   .plate { margin-top: 22px; border-radius: 14px; overflow: hidden; background: #fff; border: 2px solid var(--ink); box-shadow: 0 14px 30px -20px rgba(40,35,28,.5); text-align: center; }
   .plate-top { padding: 4px; background: #1f4fa3; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 3px; }
   .plate-v { padding: 14px 10px 2px; font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 40px; letter-spacing: 6px; color: var(--ink); }
@@ -155,12 +157,13 @@
     /* Segurança em duas colunas (Apple ID / conta do Spotify): o contexto
        fica à esquerda, parado enquanto a página rola; o formulário à
        direita, sem esticar os campos. */
-    .sub.is-split { max-width: 1040px; padding-left: 32px; padding-right: 32px; }
-    .sub.is-split .sub-head { padding-left: 0; padding-right: 0; padding-top: 24px; }
-    .sub.is-split .sub-body { display: grid; grid-template-columns: minmax(0, 380px) minmax(0, 520px); justify-content: space-between; gap: 64px; align-items: start; padding: 8px 0 0; }
+    .sub.is-split { max-width: 1120px; padding-left: 40px; padding-right: 40px; }
+    .sub.is-split .sub-head { padding-left: 0; padding-right: 0; padding-top: 28px; }
+    .sub.is-split .sub-body { display: grid; grid-template-columns: minmax(0, 440px) minmax(0, 520px); justify-content: space-between; gap: 64px; align-items: start; padding: 8px 0 0; }
     .sub.is-split .sec-side { position: sticky; top: 92px; }
-    .sub.is-split .sub-body h1 { font-size: 48px; letter-spacing: -1.6px; line-height: 1.05; }
-    .sub.is-split .sub-lead { margin-top: 14px; font-size: 15px; line-height: 22px; }
     .sub.is-split .sec-card { margin-top: 0; padding: 24px; }
+    /* No computador o salvar fica no fim do formulário, não preso embaixo. */
+    .sub.is-split .sub-bar { position: static; padding: 0; margin-top: 16px; background: none; }
+    .sub.is-split .sub-bar .ac-save { max-width: none; }
   }
 </style>
