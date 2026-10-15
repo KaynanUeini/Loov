@@ -316,7 +316,8 @@ class AppointmentsController < ApplicationController
           # lava-rápido, que não é rota.
           latitude:  a.car_wash.latitude,
           longitude: a.car_wash.longitude,
-          address:   a.car_wash.address
+          address:   a.car_wash.address,
+          route_address: a.car_wash.endereco_rota
         },
         service: {
           id:       a.service.id,

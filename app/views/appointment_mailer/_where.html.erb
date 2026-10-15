@@ -6,6 +6,6 @@
     ["Serviço", @service.title],
   ]
   rows << ["Valor", email_money(@appointment.effective_price)] if local_assigns[:price]
-  rows << ["Onde", where, (@car_wash.address.present? ? { url: email_map_url(@car_wash.address), label: "Abrir no mapa" } : nil)]
+  rows << ["Onde", where, ((@car_wash.endereco_rota || @car_wash.address).present? ? { url: email_map_url(@car_wash.endereco_rota || @car_wash.address), label: "Abrir no mapa" } : nil)]
 %>
 <%= render "emails/details", rows: rows %>

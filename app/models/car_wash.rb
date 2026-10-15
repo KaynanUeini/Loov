@@ -46,6 +46,14 @@ class CarWash < ApplicationRecord
     parts.join(", ")
   end
 
+  # Primeiro degrau: rua COM número. O OSM tem o número em poucas ruas do
+  # Brasil; quando tem, a coordenada cai na porta em vez do meio da rua.
+  # Sem resultado, a cascata segue pra rua sem número.
+  def geocoding_address_numero
+    return nil unless logradouro.present? && numero.present?
+    ["#{logradouro}, #{numero}", cidade.presence, uf.presence, "Brasil"].compact.join(", ")
+  end
+
   # Mesma ideia, um degrau mais larga: sem o logradouro, só bairro/cidade/UF.
   # Cidades pequenas ou litorâneas nem sempre têm rua a rua mapeada no OSM,
   # mas o bairro quase sempre está -- e pra "tem lava-rápido num raio de X km"
@@ -74,7 +82,7 @@ class CarWash < ApplicationRecord
   # é a diferença entre o lava-rápido nunca aparecer pra ninguém perto e
   # aparecer com uma coordenada só um pouco menos exata.
   def geocode
-    [geocoding_address, geocoding_address_bairro, geocoding_address_cep].each do |query|
+    [geocoding_address_numero, geocoding_address, geocoding_address_bairro, geocoding_address_cep].each do |query|
       next if query.blank?
       result = Geocoder.search(query).first
       next unless result&.latitude && result&.longitude
@@ -269,6 +277,21 @@ class CarWash < ApplicationRecord
 
   def full_address
     [logradouro, bairro, cidade, uf].select(&:present?).join(", ")
+  end
+
+  # Endereço pra rota no app de mapas, com o número: "Praça da Sé, 1888 - Sé,
+  # São Paulo - SP, 01001-000". As coordenadas salvas vêm de geocodificar só
+  # a rua (o OSM quase nunca tem o número no Brasil), então levam o cliente
+  # pro meio da rua; o Google Maps e o Waze acham o número exato pelo texto.
+  # Sem número cadastrado, nil — aí vale a coordenada.
+  def endereco_rota
+    return nil unless logradouro.present? && numero.present?
+
+    rua    = "#{logradouro}, #{numero}"
+    rua   += " - #{bairro}" if bairro.present?
+    cidade_uf = [cidade.presence, uf.presence].compact.join(" - ")
+    cep_fmt   = cep.to_s.gsub(/\D/, "").sub(/\A(\d{5})(\d{3})\z/, '\\1-\\2').presence
+    [rua, cidade_uf.presence, cep_fmt].compact.join(", ")
   end
 
   def location_context

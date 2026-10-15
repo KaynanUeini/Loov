@@ -257,8 +257,11 @@
     return isFinite(t) && (t - Date.now()) / 60000 > 120;
   }
   function hasCoords(cw) { var la = Number(cw && cw.latitude), lo = Number(cw && cw.longitude); return isFinite(la) && isFinite(lo) && la !== 0 && lo !== 0; }
+  // Com número cadastrado, a rota vai pelo endereço completo: a coordenada
+  // salva é do meio da rua, o texto leva o Google Maps ao número exato.
   function routeUrl(cw) {
-    var dest = hasCoords(cw) ? cw.latitude + ',' + cw.longitude : (cw && cw.address ? encodeURIComponent(cw.address) : null);
+    var dest = cw && cw.route_address ? encodeURIComponent(cw.route_address)
+      : hasCoords(cw) ? cw.latitude + ',' + cw.longitude : (cw && cw.address ? encodeURIComponent(cw.address) : null);
     return dest ? 'https://www.google.com/maps/dir/?api=1&destination=' + dest : null;
   }
   function money2(v) { return 'R$ ' + (Number(v) || 0).toFixed(2).replace('.', ','); }

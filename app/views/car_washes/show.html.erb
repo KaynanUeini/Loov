@@ -530,7 +530,8 @@
     '</div>';
   }
   function mapsUrl() {
-    var q = CW.lat != null && CW.lng != null ? CW.lat + ',' + CW.lng : [CW.logradouro || CW.address, CW.bairro, CW.cidade].filter(Boolean).join(', ');
+    // Com número, o endereço completo leva ao número exato (a coordenada é do meio da rua).
+    var q = CW.route_address || (CW.lat != null && CW.lng != null ? CW.lat + ',' + CW.lng : [CW.logradouro || CW.address, CW.bairro, CW.cidade].filter(Boolean).join(', '));
     return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q);
   }
   var maps = {};
