@@ -29,6 +29,7 @@
   perto       = @cards.count { |c| !c[:milestone] && c[:visits_required] - c[:filled] == 1 }
 %>
 <script src="/vendor/feather-4.29.2.min.js"></script>
+<%= render "shared/loov_logos" %>
 
 <style>
   .loov-nav { background: var(--cream) !important; }
@@ -77,7 +78,13 @@
   .lc.is-back .lc-flip { transform: rotateY(180deg); }
   .lc-face { grid-area: 1 / 1; position: relative; border-radius: 22px; overflow: hidden; backface-visibility: hidden; -webkit-backface-visibility: hidden; color: #fafaf6;
     background: var(--lc-bg); box-shadow: 0 2px 4px rgba(20,14,9,.18), 0 30px 60px -26px rgba(20,14,9,.55), inset 0 1px 0 rgba(255,255,255,.14); }
-  .lc-back { transform: rotateY(180deg); }
+  /* Cada face 1px fora do plano do cartão: no mesmo plano, o Chrome entrega
+     o clique ao próprio cartão em vez dos botões do verso. */
+  .lc-front { transform: translateZ(1px); }
+  .lc-back { transform: rotateY(180deg) translateZ(1px); }
+  /* A face escondida continua no mesmo lugar (e espelhada): sem isto ela
+     rouba os cliques da que está à mostra. */
+  .lc:not(.is-back) .lc-back, .lc.is-back .lc-front { pointer-events: none; }
   .lc-face::before { content: ''; position: absolute; inset: 0; opacity: .22; mix-blend-mode: overlay; pointer-events: none;
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
   .lc-face::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(520px circle at var(--mx, 30%) var(--my, 15%), rgba(255,255,255,.18), transparent 42%); }
@@ -97,6 +104,11 @@
 
   .lc-top { display: flex; align-items: center; gap: 12px; }
   .lc-mono { flex: 0 0 42px; height: 42px; border-radius: 50%; background: #fafaf6; color: var(--lc-ink); display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: -0.3px; box-shadow: 0 0 0 3px rgba(250,250,246,.22); }
+  /* Com a logo do lava-rápido (a mesma da home e da página dele): fica num
+     azulejo creme, como a logo de um passe na Wallet, pra ler em qualquer cor. */
+  .lc-mono.is-logo { border-radius: 12px; padding: 4px; }
+  .lc-mono.is-logo svg, .lc-mono.is-logo img { width: 100%; height: 100%; display: block; }
+  .np .lc-mono.is-logo { background: transparent; padding: 0; }
   .lc-id { flex: 1; min-width: 0; }
   .lc-id b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 17px; letter-spacing: -0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .lc-id small { display: block; margin-top: 2px; font-size: 12px; opacity: .72; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -242,7 +254,7 @@
                   <span class="lc-orb"></span>
                   <div class="lc-in">
                     <div class="lc-top">
-                      <span class="lc-mono"><%= sigla.(c[:car_wash_name]) %></span>
+                      <span class="lc-mono" data-logo="<%= c[:car_wash_id] %>" data-name="<%= c[:car_wash_name] %>"><%= sigla.(c[:car_wash_name]) %></span>
                       <span class="lc-id"><b><%= c[:car_wash_name] %></b><small><%= c[:reward_description] %></small></span>
                       <span class="lc-count"><small>CARIMBOS</small><b><%= c[:filled] %>/<%= n %></b></span>
                     </div>
@@ -323,7 +335,7 @@
         <% @nearby.each do |p| %>
           <a class="np lc" data-tema="<%= tema.(p[:car_wash_id]) %>" href="<%= car_wash_path(p[:car_wash_id]) %><%= qs %>">
             <div class="np-top">
-              <span class="lc-mono"><%= sigla.(p[:car_wash_name]) %></span>
+              <span class="lc-mono" data-logo="<%= p[:car_wash_id] %>" data-name="<%= p[:car_wash_name] %>"><%= sigla.(p[:car_wash_name]) %></span>
               <% if p[:distance_km] %><span class="np-dist"><%= p[:distance_km].to_s.sub(".", ",") %> km</span><% end %>
             </div>
             <div><b><%= p[:car_wash_name] %></b><span class="np-addr"><%= p[:address] %></span></div>
@@ -352,6 +364,14 @@
     if (document.referrer && document.referrer.indexOf(location.origin) === 0 && history.length > 1) { e.preventDefault(); history.back(); }
   });
   if (window.feather) feather.replace();
+
+  // Logo do lava-rápido no lugar das iniciais (sem JS, ficam as iniciais).
+  if (window.LoovLogos) {
+    document.querySelectorAll('[data-logo]').forEach(function (el) {
+      el.innerHTML = LoovLogos.logoOf({ id: el.dataset.logo, name: el.dataset.name });
+      el.classList.add('is-logo');
+    });
+  }
 
   var cards = Array.prototype.slice.call(document.querySelectorAll('#fd-cards .lc'));
 
