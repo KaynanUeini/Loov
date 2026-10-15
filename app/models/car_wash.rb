@@ -275,6 +275,22 @@ class CarWash < ApplicationRecord
     car_wash_closures.where("start_date <= ? AND end_date >= ?", date, date).exists?
   end
 
+  # Os dois números do cartão escuro do Perfil do dono/atendente (site e
+  # app): o que tem pra hoje e quanto já foi atendido no mês.
+  def resumo_perfil
+    hoje = Time.current.in_time_zone("America/Sao_Paulo")
+    {
+      today:          appointments.where(scheduled_at: hoje.all_day, status: %w[confirmed attended]).count,
+      month_attended: appointments.where(scheduled_at: hoje.all_month, status: "attended").count
+    }
+  end
+
+  # Endereço curto do Perfil: "Rua X, 123 · Bairro".
+  def endereco_curto
+    return address if logradouro.blank?
+    [[logradouro, numero.presence].compact.join(", "), bairro.presence].compact.join(" · ")
+  end
+
   def full_address
     [logradouro, bairro, cidade, uf].select(&:present?).join(", ")
   end

@@ -94,6 +94,8 @@ Rails.application.routes.draw do
   end
 
   namespace :owner do
+    # Cabeçalho do Perfil ("Mais") do app: números do dia/mês e o lava-rápido.
+    get   'profile_summary',           to: 'profile_summaries#show'
     get   'car_wash',                  to: 'car_wash#show'
     patch 'car_wash',                  to: 'car_wash#update'
     get   'car_wash/slot_diagnostics', to: 'car_wash#slot_diagnostics'

@@ -68,11 +68,8 @@ class Users::RegistrationsController < Devise::RegistrationsController
       email:     u.email,
       full_name: u.full_name,
       owner:     u.owner?,
-      car_wash:  cw && {
-        id:      cw.id,
-        name:    cw.name,
-        address: cw.logradouro.present? ? [[cw.logradouro, cw.numero.presence].compact.join(", "), cw.bairro.presence].compact.join(" · ") : cw.address
-      }
+      car_wash:  cw && { id: cw.id, name: cw.name, address: cw.endereco_curto },
+      resumo:    cw ? cw.resumo_perfil : { today: 0, month_attended: 0 }
     }
   end
 

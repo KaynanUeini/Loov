@@ -1,123 +1,92 @@
 <%#
-  Perfil do dono e do atendente — porte do "Mais" do app do dono
-  (OwnerMaisScreen), no mesmo esqueleto da Conta do cliente: mesmos estilos
-  (_account_styles), mesma tela de Privacidade e segurança e mesma folha de
-  Sair.
+  Perfil do dono e do atendente — o mesmo desenho da Conta do cliente
+  (edit.html.erb / ClientProfileScreen), com as funções do "Mais" do app:
 
-    · Esquerda: nome como título, cartão escuro com a pessoa e o papel, e o
-      lava-rápido logo abaixo (abre o Gerenciar).
-    · Direita: as funções do painel agrupadas como no app (Funcionalidades,
-      Suporte, Conta). Atendente vê só o que pode abrir.
+    · Nome como título; cartão escuro com dois números (agendados hoje e
+      atendidos no mês), no lugar de LAVAGENS e FAVORITOS.
+    · "Seu lava-rápido" no lugar de "Meu veículo" (abre o Gerenciar), com o
+      papel (DONO/ATENDENTE) ao lado do título da seção.
+    · Lista única com os ícones em areia, como a do cliente; Sair em grupo
+      próprio no fim. Atendente vê só o que pode abrir.
 
   Aprovações, Fidelidade e Mensagens são janelas do painel do dono: os
-  itens abrem o painel com a janela já aberta.
+  itens abrem o painel com a janela já aberta (?abrir=).
 %>
 <%
   sa   = @staff_account
   cw   = sa[:car_wash]
   dono = sa[:owner]
+  rs   = sa[:resumo]
   first_name = sa[:full_name].to_s.split.first.presence || "Você"
-  feat = [{ icon: "bell", label: "Notificações", desc: "Central de alertas e avisos", href: owner_notifications_path, badge: "notif" }]
-  if cw
-    feat << { icon: "settings", label: "Gerenciar lava-rápido", desc: "Horários, serviços e capacidade", href: manage_car_wash_path(cw[:id]) }
-  end
-  feat << { icon: "calendar",    label: "Agenda",       desc: "Agendamentos de hoje e dos próximos dias", href: owner_car_wash_appointments_path }
-  feat << { icon: "dollar-sign", label: "Financeiro",   desc: dono ? "Faturamento, custos e relatório do mês" : "Lançar os custos do mês",
-            href: dono ? owner_monthly_costs_path : edit_owner_monthly_costs_path }
-  # Aprovações, Fidelidade e Mensagens são janelas do painel (home do
-  # dono): o link abre o painel já com a janela aberta (?abrir=).
-  feat << { icon: "message-square", label: "Mensagens", desc: "Envie avisos para seus clientes", href: root_path(abrir: "mensagem") }
+  items = [{ icon: "bell", label: "Notificações", desc: "Tudo em dia", href: owner_notifications_path, badge: "notif" }]
+  items << { icon: "check-square", label: "Aprovações pendentes", desc: "Nenhuma mudança esperando", href: root_path(abrir: "aprovacoes"), badge: "aprov" } if dono
+  items << { icon: "settings", label: "Gerenciar lava-rápido", desc: "Horários, serviços e capacidade", href: manage_car_wash_path(cw[:id]) } if cw
+  items << { icon: "calendar", label: "Agenda", desc: "Hoje e os próximos dias", href: owner_car_wash_appointments_path }
+  items << { icon: "dollar-sign", label: "Financeiro", desc: dono ? "Faturamento, custos e relatório" : "Lançar os custos do mês",
+             href: dono ? owner_monthly_costs_path : edit_owner_monthly_costs_path }
+  items << { icon: "message-square", label: "Mensagens", desc: "Avise os clientes de hoje", href: root_path(abrir: "mensagem") }
   if dono
-    feat.insert(1, { icon: "check-square", label: "Aprovações pendentes", desc: "Mudanças feitas por atendentes", href: root_path(abrir: "aprovacoes"), badge: "aprov" })
-    feat << { icon: "gift", label: "Programa de fidelidade", desc: "Configure visitas e brindes", href: root_path(abrir: "fidelidade") }
-    feat << { icon: "cpu",   label: "IA insights",  desc: "Análise do mês gerada pela IA",      href: owner_financial_tracking_path }
-    feat << { icon: "users", label: "Funcionários", desc: "Convide e revogue acessos da equipe", href: owner_attendant_invitations_path }
+    items << { icon: "gift",  label: "Programa de fidelidade", desc: "Visitas e recompensa", href: root_path(abrir: "fidelidade") }
+    items << { icon: "cpu",   label: "IA insights",  desc: "Análise do mês gerada pela IA", href: owner_financial_tracking_path }
+    items << { icon: "users", label: "Funcionários", desc: "Convide e remova acessos", href: owner_attendant_invitations_path }
   end
 %>
 <script src="/vendor/feather-4.29.2.min.js"></script>
 
 <%= render "devise/registrations/account_styles" %>
 <style>
-  /* Cartão da pessoa: o mesmo fundo escuro da Conta do cliente, com a
-     inicial em coral e o papel em pílula — igual ao cartão do "Mais". */
-  .st-id { position: relative; overflow: hidden; display: flex; align-items: center; gap: 14px; margin: 0 20px 20px; padding: 22px 20px; border-radius: 20px; background: var(--ink); color: var(--cream); }
-  .st-id::after { content: ""; position: absolute; top: -30px; right: -30px; width: 130px; height: 130px; border-radius: 50%; background: var(--coral-500); opacity: .18; }
-  .st-av { position: relative; flex: 0 0 52px; height: 52px; border-radius: 50%; background: var(--coral-500); color: var(--cream); display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px; }
-  .st-who { position: relative; flex: 1; min-width: 0; }
-  .st-who b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 18px; letter-spacing: -0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .st-who small { display: block; margin-top: 2px; font-size: 12.5px; color: #9e9688; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .st-role { display: inline-block; margin-top: 8px; padding: 2px 8px; border-radius: 8px; border: 1px solid rgba(221,120,82,.4); background: rgba(221,120,82,.18); color: var(--coral-300, #e8a48a); font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; }
-  .ac-veh .st-store { flex: 0 0 40px; height: 40px; border-radius: 12px; background: var(--coral-50); color: var(--coral-500); display: flex; align-items: center; justify-content: center; }
-  /* Rótulo de grupo em mono (FUNCIONALIDADES · SUPORTE · CONTA), como no app. */
-  .st-group { padding: 6px 20px 8px; }
-  .ac-item-ic.is-coral { background: var(--coral-50); color: var(--coral-500); }
-  .ac-item:hover .ac-item-ic.is-coral { background: var(--coral-100); }
-  @media (min-width: 960px) {
-    .ac-split .st-id { margin-left: 0; margin-right: 0; }
-    .st-group { padding: 0 4px 8px; }
-    .ac-list + .st-group { margin-top: 22px; }
-  }
+  .ac-sec small.st-role { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px; color: var(--ash); }
 </style>
 
 <div class="ac">
   <section class="ac-view is-on" id="ac-main">
     <div class="ac-wrap ac-split">
       <div class="ac-left">
-        <div class="ac-title"><div class="ac-mono">Perfil</div><h1><%= first_name %></h1></div>
-        <div class="st-id">
-          <span class="st-av" aria-hidden="true"><%= first_name.first.upcase %></span>
-          <span class="st-who">
-            <b><%= sa[:full_name].presence || "Painel do operador" %></b>
-            <small><%= sa[:email] %></small>
-            <span class="st-role"><%= dono ? "DONO" : "ATENDENTE" %></span>
-          </span>
+        <div class="ac-title"><div class="ac-mono">Conta</div><h1><%= first_name %></h1></div>
+        <div class="ac-id">
+          <a class="ac-stat" href="<%= owner_car_wash_appointments_path %>"><b><%= rs[:today] %></b><small><%= rs[:today] == 1 ? "AGENDADO HOJE" : "AGENDADOS HOJE" %></small></a>
+          <span class="ac-sep"></span>
+          <a class="ac-stat is-fav" href="<%= owner_car_wash_appointments_path %>"><b><%= rs[:month_attended] %></b><small><%= rs[:month_attended] == 1 ? "ATENDIDO NO MÊS" : "ATENDIDOS NO MÊS" %></small></a>
         </div>
 
-        <div class="ac-sec"><h2>Seu lava-rápido</h2></div>
+        <div class="ac-sec"><h2>Seu lava-rápido</h2><small class="st-role"><%= dono ? "DONO" : "ATENDENTE" %></small></div>
         <% if cw %>
           <a class="ac-veh" href="<%= manage_car_wash_path(cw[:id]) %>">
-            <span class="st-store"><i data-feather="map-pin" style="width:18px;height:18px"></i></span>
+            <span class="ac-veh-ic"><i data-feather="map-pin" style="width:20px;height:20px"></i></span>
             <span class="ac-veh-t"><b><%= cw[:name] %></b><small><%= cw[:address].presence || "Endereço não cadastrado" %></small></span>
             <span class="ac-veh-go"><i data-feather="chevron-right" style="width:18px;height:18px"></i></span>
           </a>
         <% elsif dono %>
           <a class="ac-veh" href="<%= new_car_wash_path %>">
-            <span class="st-store"><i data-feather="plus" style="width:18px;height:18px"></i></span>
-            <span class="ac-veh-t"><b>Cadastrar seu lava-rápido</b><small>Endereço, horários e serviços</small></span>
-            <span class="ac-veh-go"><i data-feather="chevron-right" style="width:18px;height:18px"></i></span>
+            <span class="ac-veh-ic"><i data-feather="map-pin" style="width:20px;height:20px"></i></span>
+            <span class="ac-veh-t"><b>Nenhum lava-rápido cadastrado</b><small>Toque para cadastrar endereço, horários e serviços</small></span>
+            <span class="ac-veh-go"><i data-feather="plus" style="width:16px;height:16px"></i></span>
           </a>
         <% end %>
       </div>
 
       <div class="ac-right">
-        <div class="ac-mono st-group">Funcionalidades</div>
         <div class="ac-list">
-          <% feat.each do |it| %>
+          <% items.each do |it| %>
             <a class="ac-item" href="<%= it[:href] %>">
-              <span class="ac-item-ic is-coral"><i data-feather="<%= it[:icon] %>" style="width:18px;height:18px"></i></span>
+              <span class="ac-item-ic"><i data-feather="<%= it[:icon] %>" style="width:18px;height:18px"></i></span>
               <span class="ac-item-t"><b><%= it[:label] %></b><small<%= it[:badge] ? raw(%( id="st-#{it[:badge]}-sub")) : "" %>><%= it[:desc] %></small></span>
               <% if it[:badge] %><span class="ac-badge is-off" id="st-<%= it[:badge] %>-badge"></span><% end %>
               <i data-feather="chevron-right" class="ac-chev" style="width:16px;height:16px"></i>
             </a>
           <% end %>
-        </div>
-
-        <div class="ac-mono st-group">Suporte</div>
-        <div class="ac-list">
+          <button type="button" class="ac-item" data-open="seguranca">
+            <span class="ac-item-ic"><i data-feather="shield" style="width:18px;height:18px"></i></span>
+            <span class="ac-item-t"><b>Privacidade e segurança</b><small>E-mail, senha e conta</small></span>
+            <i data-feather="chevron-right" class="ac-chev" style="width:16px;height:16px"></i>
+          </button>
           <a class="ac-item" href="<%= suporte_path %>">
-            <span class="ac-item-ic is-coral"><i data-feather="life-buoy" style="width:18px;height:18px"></i></span>
-            <span class="ac-item-t"><b>Abrir chamado</b><small>Dúvidas, problemas técnicos ou financeiros</small></span>
+            <span class="ac-item-ic"><i data-feather="message-circle" style="width:18px;height:18px"></i></span>
+            <span class="ac-item-t"><b>Suporte</b><small>Fale com a gente</small></span>
             <i data-feather="chevron-right" class="ac-chev" style="width:16px;height:16px"></i>
           </a>
         </div>
-
-        <div class="ac-mono st-group">Conta</div>
         <div class="ac-list">
-          <button type="button" class="ac-item" data-open="seguranca">
-            <span class="ac-item-ic is-coral"><i data-feather="shield" style="width:18px;height:18px"></i></span>
-            <span class="ac-item-t"><b>Privacidade e segurança</b><small>E-mail, senha e exclusão da conta</small></span>
-            <i data-feather="chevron-right" class="ac-chev" style="width:16px;height:16px"></i>
-          </button>
           <button type="button" class="ac-item ac-logout" data-sheet="sair">
             <span class="ac-item-ic"><i data-feather="log-out" style="width:17px;height:17px"></i></span>
             <span class="ac-item-t"><b>Sair da conta</b><small><%= sa[:email] %></small></span>
@@ -198,7 +167,7 @@
       var n = Array.isArray(list) ? list.filter(function (x) { return !x.read; }).length : 0;
       if (!n) return;
       $('st-notif-sub').textContent = n + ' não lida' + (n > 1 ? 's' : '');
-      var b = $('st-notif-badge'); b.textContent = n > 99 ? '99+' : n; b.classList.remove('is-off');
+      var b = $('st-notif-badge'); b.textContent = n > 9 ? '9+' : n; b.classList.remove('is-off');
     });
 
   <% if dono %>
@@ -208,7 +177,7 @@
       var n = Array.isArray(list) ? list.filter(function (x) { return x.status === 'pending'; }).length : 0;
       if (!n) return;
       $('st-aprov-sub').textContent = n + (n > 1 ? ' mudanças esperando você' : ' mudança esperando você');
-      var b = $('st-aprov-badge'); b.textContent = n > 99 ? '99+' : n; b.classList.remove('is-off');
+      var b = $('st-aprov-badge'); b.textContent = n > 9 ? '9+' : n; b.classList.remove('is-off');
     });
   <% end %>
 
