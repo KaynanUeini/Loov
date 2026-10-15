@@ -53,8 +53,9 @@
   .fv-meta small { margin-left: 4px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 400; color: var(--ash); }
   .fv-meta.is-quiet { color: var(--ash); }
 
-  .fv-empty { display: flex; flex-direction: column; align-items: center; padding: 60px 24px; text-align: center; }
-  .fv-empty-ic { width: 64px; height: 64px; margin-bottom: 14px; border-radius: 50%; background: var(--coral-50); border: 1px solid var(--coral-100); color: var(--coral-500); display: flex; align-items: center; justify-content: center; }
+  .fv-empty { display: flex; flex-direction: column; align-items: center; padding: 32px 24px 60px; text-align: center; }
+  /* A ilustração do passarinho, como os vazios de Agendamentos e Fidelidade. */
+  .fv-empty img { width: min(84%, 340px); height: auto; margin-bottom: 18px; }
   .fv-empty h2 { margin: 0 0 6px !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 18px; letter-spacing: -0.2px; color: var(--ink) !important; }
   .fv-empty p { margin: 0 0 18px; max-width: 36ch; font-size: 13px; line-height: 18px; color: var(--ash); }
   .fv-empty a { padding: 12px 22px; border-radius: 100px; background: var(--coral-500); color: var(--cream) !important; font-size: 11px; font-weight: 600; letter-spacing: .3px; }
@@ -127,7 +128,7 @@
     c.textContent = LIST.length; c.classList.toggle('is-off', !LIST.length);
     $('fv-body').innerHTML = LIST.length
       ? '<div class="fv-list">' + LIST.map(card).join('') + '</div>'
-      : '<div class="fv-empty"><div class="fv-empty-ic">' + icon('heart', 28) + '</div><h2>Sem favoritos ainda</h2>' +
+      : '<div class="fv-empty"><img src="/illustrations/favoritos-vazia.svg" alt="Ilustração de um coração vazio com um passarinho pousado"><h2>Sem favoritos ainda</h2>' +
         '<p>Abra um lava-rápido e toque no coração pra salvá-lo aqui — assim você agenda mais rápido na próxima.</p>' +
         '<a href="/' + QS + '">EXPLORAR LAVA-RÁPIDOS</a></div>';
   }

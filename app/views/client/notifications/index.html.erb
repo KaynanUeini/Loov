@@ -57,8 +57,9 @@
   .nt-more { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin-top: 10px; padding: 9px 0 0; border: 0; border-top: 1px solid var(--stone); background: transparent; color: var(--coral-700); font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.2px; }
   .nt-more:hover { color: var(--coral-500); }
 
-  .nt-empty { display: flex; flex-direction: column; align-items: center; padding: 60px 20px; text-align: center; }
-  .nt-empty-ic { width: 64px; height: 64px; margin-bottom: 14px; border-radius: 50%; background: var(--coral-50); border: 1px solid var(--coral-100); color: var(--coral-500); display: flex; align-items: center; justify-content: center; }
+  .nt-empty { display: flex; flex-direction: column; align-items: center; padding: 32px 20px 60px; text-align: center; }
+  /* A ilustração do passarinho, como os vazios de Agendamentos e Fidelidade. */
+  .nt-empty img { width: min(84%, 340px); height: auto; margin-bottom: 18px; }
   .nt-empty h2 { margin: 0 0 4px !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 18px; letter-spacing: -0.2px; color: var(--ink) !important; }
   .nt-empty p { margin: 0; font-size: 13px; line-height: 18px; color: var(--ash); }
 
@@ -139,7 +140,7 @@
     $('nt-strip').querySelector('button').disabled = marking;
     $('nt-body').innerHTML = LIST.length
       ? '<div class="nt-list">' + LIST.map(card).join('') + '</div>'
-      : '<div class="nt-empty"><div class="nt-empty-ic">' + icon('bell-off', 28) + '</div><h2>Nada por aqui</h2><p>Você está em dia — sem notificações pendentes.</p></div>';
+      : '<div class="nt-empty"><img src="/illustrations/notificacoes-vazia.svg" alt="Ilustração de um sino quieto com um sinal de tudo certo e um passarinho pousado"><h2>Nada por aqui</h2><p>Você está em dia — sem notificações pendentes.</p></div>';
   }
 
   // Tocar: marca como lida (otimista) e leva pra Agenda — ou direto pra
