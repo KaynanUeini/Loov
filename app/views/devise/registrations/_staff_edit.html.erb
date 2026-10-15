@@ -9,8 +9,8 @@
     · Direita: as funções do painel agrupadas como no app (Funcionalidades,
       Suporte, Conta). Atendente vê só o que pode abrir.
 
-  Só entra o que o site tem: Aprovações, Fidelidade e Mensagens ainda
-  existem só no app.
+  Aprovações, Fidelidade e Mensagens são janelas do painel do dono: os
+  itens abrem o painel com a janela já aberta.
 %>
 <%
   sa   = @staff_account
@@ -24,7 +24,12 @@
   feat << { icon: "calendar",    label: "Agenda",       desc: "Agendamentos de hoje e dos próximos dias", href: owner_car_wash_appointments_path }
   feat << { icon: "dollar-sign", label: "Financeiro",   desc: dono ? "Faturamento, custos e relatório do mês" : "Lançar os custos do mês",
             href: dono ? owner_monthly_costs_path : edit_owner_monthly_costs_path }
+  # Aprovações, Fidelidade e Mensagens são janelas do painel (home do
+  # dono): o link abre o painel já com a janela aberta (?abrir=).
+  feat << { icon: "message-square", label: "Mensagens", desc: "Envie avisos para seus clientes", href: root_path(abrir: "mensagem") }
   if dono
+    feat.insert(1, { icon: "check-square", label: "Aprovações pendentes", desc: "Mudanças feitas por atendentes", href: root_path(abrir: "aprovacoes"), badge: "aprov" })
+    feat << { icon: "gift", label: "Programa de fidelidade", desc: "Configure visitas e brindes", href: root_path(abrir: "fidelidade") }
     feat << { icon: "cpu",   label: "IA insights",  desc: "Análise do mês gerada pela IA",      href: owner_financial_tracking_path }
     feat << { icon: "users", label: "Funcionários", desc: "Convide e revogue acessos da equipe", href: owner_attendant_invitations_path }
   end
@@ -195,6 +200,17 @@
       $('st-notif-sub').textContent = n + ' não lida' + (n > 1 ? 's' : '');
       var b = $('st-notif-badge'); b.textContent = n > 99 ? '99+' : n; b.classList.remove('is-off');
     });
+
+  <% if dono %>
+  fetch('/owner/pending_changes', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+    .then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; })
+    .then(function (list) {
+      var n = Array.isArray(list) ? list.filter(function (x) { return x.status === 'pending'; }).length : 0;
+      if (!n) return;
+      $('st-aprov-sub').textContent = n + (n > 1 ? ' mudanças esperando você' : ' mudança esperando você');
+      var b = $('st-aprov-badge'); b.textContent = n > 99 ? '99+' : n; b.classList.remove('is-off');
+    });
+  <% end %>
 
   if (window.feather) feather.replace();
   var hash = location.hash.replace('#', '');

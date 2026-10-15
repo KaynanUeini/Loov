@@ -62,7 +62,9 @@ module Owner
     end
 
     def build_notifications
-      car_wash = current_user.car_washes.first
+      # linked_car_wash: o do dono ou, pro atendente, o da equipe dele. Com
+      # car_washes.first o atendente ficava sem lava-rápido e só via suporte.
+      car_wash = current_user.linked_car_wash
       reads    = current_user.notification_reads.pluck(:key, :read_at).to_h
 
       notifications = []
@@ -182,8 +184,8 @@ module Owner
         end
       end
 
-      # ── 5. AI Insights pronta ───────────────────────────────────────────────
-      if car_wash
+      # ── 5. AI Insights pronta (apenas owner: atendente não abre a análise) ──
+      if current_user.owner? && car_wash
         insight = AiInsight.current_for(car_wash)
         if insight && insight.respond_to?(:ready?) && insight.ready? && !insight.expired?
           key = "ai_insight-#{insight.id}"

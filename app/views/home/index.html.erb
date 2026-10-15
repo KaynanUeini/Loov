@@ -2145,6 +2145,22 @@
     loadApprovals();
     setInterval(loadApprovals, 60_000);
     <% end %>
+    // Atalhos do Perfil e da Central de notificações (/?abrir=...): abrem
+    // direto a janela daquela função. Tira o parâmetro do endereço pra um
+    // recarregar não abrir de novo.
+    const abrir = new URLSearchParams(location.search).get('abrir');
+    const ATALHOS = {
+      mensagem: window.openMsgModal,
+      <% if current_user.owner? %>
+      fidelidade: window.openLoyaltyModal,
+      aprovacoes: window.openApprovalDrawer,
+      <% end %>
+    };
+    if (abrir && ATALHOS[abrir]) {
+      ATALHOS[abrir]();
+      const u = new URL(location.href); u.searchParams.delete('abrir');
+      history.replaceState(history.state, '', u.pathname + u.search + u.hash);
+    }
   });
 })();
 </script>

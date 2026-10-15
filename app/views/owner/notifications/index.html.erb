@@ -9,8 +9,7 @@
       IA INSIGHTS, ATENDENTE), tempo relativo, ponto coral se não lida. Mudança
       feita por atendente abre a lista do que mudou em "VER DETALHES".
     · Tocar marca como lida e leva pra tela do assunto no site (Suporte,
-      IA insights, Gerenciar). Aprovações ainda não têm página no site: o
-      cartão só marca como lida.
+      IA insights, Gerenciar); aprovação abre a gaveta de Aprovações do painel.
 %>
 <script src="/vendor/feather-4.29.2.min.js"></script>
 
@@ -95,6 +94,7 @@
   // Onde cada aviso leva no site (no app é a `route` de cada um).
   var HREF = {
     OwnerDisponivel:   '/',
+    OwnerMudancasPendentes: '/?abrir=aprovacoes',
     OwnerAiInsights:   '<%= owner_financial_tracking_path %>',
     OwnerSupport:      '<%= suporte_path %>',
     OwnerGerenciar:    <%= raw json_escape((current_car_wash ? manage_car_wash_path(current_car_wash) : nil).to_json) %>
