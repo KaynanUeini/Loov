@@ -2,126 +2,418 @@
   Fidelidade — os cartões de carimbos do cliente (porte da
   ClientFidelidadeScreen do app), aberta pela Conta e pelo rodapé.
 
-    · Cabeçalho no desenho da Central de notificações (voltar, RECOMPENSAS /
-      Fidelidade).
-    · Um cartão por lava-rápido, com os mesmos carimbos da Conta e uma
-      linha dizendo quanto falta; tocar abre a página do lava-rápido.
-    · Sem cartões: explica como funciona e leva pros lava-rápidos — os que
-      têm programa mostram o selo de fidelidade na página deles.
+  Mesmo desenho de Pagamentos (/client/profile/edit?tab=pagamento): título
+  grande e respiro (wiemer), o cartão como objeto físico com grão, brilho que
+  segue o cursor e verso (Apple Wallet). Do Kenz e do Reward Peak (Behance):
+  números grandes no resumo, uma cor por lava-rápido, carimbos com o prêmio
+  no último espaço, "Detalhes" que vira o cartão e uma vitrine de programas
+  perto.
+
+    · Resumo: carimbos, recompensas ganhas e cartões ativos.
+    · Cartão: carimbos (o último é o presente), "Faltam N" e, no verso, o
+      histórico de visitas (data + serviço) e "Agendar e ganhar carimbo".
+      Celular: carrossel com pontos; computador: grade.
+    · "+1 carimbo": quando ganhou carimbo desde a última vez que abriu.
+    · Perto de você: lava-rápidos com programa onde ainda não tem cartão.
+  Movimento respeita "reduzir movimento" do sistema.
+%>
+<%
+  qs     = request.query_string.present? ? "?#{request.query_string}" : ""
+  meses  = %w[jan fev mar abr mai jun jul ago set out nov dez]
+  temas  = %w[brasa noite oceano mata ameixa ocre]
+  tema   = ->(id) { temas[id.to_i % temas.size] }
+  sigla  = ->(nome) { nome.to_s.split(/\s+/).reject { |w| w.length < 2 }.first(2).map { |w| w[0] }.join.upcase.presence || "L" }
+  quando = ->(iso) { t = Time.zone.parse(iso.to_s)&.in_time_zone("America/Sao_Paulo"); t ? "#{t.day} #{meses[t.month - 1]}" : "" }
+  carimbos    = @cards.sum { |c| c[:visits_total] }
+  recompensas = @cards.sum { |c| c[:rewards_earned].to_i }
+  perto       = @cards.count { |c| !c[:milestone] && c[:visits_required] - c[:filled] == 1 }
 %>
 <script src="/vendor/feather-4.29.2.min.js"></script>
 
 <style>
   .loov-nav { background: var(--cream) !important; }
+  html, body { overflow-x: clip !important; }
   .fd { background: var(--cream); color: var(--ink); min-height: 100vh; padding-top: 60px; }
   .fd *, .fd *::before, .fd *::after { box-sizing: border-box; }
+  .fd button { font-family: inherit; line-height: normal; cursor: pointer; }
   .fd svg.feather { display: block; flex-shrink: 0; }
   .fd a { text-decoration: none; }
-  .fd-wrap { width: 100%; max-width: 760px; margin: 0 auto; padding-bottom: 48px; }
+  .fd-wrap { width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 20px 64px; }
 
-  .fd-head { display: flex; align-items: center; padding: 8px 16px; }
-  .fd-btn { flex: 0 0 40px; height: 40px; border-radius: 50%; background: var(--sand); color: var(--ink) !important; display: flex; align-items: center; justify-content: center; transition: background .15s; }
-  .fd-btn:hover { background: var(--stone); }
-  .fd-hc { flex: 1; text-align: center; padding-right: 40px; }
-  .fd-hc small { display: block; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; color: var(--coral-500); }
-  .fd-hc h1 { margin: 2px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 20px; letter-spacing: -0.3px; color: var(--ink) !important; }
+  /* ── Cabeçalho (o mesmo de Pagamentos) ─────────────────────────────── */
+  .fd-head { padding: 8px 0; }
+  .fd-back { width: 40px; height: 40px; border-radius: 50%; background: var(--sand); color: var(--ink) !important; display: inline-flex; align-items: center; justify-content: center; transition: background .15s; }
+  .fd-back:hover { background: var(--stone); }
+  .fd-eyebrow { margin-top: 18px; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px; color: var(--ash); text-transform: uppercase; }
+  .fd-title { margin: 6px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: clamp(36px, 6vw, 72px); line-height: .98; letter-spacing: -0.04em; color: var(--ink) !important; }
+  .fd-title em { font-style: normal; color: var(--coral-500); }
+  .fd-lead { margin: 14px 0 0 !important; max-width: 46ch; font-size: 15px !important; line-height: 22px !important; color: var(--graphite) !important; }
 
-  .fd-list { display: grid; gap: 10px; padding: 16px 16px 8px; }
-  /* Mesmo cartão de carimbos da Conta (.ac-lc). */
-  .fd-card { display: block; padding: 18px; background: var(--paper); border: 1px solid var(--stone); border-radius: 20px; color: var(--ink) !important; transition: border-color .15s, box-shadow .2s; }
-  .fd-card:hover { border-color: var(--ink); box-shadow: 0 12px 28px -22px rgba(40,35,28,.55); }
-  .fd-card-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-  .fd-card-h b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; letter-spacing: -0.2px; }
-  .fd-card-h small { display: block; margin-top: 2px; font-size: 12px; color: var(--graphite); }
-  .fd-badge { flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 100px; background: #fde8b5; color: #7a6419; font-size: 11px; font-weight: 600; }
-  .fd-stamps { display: flex; gap: 4px; margin-top: 14px; }
-  .fd-stamps i { flex: 1; height: 28px; border-radius: 6px; background: var(--sand); display: flex; align-items: center; justify-content: center; color: var(--cream); }
-  .fd-stamps i.is-on { background: var(--coral-500); }
-  .fd-next { display: flex; align-items: center; gap: 6px; margin-top: 12px; font-size: 12.5px; color: var(--graphite); }
-  .fd-next.is-close { color: var(--coral-700); font-weight: 600; }
-  .fd-next svg { color: var(--coral-500); }
+  /* ── Resumo em números grandes ─────────────────────────────────────── */
+  .fd-sum { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 28px; padding: 20px 4px; border-radius: 22px; background: var(--ink); color: var(--cream); position: relative; overflow: hidden; }
+  .fd-sum::after { content: ''; position: absolute; width: 260px; height: 260px; right: -80px; top: -150px; border-radius: 50%; background: radial-gradient(circle, rgba(221,120,82,.55), transparent 65%); filter: blur(10px); pointer-events: none; }
+  .fd-sum div { position: relative; z-index: 1; padding: 0 16px; border-left: 1px solid rgba(250,250,246,.12); }
+  .fd-sum div:first-child { border-left: 0; }
+  .fd-sum b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: clamp(30px, 6vw, 48px); line-height: 1; letter-spacing: -0.04em; }
+  .fd-sum small { display: block; margin-top: 8px; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 1.2px; text-transform: uppercase; color: rgba(250,250,246,.6); }
 
-  .fd-sec { padding: 22px 16px 10px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--ash); }
-  .fd-how { margin: 0 16px; padding: 4px 16px; list-style: none; background: var(--paper); border: 1px solid var(--stone); border-radius: 18px; }
-  .fd-how li { display: flex; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--stone); font-size: 13px; line-height: 18px; color: var(--graphite); }
-  .fd-how li:last-child { border-bottom: 0; }
-  .fd-how p { flex: 1; margin: 0 !important; font-size: 13px !important; line-height: 18px !important; color: var(--graphite) !important; }
-  .fd-how-ic { flex: 0 0 34px; height: 34px; border-radius: 10px; background: var(--sand); color: var(--ink); display: flex; align-items: center; justify-content: center; }
+  .fd-sec { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 40px 0 14px; }
+  .fd-sec h2 { margin: 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: clamp(22px, 3vw, 30px); letter-spacing: -0.03em; color: var(--ink) !important; }
+  .fd-sec h2 em { font-style: normal; color: var(--coral-500); }
+  .fd-sec small { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--ash); }
 
-  .fd-empty { display: flex; flex-direction: column; align-items: center; padding: 40px 24px 8px; text-align: center; }
-  .fd-empty-ic { width: 64px; height: 64px; margin-bottom: 14px; border-radius: 50%; background: var(--coral-50); border: 1px solid var(--coral-100); color: var(--coral-500); display: flex; align-items: center; justify-content: center; }
-  .fd-empty h2 { margin: 0 0 6px !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 18px; color: var(--ink) !important; }
-  .fd-empty p { margin: 0; max-width: 36ch; font-size: 13px; line-height: 19px; color: var(--graphite); }
+  /* ── Os cartões ────────────────────────────────────────────────────── */
+  .fd-cards { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 0 -20px; padding: 16px 20px 18px; scrollbar-width: none; }
+  .fd-cards::-webkit-scrollbar { display: none; }
+  .fd-cards > .lc { flex: 0 0 min(88%, 440px); scroll-snap-align: center; }
+  .fd-cards.is-one > .lc { flex-basis: 100%; }
+  .fd-dots { display: flex; justify-content: center; gap: 6px; }
+  .fd-dots i { width: 6px; height: 6px; border-radius: 100px; background: var(--stone); transition: width .3s, background .3s; }
+  .fd-dots i.is-on { width: 22px; background: var(--ink); }
+
+  .lc { perspective: 1400px; position: relative; }
+  .lc-tilt { transition: transform .5s cubic-bezier(.2,.8,.2,1); transform-style: preserve-3d; }
+  .lc-flip { display: grid; transform-style: preserve-3d; transition: transform .8s cubic-bezier(.3,1.25,.4,1); }
+  .lc.is-back .lc-flip { transform: rotateY(180deg); }
+  .lc-face { grid-area: 1 / 1; position: relative; border-radius: 22px; overflow: hidden; backface-visibility: hidden; -webkit-backface-visibility: hidden; color: #fafaf6;
+    background: var(--lc-bg); box-shadow: 0 2px 4px rgba(20,14,9,.18), 0 30px 60px -26px rgba(20,14,9,.55), inset 0 1px 0 rgba(255,255,255,.14); }
+  .lc-back { transform: rotateY(180deg); }
+  .lc-face::before { content: ''; position: absolute; inset: 0; opacity: .22; mix-blend-mode: overlay; pointer-events: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+  .lc-face::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(520px circle at var(--mx, 30%) var(--my, 15%), rgba(255,255,255,.18), transparent 42%); }
+  .lc-orb { position: absolute; width: 70%; aspect-ratio: 1; right: -24%; top: -46%; border-radius: 50%; background: radial-gradient(circle, var(--lc-orb), transparent 65%); filter: blur(28px); opacity: .6; pointer-events: none; }
+  /* A proporção de cartão fica no conteúdo (overflow visível): se os
+     carimbos não couberem, o cartão cresce em vez de cortar. */
+  .lc-in { position: relative; z-index: 1; aspect-ratio: 1.586; padding: 20px 20px 18px; display: flex; flex-direction: column; gap: 16px; }
+
+  /* Uma cor por lava-rápido (como as capas no Spotify), sempre escura o
+     bastante pro creme ler bem. */
+  .lc[data-tema="brasa"]  { --lc-bg: linear-gradient(140deg, #c9643f 0%, #9a4127 58%, #b4512f 100%); --lc-orb: #f2c14e; --lc-ink: #9a4127; }
+  .lc[data-tema="noite"]  { --lc-bg: linear-gradient(140deg, #2f2820 0%, #1a1612 60%, #2f241b 100%); --lc-orb: #dd7852; --lc-ink: #28231c; }
+  .lc[data-tema="oceano"] { --lc-bg: linear-gradient(140deg, #2b6487 0%, #173a52 60%, #20506d 100%); --lc-orb: #7cc0ea; --lc-ink: #173a52; }
+  .lc[data-tema="mata"]   { --lc-bg: linear-gradient(140deg, #2e6650 0%, #163a2f 60%, #245443 100%); --lc-orb: #8be0b9; --lc-ink: #163a2f; }
+  .lc[data-tema="ameixa"] { --lc-bg: linear-gradient(140deg, #6a3656 0%, #3a1c30 60%, #57294a 100%); --lc-orb: #f08d72; --lc-ink: #3a1c30; }
+  .lc[data-tema="ocre"]   { --lc-bg: linear-gradient(140deg, #9e7a26 0%, #634a12 60%, #85651c 100%); --lc-orb: #ffe08a; --lc-ink: #634a12; }
+
+  .lc-top { display: flex; align-items: center; gap: 12px; }
+  .lc-mono { flex: 0 0 42px; height: 42px; border-radius: 50%; background: #fafaf6; color: var(--lc-ink); display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: -0.3px; box-shadow: 0 0 0 3px rgba(250,250,246,.22); }
+  .lc-id { flex: 1; min-width: 0; }
+  .lc-id b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 17px; letter-spacing: -0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lc-id small { display: block; margin-top: 2px; font-size: 12px; opacity: .72; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lc-count { text-align: right; }
+  .lc-count small { display: block; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1.4px; opacity: .6; }
+  .lc-count b { font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 15px; letter-spacing: .5px; }
+
+  /* Carimbos: redondos e levemente tortos, como tinta de carimbo; o último
+     espaço é o presente. */
+  .lc-stamps { display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: 8px; }
+  .lc-st { aspect-ratio: 1; max-width: 46px; width: 100%; justify-self: center; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1.5px dashed rgba(250,250,246,.38); color: rgba(250,250,246,.5); font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+  .lc-st.is-on { border: 0; background: #fafaf6; color: var(--lc-ink); transform: rotate(var(--rot, -8deg)); box-shadow: 0 2px 6px rgba(0,0,0,.18); }
+  .lc-st.is-gift { border-style: solid; border-color: rgba(250,250,246,.7); color: #fafaf6; }
+  .lc-st.is-gift.is-on { background: var(--coral-500); color: #fafaf6; }
+  .lc-st.is-pop { animation: lcPop .7s cubic-bezier(.3,1.6,.5,1) both; animation-delay: var(--d, 0s); }
+  @keyframes lcPop { 0% { transform: scale(1.9) rotate(30deg); opacity: 0; } 100% { transform: rotate(var(--rot, -8deg)); opacity: 1; } }
+
+  .lc-foot { margin-top: auto; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+  .lc-left b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 26px; line-height: 1; letter-spacing: -0.04em; }
+  .lc-left small { display: block; margin-top: 5px; font-size: 12.5px; line-height: 16px; opacity: .8; }
+  .lc-btn { flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; border: 0; border-radius: 100px; background: rgba(250,250,246,.16); color: #fafaf6 !important; font-size: 13px; font-weight: 600; backdrop-filter: blur(6px); transition: background .15s; }
+  .lc-btn:hover { background: rgba(250,250,246,.28); }
+  .lc-btn.is-solid { background: #fafaf6; color: var(--lc-ink) !important; }
+  .lc-btn.is-solid:hover { background: #fff; }
+
+  /* Quase lá / completo */
+  .lc.is-close .lc-tilt, .lc.is-done .lc-tilt { border-radius: 22px; }
+  .lc.is-close .lc-front { box-shadow: 0 0 0 2px var(--coral-500), 0 0 0 7px rgba(221,120,82,.2), 0 30px 60px -26px rgba(20,14,9,.55); }
+  .lc.is-done .lc-front { box-shadow: 0 0 0 2px #f2c14e, 0 0 0 7px rgba(242,193,78,.25), 0 30px 60px -26px rgba(20,14,9,.55); }
+  .lc-new { position: absolute; z-index: 3; top: -10px; left: 18px; display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px; border-radius: 100px; background: var(--coral-500); color: #fafaf6; font-size: 12px; font-weight: 700; box-shadow: 0 8px 18px -8px rgba(221,120,82,.9); animation: lcIn .5s cubic-bezier(.3,1.5,.5,1) .5s both; }
+  @keyframes lcIn { from { transform: translateY(8px) scale(.8); opacity: 0; } }
+
+  /* Verso: histórico */
+  /* O verso não cresce o cartão: ocupa a altura da frente e o histórico rola. */
+  .lc-back .lc-in { position: absolute; inset: 0; aspect-ratio: auto; gap: 10px; }
+  .lc-bh { display: flex; justify-content: space-between; align-items: baseline; }
+  .lc-bh b { font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 10px; letter-spacing: 1.4px; opacity: .7; }
+  .lc-bh small { font-size: 12px; opacity: .7; }
+  .lc-hist { flex: 1; min-height: 0; margin: 0; padding: 0; list-style: none; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(250,250,246,.35) transparent; }
+  .lc-hist li { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid rgba(250,250,246,.12); font-size: 13px; }
+  .lc-hist li:last-child { border-bottom: 0; }
+  .lc-hist .d { flex: 0 0 52px; font-family: 'JetBrains Mono', monospace; font-size: 11px; opacity: .7; }
+  .lc-hist .s { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lc-hist .t { flex-shrink: 0; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 2px 7px; border-radius: 100px; background: rgba(250,250,246,.14); }
+  .lc-hist .t.is-old { background: transparent; opacity: .5; }
+  .lc-back .lc-foot { align-items: center; }
+
+  /* Sem cartões: um cartão "fantasma" pra mostrar o que vem. */
+  .fd-ghost { margin-top: 28px; display: grid; gap: 24px; align-items: center; }
+  .fd-ghost-card { max-width: 440px; width: 100%; aspect-ratio: 1.586; border-radius: 22px; border: 1.5px dashed var(--stone); background: repeating-linear-gradient(-45deg, transparent 0 10px, rgba(232,225,209,.35) 10px 20px); padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+  .fd-ghost-card .lc-st { border-color: var(--stone); color: var(--ash); }
+  .fd-ghost-card .lc-st.is-gift { border-color: var(--coral-300); color: var(--coral-500); }
+  .fd-ghost-top { display: flex; gap: 12px; align-items: center; }
+  .fd-ghost-top i { flex: 0 0 42px; height: 42px; border-radius: 50%; background: var(--sand); }
+  .fd-ghost-top span { display: grid; gap: 6px; flex: 1; }
+  .fd-ghost-top span::before, .fd-ghost-top span::after { content: ''; height: 10px; border-radius: 6px; background: var(--sand); width: 60%; }
+  .fd-ghost-top span::after { width: 38%; }
+  .fd-ghost h2 { margin: 0 0 6px !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 22px; letter-spacing: -0.03em; color: var(--ink) !important; }
+  .fd-ghost p { margin: 0 !important; max-width: 40ch; font-size: 14px !important; line-height: 21px !important; color: var(--graphite) !important; }
   .fd-cta { display: inline-flex; align-items: center; gap: 8px; margin-top: 18px; padding: 13px 22px; border-radius: 100px; background: var(--coral-500); color: var(--cream) !important; font-size: 14px; font-weight: 600; transition: background .15s; }
   .fd-cta:hover { background: var(--coral-700); }
 
+  /* ── Perto de você ─────────────────────────────────────────────────── */
+  .fd-near { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 0 -20px; padding: 2px 20px 8px; scrollbar-width: none; }
+  .fd-near::-webkit-scrollbar { display: none; }
+  .np { flex: 0 0 230px; scroll-snap-align: start; display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 20px; background: var(--paper); border: 1px solid var(--stone); color: var(--ink) !important; transition: border-color .15s, box-shadow .2s, transform .2s; }
+  .np:hover { border-color: var(--ink); box-shadow: 0 14px 28px -22px rgba(40,35,28,.6); transform: translateY(-2px); }
+  .np-top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .np .lc-mono { flex-basis: 40px; height: 40px; background: var(--lc-bg); color: #fafaf6; box-shadow: none; font-size: 14px; }
+  .np-dist { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--graphite); padding: 3px 8px; border-radius: 100px; background: var(--sand); }
+  .np b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; letter-spacing: -0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .np-addr { display: block; margin-top: 2px; font-size: 12px; color: var(--ash); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .np-rw { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--stone); }
+  .np-rw small { display: block; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--coral-500); }
+  .np-rw span { display: block; margin-top: 3px; font-size: 13px; line-height: 17px; color: var(--graphite); }
+
+  /* ── Como funciona: 4 passos numerados ─────────────────────────────── */
+  .fd-how { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+  .fd-how li { display: flex; gap: 14px; align-items: flex-start; padding: 16px; border-radius: 18px; background: var(--paper); border: 1px solid var(--stone); }
+  .fd-how-n { flex-shrink: 0; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--coral-500); padding-top: 2px; }
+  .fd-how b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; letter-spacing: -0.2px; color: var(--ink); }
+  .fd-how p { margin: 3px 0 0 !important; font-size: 13px !important; line-height: 18px !important; color: var(--graphite) !important; }
+
   @media (min-width: 720px) {
-    .fd-head { padding: 28px 32px 8px; }
-    .fd-hc h1 { font-size: 28px; letter-spacing: -0.6px; }
-    .fd-list { padding: 20px 32px 8px; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .fd-sec { padding-left: 32px; padding-right: 32px; }
-    .fd-how { margin: 0 32px; }
+    .fd-how { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .fd-ghost { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 48px; }
+  }
+  @media (min-width: 960px) {
+    .fd-wrap { padding: 0 40px 80px; }
+    .fd-head { padding-top: 28px; }
+    .fd-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; overflow: visible; margin: 0; padding: 10px 0 0; }
+    .fd-cards.is-one { grid-template-columns: minmax(0, 520px); }
+    .fd-dots { display: none; }
+    .fd-near { margin: 0; padding: 2px 0 8px; }
+    .fd-how { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .fd-how li { flex-direction: column; gap: 10px; }
+    .lc-in { padding: 24px 24px 22px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .lc-tilt, .lc-flip { transition: none !important; }
+    .lc-st.is-pop, .lc-new { animation: none !important; }
   }
 </style>
 
-<% qs = request.query_string.present? ? "?#{request.query_string}" : "" %>
 <div class="fd">
   <div class="fd-wrap">
     <div class="fd-head">
-      <a class="fd-btn" id="fd-back" href="/users/edit<%= qs %>" aria-label="Voltar"><i data-feather="chevron-left" style="width:18px;height:18px"></i></a>
-      <div class="fd-hc"><small>RECOMPENSAS</small><h1>Fidelidade</h1></div>
+      <a class="fd-back" id="fd-back" href="/users/edit<%= qs %>" aria-label="Voltar"><i data-feather="chevron-left" style="width:18px;height:18px"></i></a>
+      <div class="fd-eyebrow">Recompensas · Fidelidade</div>
+      <% if @cards.any? %>
+        <h1 class="fd-title">Seus <em>carimbos</em>.</h1>
+        <p class="fd-lead">
+          <%= @cards.size %> <%= @cards.size == 1 ? "cartão ativo" : "cartões ativos" %><% if perto.positive? %> · <%= perto %> a uma visita da recompensa<% end %>.
+          Cada lavagem concluída vira um carimbo; o último é o prêmio.
+        </p>
+      <% else %>
+        <h1 class="fd-title">Lave. Carimbe. <em>Ganhe.</em></h1>
+        <p class="fd-lead">Alguns lava-rápidos dão uma recompensa a cada tantas visitas. Seu cartão aparece aqui na primeira lavagem concluída num deles.</p>
+      <% end %>
     </div>
 
     <% if @cards.any? %>
-      <div class="fd-list">
+      <div class="fd-sum" aria-label="Resumo">
+        <div><b><%= carimbos %></b><small>Carimbos</small></div>
+        <div><b><%= recompensas %></b><small><%= recompensas == 1 ? "Recompensa" : "Recompensas" %></small></div>
+        <div><b><%= @cards.size %></b><small><%= @cards.size == 1 ? "Cartão" : "Cartões" %></small></div>
+      </div>
+
+      <div class="fd-sec"><h2>Seus cartões</h2><small>Toque em detalhes</small></div>
+      <div class="fd-cards<%= ' is-one' if @cards.size == 1 %>" id="fd-cards">
         <% @cards.each do |c| %>
-          <% faltam = c[:milestone] ? 0 : c[:visits_required] - c[:filled] %>
-          <a class="fd-card" href="<%= car_wash_path(c[:car_wash_id]) %><%= qs %>">
-            <div class="fd-card-h">
-              <div><b><%= c[:car_wash_name] %></b><small><%= c[:reward_description] %></small></div>
-              <span class="fd-badge"><i data-feather="star" style="width:11px;height:11px"></i><%= c[:filled] %>/<%= c[:visits_required] %></span>
+          <%
+            n      = c[:visits_required]
+            faltam = c[:milestone] ? 0 : n - c[:filled]
+            cols   = n <= 6 ? n : [8, (n / 2.0).ceil].min
+            estado = c[:milestone] ? "is-done" : (faltam == 1 ? "is-close" : "")
+            hist   = c[:history] || []
+          %>
+          <article class="lc <%= estado %>" data-tema="<%= tema.(c[:car_wash_id]) %>" data-id="<%= c[:car_wash_id] %>" data-total="<%= c[:visits_total] %>" data-filled="<%= c[:filled] %>">
+            <div class="lc-tilt">
+              <div class="lc-flip">
+                <div class="lc-face lc-front">
+                  <span class="lc-orb"></span>
+                  <div class="lc-in">
+                    <div class="lc-top">
+                      <span class="lc-mono"><%= sigla.(c[:car_wash_name]) %></span>
+                      <span class="lc-id"><b><%= c[:car_wash_name] %></b><small><%= c[:reward_description] %></small></span>
+                      <span class="lc-count"><small>CARIMBOS</small><b><%= c[:filled] %>/<%= n %></b></span>
+                    </div>
+                    <div class="lc-stamps" style="--cols:<%= cols %>">
+                      <% n.times do |i| %>
+                        <% on = i < c[:filled]; gift = i == n - 1 %>
+                        <span class="lc-st<%= ' is-on' if on %><%= ' is-gift' if gift %>" style="--rot:<%= [-12, 6, -4, 10, -8, 3][i % 6] %>deg" data-i="<%= i %>" title="<%= gift ? c[:reward_description] : "Carimbo #{i + 1}" %>">
+                          <% if gift %><i data-feather="gift" style="width:45%;height:45%"></i>
+                          <% elsif on %><i data-feather="droplet" style="width:42%;height:42%"></i>
+                          <% else %><%= i + 1 %><% end %>
+                        </span>
+                      <% end %>
+                    </div>
+                    <div class="lc-foot">
+                      <div class="lc-left">
+                        <% if c[:milestone] %>
+                          <b>Completo!</b><small>Recompensa liberada nesta visita. O próximo cartão começa na sua próxima lavagem.</small>
+                        <% elsif faltam == 1 %>
+                          <b>Falta 1</b><small>Na próxima visita você ganha.</small>
+                        <% else %>
+                          <b>Faltam <%= faltam %></b><small>visitas pra recompensa.</small>
+                        <% end %>
+                      </div>
+                      <button type="button" class="lc-btn" data-flip>Detalhes<i data-feather="rotate-cw" style="width:13px;height:13px"></i></button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="lc-face lc-back" aria-hidden="true">
+                  <span class="lc-orb"></span>
+                  <div class="lc-in">
+                    <div class="lc-bh"><b>HISTÓRICO</b><small><%= c[:visits_total] %> <%= c[:visits_total] == 1 ? "visita" : "visitas" %><% if c[:rewards_earned].to_i.positive? %> · <%= c[:rewards_earned] %> <%= c[:rewards_earned] == 1 ? "recompensa" : "recompensas" %><% end %></small></div>
+                    <ul class="lc-hist">
+                      <% hist.each_with_index do |h, idx| %>
+                        <% atual = idx < c[:filled] %>
+                        <li>
+                          <span class="d"><%= quando.(h[:at]) %></span>
+                          <span class="s"><%= h[:service].presence || "Lavagem" %></span>
+                          <span class="t<%= ' is-old' unless atual %>"><%= atual ? "##{c[:filled] - idx}" : "ciclo ant." %></span>
+                        </li>
+                      <% end %>
+                    </ul>
+                    <div class="lc-foot">
+                      <a class="lc-btn is-solid" href="<%= car_wash_path(c[:car_wash_id]) %><%= qs %>"><i data-feather="calendar" style="width:14px;height:14px"></i>Agendar e ganhar carimbo</a>
+                      <button type="button" class="lc-btn" data-flip aria-label="Voltar pra frente do cartão"><i data-feather="rotate-ccw" style="width:14px;height:14px"></i></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="fd-stamps">
-              <% c[:visits_required].times do |i| %>
-                <i class="<%= 'is-on' if i < c[:filled] %>"><% if i < c[:filled] %><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg><% end %></i>
-              <% end %>
-            </div>
-            <% if c[:milestone] %>
-              <div class="fd-next is-close"><i data-feather="award" style="width:14px;height:14px"></i>Cartão completo! A recompensa sai nesta visita; o próximo cartão começa em seguida.</div>
-            <% elsif faltam == 1 %>
-              <div class="fd-next is-close"><i data-feather="gift" style="width:14px;height:14px"></i>Na próxima visita você ganha a recompensa.</div>
-            <% else %>
-              <div class="fd-next"><i data-feather="gift" style="width:14px;height:14px"></i>Faltam <%= faltam %> visitas pra recompensa.</div>
-            <% end %>
-          </a>
+          </article>
         <% end %>
       </div>
+      <% if @cards.size > 1 %>
+        <div class="fd-dots" id="fd-dots"><% @cards.size.times do |i| %><i class="<%= 'is-on' if i.zero? %>"></i><% end %></div>
+      <% end %>
     <% else %>
-      <div class="fd-empty">
-        <div class="fd-empty-ic"><i data-feather="gift" style="width:28px;height:28px"></i></div>
-        <h2>Nenhum cartão ainda</h2>
-        <p>Alguns lava-rápidos dão uma recompensa a cada tantas visitas. Seu cartão começa na primeira lavagem concluída num deles.</p>
-        <a class="fd-cta" href="/<%= qs %>"><i data-feather="map-pin" style="width:16px;height:16px"></i>Ver lava-rápidos perto</a>
+      <div class="fd-ghost">
+        <div class="fd-ghost-card" aria-hidden="true">
+          <div class="fd-ghost-top"><i></i><span></span></div>
+          <div class="lc-stamps" style="--cols:5">
+            <% 10.times do |i| %>
+              <span class="lc-st<%= ' is-gift' if i == 9 %>"><% if i == 9 %><i data-feather="gift" style="width:45%;height:45%"></i><% else %><%= i + 1 %><% end %></span>
+            <% end %>
+          </div>
+        </div>
+        <div>
+          <h2>Seu primeiro cartão</h2>
+          <p>Os lava-rápidos com programa mostram o selo <b style="color:var(--ink)">Fidelidade</b> na página deles. Lave lá uma vez e o cartão aparece aqui, já com o primeiro carimbo.</p>
+          <a class="fd-cta" href="/<%= qs %>"><i data-feather="map-pin" style="width:16px;height:16px"></i>Ver lava-rápidos perto</a>
+        </div>
       </div>
     <% end %>
 
-    <div class="fd-sec">Como funciona</div>
-    <ul class="fd-how">
-      <li><span class="fd-how-ic"><i data-feather="award" style="width:16px;height:16px"></i></span><p>Lava-rápidos com programa mostram o selo <b style="color:var(--ink)">Fidelidade</b> na página deles, com a recompensa.</p></li>
-      <li><span class="fd-how-ic"><i data-feather="check" style="width:16px;height:16px"></i></span><p>Cada lavagem concluída ali conta um carimbo no seu cartão.</p></li>
-      <li><span class="fd-how-ic"><i data-feather="gift" style="width:16px;height:16px"></i></span><p>Na visita que completa o cartão, o lava-rápido te dá a recompensa.</p></li>
-      <li><span class="fd-how-ic"><i data-feather="refresh-cw" style="width:16px;height:16px"></i></span><p>Depois disso o cartão zera e começa um novo ciclo.</p></li>
-    </ul>
+    <% if @nearby.any? %>
+      <div class="fd-sec"><h2>Programas <em>perto</em></h2><small><%= params[:latitude].present? ? "Do mais perto" : "Com fidelidade" %></small></div>
+      <div class="fd-near">
+        <% @nearby.each do |p| %>
+          <a class="np lc" data-tema="<%= tema.(p[:car_wash_id]) %>" href="<%= car_wash_path(p[:car_wash_id]) %><%= qs %>">
+            <div class="np-top">
+              <span class="lc-mono"><%= sigla.(p[:car_wash_name]) %></span>
+              <% if p[:distance_km] %><span class="np-dist"><%= p[:distance_km].to_s.sub(".", ",") %> km</span><% end %>
+            </div>
+            <div><b><%= p[:car_wash_name] %></b><span class="np-addr"><%= p[:address] %></span></div>
+            <div class="np-rw"><small>A cada <%= p[:visits_required] %> <%= p[:visits_required] == 1 ? "visita" : "visitas" %></small><span><%= p[:reward_description] %></span></div>
+          </a>
+        <% end %>
+      </div>
+    <% end %>
+
+    <div class="fd-sec"><h2>Como funciona</h2></div>
+    <ol class="fd-how">
+      <li><span class="fd-how-n">01</span><div><b>Ache o selo</b><p>Lava-rápidos com programa mostram o selo Fidelidade na página deles, com a recompensa.</p></div></li>
+      <li><span class="fd-how-n">02</span><div><b>Lave e carimbe</b><p>Cada lavagem concluída ali vira um carimbo no seu cartão.</p></div></li>
+      <li><span class="fd-how-n">03</span><div><b>Ganhe o prêmio</b><p>Na visita que completa o cartão, o lava-rápido te dá a recompensa.</p></div></li>
+      <li><span class="fd-how-n">04</span><div><b>Recomece</b><p>Depois disso o cartão zera e começa um novo ciclo.</p></div></li>
+    </ol>
   </div>
   <%= render "shared/site_footer", audience: :client %>
 </div>
 
 <script>
 (function () {
-  var back = document.getElementById('fd-back');
-  back.addEventListener('click', function (e) {
+  var REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  document.getElementById('fd-back').addEventListener('click', function (e) {
     if (document.referrer && document.referrer.indexOf(location.origin) === 0 && history.length > 1) { e.preventDefault(); history.back(); }
   });
   if (window.feather) feather.replace();
+
+  var cards = Array.prototype.slice.call(document.querySelectorAll('#fd-cards .lc'));
+
+  // Virar o cartão (Detalhes ↔ frente).
+  cards.forEach(function (card) {
+    card.querySelectorAll('[data-flip]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var back = card.classList.toggle('is-back');
+        card.querySelector('.lc-back').setAttribute('aria-hidden', back ? 'false' : 'true');
+        card.querySelector('.lc-front').setAttribute('aria-hidden', back ? 'true' : 'false');
+      });
+    });
+  });
+
+  // Inclinação e brilho seguindo o cursor, como em Pagamentos.
+  if (!REDUCED && window.matchMedia('(hover: hover)').matches) {
+    cards.forEach(function (card) {
+      var tilt = card.querySelector('.lc-tilt');
+      tilt.addEventListener('mousemove', function (e) {
+        var r = tilt.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+        tilt.style.transform = 'rotateX(' + ((0.5 - y) * 8) + 'deg) rotateY(' + ((x - 0.5) * 10) + 'deg)';
+        card.querySelectorAll('.lc-face').forEach(function (f) { f.style.setProperty('--mx', (x * 100) + '%'); f.style.setProperty('--my', (y * 100) + '%'); });
+      });
+      tilt.addEventListener('mouseleave', function () { tilt.style.transform = ''; });
+    });
+  }
+
+  // Carrossel no celular: pontos acompanham o cartão do meio.
+  var strip = document.getElementById('fd-cards'), dots = document.getElementById('fd-dots');
+  if (strip && dots) {
+    var ds = dots.querySelectorAll('i'), raf = 0;
+    strip.addEventListener('scroll', function () {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(function () {
+        var mid = strip.scrollLeft + strip.clientWidth / 2, best = 0, bestD = Infinity;
+        cards.forEach(function (c, i) { var d = Math.abs(c.offsetLeft + c.offsetWidth / 2 - mid); if (d < bestD) { bestD = d; best = i; } });
+        ds.forEach(function (d, i) { d.classList.toggle('is-on', i === best); });
+      });
+    }, { passive: true });
+  }
+
+  // "+1 carimbo": compara com o que o cliente viu da última vez (só neste
+  // navegador). Na primeira visita só guarda.
+  var KEY = 'loov.fidelidade.vistos', vistos = null;
+  try { vistos = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { vistos = null; }
+  var agora = {};
+  cards.forEach(function (card) {
+    var id = card.dataset.id, total = +card.dataset.total, filled = +card.dataset.filled;
+    agora[id] = total;
+    if (!vistos) return;
+    var antes = vistos[id] || 0, novos = Math.min(total - antes, filled);
+    if (novos <= 0) return;
+    var tag = document.createElement('span');
+    tag.className = 'lc-new';
+    tag.textContent = '+' + novos + (novos === 1 ? ' carimbo' : ' carimbos');
+    card.appendChild(tag);
+    if (REDUCED) return;
+    for (var k = 0; k < novos; k++) {
+      var st = card.querySelector('.lc-st[data-i="' + (filled - 1 - k) + '"]');
+      if (st) { st.style.setProperty('--d', (0.35 + (novos - 1 - k) * 0.15) + 's'); st.classList.add('is-pop'); }
+    }
+  });
+  try { localStorage.setItem(KEY, JSON.stringify(agora)); } catch (e) {}
 })();
 </script>

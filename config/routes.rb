@@ -71,7 +71,8 @@ Rails.application.routes.draw do
     end
     resources :reviews,    only: [:create]
     resources :favorites,  only: [:index, :create, :destroy]
-    get 'loyalty_cards', to: 'loyalty_cards#index'
+    get 'loyalty_cards',        to: 'loyalty_cards#index'
+    get 'loyalty_cards/nearby', to: 'loyalty_cards#nearby'
     get  'tour',      to: 'tours#show'
     post 'tour/seen', to: 'tours#seen'
 
