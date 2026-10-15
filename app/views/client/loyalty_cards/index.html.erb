@@ -5,22 +5,33 @@
   Mesmo desenho de Pagamentos (/client/profile/edit?tab=pagamento): título
   grande e respiro (wiemer), o cartão como objeto físico com grão, brilho que
   segue o cursor e verso (Apple Wallet). Do Kenz e do Reward Peak (Behance):
-  uma cor por lava-rápido, carimbos com o prêmio
-  no último espaço, "Detalhes" que vira o cartão e uma vitrine de programas
-  perto.
+  10 modelos de cartão (cor + desenho), carimbos com o prêmio no último
+  espaço, "Detalhes" que vira o cartão e uma vitrine de programas perto.
 
     · Cartão: carimbos (o último é o presente), "Faltam N" e, no verso, o
       histórico de visitas (data + serviço) e "Agendar e ganhar carimbo".
       Celular: carrossel com pontos; computador: grade.
     · "+1 carimbo": quando ganhou carimbo desde a última vez que abriu.
-    · Perto de você: lava-rápidos com programa onde ainda não tem cartão.
+    · Sem cartões: a ilustração do passarinho, como em Agendamentos.
+    · "Comece outro cartão": lava-rápidos com programa onde ainda não tem
+      cartão, do mais perto pro mais longe.
   Movimento respeita "reduzir movimento" do sistema.
 %>
 <%
   qs     = request.query_string.present? ? "?#{request.query_string}" : ""
   meses  = %w[jan fev mar abr mai jun jul ago set out nov dez]
-  temas  = %w[brasa noite oceano mata ameixa ocre]
+  # 10 modelos (cor + desenho). Cada lava-rápido tem o seu preferido (pelo
+  # id, então ele não muda de uma visita pra outra); se dois cartões do
+  # cliente caírem no mesmo, o segundo pega o próximo livre.
+  temas  = %w[brasa noite oceano mata ameixa ocre lagoa oliva indigo rubi]
   tema   = ->(id) { temas[id.to_i % temas.size] }
+  usados = {}
+  tema_do_cartao = @cards.to_h do |c|
+    pref = c[:car_wash_id].to_i % temas.size
+    i    = (0...temas.size).map { |k| (pref + k) % temas.size }.find { |k| !usados[k] } || pref
+    usados[i] = true
+    [c[:car_wash_id], temas[i]]
+  end
   sigla  = ->(nome) { nome.to_s.split(/\s+/).reject { |w| w.length < 2 }.first(2).map { |w| w[0] }.join.upcase.presence || "L" }
   quando = ->(iso) { t = Time.zone.parse(iso.to_s)&.in_time_zone("America/Sao_Paulo"); t ? "#{t.day} #{meses[t.month - 1]}" : "" }
 %>
@@ -81,14 +92,31 @@
      carimbos não couberem, o cartão cresce em vez de cortar. */
   .lc-in { position: relative; z-index: 1; aspect-ratio: 1.586; padding: 20px 20px 18px; display: flex; flex-direction: column; gap: 16px; }
 
-  /* Uma cor por lava-rápido (como as capas no Spotify), sempre escura o
-     bastante pro creme ler bem. */
-  .lc[data-tema="brasa"]  { --lc-bg: linear-gradient(140deg, #c9643f 0%, #9a4127 58%, #b4512f 100%); --lc-orb: #f2c14e; --lc-ink: #9a4127; }
-  .lc[data-tema="noite"]  { --lc-bg: linear-gradient(140deg, #2f2820 0%, #1a1612 60%, #2f241b 100%); --lc-orb: #dd7852; --lc-ink: #28231c; }
-  .lc[data-tema="oceano"] { --lc-bg: linear-gradient(140deg, #2b6487 0%, #173a52 60%, #20506d 100%); --lc-orb: #7cc0ea; --lc-ink: #173a52; }
-  .lc[data-tema="mata"]   { --lc-bg: linear-gradient(140deg, #2e6650 0%, #163a2f 60%, #245443 100%); --lc-orb: #8be0b9; --lc-ink: #163a2f; }
-  .lc[data-tema="ameixa"] { --lc-bg: linear-gradient(140deg, #6a3656 0%, #3a1c30 60%, #57294a 100%); --lc-orb: #f08d72; --lc-ink: #3a1c30; }
-  .lc[data-tema="ocre"]   { --lc-bg: linear-gradient(140deg, #9e7a26 0%, #634a12 60%, #85651c 100%); --lc-orb: #ffe08a; --lc-ink: #634a12; }
+  /* 10 modelos, como as capas no Spotify: cada um com uma cor (sempre escura
+     o bastante pro creme ler bem) e um desenho próprio, que aparece no canto
+     de baixo e some antes do nome e dos carimbos. */
+  .lc-pat { position: absolute; inset: 0; pointer-events: none; background: var(--lc-pat); opacity: .9;
+    -webkit-mask-image: linear-gradient(120deg, transparent 38%, #000 82%); mask-image: linear-gradient(120deg, transparent 38%, #000 82%); }
+  .lc[data-tema="brasa"]  { --lc-bg: linear-gradient(140deg, #c9643f 0%, #9a4127 58%, #b4512f 100%); --lc-orb: #f2c14e; --lc-ink: #9a4127;
+    --lc-pat: repeating-radial-gradient(circle at 100% 100%, transparent 0 16px, rgba(255,255,255,.13) 16px 18px); }
+  .lc[data-tema="noite"]  { --lc-bg: linear-gradient(140deg, #2f2820 0%, #1a1612 60%, #2f241b 100%); --lc-orb: #dd7852; --lc-ink: #28231c;
+    --lc-pat: repeating-linear-gradient(135deg, rgba(255,255,255,.09) 0 2px, transparent 2px 11px); }
+  .lc[data-tema="oceano"] { --lc-bg: linear-gradient(140deg, #2b6487 0%, #173a52 60%, #20506d 100%); --lc-orb: #7cc0ea; --lc-ink: #173a52;
+    --lc-pat: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='18'%3E%3Cpath d='M0 9 Q11 1 22 9 T44 9' fill='none' stroke='white' stroke-opacity='.16' stroke-width='2'/%3E%3C/svg%3E"); }
+  .lc[data-tema="mata"]   { --lc-bg: linear-gradient(140deg, #2e6650 0%, #163a2f 60%, #245443 100%); --lc-orb: #8be0b9; --lc-ink: #163a2f;
+    --lc-pat: radial-gradient(rgba(255,255,255,.2) 1.6px, transparent 2px) 0 0 / 15px 15px; }
+  .lc[data-tema="ameixa"] { --lc-bg: linear-gradient(140deg, #6a3656 0%, #3a1c30 60%, #57294a 100%); --lc-orb: #f08d72; --lc-ink: #3a1c30;
+    --lc-pat: repeating-conic-gradient(rgba(255,255,255,.08) 0 25%, transparent 0 50%) 0 0 / 26px 26px; }
+  .lc[data-tema="ocre"]   { --lc-bg: linear-gradient(140deg, #9e7a26 0%, #634a12 60%, #85651c 100%); --lc-orb: #ffe08a; --lc-ink: #634a12;
+    --lc-pat: linear-gradient(rgba(255,255,255,.12) 1.5px, transparent 1.5px) 0 0 / 20px 20px, linear-gradient(90deg, rgba(255,255,255,.12) 1.5px, transparent 1.5px) 0 0 / 20px 20px; }
+  .lc[data-tema="lagoa"]  { --lc-bg: linear-gradient(140deg, #23807c 0%, #0f4a4a 60%, #1a6663 100%); --lc-orb: #9be8de; --lc-ink: #0f4a4a;
+    --lc-pat: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='16'%3E%3Cpath d='M0 13 L12 4 L24 13' fill='none' stroke='white' stroke-opacity='.16' stroke-width='2'/%3E%3C/svg%3E"); }
+  .lc[data-tema="oliva"]  { --lc-bg: linear-gradient(140deg, #76803a 0%, #3f4719 60%, #5d6629 100%); --lc-orb: #e8e08a; --lc-ink: #3f4719;
+    --lc-pat: repeating-radial-gradient(ellipse 140% 90% at 0% 120%, transparent 0 12px, rgba(255,255,255,.12) 12px 13.5px); }
+  .lc[data-tema="indigo"] { --lc-bg: linear-gradient(140deg, #4552a3 0%, #222a5c 60%, #36428a 100%); --lc-orb: #a9b6ff; --lc-ink: #222a5c;
+    --lc-pat: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cpath d='M12 7v10M7 12h10' stroke='white' stroke-opacity='.2' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E"); }
+  .lc[data-tema="rubi"]   { --lc-bg: linear-gradient(140deg, #ad3442 0%, #631822 60%, #8c2834 100%); --lc-orb: #ffb38a; --lc-ink: #631822;
+    --lc-pat: repeating-conic-gradient(from 180deg at 100% 100%, rgba(255,255,255,.1) 0 4deg, transparent 4deg 11deg); }
 
   .lc-top { display: flex; align-items: center; gap: 12px; }
   .lc-mono { flex: 0 0 42px; height: 42px; border-radius: 50%; background: #fafaf6; color: var(--lc-ink); display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: -0.3px; box-shadow: 0 0 0 3px rgba(250,250,246,.22); }
@@ -145,18 +173,12 @@
   .lc-back .lc-foot { align-items: center; }
 
   /* Sem cartões: um cartão "fantasma" pra mostrar o que vem. */
-  .fd-ghost { margin-top: 28px; display: grid; gap: 24px; align-items: center; }
-  .fd-ghost-card { max-width: 440px; width: 100%; aspect-ratio: 1.586; border-radius: 22px; border: 1.5px dashed var(--stone); background: repeating-linear-gradient(-45deg, transparent 0 10px, rgba(232,225,209,.35) 10px 20px); padding: 20px; display: flex; flex-direction: column; gap: 16px; }
-  .fd-ghost-card .lc-st { border-color: var(--stone); color: var(--ash); }
-  .fd-ghost-card .lc-st.is-gift { border-color: var(--coral-300); color: var(--coral-500); }
-  .fd-ghost-top { display: flex; gap: 12px; align-items: center; }
-  .fd-ghost-top i { flex: 0 0 42px; height: 42px; border-radius: 50%; background: var(--sand); }
-  .fd-ghost-top span { display: grid; gap: 6px; flex: 1; }
-  .fd-ghost-top span::before, .fd-ghost-top span::after { content: ''; height: 10px; border-radius: 6px; background: var(--sand); width: 60%; }
-  .fd-ghost-top span::after { width: 38%; }
-  .fd-ghost h2 { margin: 0 0 6px !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 22px; letter-spacing: -0.03em; color: var(--ink) !important; }
-  .fd-ghost p { margin: 0 !important; max-width: 40ch; font-size: 14px !important; line-height: 21px !important; color: var(--graphite) !important; }
-  .fd-cta { display: inline-flex; align-items: center; gap: 8px; margin-top: 18px; padding: 13px 22px; border-radius: 100px; background: var(--coral-500); color: var(--cream) !important; font-size: 14px; font-weight: 600; transition: background .15s; }
+  /* Sem cartões: a ilustração do passarinho, como o vazio de Agendamentos. */
+  .fd-empty { display: flex; flex-direction: column; align-items: center; padding: 32px 12px 8px; text-align: center; }
+  .fd-empty img { width: min(84%, 340px); height: auto; margin-bottom: 18px; }
+  .fd-empty h2 { margin: 0 0 8px !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 600; font-size: 18px; letter-spacing: -0.3px; color: var(--ink) !important; }
+  .fd-empty p { margin: 0 !important; max-width: 36ch; font-size: 13px !important; line-height: 20px !important; color: var(--graphite) !important; }
+  .fd-cta { display: inline-flex; align-items: center; gap: 8px; margin-top: 20px; padding: 13px 22px; border-radius: 100px; background: var(--coral-500); color: var(--cream) !important; font-size: 14px; font-weight: 600; transition: background .15s; }
   .fd-cta:hover { background: var(--coral-700); }
 
   /* ── Perto de você ─────────────────────────────────────────────────── */
@@ -173,9 +195,6 @@
   .np-rw small { display: block; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--coral-500); }
   .np-rw span { display: block; margin-top: 3px; font-size: 13px; line-height: 17px; color: var(--graphite); }
 
-  @media (min-width: 720px) {
-    .fd-ghost { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 48px; }
-  }
   @media (min-width: 960px) {
     .fd-wrap { padding: 0 40px 80px; }
     .fd-head { padding-top: 28px; }
@@ -201,7 +220,6 @@
         <p class="fd-lead">Cada lavagem concluída vira um carimbo; o último é o prêmio.</p>
       <% else %>
         <h1 class="fd-title">Lave. Carimbe. <em>Ganhe.</em></h1>
-        <p class="fd-lead">Alguns lava-rápidos dão uma recompensa a cada tantas visitas. Seu cartão aparece aqui na primeira lavagem concluída num deles.</p>
       <% end %>
     </div>
 
@@ -215,11 +233,11 @@
             estado = c[:milestone] ? "is-done" : (faltam == 1 ? "is-close" : "")
             hist   = c[:history] || []
           %>
-          <article class="lc <%= estado %>" data-tema="<%= tema.(c[:car_wash_id]) %>" data-id="<%= c[:car_wash_id] %>" data-total="<%= c[:visits_total] %>" data-filled="<%= c[:filled] %>">
+          <article class="lc <%= estado %>" data-tema="<%= tema_do_cartao[c[:car_wash_id]] %>" data-id="<%= c[:car_wash_id] %>" data-total="<%= c[:visits_total] %>" data-filled="<%= c[:filled] %>">
             <div class="lc-tilt">
               <div class="lc-flip">
                 <div class="lc-face lc-front">
-                  <span class="lc-orb"></span>
+                  <span class="lc-orb"></span><span class="lc-pat"></span>
                   <div class="lc-in">
                     <div class="lc-top">
                       <span class="lc-mono" data-logo="<%= c[:car_wash_id] %>" data-name="<%= c[:car_wash_name] %>"><%= sigla.(c[:car_wash_name]) %></span>
@@ -252,7 +270,7 @@
                 </div>
 
                 <div class="lc-face lc-back" aria-hidden="true">
-                  <span class="lc-orb"></span>
+                  <span class="lc-orb"></span><span class="lc-pat"></span>
                   <div class="lc-in">
                     <div class="lc-bh"><b>HISTÓRICO</b><small><%= c[:visits_total] %> <%= c[:visits_total] == 1 ? "visita" : "visitas" %><% if c[:rewards_earned].to_i.positive? %> · <%= c[:rewards_earned] %> <%= c[:rewards_earned] == 1 ? "recompensa" : "recompensas" %><% end %></small></div>
                     <ul class="lc-hist">
@@ -280,25 +298,16 @@
         <div class="fd-dots" id="fd-dots"><% @cards.size.times do |i| %><i class="<%= 'is-on' if i.zero? %>"></i><% end %></div>
       <% end %>
     <% else %>
-      <div class="fd-ghost">
-        <div class="fd-ghost-card" aria-hidden="true">
-          <div class="fd-ghost-top"><i></i><span></span></div>
-          <div class="lc-stamps" style="--cols:5">
-            <% 10.times do |i| %>
-              <span class="lc-st<%= ' is-gift' if i == 9 %>"><% if i == 9 %><i data-feather="gift" style="width:45%;height:45%"></i><% else %><%= i + 1 %><% end %></span>
-            <% end %>
-          </div>
-        </div>
-        <div>
-          <h2>Seu primeiro cartão</h2>
-          <p>Os lava-rápidos com programa mostram o selo <b style="color:var(--ink)">Fidelidade</b> na página deles. Lave lá uma vez e o cartão aparece aqui, já com o primeiro carimbo.</p>
-          <a class="fd-cta" href="/<%= qs %>"><i data-feather="map-pin" style="width:16px;height:16px"></i>Ver lava-rápidos perto</a>
-        </div>
+      <div class="fd-empty">
+        <img src="/illustrations/fidelidade-vazia.svg" alt="Ilustração de um cartão de carimbos vazio, com o presente no último espaço e um passarinho pousado">
+        <h2>Nenhum cartão ainda</h2>
+        <p>Lave num lava-rápido com o selo Fidelidade e seu cartão aparece aqui, já com o primeiro carimbo.</p>
+        <a class="fd-cta" href="/<%= qs %>">Encontrar lava-rápido</a>
       </div>
     <% end %>
 
     <% if @nearby.any? %>
-      <div class="fd-sec"><h2>Programas <em>perto</em></h2><small><%= params[:latitude].present? ? "Do mais perto" : "Com fidelidade" %></small></div>
+      <div class="fd-sec"><h2><%= @cards.any? ? "Comece outro" : "Comece seu" %> <em>cartão</em></h2><small><%= params[:latitude].present? ? "Do mais perto" : "Com fidelidade" %></small></div>
       <div class="fd-near">
         <% @nearby.each do |p| %>
           <a class="np lc" data-tema="<%= tema.(p[:car_wash_id]) %>" href="<%= car_wash_path(p[:car_wash_id]) %><%= qs %>">
