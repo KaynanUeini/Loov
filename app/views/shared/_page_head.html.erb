@@ -9,7 +9,7 @@
     back_href  — pra onde o voltar leva sem histórico (obrigatório)
     back_id    — id do voltar (opcional; a página pode tratar o clique)
     eyebrow    — sobretítulo
-    title      — título (pode ter <em> pra parte coral; passe html_safe)
+    title      — título (passe html_safe; <em> fica preto como o resto — modelo das páginas da conta é título todo em tinta)
     title_id   — id do título (opcional)
     lead       — frase de apoio (opcional)
     lead_id    — id da frase (opcional)
@@ -23,7 +23,7 @@
   .lp-back svg { display: block; }
   .lp-eyebrow { margin-top: 18px; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px; color: var(--ash); text-transform: uppercase; }
   .lp-title { margin: 6px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: clamp(36px, 6vw, 72px); line-height: .98; letter-spacing: -0.04em; color: var(--ink) !important; }
-  .lp-title em { font-style: normal; color: var(--coral-500); }
+  .lp-title em { font-style: normal; color: inherit; }
   .lp-lead { margin: 14px 0 0 !important; max-width: 46ch; font-size: 15px !important; line-height: 22px !important; color: var(--graphite) !important; }
   .lp-lead:empty { display: none; }
   @media (min-width: 960px) { .lp-head { padding-top: 28px; } }
