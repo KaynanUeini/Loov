@@ -300,9 +300,19 @@
       color: var(--ink) !important;
       margin: 0 0 18px !important;
     }
-    /* Títulos todos em tinta (modelo das páginas da conta): o destaque
-       não muda de cor nem ganha traço. */
-    .loov-h1 .accent { color: inherit; white-space: nowrap; }
+    .loov-h1 .accent {
+      color: var(--coral-500);
+      position: relative;
+      white-space: nowrap;
+    }
+    .loov-h1 .accent::after {
+      content: '';
+      position: absolute; left: 0; right: 0; bottom: -3px;
+      height: 4px;
+      background: linear-gradient(90deg, var(--coral-300), var(--coral-500));
+      border-radius: 4px;
+      opacity: .7;
+    }
 
     .loov-h2 {
       font-family: 'Space Grotesk', sans-serif !important;

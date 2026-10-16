@@ -56,7 +56,17 @@
       color: var(--ink);
       margin-bottom: 12px;
     }
-    h1 .accent { color: inherit; white-space: nowrap; }
+    h1 .accent {
+      color: var(--coral-500);
+      position: relative;
+      white-space: nowrap;
+    }
+    h1 .accent::after {
+      content: ''; position: absolute; left: 0; right: 0; bottom: -2px;
+      height: 3px;
+      background: linear-gradient(90deg, var(--coral-300), var(--coral-500));
+      border-radius: 4px; opacity: .7;
+    }
     .lead {
       font-size: 14.5px; color: var(--graphite);
       line-height: 1.55;
