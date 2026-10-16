@@ -3,13 +3,14 @@
   app, com a mesma lista (Owner::NotificationsController#build_notifications)
   embutida na página. Mesmo desenho da Central do cliente.
 
-    · Cabeçalho CENTRAL / Notificações; a bolinha coral com o nº de não lidas
-      e a faixa "N não lidas · MARCAR TODAS" marcam todas como lidas.
+    · Cabeçalho padrão (shared/page_head), igual à Central do cliente. Abrir
+      a página já marca todas como lidas: nesta visita as novas mantêm o
+      ponto coral e a frase diz quantas chegaram; na próxima já vêm lidas.
     · Cartão: ícone e etiqueta pelo tipo (DISPONÍVEL, APROVAÇÃO, SUPORTE,
       IA INSIGHTS, ATENDENTE), tempo relativo, ponto coral se não lida. Mudança
       feita por atendente abre a lista do que mudou em "VER DETALHES".
-    · Tocar marca como lida e leva pra tela do assunto no site (Suporte,
-      IA insights, Gerenciar); aprovação abre a gaveta de Aprovações do painel.
+    · Tocar leva pra tela do assunto no site (Suporte, IA insights,
+      Gerenciar); aprovação abre a gaveta de Aprovações do painel.
 %>
 <script src="/vendor/feather-4.29.2.min.js"></script>
 
@@ -20,27 +21,10 @@
   .nt button { font-family: inherit; line-height: normal; cursor: pointer; }
   .nt svg.feather { display: block; }
   .nt a { text-decoration: none; }
-  .nt-wrap { width: 100%; max-width: 760px; margin: 0 auto; }
+  .nt-wrap { width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 20px 64px; }
 
-  .nt-head { display: flex; align-items: center; padding: 8px 16px; }
-  .nt-btn { flex: 0 0 40px; height: 40px; border-radius: 50%; border: 0; background: var(--sand); color: var(--ink) !important; display: flex; align-items: center; justify-content: center; transition: background .15s; }
-  a.nt-btn:hover { background: var(--stone); }
-  .nt-hc { flex: 1; text-align: center; }
-  .nt-hc small { display: block; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; color: var(--coral-500); }
-  .nt-hc h1 { margin: 2px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 20px; letter-spacing: -0.3px; color: var(--ink) !important; }
-  .nt-count { flex: 0 0 auto; min-width: 40px; height: 40px; padding: 0 10px; border: 0; border-radius: 20px; background: var(--coral-500); color: var(--cream); font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; transition: transform .15s; }
-  .nt-count:hover { transform: scale(1.05); }
-  .nt-count.is-off { visibility: hidden; }
-
-  .nt-strip { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 9px 16px; background: var(--coral-50); border-top: 1px solid var(--coral-100); border-bottom: 1px solid var(--coral-100); }
-  .nt-strip.is-off { display: none; }
-  .nt-strip i { width: 6px; height: 6px; border-radius: 50%; background: var(--coral-500); }
-  .nt-strip span { flex: 1; font-size: 12px; font-weight: 600; color: var(--coral-700); }
-  .nt-strip button { padding: 9px 12px; border: 1px solid var(--coral-500); border-radius: 100px; background: transparent; color: var(--coral-700); font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: .6px; transition: background .15s; }
-  .nt-strip button:hover { background: var(--coral-100); }
-  .nt-strip button[disabled] { opacity: .6; cursor: default; }
-
-  .nt-list { display: grid; gap: 10px; padding: 16px 16px 48px; }
+  /* Lista na largura de leitura; o cabeçalho segue a largura da página. */
+  .nt-list { display: grid; gap: 10px; max-width: 760px; padding-top: 28px; }
   .nt-card { background: var(--paper); border: 1px solid var(--stone); border-radius: 16px; padding: 14px; box-shadow: 0 2px 6px -4px rgba(40,35,28,.2); transition: border-color .15s, box-shadow .2s; }
   .nt-card:hover { border-color: var(--ink); box-shadow: 0 12px 28px -22px rgba(40,35,28,.55); }
   .nt-card.is-unread { border-color: var(--coral-100); }
@@ -61,28 +45,23 @@
   .nt-items { margin: 10px 0 0 48px; padding: 0; list-style: none; display: grid; gap: 6px; }
   .nt-items li { position: relative; padding-left: 14px; font-size: 12.5px; line-height: 18px; color: var(--ink); }
   .nt-items li::before { content: ""; position: absolute; left: 0; top: 7px; width: 5px; height: 5px; border-radius: 50%; background: var(--coral-500); }
-  .nt-empty { display: flex; flex-direction: column; align-items: center; padding: 60px 20px; text-align: center; }
-  .nt-empty-ic { width: 64px; height: 64px; margin-bottom: 14px; border-radius: 50%; background: var(--coral-50); border: 1px solid var(--coral-100); color: var(--coral-500); display: flex; align-items: center; justify-content: center; }
+  .nt-empty { display: flex; flex-direction: column; align-items: center; padding: 32px 20px 60px; text-align: center; }
+  /* A ilustração do passarinho, como o vazio da Central do cliente. */
+  .nt-empty img { width: min(84%, 340px); height: auto; margin-bottom: 18px; }
   .nt-empty h2 { margin: 0 0 4px !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 18px; letter-spacing: -0.2px; color: var(--ink) !important; }
   .nt-empty p { margin: 0; font-size: 13px; line-height: 18px; color: var(--ash); }
 
   @media (min-width: 720px) {
-    .nt-head { padding: 28px 32px 8px; }
-    .nt-hc h1 { font-size: 28px; letter-spacing: -0.6px; }
-    .nt-strip { margin: 16px 32px 0; border: 1px solid var(--coral-100); border-radius: 14px; }
-    .nt-list { padding: 20px 32px 64px; gap: 12px; }
+    .nt-list { padding-top: 36px; gap: 12px; }
     .nt-card { padding: 16px 18px; }
   }
+  @media (min-width: 960px) { .nt-wrap { padding: 0 40px 80px; } }
 </style>
 
 <div class="nt">
   <div class="nt-wrap">
-    <div class="nt-head">
-      <a class="nt-btn" id="nt-back" href="/users/edit" aria-label="Voltar"><i data-feather="chevron-left" style="width:18px;height:18px"></i></a>
-      <div class="nt-hc"><small>CENTRAL</small><h1>Notificações</h1></div>
-      <button type="button" class="nt-count is-off" id="nt-count" data-markall aria-label="Marcar todas como lidas"></button>
-    </div>
-    <div class="nt-strip is-off" id="nt-strip"><i></i><span id="nt-strip-t"></span><button type="button" data-markall>MARCAR TODAS</button></div>
+    <%= render "shared/page_head", back_href: "/users/edit", back_id: "nt-back", eyebrow: "Central",
+               title: "Notificações", title_id: "nt-title", lead_id: "nt-lead" %>
     <div id="nt-body"></div>
   </div>
 </div>
@@ -109,7 +88,7 @@
     attendant_activity: { icon: 'edit-3',         color: 'var(--coral-500)',          bg: 'var(--coral-50)', border: 'var(--coral-100)', label: 'ATENDENTE' }
   };
   var FALLBACK = { icon: 'bell', color: 'var(--graphite)', bg: 'var(--sand)', border: 'var(--stone)', label: 'AVISO' };
-  var open = {}, marking = false;
+  var open = {};
 
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -147,41 +126,26 @@
 
   function render() {
     var unread = LIST.filter(function (n) { return !n.read; }).length;
-    var c = $('nt-count');
-    c.classList.toggle('is-off', !unread);
-    c.innerHTML = marking ? '…' : unread;
-    $('nt-strip').classList.toggle('is-off', !unread);
-    $('nt-strip-t').textContent = unread + (unread === 1 ? ' não lida' : ' não lidas');
-    $('nt-strip').querySelector('button').disabled = marking;
+    $('nt-title').textContent = LIST.length ? 'Suas notificações.' : 'Notificações';
+    $('nt-lead').textContent = !LIST.length ? ''
+      : unread ? unread + (unread === 1 ? ' nova' : ' novas') + ' desde a última visita.' : 'Você está em dia.';
     $('nt-body').innerHTML = LIST.length
       ? '<div class="nt-list">' + LIST.map(card).join('') + '</div>'
-      : '<div class="nt-empty"><div class="nt-empty-ic">' + icon('bell-off', 28) + '</div><h2>Nada por aqui</h2><p>Você está em dia — sem notificações pendentes.</p></div>';
+      : '<div class="nt-empty"><img src="/illustrations/notificacoes-vazia.svg" alt="Ilustração de um sino quieto com um sinal de tudo certo e um passarinho pousado"><h2>Nada por aqui</h2><p>Você está em dia — sem notificações pendentes.</p></div>';
   }
 
-  // Tocar: marca como lida (otimista) e leva pra tela do assunto.
+  // Tocar leva pra tela do assunto. A leitura já foi marcada ao abrir.
   function tap(id) {
     var n = LIST.filter(function (x) { return x.id === id; })[0]; if (!n) return;
     var go = HREF[n.route] || null;
-    if (!n.read) {
-      n.read = true; render();
-      var req = post('/owner/notifications/' + encodeURIComponent(n.id) + '/read', 'PATCH').catch(function () {});
-      // Espera a marcação antes de sair, senão a página seguinte ainda a vê não lida.
-      if (go) { req.then(function () { location.href = go; }); return; }
-    }
     if (go) location.href = go;
   }
-  function markAll() {
-    if (marking || LIST.every(function (n) { return n.read; })) return;
-    marking = true; render();
-    post('/owner/notifications/read_all', 'POST')
-      .then(function (r) { if (r.ok) LIST.forEach(function (n) { n.read = true; }); })
-      .catch(function () {})
-      .then(function () { marking = false; render(); });
-  }
+  // Abrir já conta como ler tudo (igual à Central do cliente); a lista desta
+  // visita segue mostrando o ponto nas novas.
+  if (LIST.some(function (n) { return !n.read; })) post('/owner/notifications/read_all', 'POST').catch(function () {});
 
   document.addEventListener('click', function (e) {
     var t;
-    if (e.target.closest('[data-markall]')) { markAll(); return; }
     if ((t = e.target.closest('[data-more]'))) { var id = t.dataset.more; open[id] = !open[id]; render(); return; }
     if ((t = e.target.closest('[data-tap]'))) { tap(t.dataset.tap); return; }
   });
