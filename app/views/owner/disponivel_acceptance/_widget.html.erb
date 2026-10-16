@@ -10,7 +10,7 @@
     prazo não pode ser um sino discreto num canto.
   - Anel de contagem regressiva (o comprimento é o tempo, coral → rosa nos
     últimos 30s), mesmo vocabulário do painel e do app.
-  - Som curto ao chegar e a cada 15s enquanto ninguém decide.
+  - Som da Loov ao chegar e a cada 10s enquanto ninguém decide.
   - Título da aba piscando e notificação do sistema quando a aba está em
     segundo plano — o dono pode estar em outra aba ou outro programa.
 
@@ -169,17 +169,32 @@
       if (actx.state === 'suspended') actx.resume();
     } catch (e) {}
   }
+  // Assinatura da Loov: arpejo de Dó maior que sobe (sol-dó-mi → SOL) e uma
+  // resposta curta (mi → DÓ agudo), em timbre de marimba/sino. Alegre e
+  // reconhecível, como o "pedido chegando" do Uber: o dono aprende que
+  // aquele som é cliente na porta. [freq, início, duração, volume]
+  var LOOV_TUNE = [
+    [784, 0, .16, 1], [1046.5, .10, .16, 1], [1318.5, .20, .16, 1],
+    [1568, .30, .9, 1], [1046.5, .30, .9, .45], [2093, .44, .5, .3],
+    [1318.5, 1.20, .16, 1], [2093, 1.32, 1, 1], [1568, 1.32, 1, .45]
+  ];
   function chime() {
     if (!actx || actx.state !== 'running') return;
-    var t = actx.currentTime;
-    [[880, 0], [1318.5, .16], [1760, .32]].forEach(function (n) {
-      var o = actx.createOscillator(), g = actx.createGain();
-      o.type = 'sine'; o.frequency.value = n[0];
-      g.gain.setValueAtTime(0, t + n[1]);
-      g.gain.linearRampToValueAtTime(.22, t + n[1] + .02);
-      g.gain.exponentialRampToValueAtTime(.001, t + n[1] + .45);
-      o.connect(g); g.connect(actx.destination);
-      o.start(t + n[1]); o.stop(t + n[1] + .5);
+    var t = actx.currentTime + .02, out = actx.createDynamicsCompressor(), master = actx.createGain();
+    master.gain.value = .5;
+    master.connect(out); out.connect(actx.destination);
+    LOOV_TUNE.forEach(function (n) {
+      // Fundamental com decaimento longo + 2º e 3º harmônicos que somem
+      // rápido: o "toc" brilhante da marimba no começo de cada nota.
+      [[1, 1, n[2]], [2, .35, .15], [3, .12, .08]].forEach(function (h) {
+        var o = actx.createOscillator(), g = actx.createGain(), s = t + n[1], v = .3 * n[3] * h[1];
+        o.type = 'sine'; o.frequency.value = n[0] * h[0];
+        g.gain.setValueAtTime(0, s);
+        g.gain.linearRampToValueAtTime(v, s + .005);
+        g.gain.exponentialRampToValueAtTime(.0001, s + h[2]);
+        o.connect(g); g.connect(master);
+        o.start(s); o.stop(s + h[2] + .05);
+      });
     });
   }
   ['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) {
@@ -255,7 +270,7 @@
       st.seenIds[a.id] = true;
       chime(); systemNotify(a);
     }
-    clearInterval(st.chime); st.chime = setInterval(function () { if (!st.done && !st.acting) chime(); }, 15000);
+    clearInterval(st.chime); st.chime = setInterval(function () { if (!st.done && !st.acting) chime(); }, 10000);
     clearInterval(st.flash);
     var on = false;
     st.flash = setInterval(function () { on = !on; document.title = on ? '⚡ Novo pedido Last Minute' : baseTitle; }, 1000);
