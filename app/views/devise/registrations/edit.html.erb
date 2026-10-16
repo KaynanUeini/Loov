@@ -145,7 +145,7 @@
         <div class="sec-card">
           <h2>Dados do veículo</h2>
           <p>Aparecem pro lava-rápido junto com o seu agendamento.</p>
-          <div class="ac-f"><label for="vh-model">Modelo e cor</label><input id="vh-model" maxlength="60" placeholder="Ex.: Honda Civic preto" autocomplete="off"><div class="ac-ferr" id="vh-model-err"></div></div>
+          <div class="ac-f"><label for="vh-model">Modelo</label><input id="vh-model" maxlength="60" placeholder="Ex.: Honda Civic" autocomplete="off"><div class="ac-ferr" id="vh-model-err"></div></div>
           <div class="ac-f"><label for="vh-plate">Placa</label><input id="vh-plate" class="is-plate" maxlength="8" placeholder="ABC1D23" autocomplete="off" autocapitalize="characters"><div class="ac-help" id="vh-plate-help">Antiga (ABC-1234) ou Mercosul (ABC1D23)</div></div>
           <div class="ac-formerr is-off" id="vh-err"></div>
         </div>
@@ -332,7 +332,7 @@
   function renderPlate() {
     var prev = formatPlate(vh.plate);
     $('vh-prev').textContent = prev || 'ABC1D23'; $('vh-prev').classList.toggle('is-ph', !prev);
-    $('vh-prev-m').textContent = vh.model.trim() || 'modelo e cor';
+    $('vh-prev-m').textContent = vh.model.trim() || 'modelo do carro';
   }
   function setVhErr(e) {
     $('vh-model').classList.toggle('is-err', !!e.model); $('vh-model-err').textContent = e.model || '';
