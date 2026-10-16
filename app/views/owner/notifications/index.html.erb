@@ -73,7 +73,7 @@
   // Onde cada aviso leva no site (no app é a `route` de cada um).
   var HREF = {
     OwnerDisponivel:   '/',
-    OwnerMudancasPendentes: '/?abrir=aprovacoes',
+    OwnerMudancasPendentes: '<%= owner_pending_changes_path %>',
     OwnerAiInsights:   '<%= owner_financial_tracking_path %>',
     OwnerSupport:      '<%= suporte_path %>',
     OwnerGerenciar:    <%= raw json_escape((current_car_wash ? manage_car_wash_path(current_car_wash) : nil).to_json) %>

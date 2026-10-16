@@ -4,10 +4,15 @@ module Owner
     before_action :authenticate_user!
     before_action :ensure_owner
 
+    # GET /owner/pending_changes — JSON pro app e pro dashboard; no site, a
+    # página de Aprovações com a mesma lista embutida.
     def index
-      @car_wash        = current_user.car_washes.first
-      @pending_changes = @car_wash.pending_changes.pending.order(created_at: :desc)
-      render json: @pending_changes.map { |pc| serialize(pc) }
+      @car_wash = current_user.car_washes.first
+      list = @car_wash ? @car_wash.pending_changes.pending.order(created_at: :desc).map { |pc| serialize(pc) } : []
+      respond_to do |format|
+        format.html { @pending_changes_json = list }
+        format.json { render json: list }
+      end
     end
 
     def approve
@@ -32,7 +37,11 @@ module Owner
     private
 
     def ensure_owner
-      render json: { error: "Acesso negado." }, status: :forbidden unless current_user&.owner?
+      return if current_user&.owner?
+      respond_to do |format|
+        format.html { redirect_to root_path }
+        format.json { render json: { error: "Acesso negado." }, status: :forbidden }
+      end
     end
 
     def find_change

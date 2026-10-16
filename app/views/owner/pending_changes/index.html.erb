@@ -1,0 +1,77 @@
+<%#
+  Aprovações pendentes — página própria, no modelo das páginas da conta
+  (Notificações, Veículo, Segurança). Antes o atalho levava pro dashboard e
+  abria uma janela por cima: o dono queria ver uma coisa e caía em outra
+  tela, sem um voltar pra onde estava.
+
+    · Cabeçalho padrão (shared/page_head); a frase diz quantas mudanças
+      esperam a decisão.
+    · Lista na largura de leitura com o cartão do kit (o mesmo da coluna
+      "Esperando você" do dashboard).
+    · Aprovar a última mostra o vazio do passarinho, sem fechar nada.
+%>
+<script src="/vendor/feather-4.29.2.min.js"></script>
+<%= render "owner/pending_changes/kit" %>
+
+<style>
+  .loov-nav { background: var(--cream) !important; }
+  .ap { background: var(--cream); color: var(--ink); min-height: 100vh; padding-top: 60px; }
+  .ap *, .ap *::before, .ap *::after { box-sizing: border-box; }
+  .ap-wrap { width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 20px 64px; }
+  /* Lista na largura de leitura; o cabeçalho segue a largura da página. */
+  .ap-list { display: grid; gap: 12px; max-width: 760px; padding-top: 28px; }
+  .ap-empty { display: flex; flex-direction: column; align-items: center; max-width: 760px; padding: 32px 20px 60px; text-align: center; }
+  .ap-empty img { width: min(84%, 340px); height: auto; margin-bottom: 18px; }
+  .ap-empty h2 { margin: 0 0 4px !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 18px; letter-spacing: -0.2px; color: var(--ink) !important; }
+  .ap-empty p { margin: 0; font-size: 13px; line-height: 18px; color: var(--ash); }
+  .ap-toast { position: fixed; left: 16px; right: 16px; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); z-index: 70; max-width: 440px; margin: 0 auto; padding: 13px 16px; border-radius: 14px; background: var(--ink); color: var(--cream); font-size: 13px; box-shadow: 0 14px 36px -16px rgba(40,35,28,.6); transform: translateY(16px); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+  .ap-toast.is-on { opacity: 1; transform: none; }
+  .ap-toast.is-err { background: var(--rose-500, #c0392b); }
+  @media (min-width: 720px) { .ap-list { padding-top: 36px; } }
+  @media (min-width: 960px) { .ap-wrap { padding: 0 40px 80px; } }
+</style>
+
+<div class="ap">
+  <div class="ap-wrap">
+    <%= render "shared/page_head", back_href: root_path, back_id: "ap-back", eyebrow: "Fluxo de aprovação",
+               title: "Aprovações", title_id: "ap-title", lead_id: "ap-lead" %>
+    <div id="ap-body"></div>
+  </div>
+  <div class="ap-toast" id="ap-toast" role="status" aria-live="polite"></div>
+</div>
+
+<script>
+(function () {
+  var LIST = <%= raw json_escape(@pending_changes_json.to_json) %>;
+  function $(id) { return document.getElementById(id); }
+  var tt = null;
+  function toast(msg, err) {
+    var t = $('ap-toast'); t.textContent = msg; t.classList.toggle('is-err', !!err); t.classList.add('is-on');
+    clearTimeout(tt); tt = setTimeout(function () { t.classList.remove('is-on'); }, 3200);
+  }
+
+  function render(list) {
+    var n = list.length;
+    $('ap-title').textContent = n ? 'Aprovações pendentes.' : 'Aprovações';
+    $('ap-lead').textContent = n
+      ? n + (n === 1 ? ' mudança esperando' : ' mudanças esperando') + ' sua decisão. Aprovar aplica na hora.'
+      : '';
+    $('ap-body').innerHTML = n
+      ? '<div class="ap-list">' + list.map(function (pc) { return LoovApv.card(pc); }).join('') + '</div>'
+      : '<div class="ap-empty"><img src="/illustrations/aprovacoes-vazia.svg" alt="Ilustração de uma prancheta com um visto e um passarinho pousado"><h2>Tudo em dia</h2><p>Quando um atendente mudar algo no lava-rápido, a mudança espera aqui pela sua decisão.</p></div>';
+  }
+
+  LoovApv.bind($('ap-body'), {
+    toast: toast,
+    onDone: function () { render(LoovApv.list()); }
+  });
+  $('ap-back').addEventListener('click', function (e) {
+    if (document.referrer && document.referrer.indexOf(location.origin) === 0 && history.length > 1) { e.preventDefault(); history.back(); }
+  });
+
+  // A lista vem embutida (render na hora); o load só sincroniza o kit.
+  render(LIST);
+  LoovApv.load().then(render);
+  if (window.feather) feather.replace();
+})();
+</script>

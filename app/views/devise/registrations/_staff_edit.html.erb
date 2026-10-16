@@ -19,7 +19,7 @@
   rs   = sa[:resumo]
   first_name = sa[:full_name].to_s.split.first.presence || "Você"
   items = [{ icon: "bell", label: "Notificações", desc: "Tudo em dia", href: owner_notifications_path, badge: "notif" }]
-  items << { icon: "check-square", label: "Aprovações pendentes", desc: "Nenhuma mudança esperando", href: root_path(abrir: "aprovacoes"), badge: "aprov" } if dono
+  items << { icon: "check-square", label: "Aprovações pendentes", desc: "Nenhuma mudança esperando", href: owner_pending_changes_path, badge: "aprov" } if dono
   items << { icon: "settings", label: "Gerenciar lava-rápido", desc: "Horários, serviços e capacidade", href: manage_car_wash_path(cw[:id]) } if cw
   items << { icon: "calendar", label: "Agenda", desc: "Hoje e os próximos dias", href: owner_car_wash_appointments_path }
   items << { icon: "dollar-sign", label: "Financeiro", desc: dono ? "Faturamento, custos e relatório" : "Lançar os custos do mês",

@@ -1,0 +1,197 @@
+<%#
+  Kit das aprovações — o cartão de uma mudança pendente (quem pediu, o quê,
+  "ver o que muda" e Recusar/Aprovar com confirmação no próprio cartão) e as
+  chamadas de aprovar/rejeitar. Usado pela página /owner/pending_changes e
+  pela coluna "Esperando você" do dashboard, pra os dois mostrarem o mesmo
+  cartão (porte da OwnerMudancasPendentesScreen do app).
+
+  JS: window.LoovApv
+    .load()                       → Promise com a lista (JSON do controller)
+    .card(pc, { compact })        → HTML do cartão
+    .bind(el, { onDone, toast })  → liga os botões dos cartões dentro de el;
+                                    onDone(id, kind) depois de decidir.
+%>
+<style>
+  .apv { padding: 16px; border: 1px solid var(--stone); border-radius: 18px; background: var(--paper); color: var(--ink); transition: opacity .2s, transform .2s, border-color .15s; }
+  .apv *, .apv *::before, .apv *::after { box-sizing: border-box; }
+  .apv button { font-family: inherit; line-height: normal; cursor: pointer; }
+  .apv svg.feather { display: block; flex-shrink: 0; }
+  .apv.removing { opacity: 0; transform: translateY(-6px); }
+  .apv-top { display: flex; align-items: center; gap: 10px; }
+  .apv-av { flex: 0 0 36px; height: 36px; border-radius: 50%; background: var(--sand); color: var(--ink); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; }
+  .apv-who { flex: 1; min-width: 0; }
+  .apv-who b { display: block; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .apv-who small { display: block; margin-top: 1px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--ash); }
+  .apv-badge { flex-shrink: 0; padding: 3px 8px; border-radius: 8px; background: var(--sand); color: var(--graphite); font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 1px; }
+  .apv-title { margin-top: 12px; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; letter-spacing: -0.2px; }
+  .apv-desc { margin: 4px 0 0; font-size: 13px; line-height: 19px; color: var(--graphite); }
+  .apv-more { display: inline-flex; align-items: center; gap: 4px; margin-top: 10px; padding: 0; border: 0; background: none; color: var(--ink); font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.1px; text-decoration: underline; text-underline-offset: 3px; }
+  .apv-diff { margin-top: 10px; border-radius: 12px; background: var(--cream); border: 1px solid var(--stone); overflow: hidden; }
+  .apv-diff[hidden] { display: none; }
+  .apv-sec { padding: 8px 12px 2px; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 1px; color: var(--ash); text-transform: uppercase; }
+  .apv-row { display: flex; justify-content: space-between; gap: 12px; padding: 9px 12px; border-top: 1px solid var(--stone); font-size: 12.5px; }
+  .apv-sec + .apv-row { border-top: 0; }
+  .apv-row span:first-child { color: var(--graphite); }
+  .apv-row span:last-child { color: var(--ink); font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+  .apv-acts, .apv-confirm-acts { display: flex; gap: 8px; margin-top: 14px; }
+  .apv-acts button, .apv-confirm-acts button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 11px; border-radius: 100px; font-size: 13px; font-weight: 600; transition: background .15s, border-color .15s; }
+  .apv-acts button[disabled], .apv-confirm-acts button[disabled] { opacity: .6; cursor: default; }
+  .apv-no { border: 1px solid var(--stone); background: transparent; color: var(--ink); }
+  .apv-no:hover { border-color: var(--ink); }
+  .apv-yes { border: 0; background: var(--coral-500); color: var(--cream); }
+  .apv-yes:hover { background: var(--coral-700); }
+  .apv-yes.is-danger { background: var(--rose-500, #c0392b); }
+  .apv-back { border: 1px solid var(--stone); background: transparent; color: var(--graphite); }
+  .apv-back:hover { background: var(--sand); }
+  .apv-confirm { display: none; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--stone); }
+  .apv-confirm p { margin: 0; font-size: 13px; line-height: 19px; color: var(--ink); }
+  .apv[data-ask] .apv-acts { display: none; }
+  .apv[data-ask] .apv-confirm { display: block; }
+  .apv-spin { width: 16px; height: 16px; border-radius: 50%; border: 2.5px solid rgba(250,250,246,.35); border-top-color: var(--cream); animation: apvspin .8s linear infinite; }
+  @keyframes apvspin { to { transform: rotate(360deg); } }
+  /* Versão da coluna do dashboard: mais justa, sem o resumo longo. */
+  .apv.is-compact { padding: 14px; border-radius: 16px; }
+  .apv.is-compact .apv-desc { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .apv.is-compact .apv-acts button, .apv.is-compact .apv-confirm-acts button { padding: 9px; font-size: 12.5px; }
+</style>
+
+<script>
+(function () {
+  if (window.LoovApv) return;
+  var CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content;
+  var MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  var LABELS = {
+    rent: 'Aluguel', salaries: 'Salários', utilities: 'Energia/Água', water: 'Água', electricity: 'Luz',
+    products: 'Produtos', maintenance: 'Manutenção', other_fixed: 'Outros fixos', other_variable: 'Outros variáveis',
+    notes: 'Observações', name: 'Nome', cep: 'CEP', logradouro: 'Logradouro', numero: 'Número', bairro: 'Bairro',
+    cidade: 'Cidade', uf: 'UF', address: 'Endereço', capacity_per_slot: 'Capacidade por horário',
+    latitude: 'Latitude', longitude: 'Longitude'
+  };
+  var MONEY = { rent: 1, salaries: 1, utilities: 1, water: 1, electricity: 1, products: 1, maintenance: 1, other_fixed: 1, other_variable: 1 };
+  var list = [];
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function fi(n, s) { return window.feather && feather.icons[n] ? feather.icons[n].toSvg({ width: s || 16, height: s || 16 }) : ''; }
+  function brl(v) { return 'R$ ' + (parseFloat(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function val(k, v) { return (v === null || v === undefined || v === '') ? '—' : (MONEY[k] ? brl(v) : String(v)); }
+  function row(l, v) { return '<div class="apv-row"><span>' + esc(l) + '</span><span>' + esc(v) + '</span></div>'; }
+
+  function meta(pc) {
+    if (pc.change_type === 'monthly_costs') {
+      var y = pc.payload && pc.payload.year, m = pc.payload && pc.payload.month;
+      return { badge: 'CUSTOS', title: (y && m) ? 'Custos de ' + MONTHS[m - 1] + '/' + y : 'Custos mensais' };
+    }
+    if (pc.change_type === 'manage_car_wash') return { badge: 'LAVA-RÁPIDO', title: 'Gerenciar lava-rápido' };
+    return { badge: String(pc.change_type || 'ALTERAÇÃO').toUpperCase(), title: 'Alteração' };
+  }
+  // O que muda — as mesmas linhas do app (CostDiffBody / CarWashDiffBody).
+  function diff(pc) {
+    var p = pc.payload || {}, html = '';
+    if (pc.change_type === 'monthly_costs') {
+      var cp = p.cost_params || {};
+      Object.keys(cp).filter(function (k) { return cp[k] !== '' && cp[k] != null; })
+        .forEach(function (k) { html += row(LABELS[k] || k, val(k, cp[k])); });
+      var d = p.custom_lines_diff || {};
+      var line = function (l) { return row((l.name || 'Linha #' + l.id) + (l.cost_type ? (l.cost_type === 'fixed' ? ' · fixo' : ' · variável') : ''), typeof l.amount === 'number' ? brl(l.amount) : '—'); };
+      [['Adicionadas', d.added], ['Modificadas', d.updated]].forEach(function (t) {
+        if (Array.isArray(t[1]) && t[1].length) html += '<div class="apv-sec">' + t[0] + '</div>' + t[1].map(line).join('');
+      });
+      if (Array.isArray(d.deleted) && d.deleted.length) html += '<div class="apv-sec">Removidas</div>' + d.deleted.map(function (id) { return row('Linha #' + id, 'removida'); }).join('');
+      if (!d.added && !d.updated && Array.isArray(p.custom_lines) && p.custom_lines.length) html += '<div class="apv-sec">Linhas customizadas</div>' + p.custom_lines.map(line).join('');
+    } else if (pc.change_type === 'manage_car_wash') {
+      var cw = p.car_wash_params || {};
+      Object.keys(cw).forEach(function (k) {
+        if (k === 'operating_hours_attributes' || k === 'services_attributes') return;
+        html += row(LABELS[k] || k, val(k, cw[k]));
+      });
+      var n1 = Object.keys(cw.operating_hours_attributes || {}).length;
+      var n2 = Object.keys(cw.services_attributes || {}).length;
+      if (n1) html += row('Horários', n1 + (n1 > 1 ? ' alterações' : ' alteração'));
+      if (n2) html += row('Serviços', n2 + (n2 > 1 ? ' alterações' : ' alteração'));
+    }
+    return html || '<div class="apv-row"><span>Sem detalhes disponíveis.</span><span></span></div>';
+  }
+
+  function card(pc, opts) {
+    var m = meta(pc), compact = opts && opts.compact;
+    var ini = (String(pc.attendant || '?').trim().charAt(0) || '?').toUpperCase();
+    return '<article class="apv' + (compact ? ' is-compact' : '') + '" id="acard-' + pc.id + '" data-id="' + pc.id + '">' +
+      '<div class="apv-top"><span class="apv-av">' + esc(ini) + '</span>' +
+        '<div class="apv-who"><b>' + esc(pc.attendant) + '</b><small>' + esc(pc.created_at) + '</small></div>' +
+        '<span class="apv-badge">' + esc(m.badge) + '</span></div>' +
+      '<div class="apv-title">' + esc(m.title) + '</div>' +
+      (pc.description ? '<p class="apv-desc">' + esc(pc.description) + '</p>' : '') +
+      '<button type="button" class="apv-more" data-apv="more" aria-expanded="false">VER O QUE MUDA' + fi('chevron-down', 13) + '</button>' +
+      '<div class="apv-diff" hidden>' + diff(pc) + '</div>' +
+      '<div class="apv-acts">' +
+        '<button type="button" class="apv-no" data-apv="ask-reject">' + fi('x', 14) + 'Recusar</button>' +
+        '<button type="button" class="apv-yes" data-apv="ask-approve">' + fi('check', 14) + 'Aprovar</button>' +
+      '</div>' +
+      '<div class="apv-confirm"><p></p>' +
+        '<div class="apv-confirm-acts"><button type="button" class="apv-back" data-apv="back">Voltar</button><button type="button" class="apv-yes" data-apv="go"></button></div>' +
+      '</div>' +
+    '</article>';
+  }
+
+  function load() {
+    return fetch('/owner/pending_changes', { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : []; })
+      .then(function (d) { list = Array.isArray(d) ? d : []; return list; })
+      .catch(function () { return list; });
+  }
+
+  // Confirmação dentro do próprio cartão (como o Alert do app): aprovar
+  // aplica na hora e recusar descarta — os dois pedem um segundo toque.
+  function bind(el, opts) {
+    opts = opts || {};
+    el.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-apv]'); if (!b) return;
+      var c = b.closest('.apv'), id = c.dataset.id, act = b.dataset.apv;
+      var pc = list.filter(function (x) { return String(x.id) === id; })[0];
+      if (act === 'more') {
+        var d = c.querySelector('.apv-diff'), open = d.hidden;
+        d.hidden = !open; b.setAttribute('aria-expanded', open);
+        b.innerHTML = (open ? 'OCULTAR O QUE MUDA' : 'VER O QUE MUDA') + fi(open ? 'chevron-up' : 'chevron-down', 13);
+      } else if (act === 'ask-approve' || act === 'ask-reject') {
+        var ok = act === 'ask-approve', who = (pc && pc.attendant) || 'o atendente';
+        c.dataset.ask = ok ? 'approve' : 'reject';
+        c.querySelector('.apv-confirm p').textContent = ok
+          ? 'A alteração de ' + who + ' será aplicada agora.'
+          : 'A alteração de ' + who + ' será descartada.';
+        var go = c.querySelector('[data-apv="go"]');
+        go.textContent = ok ? 'Sim, aprovar' : 'Sim, recusar';
+        go.classList.toggle('is-danger', !ok);
+        go.focus();
+      } else if (act === 'back') {
+        delete c.dataset.ask;
+      } else if (act === 'go') {
+        decide(c, id, c.dataset.ask, b, opts);
+      }
+    });
+  }
+
+  function decide(c, id, kind, btn, opts) {
+    var label = btn.textContent, toast = opts.toast || function () {};
+    c.querySelectorAll('button').forEach(function (x) { x.disabled = true; });
+    btn.innerHTML = '<span class="apv-spin"></span>';
+    fetch('/owner/pending_changes/' + id + '/' + kind, {
+      method: 'PATCH', credentials: 'same-origin',
+      headers: { 'X-CSRF-Token': CSRF, 'Content-Type': 'application/json', Accept: 'application/json' }
+    }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { r: r, d: d }; }); })
+      .then(function (x) {
+        if (!x.r.ok || x.d.ok === false) throw new Error(x.d.error || x.d.message || '');
+        list = list.filter(function (p) { return String(p.id) !== String(id); });
+        c.classList.add('removing');
+        toast(kind === 'approve' ? 'Alteração aprovada e aplicada.' : 'Alteração recusada.');
+        setTimeout(function () { if (opts.onDone) opts.onDone(id, kind); }, 220);
+      })
+      .catch(function (e) {
+        toast(e.message || (kind === 'approve' ? 'Não foi possível aprovar.' : 'Não foi possível recusar.'), true);
+        c.querySelectorAll('button').forEach(function (x) { x.disabled = false; });
+        btn.textContent = label;
+      });
+  }
+
+  window.LoovApv = { load: load, card: card, bind: bind, list: function () { return list; } };
+})();
+</script>

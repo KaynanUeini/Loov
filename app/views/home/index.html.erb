@@ -635,39 +635,34 @@
   .lx-counter.is-near { color:var(--coral-700); }
   .lx-av { flex:0 0 36px; height:36px; border-radius:50%; background:var(--coral-50); color:var(--coral-700); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:600; }
 
-  /* Aprovações (OwnerMudancasPendentesScreen) */
-  .apv { margin-top:12px; padding:16px; border:1px solid var(--stone); border-radius:18px; background:var(--paper); transition:opacity .2s, transform .2s; }
-  .apv.removing { opacity:0; transform:translateY(-6px); }
-  .apv-top { display:flex; align-items:center; gap:10px; }
-  .apv-who { flex:1; min-width:0; }
-  .apv-who b { display:block; font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .apv-who small { display:block; margin-top:1px; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--ash); }
-  .apv-badge { flex-shrink:0; padding:3px 8px; border-radius:8px; background:var(--sand); color:var(--graphite); font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:1px; }
-  .apv-title { margin-top:12px; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:15px; letter-spacing:-0.2px; }
-  .apv-desc { margin:4px 0 0; font-size:13px; line-height:19px; color:var(--graphite); }
-  .apv-more { display:inline-flex; align-items:center; gap:4px; margin-top:10px; padding:0; border:0; background:none; color:var(--coral-700); font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:1.1px; }
-  .apv-more:hover { color:var(--coral-500); }
-  .apv-diff { margin-top:10px; border-radius:12px; background:var(--cream); border:1px solid var(--stone); overflow:hidden; }
-  .apv-diff[hidden] { display:none; }
-  .apv-sec { padding:8px 12px 2px; font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:1px; color:var(--ash); text-transform:uppercase; }
-  .apv-row { display:flex; justify-content:space-between; gap:12px; padding:9px 12px; border-top:1px solid var(--stone); font-size:12.5px; }
-  .apv-sec + .apv-row { border-top:0; }
-  .apv-row span:first-child { color:var(--graphite); }
-  .apv-row span:last-child { color:var(--ink); font-weight:600; text-align:right; font-variant-numeric:tabular-nums; }
-  .apv-acts, .apv-confirm-acts { display:flex; gap:8px; margin-top:14px; }
-  .apv-acts button, .apv-confirm-acts button { flex:1; display:flex; align-items:center; justify-content:center; gap:6px; padding:11px; border-radius:100px; font-size:13px; font-weight:600; transition:background .15s, border-color .15s; }
-  .apv-no { border:1px solid rgba(200,80,80,.3); background:transparent; color:var(--rose-500,#c0392b); }
-  .apv-no:hover { background:rgba(200,80,80,.06); }
-  .apv-yes { border:0; background:var(--coral-500); color:var(--cream); }
-  .apv-yes:hover { background:var(--coral-700); }
-  .apv-yes.is-danger { background:var(--rose-500,#c0392b); }
-  .apv-back { border:1px solid var(--stone); background:transparent; color:var(--graphite); }
-  .apv-back:hover { background:var(--sand); }
-  .apv-confirm { display:none; margin-top:14px; padding-top:14px; border-top:1px solid var(--stone); }
-  .apv-confirm p { margin:0; font-size:13px; line-height:19px; color:var(--ink); }
-  .apv[data-ask] .apv-acts { display:none; }
-  .apv[data-ask] .apv-confirm { display:block; }
-  .apv button[disabled] { opacity:.6; cursor:default; }
+  /* Aprovações no painel — o cartão vem do kit (owner/pending_changes/_kit).
+     Tela grande: coluna "Esperando você" no espaço em branco à direita do
+     conteúdo (a lateral do "tocando agora" do Spotify). Tela menor: uma
+     faixa no topo que leva pra página (o "ação necessária" do Uber). Sem
+     nada pendente, nenhuma das duas aparece. */
+  .od-rail { display:none; }
+  .od-apv-strip { display:flex; align-items:center; gap:12px; margin:0 0 1.25rem; padding:12px 14px; border:1px solid var(--stone); border-radius:16px; background:var(--paper); color:var(--ink) !important; text-decoration:none !important; transition:border-color .15s; }
+  .od-apv-strip:hover { border-color:var(--ink); }
+  .od-apv-strip[hidden] { display:none; }
+  .od-apv-strip-ic { flex:0 0 36px; height:36px; border-radius:50%; background:var(--sand); display:flex; align-items:center; justify-content:center; }
+  .od-apv-strip-t { flex:1; min-width:0; font-size:13.5px; line-height:18px; }
+  .od-apv-strip-t b { display:block; font-weight:600; }
+  .od-apv-strip-t span { color:var(--graphite); font-size:12.5px; }
+  .od-apv-strip-go { font-size:13px; font-weight:600; white-space:nowrap; display:flex; align-items:center; gap:4px; }
+  .od-apv-strip svg { display:block; }
+  @media (min-width:1280px) {
+    .od-apv-strip { display:none !important; }
+    .od-rail { display:block; flex:0 0 340px; align-self:flex-start; position:sticky; top:60px; max-height:calc(100vh - 60px); overflow-y:auto; padding:2rem 2rem 2rem 0; }
+    .od-rail[hidden] { display:none; }
+    .od-rail-eyebrow { font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:1px; color:var(--ash); text-transform:uppercase; }
+    .od-rail-h { margin:6px 0 4px; font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:24px; letter-spacing:-0.6px; line-height:1.1; color:var(--ink); }
+    .od-rail-sub { margin:0 0 16px; font-size:13px; line-height:18px; color:var(--graphite); }
+    .od-rail-list { display:grid; gap:10px; }
+    .od-rail-all { display:flex; align-items:center; justify-content:center; gap:6px; margin-top:12px; padding:11px; border:1px solid var(--stone); border-radius:100px; color:var(--ink) !important; font-size:13px; font-weight:600; text-decoration:none !important; transition:border-color .15s; }
+    .od-rail-all:hover { border-color:var(--ink); }
+    .od-rail-all[hidden] { display:none; }
+    .od-rail-all svg { display:block; }
+  }
 
   /* Mensagens (OwnerMensagensScreen) */
   .lx-seg { display:flex; padding:4px; gap:2px; border-radius:999px; background:var(--sand); border:1px solid var(--stone); }
@@ -789,18 +784,8 @@
   }
 </style>
 
-<%# ── Folha: Aprovações (porte da OwnerMudancasPendentesScreen) ───────── %>
 <script src="/vendor/feather-4.29.2.min.js"></script>
-<div class="lx-bg" id="approval-overlay" aria-hidden="true">
-  <div class="lx-sheet is-wide" id="approval-drawer" role="dialog" aria-modal="true" aria-labelledby="apv-t">
-    <div class="lx-handle"></div>
-    <div class="lx-h">
-      <div class="lx-h-t"><div class="lx-eyebrow">Fluxo de aprovação</div><h2 id="apv-t">Aprovações <span class="lx-count" id="drawer-badge" hidden>0</span></h2></div>
-      <button type="button" class="lx-x" id="drawer-close" aria-label="Fechar"><i data-feather="x" style="width:18px;height:18px"></i></button>
-    </div>
-    <div class="lx-b" id="drawer-body"><div class="lx-empty"><span class="lx-spin is-dark"></span></div></div>
-  </div>
-</div>
+<% if current_user.owner? %><%= render "owner/pending_changes/kit" %><% end %>
 
 <div class="toast-container" id="toast-container"></div>
 
@@ -993,10 +978,10 @@
         <% end %>
       <% end %>
       <% if current_user.owner? %>
-      <button class="snav-item" id="approval-nav-btn" style="display:none;" onclick="openApprovalDrawer()">
+      <%= link_to owner_pending_changes_path, class: "snav-item", id: "approval-nav-btn", style: "display:none;" do %>
         <i class="fas fa-bell"></i> Aprovações
         <span class="snav-badge yellow" id="snav-approval-badge"></span>
-      </button>
+      <% end %>
       <% end %>
     </nav>
     <div class="sidebar-footer">
@@ -1045,16 +1030,21 @@
       <button class="owner-dash-icon-btn" id="od-loyalty-btn" onclick="openLoyaltyModal()" title="Programa de fidelidade">
         <i class="fas fa-star"></i>
       </button>
-      <button class="owner-dash-icon-btn" id="od-approval-btn" onclick="openApprovalDrawer()" title="Aprovações pendentes">
-        <i class="fas fa-clock"></i>
-        <span class="od-mini-badge" id="od-approval-badge"></span>
-      </button>
       <% end %>
       <button class="owner-dash-bell" id="od-bell-btn" title="Notificações">
         <i class="fas fa-bell"></i>
         <span class="od-dot"></span>
       </button>
     </div>
+
+    <% if current_user.owner? %>
+    <%# Aprovações em tela menor: uma linha que leva pra página. %>
+    <a class="od-apv-strip" id="od-apv-strip" href="<%= owner_pending_changes_path %>" hidden>
+      <span class="od-apv-strip-ic"><i data-feather="check-square" style="width:16px;height:16px"></i></span>
+      <span class="od-apv-strip-t"><b id="od-apv-strip-n"></b><span>Mudanças da equipe esperando sua decisão</span></span>
+      <span class="od-apv-strip-go">Revisar<i data-feather="chevron-right" style="width:16px;height:16px"></i></span>
+    </a>
+    <% end %>
 
     <%# Pausa: só o dono decide parar de receber (o endpoint é ensure_owner) %>
     <% if current_user.owner? %>
@@ -1152,6 +1142,17 @@
 
     <div style="height:60px;"></div>
   </main>
+
+  <% if current_user.owner? %>
+  <%# Aprovações em tela grande: coluna no espaço à direita do conteúdo. %>
+  <aside class="od-rail" id="od-rail" hidden aria-labelledby="od-rail-h">
+    <div class="od-rail-eyebrow">Esperando você</div>
+    <h2 class="od-rail-h" id="od-rail-h">Aprovações</h2>
+    <p class="od-rail-sub" id="od-rail-sub"></p>
+    <div class="od-rail-list" id="od-rail-list"></div>
+    <a class="od-rail-all" id="od-rail-all" href="<%= owner_pending_changes_path %>">Ver todas<i data-feather="arrow-right" style="width:14px;height:14px"></i></a>
+  </aside>
+  <% end %>
 </div>
 
 
@@ -1846,27 +1847,42 @@
   // Polling silencioso a cada 15s pra refletir mudanças do app
   setInterval(() => loadDashboard(true), 15_000);
 
-  // ── APROVAÇÕES (drawer mantido) ──────────────────────────────────────
+  // ── APROVAÇÕES (coluna e faixa; cartão do kit) ──────────────────────
+  // Aprovações: a coluna (tela grande) mostra as 3 mais recentes com
+  // Aprovar/Recusar ali mesmo; a faixa (tela menor) e o menu lateral só
+  // contam e levam pra página. Só redesenha a coluna se a lista mudou, pra
+  // o polling não desfazer uma confirmação aberta.
+  let apvSig = null;
   async function loadApprovals() {
-    const btn = document.getElementById('od-approval-btn');
-    if (!btn) return;
-    try {
-      const res = await fetch('/owner/pending_changes', { headers:{ Accept:'application/json' }});
-      const data = await res.json();
-      const badge = document.getElementById('od-approval-badge');
-      const navBadge = document.getElementById('snav-approval-badge');
-      const navBtn = document.getElementById('approval-nav-btn');
-      if (data.length > 0) {
-        badge.textContent = data.length; badge.classList.add('visible');
-        if (navBadge) { navBadge.textContent = data.length; navBadge.classList.add('visible'); }
-        if (navBtn) navBtn.style.display = 'flex';
-      } else {
-        badge.classList.remove('visible');
-        if (navBadge) navBadge.classList.remove('visible');
-        if (navBtn) navBtn.style.display = 'none';
-      }
-      renderApprovalDrawer(data);
-    } catch(e) {}
+    if (!window.LoovApv) return;
+    const data = await LoovApv.load();
+    const n = data.length;
+    const navBadge = document.getElementById('snav-approval-badge');
+    const navBtn = document.getElementById('approval-nav-btn');
+    if (navBadge) { navBadge.textContent = n; navBadge.classList.toggle('visible', n > 0); }
+    if (navBtn) navBtn.style.display = n ? 'flex' : 'none';
+    const strip = document.getElementById('od-apv-strip');
+    if (strip) {
+      strip.hidden = !n;
+      document.getElementById('od-apv-strip-n').textContent = n + (n === 1 ? ' aprovação pendente' : ' aprovações pendentes');
+    }
+    const rail = document.getElementById('od-rail');
+    if (!rail) return;
+    rail.hidden = !n;
+    document.getElementById('od-rail-sub').textContent = n + (n === 1 ? ' mudança da equipe' : ' mudanças da equipe') + '. Aprovar aplica na hora.';
+    const all = document.getElementById('od-rail-all');
+    all.hidden = n <= 3;
+    all.firstChild.textContent = 'Ver todas (' + n + ')';
+    const sig = data.slice(0, 3).map(pc => pc.id).join(',');
+    if (sig === apvSig) return;
+    apvSig = sig;
+    document.getElementById('od-rail-list').innerHTML = data.slice(0, 3).map(pc => LoovApv.card(pc, { compact: true })).join('');
+  }
+  if (window.LoovApv && document.getElementById('od-rail-list')) {
+    LoovApv.bind(document.getElementById('od-rail-list'), {
+      toast: (msg, err) => showToast(msg, err ? 'error' : 'success'),
+      onDone: () => { apvSig = null; loadApprovals(); }
+    });
   }
   // Ícone Feather em string (o painel usa Font Awesome; as folhas novas,
   // Feather, como o app).
@@ -1892,142 +1908,6 @@
     if (e.key === 'Escape') document.querySelectorAll('.lx-bg.open').forEach(bg => lxClose(bg.id));
   });
   document.querySelectorAll('.lx-bg').forEach(bg => bg.addEventListener('click', e => { if (e.target === bg) lxClose(bg.id); }));
-
-  // ── APROVAÇÕES (OwnerMudancasPendentesScreen) ─────────────────────────
-  const APV_MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-  const APV_LABELS = {
-    rent:'Aluguel', salaries:'Salários', utilities:'Energia/Água', water:'Água', electricity:'Luz',
-    products:'Produtos', maintenance:'Manutenção', other_fixed:'Outros fixos', other_variable:'Outros variáveis',
-    notes:'Observações', name:'Nome', cep:'CEP', logradouro:'Logradouro', numero:'Número', bairro:'Bairro',
-    cidade:'Cidade', uf:'UF', address:'Endereço', capacity_per_slot:'Capacidade por horário',
-    latitude:'Latitude', longitude:'Longitude'
-  };
-  const APV_MONEY = new Set(['rent','salaries','utilities','water','electricity','products','maintenance','other_fixed','other_variable']);
-  const brl = v => 'R$ ' + (parseFloat(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const apvVal = (k, v) => (v === null || v === undefined || v === '') ? '—' : (APV_MONEY.has(k) ? brl(v) : String(v));
-  const apvRow = (l, v) => `<div class="apv-row"><span>${escapeHtml(l)}</span><span>${escapeHtml(v)}</span></div>`;
-
-  function apvMeta(pc) {
-    if (pc.change_type === 'monthly_costs') {
-      const y = pc.payload?.year, m = pc.payload?.month;
-      return { badge: 'CUSTOS', title: (y && m) ? `Custos de ${APV_MONTHS[m - 1]}/${y}` : 'Custos mensais' };
-    }
-    if (pc.change_type === 'manage_car_wash') return { badge: 'LAVA-RÁPIDO', title: 'Gerenciar lava-rápido' };
-    return { badge: String(pc.change_type || 'ALTERAÇÃO').toUpperCase(), title: 'Alteração' };
-  }
-  // O que muda — as mesmas linhas do app (CostDiffBody / CarWashDiffBody).
-  function apvDiff(pc) {
-    const p = pc.payload || {};
-    let html = '';
-    if (pc.change_type === 'monthly_costs') {
-      const cp = p.cost_params || {};
-      const keys = Object.keys(cp).filter(k => cp[k] !== '' && cp[k] != null);
-      if (keys.length) html += keys.map(k => apvRow(APV_LABELS[k] || k, apvVal(k, cp[k]))).join('');
-      const d = p.custom_lines_diff || {};
-      const line = l => apvRow((l.name || `Linha #${l.id}`) + (l.cost_type ? (l.cost_type === 'fixed' ? ' · fixo' : ' · variável') : ''), typeof l.amount === 'number' ? brl(l.amount) : '—');
-      [['Adicionadas', d.added], ['Modificadas', d.updated]].forEach(([t, ls]) => {
-        if (Array.isArray(ls) && ls.length) html += `<div class="apv-sec">${t}</div>` + ls.map(line).join('');
-      });
-      if (Array.isArray(d.deleted) && d.deleted.length) html += `<div class="apv-sec">Removidas</div>` + d.deleted.map(id => apvRow(`Linha #${id}`, 'removida')).join('');
-      if (!d.added && !d.updated && Array.isArray(p.custom_lines) && p.custom_lines.length) html += `<div class="apv-sec">Linhas customizadas</div>` + p.custom_lines.map(line).join('');
-    } else if (pc.change_type === 'manage_car_wash') {
-      const cw = p.car_wash_params || {};
-      Object.keys(cw).forEach(k => {
-        if (k === 'operating_hours_attributes' || k === 'services_attributes') return;
-        html += apvRow(APV_LABELS[k] || k, apvVal(k, cw[k]));
-      });
-      const n1 = Object.keys(cw.operating_hours_attributes || {}).length;
-      const n2 = Object.keys(cw.services_attributes || {}).length;
-      if (n1) html += apvRow('Horários', `${n1} alteraç${n1 > 1 ? 'ões' : 'ão'}`);
-      if (n2) html += apvRow('Serviços', `${n2} alteraç${n2 > 1 ? 'ões' : 'ão'}`);
-    }
-    return html || `<div class="apv-row"><span>Sem detalhes disponíveis.</span><span></span></div>`;
-  }
-
-  let apvList = [];
-  function renderApprovalDrawer(data) {
-    apvList = data;
-    const body = document.getElementById('drawer-body');
-    const badge = document.getElementById('drawer-badge');
-    badge.textContent = data.length; badge.hidden = !data.length;
-    if (!data.length) {
-      body.innerHTML = `<div class="lx-empty"><span class="lx-empty-ic">${fi('check-circle', 26)}</span><b>Tudo em dia</b><span>Nenhuma alteração esperando sua aprovação.</span></div>`;
-      return;
-    }
-    const keepOpen = new Set([...body.querySelectorAll('.apv-diff:not([hidden])')].map(d => d.closest('.apv').dataset.id));
-    body.innerHTML = `<div class="lx-note">${fi('info', 14)}<span>Mudanças feitas por atendentes ficam aqui até você decidir. Aprovar aplica na hora.</span></div>` +
-      data.map(pc => {
-        const m = apvMeta(pc), open = keepOpen.has(String(pc.id));
-        return `<article class="apv" id="acard-${pc.id}" data-id="${pc.id}">
-          <div class="apv-top"><span class="lx-av">${escapeHtml((pc.attendant || '?').trim()[0]?.toUpperCase() || '?')}</span>
-            <div class="apv-who"><b>${escapeHtml(pc.attendant)}</b><small>${escapeHtml(pc.created_at)}</small></div>
-            <span class="apv-badge">${escapeHtml(m.badge)}</span></div>
-          <div class="apv-title">${escapeHtml(m.title)}</div>
-          <p class="apv-desc">${escapeHtml(pc.description)}</p>
-          <button type="button" class="apv-more" data-apv="more" aria-expanded="${open}">${open ? 'OCULTAR O QUE MUDA' : 'VER O QUE MUDA'}${fi(open ? 'chevron-up' : 'chevron-down', 13)}</button>
-          <div class="apv-diff"${open ? '' : ' hidden'}>${apvDiff(pc)}</div>
-          <div class="apv-acts">
-            <button type="button" class="apv-no" data-apv="ask-reject">${fi('x', 14)}Rejeitar</button>
-            <button type="button" class="apv-yes" data-apv="ask-approve">${fi('check', 14)}Aprovar</button>
-          </div>
-          <div class="apv-confirm"><p></p>
-            <div class="apv-confirm-acts"><button type="button" class="apv-back" data-apv="back">Voltar</button><button type="button" class="apv-yes" data-apv="go"></button></div>
-          </div>
-        </article>`;
-      }).join('');
-  }
-  // Confirmação dentro do próprio cartão, como o Alert do app: aprovar
-  // aplica na hora e rejeitar descarta — os dois pedem um segundo toque.
-  document.getElementById('drawer-body')?.addEventListener('click', e => {
-    const b = e.target.closest('[data-apv]'); if (!b) return;
-    const card = b.closest('.apv'), id = card.dataset.id, pc = apvList.find(x => String(x.id) === id);
-    const act = b.dataset.apv;
-    if (act === 'more') {
-      const d = card.querySelector('.apv-diff'), open = d.hidden;
-      d.hidden = !open; b.setAttribute('aria-expanded', open);
-      b.innerHTML = (open ? 'OCULTAR O QUE MUDA' : 'VER O QUE MUDA') + fi(open ? 'chevron-up' : 'chevron-down', 13);
-    } else if (act === 'ask-approve' || act === 'ask-reject') {
-      const ok = act === 'ask-approve', who = pc?.attendant || 'o atendente';
-      card.dataset.ask = ok ? 'approve' : 'reject';
-      card.querySelector('.apv-confirm p').textContent = ok
-        ? `A alteração de ${who} será aplicada agora.`
-        : `A alteração de ${who} será descartada.`;
-      const go = card.querySelector('[data-apv="go"]');
-      go.textContent = ok ? 'Sim, aprovar' : 'Sim, rejeitar';
-      go.classList.toggle('is-danger', !ok);
-      go.focus();
-    } else if (act === 'back') {
-      delete card.dataset.ask;
-    } else if (act === 'go') {
-      decideChange(id, card.dataset.ask, b);
-    }
-  });
-  async function decideChange(id, kind, btn) {
-    const label = btn.textContent;
-    card_busy(btn, true);
-    try {
-      const res = await fetch(`/owner/pending_changes/${id}/${kind}`, {
-        method: 'PATCH', headers: { 'X-CSRF-Token': CSRF, 'Content-Type': 'application/json', Accept: 'application/json' }
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || data.ok === false) throw new Error(data.error || data.message);
-      const card = document.getElementById(`acard-${id}`);
-      if (card) { card.classList.add('removing'); setTimeout(loadApprovals, 220); } else loadApprovals();
-      showToast(kind === 'approve' ? 'Alteração aprovada e aplicada.' : 'Alteração rejeitada.', 'success');
-    } catch (e) {
-      showToast(e.message || (kind === 'approve' ? 'Erro ao aprovar.' : 'Erro ao rejeitar.'), 'error');
-      card_busy(btn, false, label);
-    }
-  }
-  function card_busy(btn, on, label) {
-    btn.closest('.apv').querySelectorAll('button').forEach(b => b.disabled = on);
-    btn.innerHTML = on ? '<span class="lx-spin"></span>' : escapeHtml(label);
-  }
-  // Mantidas: outros pontos do painel ainda chamam por esses nomes.
-  window.approveChange = (id) => decideChange(id, 'approve', document.querySelector(`#acard-${id} [data-apv="go"]`));
-  window.rejectChange  = (id) => decideChange(id, 'reject',  document.querySelector(`#acard-${id} [data-apv="go"]`));
-  window.openApprovalDrawer = function() { lxOpen('approval-overlay'); loadApprovals(); };
-  document.getElementById('drawer-close')?.addEventListener('click', () => lxClose('approval-overlay'));
 
   // ── ACTIVATION CHECKLIST DISMISS ─────────────────────────────────────
   window.dismissActivation = function() {
@@ -2262,7 +2142,7 @@
       mensagem: window.openMsgModal,
       <% if current_user.owner? %>
       fidelidade: window.openLoyaltyModal,
-      aprovacoes: window.openApprovalDrawer,
+      aprovacoes: () => { location.href = '<%= owner_pending_changes_path %>'; },
       <% end %>
     };
     if (abrir && ATALHOS[abrir]) {
