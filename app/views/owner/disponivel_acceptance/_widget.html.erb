@@ -14,8 +14,12 @@
   - Título da aba piscando e notificação do sistema quando a aba está em
     segundo plano — o dono pode estar em outra aba ou outro programa.
 
-  Navegador só toca som e mostra notificação depois de um clique na página e
-  de uma permissão; a pílula "Ativar alertas" pede as duas coisas de uma vez.
+  Navegador só toca som depois de um clique na página e só mostra
+  notificação com permissão. A pílula no canto pede as duas coisas; enquanto
+  o som estiver bloqueado ela fica visível (e o alerta mostra "Som
+  bloqueado"), pra o dono nunca achar que tem som quando não tem. O primeiro
+  clique em qualquer lugar libera o som e, se houver pedido na tela, toca na
+  hora.
 %>
 <div id="lm-alert" hidden>
   <div class="lma-ov"></div>
@@ -51,6 +55,8 @@
       <div class="lma-row strong"><span>Você recebe na chegada</span><b id="lma-rest">—</b></div>
     </div>
 
+    <button type="button" class="lma-mute" id="lma-mute" hidden>🔇 Som bloqueado pelo navegador · <u>toque pra ouvir</u></button>
+
     <div class="lma-actions" id="lma-actions">
       <button type="button" class="lma-btn lma-no" id="lma-no">Recusar</button>
       <button type="button" class="lma-btn lma-yes" id="lma-yes">Aceitar pedido</button>
@@ -61,7 +67,7 @@
 
 <button type="button" class="lma-enable" id="lma-enable" hidden>
   <span class="lma-enable-ic">🔔</span>
-  <span><b>Ativar alertas do Last Minute</b><small>Som e aviso do navegador quando chegar pedido</small></span>
+  <span><b id="lma-enable-t">Ativar alertas do Last Minute</b><small id="lma-enable-s">Som e aviso do navegador quando chegar pedido</small></span>
   <span class="lma-enable-x" id="lma-enable-x" aria-label="Agora não">×</span>
 </button>
 
@@ -122,6 +128,8 @@
   .lma-result.no  { background: var(--sand, #f1eee6); color: var(--graphite, #575148); }
   .lma-result.err { background: #fdecec; color: var(--rose-500, #d05a5a); }
 
+  .lma-mute { display: block; width: 100%; margin-top: 14px; padding: 10px 12px; border: 1px dashed var(--coral-300, #eaa184); border-radius: 12px; background: var(--coral-50, #fdf3ee); color: var(--coral-700, #b5532f); font: 600 13px 'Inter', sans-serif; cursor: pointer; }
+
   .lma-enable {
     position: fixed; left: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 1500;
     display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 32px);
@@ -155,7 +163,7 @@
   var $ = function (id) { return document.getElementById(id); };
   var root = $('lm-alert');
 
-  var st = { queue: [], cur: null, deadline: 0, acting: false, done: false, tick: null, chime: null, flash: null, seenIds: {}, closed: {} };
+  var st = { queue: [], cur: null, deadline: 0, acting: false, done: false, tick: null, chime: null, flash: null, seenIds: {}, heard: {}, closed: {} };
   var baseTitle = document.title;
 
   function brl(v) { return 'R$ ' + (Number(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
@@ -163,11 +171,22 @@
 
   // ── Som (Web Audio: sem arquivo, sem custo de carga) ──────────────────
   var actx = null;
+  function audioOn() { return !!actx && actx.state === 'running'; }
   function unlockAudio() {
     try {
-      if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
-      if (actx.state === 'suspended') actx.resume();
+      if (!actx) {
+        actx = new (window.AudioContext || window.webkitAudioContext)();
+        actx.onstatechange = audioChanged;
+      }
+      if (actx.state === 'suspended') actx.resume().then(audioChanged, function () {});
     } catch (e) {}
+  }
+  // Som acabou de liberar: some o aviso de bloqueado e, se tem pedido na
+  // tela que ainda não foi ouvido, toca agora em vez de esperar os 10s.
+  function audioChanged() {
+    $('lma-mute').hidden = audioOn() || !st.cur || st.done;
+    maybeShowEnable();
+    if (audioOn() && st.cur && !st.done && !st.acting && !downOnAction && !st.heard[st.cur.id]) chime();
   }
   // Assinatura da Loov: arpejo de Dó maior que sobe (sol-dó-mi → SOL) e uma
   // resposta curta (mi → DÓ agudo), em timbre de marimba/sino. Alegre e
@@ -179,7 +198,8 @@
     [1318.5, 1.20, .16, 1], [2093, 1.32, 1, 1], [1568, 1.32, 1, .45]
   ];
   function chime() {
-    if (!actx || actx.state !== 'running') return;
+    if (!audioOn()) return;
+    if (st.cur) st.heard[st.cur.id] = true;
     var t = actx.currentTime + .02, out = actx.createDynamicsCompressor(), master = actx.createGain();
     master.gain.value = .5;
     master.connect(out); out.connect(actx.destination);
@@ -197,8 +217,14 @@
       });
     });
   }
+  // O clique que libera o som pode ser o próprio Aceitar/Recusar: aí não
+  // toca o som atrasado em cima da decisão.
+  var downOnAction = false;
   ['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) {
-    window.addEventListener(ev, unlockAudio, { passive: true });
+    window.addEventListener(ev, function (e) {
+      downOnAction = !!(e.target && e.target.closest && e.target.closest('#lma-actions'));
+      unlockAudio();
+    }, { passive: true });
   });
 
   // ── Notificação do sistema (aba em segundo plano) ─────────────────────
@@ -215,14 +241,25 @@
 
   // ── Pílula "Ativar alertas" ───────────────────────────────────────────
   var DISMISS_KEY = 'loov_lm_alerts_dismissed';
+  // Duas versões da pílula: pedir a permissão de notificação (dispensável
+  // pra sempre no ×) ou só avisar que o som está bloqueado nesta página
+  // (o × esconde até recarregar; qualquer clique já resolve).
+  var muteClosed = false;
   function maybeShowEnable() {
     var dismissed = false; try { dismissed = localStorage.getItem(DISMISS_KEY) === '1'; } catch (e) {}
-    var need = ('Notification' in window) && Notification.permission === 'default';
-    $('lma-enable').hidden = dismissed || !need;
+    var needNotif = !dismissed && ('Notification' in window) && Notification.permission === 'default';
+    var needSound = !muteClosed && !audioOn();
+    $('lma-enable-t').textContent = needNotif ? 'Ativar alertas do Last Minute' : 'Ativar som do Last Minute';
+    $('lma-enable-s').textContent = needNotif ? 'Som e aviso do navegador quando chegar pedido' : 'O navegador só toca depois de um clique na página';
+    $('lma-enable').hidden = !(needNotif || needSound);
   }
+  $('lma-mute').addEventListener('click', function () { unlockAudio(); });
   $('lma-enable').addEventListener('click', function (e) {
     if (e.target.id === 'lma-enable-x') {
-      try { localStorage.setItem(DISMISS_KEY, '1'); } catch (x) {}
+      if (('Notification' in window) && Notification.permission === 'default') {
+        try { localStorage.setItem(DISMISS_KEY, '1'); } catch (x) {}
+      }
+      muteClosed = true;
       $('lma-enable').hidden = true; return;
     }
     unlockAudio(); chime();
@@ -268,8 +305,9 @@
 
     if (!st.seenIds[a.id]) {
       st.seenIds[a.id] = true;
-      chime(); systemNotify(a);
+      unlockAudio(); chime(); systemNotify(a);
     }
+    $('lma-mute').hidden = audioOn();
     clearInterval(st.chime); st.chime = setInterval(function () { if (!st.done && !st.acting) chime(); }, 10000);
     clearInterval(st.flash);
     var on = false;
@@ -299,7 +337,7 @@
 
   function finish(kind, text) {
     st.done = true; stopSignals(); clearInterval(st.tick);
-    root.classList.remove('urgent');
+    root.classList.remove('urgent'); $('lma-mute').hidden = true;
     $('lma-actions').hidden = true;
     var r = $('lma-result'); r.hidden = false; r.className = 'lma-result ' + kind; r.textContent = text;
     var id = st.cur && st.cur.id;
@@ -377,6 +415,9 @@
     pending: function () { return st.queue.length; }
   };
 
+  // Tenta abrir o som já no carregamento: alguns navegadores liberam sem
+  // clique em sites que a pessoa usa muito (Chrome: Media Engagement).
+  unlockAudio();
   maybeShowEnable();
   poll();
 })();
