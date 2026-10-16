@@ -17,6 +17,7 @@
   cartões usam o resto da largura em grade.
 %>
 <script src="/vendor/feather-4.29.2.min.js"></script>
+<%= render "shared/loov_logos" %>
 
 <style>
   .loov-nav { background: var(--cream) !important; }
@@ -107,43 +108,53 @@
   .ag-spin { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(250,250,246,.35); border-top-color: var(--cream); animation: agspin .8s linear infinite; }
   @keyframes agspin { to { transform: rotate(360deg); } }
 
-  /* Avaliar (porte da ReviewScreen) */
-  .rv { max-width: 560px; margin: 0 auto; padding-bottom: 48px; }
-  .rv-head { display: flex; align-items: center; padding: 8px 16px; }
-  .rv-back { flex: 0 0 40px; height: 40px; border: 0; border-radius: 50%; background: var(--sand); color: var(--ink); display: flex; align-items: center; justify-content: center; }
+  /* Avaliar (porte da ReviewScreen), no padrão das páginas da conta: título
+     grande e respiro (wiemer), a pergunta é o título ("Como foi na Italy
+     Wash?") e o serviço e a data viram a frase de apoio, sem cartão em
+     volta. Estrelas grandes no centro, como a nota da App Store; o coral
+     só nas estrelas marcadas e no Enviar (Spotify: uma cor de ação).
+     Computador: duas colunas, como Segurança e Dados pessoais. */
+  .rv { width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 20px 64px; }
+  .rv-head { padding: 8px 0; }
+  .rv-back { width: 40px; height: 40px; border: 0; border-radius: 50%; background: var(--sand); color: var(--ink); display: flex; align-items: center; justify-content: center; transition: background .15s; }
   .rv-back:hover { background: var(--stone); }
-  .rv-hc { flex: 1; text-align: center; }
-  .rv-hc small { display: block; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 2px; color: var(--coral-500); }
-  .rv-hc h1 { margin: 2px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 18px; letter-spacing: -0.3px; color: var(--ink) !important; }
-  .rv-body { padding: 18px; }
-  .rv-card { margin-bottom: 24px; padding: 16px; background: var(--paper); border: 1px solid var(--stone); border-radius: 16px; box-shadow: 0 6px 18px -14px rgba(40,35,28,.4); }
-  .rv-lab { margin-bottom: 6px; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1.5px; color: var(--ash); }
-  .rv-name { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 18px; letter-spacing: -0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .rv-div { height: 1px; background: var(--stone); margin: 14px 0; }
-  .rv-row { display: flex; align-items: center; }
-  .rv-item { flex: 1; min-width: 0; }
-  .rv-item b { display: block; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .rv-sep { width: 1px; height: 28px; background: var(--stone); margin: 0 12px; }
-  .rv-sec { margin-bottom: 8px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.8px; color: var(--ash); }
-  .rv-help { margin: -2px 0 12px; font-size: 11px; color: var(--graphite); }
-  .rv-stars { display: flex; justify-content: center; gap: 6px; padding: 10px 0; margin-bottom: 6px; }
+  .rv-logo { width: 52px; height: 52px; margin-top: 22px; }
+  .rv-logo svg, .rv-logo img { width: 100%; height: 100%; display: block; }
+  .rv-eyebrow { margin-top: 18px; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px; color: var(--ash); text-transform: uppercase; }
+  .rv-title { margin: 6px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: clamp(36px, 6vw, 72px); line-height: .98; letter-spacing: -0.04em; color: var(--ink) !important; overflow-wrap: anywhere; }
+  .rv-title em { font-style: normal; color: var(--coral-500); }
+  .rv-lead { margin: 14px 0 0; max-width: 46ch; font-size: 15px; line-height: 22px; color: var(--graphite); }
+  .rv-panel { margin-top: 28px; padding: 22px 18px; background: var(--paper); border: 1px solid var(--stone); border-radius: 18px; }
+  .rv-sec { margin-bottom: 8px; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px; color: var(--ash); text-transform: uppercase; }
+  .rv-help { margin: -2px 0 12px; font-size: 12px; color: var(--graphite); }
+  .rv-stars { display: flex; justify-content: center; gap: 4px; padding: 6px 0 2px; }
   .rv-star { border: 0; background: transparent; padding: 6px; color: var(--stone); transition: transform .15s, color .15s; }
   .rv-star:hover { transform: scale(1.12); }
   .rv-star.is-on { color: var(--coral-500); }
   .rv-star.is-on svg { fill: currentColor; }
-  .rv-rlab { min-height: 18px; text-align: center; font-size: 14px; font-weight: 600; letter-spacing: .5px; color: var(--coral-700); }
-  .rv-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
-  .rv-tag { display: inline-flex; align-items: center; gap: 5px; padding: 9px 14px; border-radius: 100px; background: var(--paper); border: 1px solid var(--stone); color: var(--graphite); font-size: 12px; font-weight: 600; transition: background .15s, border-color .15s; }
+  .rv-rlab { min-height: 22px; text-align: center; font-family: 'Space Grotesk', sans-serif; font-size: 17px; font-weight: 600; letter-spacing: -0.2px; color: var(--ink); }
+  .rv-rlab.is-off { font-family: inherit; font-size: 13px; font-weight: 500; color: var(--ash); }
+  .rv-div { height: 1px; background: var(--stone); margin: 22px 0; }
+  .rv-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+  .rv-tag { display: inline-flex; align-items: center; gap: 5px; padding: 9px 14px; border-radius: 100px; background: var(--paper); border: 1px solid var(--stone); color: var(--graphite); font-size: 13px; font-weight: 600; transition: background .15s, border-color .15s; }
   .rv-tag:hover { border-color: var(--ink); }
-  .rv-tag.is-on { background: var(--coral-500); border-color: var(--coral-500); color: var(--cream); }
-  .rv-comment { padding: 14px; background: var(--paper); border: 1px solid var(--stone); border-radius: 14px; transition: border-color .15s, box-shadow .15s; }
+  .rv-tag.is-on { background: var(--ink); border-color: var(--ink); color: var(--cream); }
+  .rv-comment { padding: 14px; background: var(--sand); border: 1px solid transparent; border-radius: 14px; transition: border-color .15s, box-shadow .15s; }
   .rv-comment:focus-within { border-color: var(--coral-500); box-shadow: 0 0 0 4px rgba(221,120,82,.14); }
-  .rv-comment textarea { display: block; width: 100%; min-height: 90px; padding: 0; border: 0 !important; outline: none; resize: vertical; background: transparent !important; box-shadow: none !important; font: inherit; font-size: 14px; line-height: 20px; color: var(--ink); }
+  .rv-comment textarea { display: block; width: 100%; min-height: 96px; padding: 0; border: 0 !important; outline: none; resize: vertical; background: transparent !important; box-shadow: none !important; font: inherit; font-size: 15px; line-height: 21px; color: var(--ink); }
   .rv-count { margin-top: 8px; text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ash); }
   .rv-count.is-warn { color: var(--amber-500, #c98a1a); }
-  .rv-send { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 28px; padding: 15px; border: 0; border-radius: 100px; background: var(--coral-500); color: var(--cream); font-size: 14px; font-weight: 600; transition: opacity .15s; }
+  .rv-send { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 22px; padding: 15px; border: 0; border-radius: 100px; background: var(--coral-500); color: var(--cream); font-size: 15px; font-weight: 600; transition: opacity .15s, background .15s; }
+  .rv-send:not([disabled]):hover { background: var(--coral-700); }
   .rv-send[disabled] { opacity: .4; cursor: default; }
-  .rv-note { margin: 16px 0 0; padding: 0 12px; text-align: center; font-size: 11px; line-height: 16px; color: var(--ash); }
+  .rv-note { margin: 14px 0 0; text-align: center; font-size: 12px; line-height: 17px; color: var(--ash); }
+  @media (min-width: 960px) {
+    .rv { padding: 0 40px 80px; }
+    .rv-head { padding-top: 28px; }
+    .rv-grid { display: grid; grid-template-columns: minmax(0, 440px) minmax(0, 520px); justify-content: space-between; gap: 64px; align-items: start; }
+    .rv-side { position: sticky; top: 92px; }
+    .rv-panel { margin-top: 34px; padding: 28px; }
+  }
 
   .ag-toast { position: fixed; left: 16px; right: 16px; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); z-index: 70; max-width: 440px; margin: 0 auto; display: flex; align-items: center; gap: 10px; padding: 13px; border-radius: 14px; border: 1px solid var(--coral-100); background: var(--coral-50); color: var(--coral-700); font-size: 12.5px; font-weight: 600; box-shadow: 0 14px 36px -16px rgba(40,35,28,.45); transform: translateY(16px); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
   .ag-toast.is-on { opacity: 1; transform: none; }
@@ -412,30 +423,33 @@
   function renderReview() {
     var r = state.review, a = r.a, d = new Date(a.scheduled_at);
     var stars = '';
-    for (var n = 1; n <= 5; n++) stars += '<button type="button" class="rv-star' + (n <= r.rating ? ' is-on' : '') + '" data-rv-star="' + n + '" aria-label="' + n + (n === 1 ? ' estrela' : ' estrelas') + '">' + icon('star', 36) + '</button>';
+    for (var n = 1; n <= 5; n++) stars += '<button type="button" class="rv-star' + (n <= r.rating ? ' is-on' : '') + '" data-rv-star="' + n + '" aria-label="' + n + (n === 1 ? ' estrela' : ' estrelas') + '">' + icon('star', 42) + '</button>';
     var tags = (TAGS_BY_RATING[r.rating] || []).map(function (t) {
       var on = r.tags.indexOf(t) !== -1;
       return '<button type="button" class="rv-tag' + (on ? ' is-on' : '') + '" data-rv-tag="' + esc(t) + '" aria-pressed="' + on + '">' + (on ? icon('check', 11) : '') + esc(t) + '</button>';
     }).join('');
+    var cw = a.car_wash || {};
     $('ag-review').innerHTML = '<div class="rv">' +
-      '<div class="rv-head"><button type="button" class="rv-back" data-rv-back aria-label="Voltar">' + icon('chevron-left', 18) + '</button>' +
-        '<div class="rv-hc"><small>FEEDBACK</small><h1>Avaliar atendimento</h1></div><span style="width:40px"></span></div>' +
-      '<div class="rv-body">' +
-        '<div class="rv-card"><div class="rv-lab">VOCÊ FOI ATENDIDO EM</div><div class="rv-name">' + esc(a.car_wash && a.car_wash.name || 'Lava-rápido') + '</div>' +
-          '<div class="rv-div"></div><div class="rv-row">' +
-            '<div class="rv-item"><div class="rv-lab">SERVIÇO</div><b>' + esc(a.service && a.service.title || 'Serviço') + '</b></div><div class="rv-sep"></div>' +
-            '<div class="rv-item"><div class="rv-lab">DATA</div><b>' + WD_CAP[d.getDay()] + ', ' + d.getDate() + ' de ' + MONTHS[d.getMonth()] + '</b></div>' +
-          '</div></div>' +
-        '<div class="rv-sec">SUA AVALIAÇÃO</div>' +
+      '<div class="rv-head"><button type="button" class="rv-back" data-rv-back aria-label="Voltar">' + icon('chevron-left', 18) + '</button></div>' +
+      '<div class="rv-grid">' +
+        '<div class="rv-side">' +
+          (window.LoovLogos ? '<div class="rv-logo">' + LoovLogos.logoOf(cw) + '</div>' : '') +
+          '<div class="rv-eyebrow">Avaliar atendimento</div>' +
+          '<h1 class="rv-title">Como foi na <em>' + esc(cw.name || 'lavagem') + '</em>?</h1>' +
+          '<p class="rv-lead">' + esc(a.service && a.service.title || 'Serviço') + ' · ' + WD_CAP[d.getDay()] + ', ' + d.getDate() + ' de ' + MONTHS[d.getMonth()] + '.</p>' +
+        '</div>' +
+        '<div class="rv-main"><div class="rv-panel">' +
+        '<div class="rv-sec" style="text-align:center">Sua nota</div>' +
         '<div class="rv-stars">' + stars + '</div>' +
-        '<div class="rv-rlab">' + (r.rating ? RATING_LABELS[r.rating] : 'Toque nas estrelas') + '</div>' +
-        (r.rating ? '<div class="rv-sec" style="margin-top:28px">COMO FOI O ATENDIMENTO?</div><div class="rv-help">Selecione até ' + MAX_TAGS + ' opções</div><div class="rv-tags">' + tags + '</div>' +
-          '<div class="rv-sec" style="margin-top:24px">COMENTÁRIO (OPCIONAL)</div>' +
+        '<div class="rv-rlab' + (r.rating ? '' : ' is-off') + '">' + (r.rating ? RATING_LABELS[r.rating] : 'Toque nas estrelas') + '</div>' +
+        (r.rating ? '<div class="rv-div"></div><div class="rv-sec">Como foi o atendimento?</div><div class="rv-help">Selecione até ' + MAX_TAGS + ' opções</div><div class="rv-tags">' + tags + '</div>' +
+          '<div class="rv-sec" style="margin-top:24px">Comentário (opcional)</div>' +
           '<div class="rv-comment"><textarea id="rv-text" maxlength="' + MAX_COMMENT + '" placeholder="Conte mais sobre sua experiência…">' + esc(r.comment) + '</textarea>' +
           '<div class="rv-count' + (r.comment.length > MAX_COMMENT * 0.9 ? ' is-warn' : '') + '" id="rv-count">' + r.comment.length + '/' + MAX_COMMENT + '</div></div>' : '') +
         '<button type="button" class="rv-send" data-rv-send' + (!r.rating || r.sending ? ' disabled' : '') + '>' + (r.sending ? '<span class="ag-spin"></span>' : icon('send', 14) + 'Enviar avaliação') + '</button>' +
+        '</div>' +
         '<p class="rv-note">Sua avaliação ajuda outros clientes e o lava-rápido a melhorar.</p>' +
-      '</div></div>';
+      '</div></div></div>';
   }
   function sendReview() {
     var r = state.review; if (!r || !r.rating || r.sending) return;
