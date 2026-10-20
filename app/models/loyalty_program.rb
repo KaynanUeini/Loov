@@ -60,8 +60,9 @@ class LoyaltyProgram < ApplicationRecord
   # Conta só lavagens concluídas depois que o programa foi criado. A visita
   # que completa o cartão gera um vale (LoyaltyReward) pra próxima visita.
   #
-  # historico: true acrescenta as visitas (data + serviço, mais recente
-  # primeiro) pro verso do cartão na tela Fidelidade.
+  # historico: true acrescenta as visitas do ciclo deste cartão (data +
+  # serviço, mais recente primeiro) pro verso do cartão na tela Fidelidade —
+  # as lavagens de cartões anteriores ficam nos cartões delas.
   def cartao_para(user, historico: false)
     visitas_scope = if user
       user.appointments.where(car_wash_id: car_wash_id, status: "attended")
@@ -83,9 +84,8 @@ class LoyaltyProgram < ApplicationRecord
     return cartao unless historico
 
     cartao.merge(
-      address:        car_wash.endereco_curto,
-      rewards_earned: visitas / meta,
-      history:        historico_de(visitas_scope, [meta, 12].max)
+      address: car_wash.endereco_curto,
+      history: historico_de(visitas_scope, cartao[:filled])
     )
   end
 

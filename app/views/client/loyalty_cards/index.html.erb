@@ -162,14 +162,12 @@
   .lc-back .lc-in { position: absolute; inset: 0; aspect-ratio: auto; gap: 10px; }
   .lc-bh { display: flex; justify-content: space-between; align-items: baseline; }
   .lc-bh b { font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 10px; letter-spacing: 1.4px; opacity: .7; }
-  .lc-bh small { font-size: 12px; opacity: .7; }
   .lc-hist { flex: 1; min-height: 0; margin: 0; padding: 0; list-style: none; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(250,250,246,.35) transparent; }
   .lc-hist li { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid rgba(250,250,246,.12); font-size: 13px; }
   .lc-hist li:last-child { border-bottom: 0; }
   .lc-hist .d { flex: 0 0 52px; font-family: 'JetBrains Mono', monospace; font-size: 11px; opacity: .7; }
   .lc-hist .s { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .lc-hist .t { flex-shrink: 0; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 2px 7px; border-radius: 100px; background: rgba(250,250,246,.14); }
-  .lc-hist .t.is-old { background: transparent; opacity: .5; }
   .lc-back .lc-foot { align-items: center; }
 
   /* Sem cartões: um cartão "fantasma" pra mostrar o que vem. */
@@ -280,14 +278,13 @@
                 <div class="lc-face lc-back" aria-hidden="true">
                   <span class="lc-orb"></span><span class="lc-pat"></span>
                   <div class="lc-in">
-                    <div class="lc-bh"><b>HISTÓRICO</b><small><%= c[:visits_total] %> <%= c[:visits_total] == 1 ? "visita" : "visitas" %><% if c[:rewards_earned].to_i.positive? %> · <%= c[:rewards_earned] %> <%= c[:rewards_earned] == 1 ? "recompensa" : "recompensas" %><% end %></small></div>
+                    <div class="lc-bh"><b>HISTÓRICO</b></div>
                     <ul class="lc-hist">
                       <% hist.each_with_index do |h, idx| %>
-                        <% atual = idx < c[:filled] %>
                         <li>
                           <span class="d"><%= quando.(h[:at]) %></span>
                           <span class="s"><%= h[:service].presence || "Lavagem" %></span>
-                          <span class="t<%= ' is-old' unless atual %>"><%= atual ? "##{c[:filled] - idx}" : "ciclo ant." %></span>
+                          <span class="t">#<%= c[:filled] - idx %></span>
                         </li>
                       <% end %>
                     </ul>
