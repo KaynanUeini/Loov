@@ -35,7 +35,7 @@ class LoyaltyProgram < ApplicationRecord
 
   # Cria o vale do cliente que completou o cartão no atendimento `appointment`.
   # Idempotente (um vale por atendimento que completou). Condições congeladas.
-  def emitir_vale!(appointment)
+  def emitir_vale!(appointment, avisar: true)
     vale = LoyaltyReward.create!(
       user_id:               appointment.user_id,
       car_wash_id:           car_wash_id,
@@ -49,7 +49,7 @@ class LoyaltyProgram < ApplicationRecord
       description:           reward_description,
       expires_at:            (Time.current + valid_days.days).in_time_zone("America/Sao_Paulo").end_of_day
     )
-    avisar_vale(vale)
+    avisar_vale(vale) if avisar
     vale
   rescue ActiveRecord::RecordNotUnique
     LoyaltyReward.find_by(earned_appointment_id: appointment.id)

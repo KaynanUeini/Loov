@@ -233,7 +233,7 @@
             estado = (c[:milestone] || c[:reward]) ? "is-done" : (faltam == 1 ? "is-close" : "")
             hist   = c[:history] || []
           %>
-          <article class="lc <%= estado %>" data-tema="<%= tema_do_cartao[c[:car_wash_id]] %>" data-id="<%= c[:car_wash_id] %>" data-total="<%= c[:visits_total] %>" data-filled="<%= c[:filled] %>">
+          <article class="lc <%= estado %>" data-tema="<%= tema_do_cartao[c[:car_wash_id]] %>" data-id="<%= c[:completed] ? c[:card_key] : c[:car_wash_id] %>" data-total="<%= c[:visits_total] %>" data-filled="<%= c[:filled] %>"<%= ' data-done' if c[:completed] %>>
             <div class="lc-tilt">
               <div class="lc-flip">
                 <div class="lc-face lc-front">
@@ -396,6 +396,8 @@
   try { vistos = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { vistos = null; }
   var agora = {};
   cards.forEach(function (card) {
+    // Cartão completo guardando o vale: os carimbos já são antigos.
+    if (card.hasAttribute('data-done')) return;
     var id = card.dataset.id, total = +card.dataset.total, filled = +card.dataset.filled;
     agora[id] = total;
     if (!vistos) return;

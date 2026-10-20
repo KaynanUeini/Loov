@@ -15,12 +15,7 @@ module Client
       cards = LoyaltyProgram.where(active: true).includes(:car_wash)
                             .map { |lp| lp.cartao_para(current_user, historico: true) }
                             .select { |c| c[:visits_total].positive? }
-      # Vale ganho e ainda não usado (o que vence primeiro), por lava-rápido.
-      vales = LoyaltyReward.nao_usados.where(user_id: current_user.id)
-                           .where("expires_at > ?", Time.current)
-                           .includes(:car_wash, :appointment).order(:expires_at)
-                           .group_by(&:car_wash_id)
-      cards.each { |c| c[:reward] = vales[c[:car_wash_id]]&.first&.as_cliente }
+      cards = com_cartoes_completos(cards)
 
       respond_to do |format|
         format.html do
@@ -42,6 +37,46 @@ module Client
     end
 
     private
+
+    # Cartão completo vira um cartão à parte, com o vale que ele deu, até o
+    # vale ser usado; a visita seguinte já abre um cartão novo do mesmo
+    # lava-rápido (antes o mesmo cartão só zerava e o vale "sumia" junto).
+    # Enquanto a visita que completou é a última, o cartão do momento É o
+    # completo — o novo começa na próxima visita.
+    def com_cartoes_completos(cards)
+      vales = LoyaltyReward.nao_usados.where(user_id: current_user.id)
+                           .where("expires_at > ?", Time.current)
+                           .includes(:car_wash, :appointment, :earned_appointment)
+                           .order(created_at: :desc)
+                           .group_by(&:car_wash_id)
+      cards.flat_map do |c|
+        vs = vales[c[:car_wash_id]] || []
+        c[:card_key] = "cw-#{c[:car_wash_id]}"
+        if c[:milestone] && vs.any?
+          c[:reward] = vs.first.as_cliente
+          vs = vs.drop(1)
+        end
+        completos = vs.map { |v| cartao_completo(c, v) }
+        completos + [c]
+      end
+    end
+
+    def cartao_completo(atual, vale)
+      meta = atual[:visits_required]
+      ganho = vale.earned_appointment
+      visitas = current_user.appointments.where(car_wash_id: vale.car_wash_id, status: "attended")
+                            .where("scheduled_at <= ?", ganho.scheduled_at)
+                            .includes(:service).order(scheduled_at: :desc).limit(meta)
+      atual.merge(
+        card_key:           "vale-#{vale.id}",
+        completed:          true,
+        reward_description: vale.description,
+        filled:             meta,
+        milestone:          true,
+        reward:             vale.as_cliente,
+        history:            visitas.map { |a| { at: (a.attended_at || a.scheduled_at)&.iso8601, service: a.service&.title } }
+      )
+    end
 
     PERTO_LIMITE = 10
 
