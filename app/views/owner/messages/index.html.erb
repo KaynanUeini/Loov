@@ -1,0 +1,236 @@
+<%#
+  Mensagens do dono e do atendente — página própria, no modelo das páginas
+  da conta (Notificações, Aprovações). Antes o atalho levava pro dashboard e
+  abria uma folha por cima: quem queria mandar um aviso caía em outra tela,
+  sem um voltar pra onde estava.
+
+    · Cabeçalho padrão (shared/page_head).
+    · Escrever à esquerda: para quem (aviso geral ou direta), quem recebe,
+      a mensagem e o enviar. Mesma API do app (POST /owner/messages).
+    · À direita, "Como o cliente vê" — a notificação como chega no celular,
+      atualizando enquanto escreve (ver antes de mandar: Nielsen, visibilidade
+      do estado) — e as últimas enviadas, pra não repetir aviso.
+    · No celular a coluna da direita desce pra baixo do formulário.
+%>
+<script src="/vendor/feather-4.29.2.min.js"></script>
+
+<style>
+  .loov-nav { background: var(--cream) !important; }
+  .mg { background: var(--cream); color: var(--ink); min-height: 100vh; padding-top: 60px; }
+  .mg *, .mg *::before, .mg *::after { box-sizing: border-box; }
+  .mg button { font-family: inherit; line-height: normal; cursor: pointer; }
+  .mg svg.feather { display: block; flex-shrink: 0; }
+  .mg-wrap { width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 20px 64px; }
+  .mg-grid { display: grid; gap: 28px; padding-top: 28px; }
+
+  .mg-label { display: block; margin: 22px 0 8px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--ash); }
+  .mg-label:first-child { margin-top: 0; }
+
+  /* Para quem: segmentado em pílula, ativo em coral (o mesmo da folha antiga). */
+  .mg-seg { display: flex; padding: 4px; gap: 2px; border-radius: 999px; background: var(--sand); border: 1px solid var(--stone); }
+  .mg-seg button { flex: 1; min-width: 0; height: 42px; border: 0; border-radius: 999px; background: transparent; color: var(--graphite); font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px; transition: background .15s, color .15s; }
+  .mg-seg button:hover { color: var(--ink); }
+  .mg-seg button[aria-pressed="true"] { background: var(--coral-500); color: var(--cream); box-shadow: 0 2px 6px rgba(220,120,82,.25); }
+  .mg-help { margin: 8px 2px 0; font-size: 12.5px; line-height: 18px; color: var(--graphite); }
+
+  .mg-list { background: var(--paper); border: 1px solid var(--stone); border-radius: 16px; overflow: hidden; max-height: 288px; overflow-y: auto; }
+  .mg-row { width: 100%; display: flex; align-items: center; gap: 12px; padding: 11px 14px; border: 0; border-bottom: 1px solid var(--stone); background: transparent; text-align: left; color: var(--ink); }
+  .mg-row:last-child { border-bottom: 0; }
+  button.mg-row:hover { background: var(--cream); }
+  .mg-av { flex: 0 0 36px; height: 36px; border-radius: 50%; background: var(--coral-50); color: var(--coral-700); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; }
+  .mg-row-t { flex: 1; min-width: 0; }
+  .mg-row-t b { display: block; font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mg-row-t small { display: block; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--ash); }
+  .mg-radio { flex: 0 0 20px; height: 20px; border-radius: 50%; border: 2px solid var(--stone); display: flex; align-items: center; justify-content: center; transition: border-color .15s; }
+  .mg-row[aria-checked="true"] { background: var(--coral-50); }
+  .mg-row[aria-checked="true"] .mg-radio { border-color: var(--coral-500); }
+  .mg-row[aria-checked="true"] .mg-radio::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--coral-500); }
+  .mg-none { display: flex; align-items: center; gap: 10px; padding: 16px 14px; color: var(--graphite); font-size: 13px; }
+
+  .mg .mg-text { display: block; width: 100%; height: 132px; resize: none; padding: 14px 16px !important; border: 1px solid var(--stone) !important; border-radius: 16px !important; background: var(--paper) !important; box-shadow: none !important; outline: none; font: inherit; font-size: 15px; line-height: 1.45; color: var(--ink); transition: border-color .15s, box-shadow .15s; }
+  .mg .mg-text:focus { border-color: var(--coral-500) !important; box-shadow: 0 0 0 4px rgba(221,120,82,.14) !important; }
+  .mg-counter { margin-top: 6px; text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--ash); }
+  .mg-counter.is-near { color: var(--coral-700); }
+  .mg-err { display: flex; gap: 8px; align-items: center; margin-top: 12px; padding: 11px 12px; border-radius: 12px; background: #f6d4d4; color: var(--rose-500, #c0392b); font-size: 13px; font-weight: 600; }
+  .mg-err[hidden] { display: none; }
+  .mg-send { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 18px; padding: 16px; border: 0; border-radius: 100px; background: var(--coral-500); color: var(--cream); font-size: 15px; font-weight: 600; transition: background .15s, opacity .15s; }
+  .mg-send:hover { background: var(--coral-700); }
+  .mg-send[disabled] { opacity: .5; cursor: default; background: var(--coral-500); }
+  .mg-spin { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(250,250,246,.35); border-top-color: var(--cream); animation: mgspin .8s linear infinite; }
+  @keyframes mgspin { to { transform: rotate(360deg); } }
+  .mg-foot { display: flex; gap: 8px; align-items: flex-start; margin-top: 14px; font-size: 12px; line-height: 17px; color: var(--ash); }
+  .mg-foot svg { margin-top: 1px; }
+
+  /* Como o cliente vê: a notificação do celular, viva enquanto escreve. */
+  .mg-phone { padding: 18px; border-radius: 24px; background: var(--sand); }
+  .mg-notif { display: flex; gap: 12px; padding: 14px; border-radius: 18px; background: var(--paper); box-shadow: 0 10px 28px -18px rgba(40,35,28,.45); }
+  .mg-notif-ic { flex: 0 0 38px; height: 38px; border-radius: 10px; background: var(--ink); color: var(--cream); display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 16px; }
+  .mg-notif-t { flex: 1; min-width: 0; }
+  .mg-notif-top { display: flex; justify-content: space-between; gap: 8px; }
+  .mg-notif-top b { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mg-notif-top small { font-size: 11px; color: var(--ash); white-space: nowrap; }
+  .mg-notif-body { margin-top: 2px; font-size: 13px; line-height: 18px; color: var(--graphite); overflow-wrap: anywhere; }
+  .mg-notif-body.is-ph { color: var(--ash); }
+
+  .mg-sent { display: grid; gap: 10px; }
+  .mg-sent-card { padding: 14px; border-radius: 16px; background: var(--paper); border: 1px solid var(--stone); }
+  .mg-sent-meta { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+  .mg-sent-meta span { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--coral-700); }
+  .mg-sent-meta small { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ash); white-space: nowrap; }
+  .mg-sent-card p { margin: 0; font-size: 13px; line-height: 18px; color: var(--ink); overflow-wrap: anywhere; }
+  .mg-sent-none { margin: 0; font-size: 13px; color: var(--ash); }
+
+  .mg-toast { position: fixed; left: 16px; right: 16px; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); z-index: 70; max-width: 440px; margin: 0 auto; padding: 13px 16px; border-radius: 14px; background: var(--ink); color: var(--cream); font-size: 13px; box-shadow: 0 14px 36px -16px rgba(40,35,28,.6); transform: translateY(16px); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+  .mg-toast.is-on { opacity: 1; transform: none; }
+
+  @media (min-width: 720px) { .mg-grid { padding-top: 36px; } }
+  @media (min-width: 960px) {
+    .mg-wrap { padding: 0 40px 80px; }
+    .mg-grid { grid-template-columns: minmax(0, 1fr) 340px; gap: 48px; align-items: start; }
+    .mg-side { position: sticky; top: 84px; }
+  }
+</style>
+
+<div class="mg">
+  <div class="mg-wrap">
+    <%= render "shared/page_head", back_href: edit_user_registration_path, back_id: "mg-back", eyebrow: "Comunicação",
+               title: "Mensagens", lead: "Avise quem tem horário hoje. Chega como notificação no app e no site." %>
+
+    <div class="mg-grid">
+      <section class="mg-main" aria-label="Escrever mensagem">
+        <span class="mg-label">Enviar para</span>
+        <div class="mg-seg" role="group" aria-label="Destinatário">
+          <button type="button" id="mg-all" aria-pressed="true"><i data-feather="radio" style="width:14px;height:14px"></i>Aviso geral do dia</button>
+          <button type="button" id="mg-user" aria-pressed="false"><i data-feather="message-circle" style="width:14px;height:14px"></i>Mensagem direta</button>
+        </div>
+        <p class="mg-help" id="mg-help"></p>
+
+        <span class="mg-label" id="mg-list-label">Quem recebe</span>
+        <div class="mg-list" id="mg-list" role="radiogroup" aria-labelledby="mg-list-label"></div>
+
+        <label class="mg-label" for="mg-body">Mensagem</label>
+        <textarea class="mg-text" id="mg-body" maxlength="300" placeholder="Ex.: Chegue 10 minutos antes, por favor."></textarea>
+        <div class="mg-counter" id="mg-counter"><span id="mg-count">0</span>/300</div>
+        <div class="mg-err" id="mg-err" hidden></div>
+        <button type="button" class="mg-send" id="mg-send">Enviar mensagem</button>
+        <p class="mg-foot"><i data-feather="info" style="width:14px;height:14px"></i><span>Só clientes com horário marcado hoje recebem.</span></p>
+      </section>
+
+      <aside class="mg-side" aria-label="Pré-visualização e enviadas">
+        <span class="mg-label">Como o cliente vê</span>
+        <div class="mg-phone">
+          <div class="mg-notif">
+            <span class="mg-notif-ic">L</span>
+            <div class="mg-notif-t">
+              <div class="mg-notif-top"><b><%= @car_wash.name %></b><small>agora</small></div>
+              <div class="mg-notif-body is-ph" id="mg-preview">Sua mensagem aparece aqui.</div>
+            </div>
+          </div>
+        </div>
+
+        <span class="mg-label">Enviadas</span>
+        <div class="mg-sent" id="mg-sent"></div>
+      </aside>
+    </div>
+  </div>
+  <div class="mg-toast" id="mg-toast" role="status" aria-live="polite"></div>
+</div>
+
+<script>
+(function () {
+  var CLIENTS = <%= raw json_escape(@clients_json.to_json) %>;
+  var SENT = <%= raw json_escape(@sent_json.to_json) %>;
+  var CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content;
+  var target = 'all', pick = null;
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function fi(n, s) { return (window.feather && feather.icons[n]) ? feather.icons[n].toSvg({ width: s || 16, height: s || 16 }) : ''; }
+  function split(c) { var p = String(c.name || '').split(' · '); return { name: p[0] || 'Cliente', time: p[1] || '' }; }
+  var tt = null;
+  function toast(msg) {
+    var t = $('mg-toast'); t.textContent = msg; t.classList.add('is-on');
+    clearTimeout(tt); tt = setTimeout(function () { t.classList.remove('is-on'); }, 3200);
+  }
+
+  function renderList() {
+    var n = CLIENTS.length, list = $('mg-list');
+    $('mg-all').setAttribute('aria-pressed', target === 'all');
+    $('mg-user').setAttribute('aria-pressed', target === 'user');
+    $('mg-help').textContent = target === 'all'
+      ? (n ? 'Vai para ' + (n === 1 ? 'o cliente' : 'os ' + n + ' clientes') + ' com horário hoje.' : 'Ninguém com horário hoje ainda.')
+      : 'Escolha um cliente de hoje e escreva só pra ele.';
+    $('mg-list-label').textContent = target === 'all' ? 'Quem recebe' + (n ? ' · ' + n : '') : 'Escolha o cliente';
+    if (!n) {
+      list.innerHTML = '<div class="mg-none">' + fi('calendar') + '<span>Nenhum cliente com horário confirmado hoje.</span></div>';
+    } else if (target === 'all') {
+      list.innerHTML = CLIENTS.map(function (c) { var s = split(c); return '<div class="mg-row"><span class="mg-av">' + esc(s.name[0].toUpperCase()) + '</span><span class="mg-row-t"><b>' + esc(s.name) + '</b><small>' + esc(s.time) + '</small></span></div>'; }).join('');
+    } else {
+      // Um cliente com dois horários hoje aparece uma vez só na escolha.
+      var seen = {}, unicos = CLIENTS.filter(function (c) { if (seen[c.id]) return false; seen[c.id] = 1; return true; });
+      list.innerHTML = unicos.map(function (c) { var s = split(c), on = pick === c.id; return '<button type="button" class="mg-row" role="radio" aria-checked="' + on + '" data-pick="' + c.id + '"><span class="mg-av">' + esc(s.name[0].toUpperCase()) + '</span><span class="mg-row-t"><b>' + esc(s.name) + '</b><small>Horário às ' + esc(s.time) + '</small></span><span class="mg-radio"></span></button>'; }).join('');
+    }
+    $('mg-send').disabled = !n;
+  }
+
+  function ago(iso) {
+    var d = new Date(iso), m = Math.round((Date.now() - d) / 60000);
+    if (m < 1) return 'agora';
+    if (m < 60) return 'há ' + m + ' min';
+    var h = Math.round(m / 60);
+    if (h < 24) return 'há ' + h + ' h';
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  }
+  function renderSent() {
+    $('mg-sent').innerHTML = SENT.length
+      ? SENT.map(function (m) { return '<div class="mg-sent-card"><div class="mg-sent-meta"><span>' + (m.target === 'user' ? 'Para ' + esc(m.to || 'cliente') : 'Aviso geral') + '</span><small>' + ago(m.at) + '</small></div><p>' + esc(m.body) + '</p></div>'; }).join('')
+      : '<p class="mg-sent-none">Nenhuma mensagem enviada ainda.</p>';
+  }
+
+  function onType() {
+    var v = $('mg-body').value, n = v.length;
+    $('mg-count').textContent = n;
+    $('mg-counter').classList.toggle('is-near', n >= 270);
+    var p = $('mg-preview');
+    p.textContent = v.trim() || 'Sua mensagem aparece aqui.';
+    p.classList.toggle('is-ph', !v.trim());
+  }
+
+  function fail(t) { $('mg-err').innerHTML = fi('alert-circle', 14) + '<span>' + esc(t) + '</span>'; $('mg-err').hidden = false; }
+  function send() {
+    var body = $('mg-body').value.trim(), btn = $('mg-send');
+    $('mg-err').hidden = true;
+    if (target === 'user' && !pick) return fail('Escolha o cliente que vai receber.');
+    if (!body) { $('mg-body').focus(); return fail('Escreva a mensagem antes de enviar.'); }
+    btn.disabled = true; btn.innerHTML = '<span class="mg-spin"></span>';
+    var payload = { target: target, body: body };
+    if (target === 'user') payload.recipient_id = pick;
+    fetch('/owner/messages', {
+      method: 'POST', headers: { 'X-CSRF-Token': CSRF, 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(function (r) { return r.json().catch(function () { return {}; }); }).then(function (data) {
+      if (data.ok) {
+        toast(target === 'all' ? 'Aviso enviado aos clientes de hoje.' : 'Mensagem enviada.');
+        if (data.message) { SENT.unshift(data.message); SENT = SENT.slice(0, 8); renderSent(); }
+        $('mg-body').value = ''; onType();
+      } else fail(data.error || 'Erro ao enviar.');
+    }).catch(function () { fail('Erro de conexão.'); }).then(function () {
+      btn.textContent = 'Enviar mensagem'; btn.disabled = !CLIENTS.length;
+    });
+  }
+
+  $('mg-all').addEventListener('click', function () { target = 'all'; $('mg-err').hidden = true; renderList(); });
+  $('mg-user').addEventListener('click', function () { target = 'user'; $('mg-err').hidden = true; renderList(); });
+  $('mg-list').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-pick]'); if (!b) return;
+    pick = Number(b.dataset.pick); $('mg-err').hidden = true; renderList();
+  });
+  $('mg-body').addEventListener('input', onType);
+  $('mg-send').addEventListener('click', send);
+  $('mg-back').addEventListener('click', function (e) {
+    if (document.referrer && document.referrer.indexOf(location.origin) === 0 && history.length > 1) { e.preventDefault(); history.back(); }
+  });
+
+  renderList(); renderSent(); onType();
+  if (window.feather) feather.replace();
+})();
+</script>

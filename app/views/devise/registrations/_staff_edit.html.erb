@@ -9,8 +9,8 @@
     · Lista única com os ícones em areia, como a do cliente; Sair em grupo
       próprio no fim. Atendente vê só o que pode abrir.
 
-  Aprovações, Fidelidade e Mensagens são janelas do painel do dono: os
-  itens abrem o painel com a janela já aberta (?abrir=).
+  Fidelidade é janela do painel do dono: o item abre o painel com a janela
+  já aberta (?abrir=). Aprovações e Mensagens têm página própria.
 %>
 <%
   sa   = @staff_account
@@ -24,7 +24,7 @@
   items << { icon: "calendar", label: "Agenda", desc: "Hoje e os próximos dias", href: owner_car_wash_appointments_path }
   items << { icon: "dollar-sign", label: "Financeiro", desc: dono ? "Faturamento, custos e relatório" : "Lançar os custos do mês",
              href: dono ? owner_monthly_costs_path : edit_owner_monthly_costs_path }
-  items << { icon: "message-square", label: "Mensagens", desc: "Avise os clientes de hoje", href: root_path(abrir: "mensagem") }
+  items << { icon: "message-square", label: "Mensagens", desc: "Avise os clientes de hoje", href: owner_messages_path }
   if dono
     items << { icon: "gift",  label: "Programa de fidelidade", desc: "Visitas e recompensa", href: root_path(abrir: "fidelidade") }
     items << { icon: "cpu",   label: "IA insights",  desc: "Análise do mês gerada pela IA", href: owner_financial_tracking_path }

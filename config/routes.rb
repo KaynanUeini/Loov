@@ -131,7 +131,7 @@ Rails.application.routes.draw do
     delete 'attendants/invitations/:id', to: 'attendants#destroy_invitation', as: :destroy_attendant_invitation
     delete 'attendants/car_wash/:id',    to: 'attendants#destroy_car_wash',  as: :destroy_owner_car_wash
 
-    resources :messages, only: [:create] do
+    resources :messages, only: [:index, :create] do
       collection do
         get :clients_today
       end

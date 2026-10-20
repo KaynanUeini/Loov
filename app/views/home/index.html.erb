@@ -670,18 +670,6 @@
   .lx-seg button:hover { color:var(--ink); }
   .lx-seg button[aria-pressed="true"] { background:var(--coral-500); color:var(--cream); box-shadow:0 2px 6px rgba(220,120,82,.25); }
   .lx-seg-help { margin:8px 2px 0; font-size:12px; line-height:17px; color:var(--graphite); }
-  .msg-list { border:1px solid var(--stone); border-radius:16px; overflow:hidden; max-height:236px; overflow-y:auto; }
-  .msg-row { width:100%; display:flex; align-items:center; gap:12px; padding:10px 14px; border:0; border-bottom:1px solid var(--stone); background:transparent; text-align:left; color:var(--ink); }
-  .msg-row:last-child { border-bottom:0; }
-  button.msg-row:hover { background:var(--cream); }
-  .msg-row-t { flex:1; min-width:0; }
-  .msg-row-t b { display:block; font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .msg-row-t small { display:block; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--ash); }
-  .msg-radio { flex:0 0 20px; height:20px; border-radius:50%; border:2px solid var(--stone); display:flex; align-items:center; justify-content:center; transition:border-color .15s; }
-  .msg-row[aria-checked="true"] .msg-radio { border-color:var(--coral-500); }
-  .msg-row[aria-checked="true"] .msg-radio::after { content:''; width:10px; height:10px; border-radius:50%; background:var(--coral-500); }
-  .msg-row[aria-checked="true"] { background:var(--coral-50); }
-  .msg-none { display:flex; align-items:center; gap:10px; padding:16px 14px; color:var(--graphite); font-size:13px; }
 
   /* Fidelidade (OwnerLoyaltyScreen) */
   .loy-status { display:flex; align-items:center; gap:12px; padding:14px 16px; border-radius:16px; border:1px solid var(--stone); background:var(--cream); transition:background .2s, border-color .2s; }
@@ -853,35 +841,6 @@
 </div>
 <% end %>
 
-<%# ── Folha: Mensagens (porte da OwnerMensagensScreen) ─────────────── %>
-<div class="lx-bg" id="msg-modal-overlay" aria-hidden="true">
-  <div class="lx-sheet" role="dialog" aria-modal="true" aria-labelledby="msg-t">
-    <div class="lx-handle"></div>
-    <div class="lx-h">
-      <div class="lx-h-t"><div class="lx-eyebrow">Comunicação</div><h2 id="msg-t">Mensagens</h2></div>
-      <button type="button" class="lx-x" id="msg-modal-close" aria-label="Fechar"><i data-feather="x" style="width:18px;height:18px"></i></button>
-    </div>
-    <div class="lx-b">
-      <span class="lx-label">Enviar para</span>
-      <div class="lx-seg" role="group" aria-label="Destinatário">
-        <button type="button" id="msg-target-all" aria-pressed="true"><i data-feather="radio" style="width:14px;height:14px"></i>Aviso geral do dia</button>
-        <button type="button" id="msg-target-user" aria-pressed="false"><i data-feather="message-circle" style="width:14px;height:14px"></i>Mensagem direta</button>
-      </div>
-      <p class="lx-seg-help" id="msg-target-help"></p>
-
-      <span class="lx-label" id="msg-list-label">Clientes de hoje</span>
-      <div class="msg-list" id="msg-client-list"><div class="msg-none"><span class="lx-spin is-dark"></span></div></div>
-
-      <span class="lx-label">Mensagem</span>
-      <textarea class="lx-textarea" id="msg-body" maxlength="300" placeholder="Ex.: Chegue 10 minutos antes, por favor."></textarea>
-      <div class="lx-counter" id="msg-counter"><span id="msg-count">0</span>/300</div>
-      <div class="lx-note is-quiet" style="margin-top:12px"><i data-feather="info" style="width:14px;height:14px"></i><span>Só clientes com horário marcado hoje recebem. A mensagem chega como notificação no app e no site.</span></div>
-      <div class="lx-err" id="msg-error" hidden></div>
-    </div>
-    <div class="lx-foot"><button type="button" class="lx-primary" id="msg-send-btn">Enviar mensagem</button></div>
-  </div>
-</div>
-
 <%# ── MODAL EDITAR SERVIÇO (bottom sheet) ── %>
 <div class="owner-dash-modal-overlay" id="od-edit-overlay">
   <div class="owner-dash-sheet" id="od-edit-sheet">
@@ -1023,9 +982,9 @@
         <div class="owner-dash-today" id="od-today-label"></div>
         <div class="owner-dash-shopname"><%= @car_wash&.name || "Lava-rápido" %></div>
       </div>
-      <button class="owner-dash-icon-btn" id="od-msg-btn" onclick="openMsgModal()" title="Enviar mensagem">
+      <a class="owner-dash-icon-btn" id="od-msg-btn" href="<%= owner_messages_path %>" title="Enviar mensagem" aria-label="Mensagens">
         <i class="fas fa-paper-plane"></i>
-      </button>
+      </a>
       <% if current_user.owner? %>
       <button class="owner-dash-icon-btn" id="od-loyalty-btn" onclick="openLoyaltyModal()" title="Programa de fidelidade">
         <i class="fas fa-star"></i>
@@ -1925,89 +1884,6 @@
     });
   }
 
-  // ── MENSAGENS (OwnerMensagensScreen) ──────────────────────────────────
-  // Aviso geral vai pra todos com horário hoje; mensagem direta, pra um
-  // cliente escolhido na lista de hoje. Mesma API do app.
-  let msgTarget = 'all', msgClients = [], msgPick = null;
-  window.openMsgModal = function() {
-    document.getElementById('msg-body').value = '';
-    document.getElementById('msg-error').hidden = true;
-    msgPick = null;
-    updateMsgCount();
-    setMsgTarget('all');
-    lxOpen('msg-modal-overlay');
-    loadMsgClients();
-  };
-  window.setMsgTarget = function(t) {
-    msgTarget = t;
-    document.getElementById('msg-target-all').setAttribute('aria-pressed', t === 'all');
-    document.getElementById('msg-target-user').setAttribute('aria-pressed', t === 'user');
-    renderMsgClients();
-  };
-  window.updateMsgCount = function() {
-    const n = document.getElementById('msg-body').value.length;
-    document.getElementById('msg-count').textContent = n;
-    document.getElementById('msg-counter').classList.toggle('is-near', n >= 270);
-  };
-  function msgSplit(c) { const [name, time] = String(c.name || '').split(' · '); return { name: name || 'Cliente', time: time || '' }; }
-  function renderMsgClients() {
-    const list = document.getElementById('msg-client-list');
-    const n = msgClients.length;
-    document.getElementById('msg-target-help').textContent = msgTarget === 'all'
-      ? (n ? `Vai para ${n === 1 ? 'o cliente' : `os ${n} clientes`} com horário hoje.` : 'Ninguém com horário hoje ainda.')
-      : 'Escolha um cliente de hoje e escreva só pra ele.';
-    document.getElementById('msg-list-label').textContent = msgTarget === 'all' ? `Quem recebe${n ? ' · ' + n : ''}` : 'Escolha o cliente';
-    if (!n) {
-      list.innerHTML = `<div class="msg-none">${fi('calendar', 16)}<span>Nenhum cliente com horário confirmado hoje.</span></div>`;
-    } else if (msgTarget === 'all') {
-      list.innerHTML = msgClients.map(c => { const s = msgSplit(c); return `<div class="msg-row"><span class="lx-av">${escapeHtml(s.name[0].toUpperCase())}</span><span class="msg-row-t"><b>${escapeHtml(s.name)}</b><small>${escapeHtml(s.time)}</small></span></div>`; }).join('');
-    } else {
-      // Um cliente com dois horários hoje aparece uma vez só na escolha.
-      const seen = new Set(), unicos = msgClients.filter(c => !seen.has(c.id) && seen.add(c.id));
-      list.innerHTML = unicos.map(c => { const s = msgSplit(c), on = msgPick === c.id; return `<button type="button" class="msg-row" role="radio" aria-checked="${on}" data-msg-pick="${c.id}"><span class="lx-av">${escapeHtml(s.name[0].toUpperCase())}</span><span class="msg-row-t"><b>${escapeHtml(s.name)}</b><small>Horário às ${escapeHtml(s.time)}</small></span><span class="msg-radio"></span></button>`; }).join('');
-    }
-    document.getElementById('msg-send-btn').disabled = !n;
-  }
-  async function loadMsgClients() {
-    msgClients = []; document.getElementById('msg-client-list').innerHTML = '<div class="msg-none"><span class="lx-spin is-dark"></span></div>';
-    try {
-      const res = await fetch('/owner/messages/clients_today', { headers: { Accept: 'application/json' } });
-      const data = await res.json();
-      msgClients = Array.isArray(data) ? data : [];
-    } catch (e) { msgClients = []; }
-    renderMsgClients();
-  }
-  window.sendOwnerMessage = async function() {
-    const body = document.getElementById('msg-body').value.trim();
-    const errEl = document.getElementById('msg-error'), btn = document.getElementById('msg-send-btn');
-    const fail = t => { errEl.innerHTML = fi('alert-circle', 14) + '<span>' + escapeHtml(t) + '</span>'; errEl.hidden = false; };
-    errEl.hidden = true;
-    if (msgTarget === 'user' && !msgPick) return fail('Escolha o cliente que vai receber.');
-    if (!body) { document.getElementById('msg-body').focus(); return fail('Escreva a mensagem antes de enviar.'); }
-    btn.disabled = true; btn.innerHTML = '<span class="lx-spin"></span>';
-    try {
-      const payload = { target: msgTarget, body };
-      if (msgTarget === 'user') payload.recipient_id = msgPick;
-      const res = await fetch('/owner/messages', {
-        method: 'POST', headers: { 'X-CSRF-Token': CSRF, 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json().catch(() => ({}));
-      if (data.ok) { lxClose('msg-modal-overlay'); showToast(msgTarget === 'all' ? 'Aviso enviado aos clientes de hoje.' : 'Mensagem enviada.', 'success'); }
-      else fail(data.error || 'Erro ao enviar.');
-    } catch (e) { fail('Erro de conexão.'); }
-    btn.disabled = false; btn.textContent = 'Enviar mensagem';
-  };
-  document.getElementById('msg-target-all')?.addEventListener('click', () => setMsgTarget('all'));
-  document.getElementById('msg-target-user')?.addEventListener('click', () => setMsgTarget('user'));
-  document.getElementById('msg-client-list')?.addEventListener('click', e => {
-    const b = e.target.closest('[data-msg-pick]'); if (!b) return;
-    msgPick = Number(b.dataset.msgPick); renderMsgClients();
-    document.getElementById('msg-error').hidden = true;
-  });
-  document.getElementById('msg-body')?.addEventListener('input', updateMsgCount);
-  document.getElementById('msg-send-btn')?.addEventListener('click', sendOwnerMessage);
-  document.getElementById('msg-modal-close')?.addEventListener('click', () => lxClose('msg-modal-overlay'));
 
   // ── FIDELIDADE (OwnerLoyaltyScreen) ───────────────────────────────────
   const LOY_MIN = 1, LOY_MAX = 50;
@@ -2139,7 +2015,7 @@
     // recarregar não abrir de novo.
     const abrir = new URLSearchParams(location.search).get('abrir');
     const ATALHOS = {
-      mensagem: window.openMsgModal,
+      mensagem: () => { location.href = '<%= owner_messages_path %>'; },
       <% if current_user.owner? %>
       fidelidade: window.openLoyaltyModal,
       aprovacoes: () => { location.href = '<%= owner_pending_changes_path %>'; },
