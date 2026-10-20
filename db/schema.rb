@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_10_15_120000) do
+ActiveRecord::Schema[7.1].define(version: 2026_10_20_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -78,6 +78,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_15_120000) do
     t.string "cancelled_by_role"
     t.datetime "attended_at"
     t.datetime "reminder_sent_at"
+    t.decimal "reward_discount", precision: 10, scale: 2
     t.index ["acceptance_expires_at"], name: "index_appointments_on_acceptance_expires_at"
     t.index ["appointment_type"], name: "index_appointments_on_appointment_type"
     t.index ["attended_at"], name: "index_appointments_on_attended_at"
@@ -177,7 +178,33 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_15_120000) do
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "reward_type", default: "gift", null: false
+    t.decimal "reward_value", precision: 10, scale: 2
+    t.bigint "reward_service_id"
+    t.integer "valid_days", default: 45, null: false
     t.index ["car_wash_id"], name: "index_loyalty_programs_on_car_wash_id"
+  end
+
+  create_table "loyalty_rewards", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "car_wash_id", null: false
+    t.bigint "earned_appointment_id", null: false
+    t.bigint "appointment_id"
+    t.string "reward_type", null: false
+    t.decimal "reward_value", precision: 10, scale: 2
+    t.bigint "reward_service_id"
+    t.string "reward_service_title"
+    t.string "description", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "used_at"
+    t.datetime "reminder_sent_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["appointment_id"], name: "index_loyalty_rewards_on_appointment_id"
+    t.index ["car_wash_id"], name: "index_loyalty_rewards_on_car_wash_id"
+    t.index ["earned_appointment_id"], name: "index_loyalty_rewards_on_earned_appointment_id", unique: true
+    t.index ["user_id", "car_wash_id", "used_at"], name: "index_loyalty_rewards_on_user_id_and_car_wash_id_and_used_at"
+    t.index ["user_id"], name: "index_loyalty_rewards_on_user_id"
   end
 
   create_table "monthly_costs", force: :cascade do |t|
@@ -407,6 +434,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_15_120000) do
   add_foreign_key "favorite_car_washes", "car_washes"
   add_foreign_key "favorite_car_washes", "users"
   add_foreign_key "loyalty_programs", "car_washes"
+  add_foreign_key "loyalty_rewards", "car_washes"
+  add_foreign_key "loyalty_rewards", "users"
   add_foreign_key "monthly_costs", "car_washes"
   add_foreign_key "notification_reads", "users"
   add_foreign_key "operating_hours", "car_washes"

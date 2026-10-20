@@ -73,6 +73,8 @@ Rails.application.routes.draw do
     resources :favorites,  only: [:index, :create, :destroy]
     get 'loyalty_cards',        to: 'loyalty_cards#index'
     get 'loyalty_cards/nearby', to: 'loyalty_cards#nearby'
+    get 'rewards',              to: 'rewards#index'
+    get 'rewards/preview',      to: 'rewards#preview'
     get  'tour',      to: 'tours#show'
     post 'tour/seen', to: 'tours#seen'
 
@@ -167,6 +169,7 @@ Rails.application.routes.draw do
     patch 'checkins/:id/no_show',        to: 'checkins#no_show',        as: :checkin_no_show
     patch 'checkins/:id/revert',         to: 'checkins#revert',         as: :checkin_revert
     patch 'checkins/:id/update_service', to: 'checkins#update_service', as: :checkin_update_service
+    patch 'checkins/:id/apply_reward',   to: 'checkins#apply_reward',   as: :checkin_apply_reward
 
     resources :disponivel_acceptance, only: [:index, :show] do
       collection do

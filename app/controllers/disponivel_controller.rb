@@ -186,7 +186,13 @@ class DisponivelController < ApplicationController
     end
 
     @total_price = @service.preco_last_minute
+    # Vale de fidelidade do cliente neste lava-rápido (entra sozinho).
+    @vale        = LoyaltyReward.disponivel_para(current_user, @car_wash)
+    @preco_cheio = @total_price
+    @desconto    = @vale ? @vale.desconto_para(@service, @total_price) : 0
+    @total_price = (@total_price - @desconto).round(2)
     @prepayment  = (@total_price * Appointment::PREPAYMENT_PCT).round(2)
+    @prepayment  = 0 if @prepayment < Appointment::PREPAGO_MINIMO
     @remaining   = (@total_price - @prepayment).round(2)
     @has_card    = current_user.has_payment_method?
     @card_display = current_user.card_display
@@ -250,13 +256,19 @@ class DisponivelController < ApplicationController
         # o cliente paga o que viu.
         price_override:        (service.preco_last_minute if service.preco_last_minute_proprio?)
       )
+      # Vale de fidelidade também vale no Last Minute, sobre o preço dele. O
+      # sinal e a comissão saem do valor com desconto; se o vale cobre quase
+      # tudo, não há sinal (o Stripe não cobra abaixo de R$ 0,50).
+      vale = usar_vale? ? appointment.aplicar_vale_disponivel(service.preco_last_minute) : nil
       # Valores informativos (pré-pagamento teórico, comissão) — úteis para DRE/relatórios
       appointment.calculate_disponivel_amounts!
+      appointment.prepayment_amount = 0 if appointment.prepayment_amount.to_f < Appointment::PREPAGO_MINIMO
 
       unless appointment.save
         save_error = appointment.errors.full_messages.join(", ")
         raise ActiveRecord::Rollback
       end
+      vale&.reservar!(appointment)
     end
 
     if slot_taken
@@ -421,6 +433,9 @@ class DisponivelController < ApplicationController
   #   [:declined, mensagem]     não deu; pedido cancelado antes de o dono
   #                             saber, e a vaga volta pra lista
   def authorize_prepayment!(appointment, log_tag)
+    # Vale cobriu o serviço: nada a reservar no cartão.
+    return [:ok] if appointment.prepayment_amount.to_f < Appointment::PREPAGO_MINIMO
+
     amount_cents = (appointment.prepayment_amount.to_f * 100).round
     current_user.stripe_customer!
     intent = StripeService.new.create_payment_intent(
@@ -478,8 +493,14 @@ class DisponivelController < ApplicationController
       expires_at:     appointment.acceptance_expires_at.iso8601,
       seconds:        [(appointment.acceptance_expires_at - Time.current).round, 0].max,
       prepayment:     appointment.prepayment_amount.to_f,
+      total:          appointment.effective_price,
+      reward_discount: appointment.reward_discount.to_f,
       payment_status: appointment.stripe_payment_intent_id.present? ? "authorized" : "pending"
     }
+  end
+
+  def usar_vale?
+    params[:use_reward].to_s != "false"
   end
 
   def release_prepayment(appointment)

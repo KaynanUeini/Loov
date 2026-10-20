@@ -134,6 +134,16 @@
   .dp-svc p { margin: 12px 0 0; font-size: 14px; line-height: 20px; color: var(--graphite); white-space: pre-line; }
   /* Divisão do pagamento: o que sai do cartão AGORA vem primeiro e maior —
      é a informação que o cliente precisa saber antes de tocar no botão. */
+  .dp-vale { display: flex; align-items: center; gap: 10px; margin-top: 18px; padding: 10px 12px; border-radius: 14px; background: var(--sand); color: var(--coral-500); }
+  .dp-vale.is-on { background: var(--coral-50); }
+  .dp-vale-t { flex: 1; min-width: 0; }
+  .dp-vale-t b { display: block; font-size: 13.5px; font-weight: 600; color: var(--ink); }
+  .dp-vale-t small { display: block; font-size: 12px; color: var(--graphite); }
+  .dp-vale-v { font-size: 14px; font-weight: 600; color: var(--coral-700); white-space: nowrap; }
+  .dp-vale-sw { position: relative; flex: 0 0 44px; height: 26px; border: 0; border-radius: 13px; background: var(--stone); cursor: pointer; transition: background .2s; }
+  .dp-vale-sw::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(25,20,15,.2); transition: transform .2s; }
+  .dp-vale-sw[aria-checked="true"] { background: var(--coral-500); }
+  .dp-vale-sw[aria-checked="true"]::after { transform: translateX(18px); }
   .dp-pay { margin-top: 18px; border: 1px solid var(--stone); border-radius: 16px; overflow: hidden; background: var(--cream); }
   .dp-pay-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 12px 14px; }
   .dp-pay-row + .dp-pay-row { border-top: 1px solid var(--stone); }
@@ -306,7 +316,27 @@
   var HAS_CARD  = <%= (user_signed_in? && current_user.has_payment_method?) ? "true" : "false" %>;
   var CARD_TXT  = <%= raw json_escape(((user_signed_in? && current_user.card_display) || "").to_json) %>;
   var STRIPE_PK = <%= raw json_escape(ENV['STRIPE_PUBLISHABLE_KEY'].to_s.to_json) %>;
-  function prepayOf(price) { return Math.round(Number(price) * PCT * 100) / 100; }
+  var MIN_PREPAGO = <%= Appointment::PREPAGO_MINIMO %>;
+  // Abaixo do mínimo do Stripe (vale cobrindo quase tudo) não há sinal.
+  function prepayOf(price) { var v = Math.round(Number(price) * PCT * 100) / 100; return v < MIN_PREPAGO ? 0 : v; }
+  // Vales de fidelidade livres do cliente, por lava-rápido (LoyaltyReward).
+  // O desconto é a mesma conta do servidor (LoyaltyReward#desconto_para),
+  // sobre o preço do Last Minute.
+  <% vales = user_signed_in? && current_user.client? ? LoyaltyReward.livres.where(user_id: current_user.id).order(:expires_at).to_a.uniq(&:car_wash_id) : [] %>
+  var VALES = <%= raw json_escape(vales.to_h { |v| [v.car_wash_id, {
+    type: v.reward_type, value: v.reward_value.to_f, service_id: v.reward_service_id, short: v.resumo_curto,
+    expires: v.expires_at.in_time_zone("America/Sao_Paulo").strftime("%d/%m") }] }.to_json) %>;
+  var useReward = true;
+  function valeDe(cw) { return cw && VALES[cw.id] || null; }
+  function descontoDe(cw, svc) {
+    var v = valeDe(cw); if (!v || !useReward || !svc) return 0;
+    var base = Number(svc.price), d = 0;
+    if (v.type === 'percent') d = base * v.value / 100;
+    else if (v.type === 'fixed') d = v.value;
+    else if (v.type === 'free_service') d = svc.id === v.service_id ? base : v.value;
+    return Math.round(Math.min(Math.max(d, 0), base) * 100) / 100;
+  }
+  function totalDe(cw, svc) { return svc ? Math.max(0, Math.round((Number(svc.price) - descontoDe(cw, svc)) * 100) / 100) : 0; }
   function cardUrl(cwId) {
     var back = '/disponivel' + (cwId ? '?car_wash_id=' + cwId : '');
     return '/client/profile/edit?add_card=1&return_to=' + encodeURIComponent(back);
@@ -561,7 +591,7 @@
       '<button type="button" class="dp-confirm" id="dp-confirm"' + (state.reserving || !svc ? ' disabled' : '') + '>' +
         (state.reserving ? '<span class="dp-spin"></span>'
           : (SIGNED_IN && !HAS_CARD) ? icon('credit-card', 16) + ' Cadastrar cartão para reservar'
-          : svc ? 'Reservar e pagar R$ ' + money(prepayOf(svc.price), 2) + ' ' + icon('arrow-right', 16)
+          : svc ? (prepayOf(totalDe(cw, svc)) ? 'Reservar e pagar R$ ' + money(prepayOf(totalDe(cw, svc)), 2) : 'Reservar com o vale') + ' ' + icon('arrow-right', 16)
           : 'Confirmar reserva') + '</button>';
   }
   // O "Pagamento na chegada" escondia que parte sai do cartão na hora. Agora a
@@ -569,11 +599,17 @@
   // que vai ser usado — sem surpresa na fatura.
   function payBlock(svc, cw) {
     if (!svc) return '';
-    var now = prepayOf(svc.price), rest = Math.max(0, Math.round((Number(svc.price) - now) * 100) / 100);
+    var total = totalDe(cw, svc), now = prepayOf(total), rest = Math.max(0, Math.round((total - now) * 100) / 100);
+    var v = valeDe(cw), d = descontoDe(cw, svc);
+    // Vale ligado por padrão; a chave guarda pra outra vez.
+    var valeRow = !v ? '' : '<div class="dp-vale' + (useReward ? ' is-on' : '') + '">' + icon('gift', 15) +
+      '<span class="dp-vale-t"><b>Vale de fidelidade</b><small>' + esc(v.short) + ' · até ' + esc(v.expires) + '</small></span>' +
+      (useReward ? '<b class="dp-vale-v">' + (v.type === 'gift' ? 'no balcão' : '−R$ ' + money(d, 2)) + '</b>' : '') +
+      '<button type="button" class="dp-vale-sw" role="switch" aria-checked="' + useReward + '" aria-label="Usar o vale nesta reserva" data-vale></button></div>';
     var cardLine = !SIGNED_IN ? ''
       : HAS_CARD ? '<div class="dp-pay-card">' + icon('credit-card', 15) + '<span>' + esc(CARD_TXT) + '</span><a href="' + cardUrl(cw.id) + '">Trocar</a></div>'
       : '<div class="dp-pay-card missing">' + icon('credit-card', 15) + '<span>Para reservar no Last Minute você precisa de um cartão cadastrado. É ele que garante a vaga.</span></div>';
-    return '<div class="dp-pay">' +
+    return valeRow + '<div class="dp-pay">' +
       '<div class="dp-pay-row now"><span>Agora, no cartão<em>' + PCT_LABEL + '</em></span><b>R$ ' + money(now, 2) + '</b></div>' +
       '<div class="dp-pay-row"><span>Na chegada, no lava-rápido<em>' + REST_LABEL + '</em></span><b>R$ ' + money(rest, 2) + '</b></div>' +
       cardLine + '</div>';
@@ -587,7 +623,7 @@
     if (!SIGNED_IN) { toast('Entre na sua conta para reservar.', 'error'); setTimeout(function () { location.href = '/users/sign_in'; }, 900); return; }
     if (!HAS_CARD) { location.href = cardUrl(it.car_wash.id); return; }
     state.reserving = true; renderSheet();
-    api('/disponivel', { method: 'POST', body: JSON.stringify({ car_wash_id: it.car_wash.id, service_id: svc.id, slot: slot }) })
+    api('/disponivel', { method: 'POST', body: JSON.stringify({ car_wash_id: it.car_wash.id, service_id: svc.id, slot: slot, use_reward: !!valeDe(it.car_wash) && useReward }) })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { r: r, d: d }; }); })
       .then(function (x) {
         if (x.r.status === 401) { location.href = '/users/sign_in'; return; }
@@ -598,7 +634,7 @@
           state.reserving = false;
           closeSheet();
           startWaiting({ id: d.appointment_id, expires_at: d.expires_at, seconds: d.seconds || 180, car_wash: it.car_wash, service: svc, slot: slot,
-            prepayment: d.prepayment != null ? d.prepayment : prepayOf(svc.price) });
+            prepayment: d.prepayment != null ? d.prepayment : prepayOf(totalDe(it.car_wash, svc)) });
         });
       })
       .catch(function () { toast('Erro de conexão. Tente novamente.', 'error'); })
@@ -936,6 +972,7 @@
     if (e.target.closest('#dp-close')) { closeSheet(); return; }
     if (e.target.id === 'dp-sheet-bg') { closeSheet(); return; }
     if (e.target.closest('#dp-confirm')) { confirmReserve(); return; }
+    if (e.target.closest('[data-vale]')) { useReward = !useReward; renderSheet(); return; }
     if (e.target.closest('#dp-retry')) { retryLocation(); return; }
     if ((t = e.target.closest('[data-result]'))) {
       if (t.dataset.result === 'appt') { location.href = '<%= appointments_path %>'; return; }

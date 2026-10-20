@@ -164,6 +164,37 @@ module Client
           }
         end
 
+      # ── Vales de fidelidade ───────────────────────────────────────────
+      # Ganhou (nos últimos 7 dias) e vence logo (faltando até 7 dias, ainda
+      # sem uso e sem horário marcado com ele).
+      LoyaltyReward.where(user_id: current_user.id).where("loyalty_rewards.created_at > ?", 7.days.ago)
+                   .includes(:car_wash).each do |v|
+        key = "reward_earned-#{v.id}"
+        ate = v.expires_at.in_time_zone("America/Sao_Paulo").strftime("%d/%m")
+        list << {
+          id: key, type: "loyalty_reward",
+          title: "Você ganhou: #{v.resumo_curto}",
+          desc:  "Cartão completo no #{v.car_wash&.name}. Vale na próxima visita, até #{ate}.",
+          car_wash_id: v.car_wash_id,
+          created_at: v.created_at.iso8601,
+          read: reads.key?(key)
+        }
+      end
+      LoyaltyReward.livres.where(user_id: current_user.id)
+                   .where("loyalty_rewards.expires_at <= ?", Time.current + LoyaltyReward::AVISO_ANTES)
+                   .includes(:car_wash).each do |v|
+        key  = "reward_expiring-#{v.id}"
+        dias = ((v.expires_at - Time.current) / 1.day).ceil
+        list << {
+          id: key, type: "loyalty_reward_expiring",
+          title: dias <= 1 ? "Seu vale vence hoje" : "Seu vale vence em #{dias} dias",
+          desc:  "#{v.resumo_curto} no #{v.car_wash&.name}. Agende pra usar.",
+          car_wash_id: v.car_wash_id,
+          created_at: (v.expires_at - LoyaltyReward::AVISO_ANTES).iso8601,
+          read: reads.key?(key)
+        }
+      end
+
       list.sort_by! { |n| -Time.iso8601(n[:created_at]).to_i }
       list
     end

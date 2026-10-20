@@ -183,6 +183,12 @@ class AppointmentsController < ApplicationController
         raise ActiveRecord::Rollback
       end
 
+      # Vale de fidelidade: entra sozinho (o cliente desliga mandando
+      # use_reward=false). Com o vale cobrindo quase tudo, não há sinal pra
+      # cobrar — o Stripe não cobra abaixo de R$ 0,50.
+      vale = usar_vale? ? @appointment.aplicar_vale_disponivel(service.price.to_f) : nil
+      com_sinal &&= (@appointment.effective_price * Appointment::PREPAYMENT_PCT).round(2) >= Appointment::PREPAGO_MINIMO
+
       # Com sinal, o horário fica preso só enquanto o banco cobra (como o
       # Last Minute no 3DS) e não aparece pro dono até virar confirmed.
       if com_sinal
@@ -193,6 +199,7 @@ class AppointmentsController < ApplicationController
       end
       saved = @appointment.save
       raise ActiveRecord::Rollback unless saved
+      vale&.reservar!(@appointment)
     end
 
     if conflict
@@ -237,7 +244,9 @@ class AppointmentsController < ApplicationController
     respond_to do |format|
       format.html { redirect_to appointments_path, notice: "Agendamento criado com sucesso!" }
       format.json { render json: { message: "Agendamento confirmado!", appointment_id: @appointment.id,
-                                   deposit: @appointment.stripe_payment_intent_id.present? ? @appointment.prepayment_amount.to_f : nil },
+                                   deposit: @appointment.stripe_payment_intent_id.present? ? @appointment.prepayment_amount.to_f : nil,
+                                   total: @appointment.effective_price,
+                                   reward: vale_do(@appointment) },
                            status: :created }
     end
   end
@@ -272,7 +281,7 @@ class AppointmentsController < ApplicationController
     # agendamento até o banco confirmar.
     all = current_user.appointments
       .where.not(status: "awaiting_payment")
-      .includes(:service, :car_wash, :review)
+      .includes(:service, :car_wash, :review, :vale_aplicado)
       .order(scheduled_at: :desc)
 
     # Último 4 dígitos do próprio telefone do cliente — usado no card do
@@ -324,7 +333,8 @@ class AppointmentsController < ApplicationController
           title:    a.service.title,
           price:    a.effective_price,
           duration: a.service.duration
-        }
+        },
+        reward: vale_do(a)
       }
     }
   end
@@ -381,6 +391,17 @@ class AppointmentsController < ApplicationController
   end
 
   private
+
+  def usar_vale?
+    params[:use_reward].to_s != "false"
+  end
+
+  # O vale aplicado num atendimento, como o cliente vê no resumo e na Agenda.
+  def vale_do(appointment)
+    v = appointment.vale_aplicado
+    return nil unless v
+    { description: v.description, short: v.resumo_curto, type: v.reward_type, discount: appointment.reward_discount.to_f }
+  end
 
   def enviar_confirmacao(appointment)
     AppointmentMailer.confirmation(appointment).deliver_now

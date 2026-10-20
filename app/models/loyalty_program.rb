@@ -1,13 +1,64 @@
 class LoyaltyProgram < ApplicationRecord
   belongs_to :car_wash
+  belongs_to :reward_service, class_name: "Service", optional: true
+
+  # O que o cliente ganha ao completar o cartão (ver LoyaltyReward):
+  #   percent       reward_value % de desconto na próxima visita
+  #   fixed         R$ reward_value de desconto na próxima visita
+  #   free_service  reward_service grátis na próxima visita
+  #   gift          brinde (reward_description), entregue no balcão
+  REWARD_TYPES = LoyaltyReward::TYPES
+  VALIDADE_PADRAO = 45
 
   validates :visits_required,    presence: true, numericality: { greater_than: 0, less_than_or_equal_to: 50 }
   validates :reward_description, presence: true, length: { maximum: 120 }
+  validates :reward_type,        inclusion: { in: REWARD_TYPES }
+  validates :reward_value,       numericality: { greater_than: 0, less_than_or_equal_to: 100 }, if: -> { reward_type == "percent" }
+  validates :reward_value,       numericality: { greater_than: 0, less_than_or_equal_to: 10_000 }, if: -> { reward_type == "fixed" }
+  validates :valid_days,         numericality: { only_integer: true, greater_than: 0, less_than_or_equal_to: 365 }
+  validate  :servico_do_lava_rapido, if: -> { reward_type == "free_service" }
+
+  # Nos tipos que o sistema calcula, a frase que o cliente vê sai da regra —
+  # não tem como o texto dizer uma coisa e o desconto ser outra.
+  before_validation :gerar_descricao
+
+  def gerar_descricao
+    case reward_type
+    when "percent"
+      self.reward_description = "#{reward_value.to_f.round}% de desconto na próxima visita" if reward_value.present?
+    when "fixed"
+      self.reward_description = "R$ #{dinheiro(reward_value)} de desconto na próxima visita" if reward_value.present?
+    when "free_service"
+      self.reward_description = "#{reward_service.title} grátis na próxima visita" if reward_service
+    end
+  end
+
+  # Cria o vale do cliente que completou o cartão no atendimento `appointment`.
+  # Idempotente (um vale por atendimento que completou). Condições congeladas.
+  def emitir_vale!(appointment)
+    vale = LoyaltyReward.create!(
+      user_id:               appointment.user_id,
+      car_wash_id:           car_wash_id,
+      earned_appointment_id: appointment.id,
+      reward_type:           reward_type,
+      # free_service guarda o preço do serviço de hoje: se o cliente escolher
+      # outro serviço, abate até esse valor.
+      reward_value:          reward_type == "free_service" ? reward_service&.price : reward_value,
+      reward_service_id:     reward_type == "free_service" ? reward_service_id : nil,
+      reward_service_title:  reward_type == "free_service" ? reward_service&.title : nil,
+      description:           reward_description,
+      expires_at:            (Time.current + valid_days.days).in_time_zone("America/Sao_Paulo").end_of_day
+    )
+    avisar_vale(vale)
+    vale
+  rescue ActiveRecord::RecordNotUnique
+    LoyaltyReward.find_by(earned_appointment_id: appointment.id)
+  end
 
   # Cartão de carimbos de um cliente neste programa — o mesmo cálculo da
   # Conta, da tela Fidelidade e da página do lava-rápido (site e app).
-  # Conta só lavagens concluídas depois que o programa foi criado. A
-  # recompensa sai na visita que completa o cartão (o check-in do dono avisa).
+  # Conta só lavagens concluídas depois que o programa foi criado. A visita
+  # que completa o cartão gera um vale (LoyaltyReward) pra próxima visita.
   #
   # historico: true acrescenta as visitas (data + serviço, mais recente
   # primeiro) pro verso do cartão na tela Fidelidade.
@@ -39,6 +90,26 @@ class LoyaltyProgram < ApplicationRecord
   end
 
   private
+
+  def dinheiro(v)
+    format("%.2f", v.to_f).sub(".", ",").sub(",00", "")
+  end
+
+  def servico_do_lava_rapido
+    errors.add(:base, "Escolha o serviço que sai de graça.") unless reward_service && reward_service.car_wash_id == car_wash_id
+  end
+
+  def avisar_vale(vale)
+    validade = vale.expires_at.in_time_zone("America/Sao_Paulo").strftime("%d/%m")
+    ExpoPushNotifier.new.notify_user(
+      vale.user,
+      title: "Você ganhou: #{vale.resumo_curto} 🎁",
+      body:  "Cartão completo no #{car_wash.name}. Vale na próxima visita, até #{validade}.",
+      data:  { type: "loyalty_reward", car_wash_id: car_wash_id, reward_id: vale.id }
+    )
+  rescue => e
+    Rails.logger.error("[LoyaltyProgram] aviso do vale ##{vale&.id} falhou: #{e.message}")
+  end
 
   def historico_de(scope, limite)
     return [] unless scope

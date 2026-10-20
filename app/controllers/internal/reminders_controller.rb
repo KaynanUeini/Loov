@@ -24,7 +24,13 @@ module Internal
         Rails.logger.error("[Internal::Reminders] aviso de IA falhou: #{e.message}")
         { ai_reminders: "erro" }
       end
-      render json: AppointmentReminders.run!.merge(ia)
+      vales = begin
+        LoyaltyRewardReminders.run!
+      rescue => e
+        Rails.logger.error("[Internal::Reminders] lembrete de vale falhou: #{e.message}")
+        { vales_lembrados: "erro" }
+      end
+      render json: AppointmentReminders.run!.merge(ia).merge(vales)
     end
   end
 end

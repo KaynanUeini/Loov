@@ -3,7 +3,7 @@ module Owner
     skip_before_action :verify_authenticity_token
     before_action :authenticate_user!
     before_action :ensure_owner_or_attendant
-    before_action :load_appointment, only: [:attend, :no_show, :revert, :update_service, :cancel]
+    before_action :load_appointment, only: [:attend, :no_show, :revert, :update_service, :cancel, :apply_reward]
 
     # GET /owner/checkins/today
     def today
@@ -39,7 +39,7 @@ module Owner
       appointments = car_wash.appointments
         .where(scheduled_at: today_start..today_end)
         .where.not(status: %w[cancelled awaiting_payment])
-        .includes(:service, :user)
+        .includes(:service, :user, :vale_aplicado)
         .order(:scheduled_at)
         .map { |a| serialize_appointment(a, loyalty, loyalty_counts) }
 
@@ -149,10 +149,49 @@ module Owner
       if price.nil? && @appointment.disponivel? && service.preco_last_minute_proprio?
         price = service.preco_last_minute
       end
-      @appointment.update!(service: service, price_override: price)
+      vale = @appointment.vale_aplicado
+      if price.nil? && vale
+        # Trocou de serviço com vale aplicado: o desconto é refeito sobre o
+        # serviço novo (vale de serviço grátis em outro serviço abate até o
+        # preço do serviço do vale; o cliente paga a diferença).
+        base     = @appointment.disponivel? ? service.preco_last_minute : service.price.to_f
+        desconto = vale.desconto_para(service, base)
+        @appointment.update!(service: service, price_override: (base - desconto).round(2),
+                             reward_discount: desconto.positive? ? desconto : nil)
+      else
+        # Preço digitado pelo dono vale como está (o vale segue marcado).
+        @appointment.update!(service: service, price_override: price, reward_discount: price.nil? ? nil : @appointment.reward_discount)
+      end
       render json: { ok: true }.merge(serialize_appointment(@appointment))
     rescue => e
       render json: { error: e.message }, status: :unprocessable_entity
+    end
+
+    # PATCH /owner/checkins/:id/apply_reward
+    # O cliente tem um vale livre neste lava-rápido e o atendimento ainda não
+    # usa: o dono aplica no balcão (quem agendou antes de ganhar, ou guardou
+    # o vale e mudou de ideia). O desconto sai do preço atual do atendimento.
+    def apply_reward
+      unless @appointment.user && @appointment.status == "confirmed"
+        return render json: { error: "Este atendimento não pode receber o vale." }, status: :unprocessable_entity
+      end
+      # Já pago em parte no app (Last Minute, sinal): o desconto poderia
+      # passar do que falta pagar. O vale fica pra próxima visita.
+      if @appointment.stripe_payment_intent_id.present?
+        return render json: { error: "Reserva já paga em parte no app: o vale fica pra próxima visita." }, status: :unprocessable_entity
+      end
+      return render json: { error: "Este atendimento já tem um vale." }, status: :unprocessable_entity if @appointment.vale_aplicado
+
+      ActiveRecord::Base.transaction do
+        vale = @appointment.aplicar_vale_disponivel(@appointment.effective_price)
+        raise ActiveRecord::RecordNotFound unless vale
+        @appointment.save!(validate: false)
+        vale.reservar!(@appointment)
+      end
+      @appointment.reload
+      render json: { ok: true }.merge(serialize_appointment(@appointment))
+    rescue ActiveRecord::RecordNotFound
+      render json: { error: "O cliente não tem vale disponível aqui." }, status: :unprocessable_entity
     end
 
     # POST /owner/checkins/walk_in
@@ -343,10 +382,27 @@ module Owner
             visits:    proj_visits,
             goal:      goal,
             filled:    filled,
+            # Esta visita completa o cartão: o cliente ganha o vale pra próxima.
             milestone: milestone,
             reward:    loyalty.reward_description
           }
         end
+      end
+
+      # Vale de fidelidade: o aplicado neste atendimento (desconto já no
+      # preço, ou brinde a entregar) ou, se não tem, um livre que o dono pode
+      # aplicar no balcão.
+      vale = a.vale_aplicado
+      reward_data = vale && {
+        short:       vale.resumo_curto,
+        description: vale.description,
+        type:        vale.reward_type,
+        discount:    a.reward_discount.to_f
+      }
+      reward_available = nil
+      if vale.nil? && a.user_id.present? && a.status == "confirmed" && a.stripe_payment_intent_id.blank?
+        livre = LoyaltyReward.disponivel_para(a.user, a.car_wash)
+        reward_available = livre && { short: livre.resumo_curto, description: livre.description, type: livre.reward_type }
       end
 
       # Janela em que o código de conferência aparece pro dono.
@@ -393,7 +449,9 @@ module Owner
         is_disponivel:    is_disponivel,
         prepayment_amount: prepayment,
         remaining_amount:  remaining_amount,
-        loyalty:          loyalty_data
+        loyalty:          loyalty_data,
+        reward:           reward_data,
+        reward_available: reward_available
       }
     end
 

@@ -3,6 +3,14 @@ class Appointment < ApplicationRecord
   belongs_to :car_wash
   belongs_to :service
   has_one :review, dependent: :destroy
+  # Vale de fidelidade usado neste atendimento (ver LoyaltyReward).
+  has_one :vale_aplicado, class_name: "LoyaltyReward", foreign_key: :appointment_id, inverse_of: :appointment
+
+  # Fidelidade acompanha o status: concluir marca o vale aplicado como usado e,
+  # se esta visita completou o cartão, dá um vale novo pra próxima; desfazer o
+  # "compareceu" desfaz os dois. after_commit: o aviso de vale novo só sai com
+  # o atendimento gravado.
+  after_commit :sincronizar_fidelidade, on: [:create, :update], if: -> { saved_change_to_status? }
 
   # ── TIPOS ─────────────────────────────────────────────────────────────────
   TYPES = %w[regular disponivel].freeze
@@ -23,6 +31,7 @@ class Appointment < ApplicationRecord
   # ── COMISSÃO E PRÉ-PAGAMENTO ──────────────────────────────────────────────
   PREPAYMENT_PCT   = 0.35  # 35% do valor total pago no app
   COMMISSION_PCT   = 0.05  # 5% do valor total retido pela Loov
+  PREPAGO_MINIMO   = 0.50  # abaixo disso o Stripe não cobra: sem pré-pagamento
   ACCEPTANCE_TTL   = 3.minutes # timeout para aceite do dono
 
   # Receita líquida do dono por atendimento, em SQL (exige joins(:service)).
@@ -188,6 +197,12 @@ class Appointment < ApplicationRecord
   # daquele momento, então dá pra reconstruí-lo sem coluna extra.
   def preco_ajustado?
     return false if price_override.blank?
+    # Desconto do vale de fidelidade não é ajuste do dono: o preço antes do
+    # vale tem que bater com o de tabela (ou o do Last Minute).
+    if reward_discount.to_f.positive?
+      base = disponivel? ? service.preco_last_minute : service.price.to_f
+      return (price_override.to_f + reward_discount.to_f - base).abs > 0.05
+    end
     return true unless disponivel? && prepayment_amount.to_f.positive?
 
     (price_override.to_f - prepayment_amount.to_f / PREPAYMENT_PCT).abs > 0.05
@@ -230,6 +245,45 @@ class Appointment < ApplicationRecord
 
   def reviewable?
     status == "confirmed" && scheduled_at < Time.current && review.nil? && !walk_in?
+  end
+
+  # ── FIDELIDADE ────────────────────────────────────────────────────────────
+
+  # Aplica o vale livre do cliente neste lava-rápido (se houver) a um
+  # atendimento ainda não salvo, sobre o preço `base`. Devolve o vale (pra
+  # reservar depois do save, com #reservar!) ou nil.
+  def aplicar_vale_disponivel(base)
+    return nil if walk_in? || user.nil?
+    vale = LoyaltyReward.disponivel_para(user, car_wash)
+    return nil unless vale
+    vale.lock!
+    vale.aplicar_em(self, base)
+    vale
+  end
+
+  def sincronizar_fidelidade
+    agora = Time.current
+    if attended?
+      LoyaltyReward.where(appointment_id: id, used_at: nil).update_all(used_at: attended_at || agora, updated_at: agora)
+      emitir_vale_se_completou
+    elsif status_before_last_save == "attended"
+      LoyaltyReward.where(appointment_id: id).update_all(used_at: nil, updated_at: agora)
+      # O vale que esta visita tinha dado some, se ainda não foi usado.
+      LoyaltyReward.where(earned_appointment_id: id, used_at: nil).delete_all
+    end
+  rescue => e
+    Rails.logger.error("[Appointment##{id}] fidelidade: #{e.class}: #{e.message}")
+  end
+
+  def emitir_vale_se_completou
+    return if walk_in? || user_id.nil?
+    programa = car_wash.loyalty_program
+    return unless programa&.active? && scheduled_at >= programa.created_at
+
+    visitas = programa.cartao_para(user)[:visits_total]
+    return unless visitas.positive? && (visitas % programa.visits_required).zero?
+
+    programa.emitir_vale!(self)
   end
 
   # ── TRANSIÇÕES DE STATUS (DISPONÍVEL) ────────────────────────────────────

@@ -63,6 +63,8 @@
   .ag-card.is-today .ag-lm { background: var(--coral-300); color: var(--ink); }
   .ag-svc { margin-top: 3px; font-size: 12.5px; color: var(--b); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ag-money { text-align: right; }
+  .ag-vale { display: inline-flex; align-items: center; gap: 5px; margin-top: 6px; padding: 3px 9px; border-radius: 100px; background: var(--coral-50); color: var(--coral-700); font-size: 11.5px; font-weight: 600; }
+  .ag-vale svg { display: block; }
   .ag-price { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; letter-spacing: -0.3px; color: var(--t); white-space: nowrap; }
   .ag-id { margin-top: 4px; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: .5px; color: var(--q); }
   .ag-foot { display: flex; align-items: center; gap: 10px; margin-top: 4px; padding: 12px 0 10px; border-top: 1px solid var(--l); }
@@ -298,7 +300,8 @@
         '<div class="ag-time"><b>' + hm(a.scheduled_at) + '</b>' + (s.duration ? '<small>' + s.duration + 'MIN</small>' : '') + '</div>' +
         '<div class="ag-mid"><div class="ag-shoprow"><a class="ag-shop" href="/car_washes/' + cw.id + location.search + '">' + esc(cw.name || 'Lava-rápido') + '</a>' +
           (lm ? '<span class="ag-lm">' + icon('zap', 9) + 'LAST MINUTE</span>' : '') + '</div>' +
-          '<div class="ag-svc">' + esc(s.title || 'Serviço') + '</div></div>' +
+          '<div class="ag-svc">' + esc(s.title || 'Serviço') + '</div>' +
+          (a.reward ? '<div class="ag-vale">' + icon('gift', 11) + 'Vale: ' + esc(a.reward.short) + '</div>' : '') + '</div>' +
         '<div class="ag-money"><div class="ag-price">' + money2(s.price) + '</div><div class="ag-id">LV-' + String(a.id).padStart(4, '0') + '</div></div>' +
       '</div>';
     // Código de chegada: a frase de instrução só quando é hoje (é quando age).

@@ -54,6 +54,32 @@
 
   .fp .fp-input { display: block; width: 100%; padding: 14px 16px !important; border: 1px solid var(--stone) !important; border-radius: 16px !important; background: var(--paper) !important; box-shadow: none !important; outline: none; font: inherit; font-size: 15px; color: var(--ink); transition: border-color .15s, box-shadow .15s; }
   .fp .fp-input:focus { border-color: var(--coral-500) !important; box-shadow: 0 0 0 4px rgba(221,120,82,.14) !important; }
+  /* Tipo de recompensa: 4 opções em grade, a escolhida em contorno coral. */
+  .fp-types { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .fp-type { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 14px; border: 1.5px solid var(--stone); border-radius: 16px; background: var(--paper); color: var(--ink); text-align: left; transition: border-color .15s, background .15s; }
+  .fp-type:hover { border-color: var(--ink); }
+  .fp-type[aria-checked="true"] { border-color: var(--coral-500); background: var(--coral-50); }
+  .fp-type-ic { width: 32px; height: 32px; border-radius: 10px; background: var(--sand); color: var(--coral-500); display: flex; align-items: center; justify-content: center; }
+  .fp-type[aria-checked="true"] .fp-type-ic { background: var(--coral-500); color: var(--cream); }
+  .fp-type b { font-size: 14px; font-weight: 600; }
+  .fp-type small { margin-top: -6px; font-size: 12px; line-height: 16px; color: var(--graphite); }
+  .fp-detail { margin-top: 12px; }
+  .fp-amount { display: flex; align-items: center; gap: 8px; padding: 0 16px; border: 1px solid var(--stone); border-radius: 16px; background: var(--paper); transition: border-color .15s, box-shadow .15s; }
+  .fp-amount:focus-within { border-color: var(--coral-500); box-shadow: 0 0 0 4px rgba(221,120,82,.14); }
+  .fp-amount span { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 20px; color: var(--ash); }
+  .fp .fp-amount input { flex: 1; min-width: 0; padding: 14px 0 !important; border: 0 !important; background: transparent !important; box-shadow: none !important; outline: none; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px; color: var(--ink); }
+  .fp-svcs { background: var(--paper); border: 1px solid var(--stone); border-radius: 16px; overflow: hidden; }
+  .fp-svc { width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 0; border-bottom: 1px solid var(--stone); background: transparent; color: var(--ink); text-align: left; }
+  .fp-svc:last-child { border-bottom: 0; }
+  .fp-svc:hover { background: var(--cream); }
+  .fp-svc-t { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; }
+  .fp-svc-p { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--ash); }
+  .fp-radio { flex: 0 0 20px; height: 20px; border-radius: 50%; border: 2px solid var(--stone); display: flex; align-items: center; justify-content: center; }
+  .fp-svc[aria-checked="true"] { background: var(--coral-50); }
+  .fp-svc[aria-checked="true"] .fp-radio { border-color: var(--coral-500); }
+  .fp-svc[aria-checked="true"] .fp-radio::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--coral-500); }
+  .fp-hint { display: flex; gap: 8px; align-items: flex-start; margin-top: 12px; font-size: 12.5px; line-height: 18px; color: var(--graphite); }
+  .fp-hint svg { margin-top: 2px; color: var(--coral-500); }
   .fp-counter { margin-top: 6px; text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--ash); }
   .fp-err { display: flex; gap: 8px; align-items: center; margin-top: 12px; padding: 11px 12px; border-radius: 12px; background: #f6d4d4; color: var(--rose-500, #c0392b); font-size: 13px; font-weight: 600; }
   .fp-err[hidden] { display: none; }
@@ -93,12 +119,13 @@
 <div class="fp">
   <div class="fp-wrap">
     <%= render "shared/page_head", back_href: edit_user_registration_path, back_id: "fp-back", eyebrow: "Recompensa",
-               title: "Programa de fidelidade", lead: "Cada visita concluída vira um carimbo. Quem completa o cartão ganha a recompensa." %>
+               title: "Programa de fidelidade", lead: "Cada visita concluída vira um carimbo. Quem completa o cartão ganha um vale pra próxima visita." %>
 
     <% if @stats %>
       <div class="fp-stats">
         <div class="fp-stat"><b><%= @stats[:clientes] %></b><small><%= @stats[:clientes] == 1 ? "CLIENTE COM CARTÃO" : "CLIENTES COM CARTÃO" %></small></div>
         <div class="fp-stat"><b><%= @stats[:recompensas] %></b><small><%= @stats[:recompensas] == 1 ? "RECOMPENSA GANHA" : "RECOMPENSAS GANHAS" %></small></div>
+        <div class="fp-stat"><b><%= @stats[:vales] %></b><small><%= @stats[:vales] == 1 ? "VALE ESPERANDO USO" : "VALES ESPERANDO USO" %></small></div>
       </div>
     <% end %>
 
@@ -120,9 +147,32 @@
           </div>
         </div>
 
-        <label class="fp-label" for="fp-reward">O que o cliente ganha</label>
-        <input type="text" class="fp-input" id="fp-reward" maxlength="120" placeholder="Ex.: Lavagem simples grátis, 20% de desconto">
-        <div class="fp-counter" id="fp-count">0/120</div>
+        <span class="fp-label" id="fp-type-label">O que o cliente ganha</span>
+        <div class="fp-types" role="radiogroup" aria-labelledby="fp-type-label">
+          <button type="button" class="fp-type" role="radio" data-type="percent"><span class="fp-type-ic"><i data-feather="percent" style="width:16px;height:16px"></i></span><b>Desconto em %</b><small>Ex.: 30% na próxima</small></button>
+          <button type="button" class="fp-type" role="radio" data-type="fixed"><span class="fp-type-ic"><i data-feather="tag" style="width:16px;height:16px"></i></span><b>Desconto em R$</b><small>Ex.: R$ 20 na próxima</small></button>
+          <button type="button" class="fp-type" role="radio" data-type="free_service"><span class="fp-type-ic"><i data-feather="gift" style="width:16px;height:16px"></i></span><b>Serviço grátis</b><small>Ex.: lavagem simples</small></button>
+          <button type="button" class="fp-type" role="radio" data-type="gift"><span class="fp-type-ic"><i data-feather="package" style="width:16px;height:16px"></i></span><b>Brinde</b><small>Entregue no balcão</small></button>
+        </div>
+
+        <div class="fp-detail" id="fp-d-percent" hidden>
+          <label class="fp-label" for="fp-pct">Desconto</label>
+          <div class="fp-amount"><input type="number" id="fp-pct" min="1" max="100" step="1" inputmode="numeric" placeholder="30"><span>%</span></div>
+        </div>
+        <div class="fp-detail" id="fp-d-fixed" hidden>
+          <label class="fp-label" for="fp-fix">Desconto</label>
+          <div class="fp-amount"><span>R$</span><input type="number" id="fp-fix" min="1" step="1" inputmode="decimal" placeholder="20"></div>
+        </div>
+        <div class="fp-detail" id="fp-d-free_service" hidden>
+          <span class="fp-label">Qual serviço sai de graça</span>
+          <div class="fp-svcs" id="fp-svcs" role="radiogroup"></div>
+        </div>
+        <div class="fp-detail" id="fp-d-gift" hidden>
+          <label class="fp-label" for="fp-reward">Qual é o brinde</label>
+          <input type="text" class="fp-input" id="fp-reward" maxlength="120" placeholder="Ex.: Cera grátis, aromatizador">
+          <div class="fp-counter" id="fp-count">0/120</div>
+        </div>
+        <p class="fp-hint"><i data-feather="clock" style="width:14px;height:14px"></i><span id="fp-hint"></span></p>
         <div class="fp-err" id="fp-err" hidden></div>
         <button type="button" class="fp-save" id="fp-save">Salvar alterações</button>
       </section>
@@ -140,7 +190,8 @@
           <li><span class="fp-how-ic"><i data-feather="calendar" style="width:14px;height:14px"></i></span>Cada visita concluída conta um carimbo no cartão do cliente.</li>
           <li><span class="fp-how-ic"><i data-feather="award" style="width:14px;height:14px"></i></span><span id="fp-how-goal"></span></li>
           <li><span class="fp-how-ic"><i data-feather="bell" style="width:14px;height:14px"></i></span>O cliente é avisado quando está perto de completar.</li>
-          <li><span class="fp-how-ic"><i data-feather="refresh-cw" style="width:14px;height:14px"></i></span>Depois da recompensa, o cartão zera e começa um novo ciclo.</li>
+          <li><span class="fp-how-ic"><i data-feather="tag" style="width:14px;height:14px"></i></span>O vale entra sozinho no próximo agendamento, inclusive no Last Minute. Se o cliente cancelar ou faltar, o vale volta pra ele.</li>
+          <li><span class="fp-how-ic"><i data-feather="refresh-cw" style="width:14px;height:14px"></i></span>O cartão zera e começa um novo ciclo.</li>
         </ul>
       </aside>
     </div>
@@ -157,12 +208,33 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function fi(n, s) { return (window.feather && feather.icons[n]) ? feather.icons[n].toSvg({ width: s || 16, height: s || 16 }) : ''; }
   function clamp(n) { return Math.max(MIN, Math.min(MAX, parseInt(n, 10) || MIN)); }
+  var SERVICES = DATA.services || [];
+  var VALIDADE = DATA.valid_days || 45;
   var st = {
     exists: !!DATA.exists,
     active: DATA.exists ? !!DATA.active : true,
-    visits: DATA.exists ? clamp(DATA.visits_required) : 5
+    visits: DATA.exists ? clamp(DATA.visits_required) : 5,
+    type: DATA.exists ? (DATA.reward_type || 'gift') : 'percent',
+    serviceId: DATA.reward_service_id || null
   };
-  $('fp-reward').value = DATA.exists ? (DATA.reward_description || '') : '';
+  $('fp-reward').value = DATA.exists && st.type === 'gift' ? (DATA.reward_description || '') : '';
+  if (DATA.reward_value != null) {
+    if (st.type === 'percent') $('fp-pct').value = Math.round(DATA.reward_value);
+    if (st.type === 'fixed') $('fp-fix').value = DATA.reward_value;
+  }
+  function money(v) { var n = Number(v); return (n % 1 ? n.toFixed(2) : String(n)).replace('.', ','); }
+  // A mesma frase que o servidor gera (LoyaltyProgram#gerar_descricao).
+  function descricao() {
+    if (st.type === 'percent') { var p = parseInt($('fp-pct').value, 10); return p > 0 ? p + '% de desconto na próxima visita' : ''; }
+    if (st.type === 'fixed') { var f = Number(String($('fp-fix').value).replace(',', '.')); return f > 0 ? 'R$ ' + money(f) + ' de desconto na próxima visita' : ''; }
+    if (st.type === 'free_service') { var sv = SERVICES.find(function (x) { return x.id === st.serviceId; }); return sv ? sv.title + ' grátis na próxima visita' : ''; }
+    return $('fp-reward').value.trim();
+  }
+  function renderSvcs() {
+    $('fp-svcs').innerHTML = SERVICES.length
+      ? SERVICES.map(function (sv) { return '<button type="button" class="fp-svc" role="radio" aria-checked="' + (sv.id === st.serviceId) + '" data-svc="' + sv.id + '"><span class="fp-radio"></span><span class="fp-svc-t">' + esc(sv.title) + '</span><span class="fp-svc-p">R$ ' + money(sv.price) + '</span></button>'; }).join('')
+      : '<div class="fp-svc">Cadastre um serviço no Gerenciar pra usar esta opção.</div>';
+  }
   var tt = null;
   function toast(msg) {
     var t = $('fp-toast'); t.textContent = msg; t.classList.add('is-on');
@@ -172,7 +244,13 @@
   // Sem programa ainda, o botão diz o que acontece: cria.
   function saveLabel() { return st.exists ? 'Salvar alterações' : 'Criar programa'; }
   function render() {
-    var v = st.visits, reward = $('fp-reward').value.trim();
+    var v = st.visits, reward = descricao();
+    document.querySelectorAll('.fp-type').forEach(function (b) { b.setAttribute('aria-checked', b.dataset.type === st.type); });
+    ['percent', 'fixed', 'free_service', 'gift'].forEach(function (t) { $('fp-d-' + t).hidden = t !== st.type; });
+    renderSvcs();
+    $('fp-hint').textContent = st.type === 'gift'
+      ? 'O vale vale ' + VALIDADE + ' dias. O atendente vê o brinde no check-in e entrega no balcão.'
+      : 'O vale vale ' + VALIDADE + ' dias e o desconto já aparece no preço quando o cliente agenda.';
     $('fp-active').setAttribute('aria-checked', st.active);
     $('fp-status').classList.toggle('is-on', st.active);
     $('fp-status-v').textContent = st.active ? 'Ativo' : 'Pausado';
@@ -187,23 +265,38 @@
     var filled = Math.floor(v * 0.6), shown = Math.min(v, 10), html = '';
     for (var i = 0; i < shown; i++) html += '<i class="' + (i < filled ? 'is-on' : '') + '">' + (i < filled ? fi('check', 13) : '') + '</i>';
     $('fp-prev-stamps').innerHTML = html;
-    $('fp-prev-reward').textContent = reward || 'Descreva a recompensa';
+    $('fp-prev-reward').textContent = reward || 'Escolha a recompensa';
     $('fp-prev-badge').textContent = filled + '/' + v;
     $('fp-prev-cap').textContent = filled + ' DE ' + v + ' VISITAS (EXEMPLO)' + (v > 10 ? ' · MOSTRANDO 10' : '');
     $('fp-card').classList.toggle('is-off', !st.active);
     if (!$('fp-save').disabled) $('fp-save').textContent = saveLabel();
-    $('fp-how-goal').textContent = 'Ao completar ' + v + ' visita' + (v > 1 ? 's' : '') + ', o cliente ganha a recompensa.';
+    $('fp-how-goal').textContent = 'Ao completar ' + v + ' visita' + (v > 1 ? 's' : '') + ', o cliente ganha um vale pra próxima visita.';
   }
 
   function fail(t) { $('fp-err').innerHTML = fi('alert-circle', 14) + '<span>' + esc(t) + '</span>'; $('fp-err').hidden = false; }
   function save() {
-    var reward = $('fp-reward').value.trim(), btn = $('fp-save');
+    var btn = $('fp-save'), payload = { visits_required: st.visits, active: st.active, reward_type: st.type };
     $('fp-err').hidden = true;
-    if (!reward) { $('fp-reward').focus(); return fail('Diga o que o cliente ganha ao completar.'); }
+    if (st.type === 'percent') {
+      var p = parseInt($('fp-pct').value, 10);
+      if (!(p >= 1 && p <= 100)) { $('fp-pct').focus(); return fail('Diga o desconto, de 1% a 100%.'); }
+      payload.reward_value = p;
+    } else if (st.type === 'fixed') {
+      var f = Number(String($('fp-fix').value).replace(',', '.'));
+      if (!(f > 0)) { $('fp-fix').focus(); return fail('Diga quantos reais de desconto.'); }
+      payload.reward_value = f;
+    } else if (st.type === 'free_service') {
+      if (!st.serviceId) return fail('Escolha o serviço que sai de graça.');
+      payload.reward_service_id = st.serviceId;
+    } else {
+      var g = $('fp-reward').value.trim();
+      if (!g) { $('fp-reward').focus(); return fail('Diga qual é o brinde.'); }
+      payload.reward_description = g;
+    }
     btn.disabled = true; btn.innerHTML = '<span class="fp-spin"></span>';
     fetch('/owner/loyalty_program', {
       method: 'POST', headers: { 'X-CSRF-Token': CSRF, 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ visits_required: st.visits, reward_description: reward, active: st.active })
+      body: JSON.stringify(payload)
     }).then(function (r) { return r.json().catch(function () { return {}; }); }).then(function (data) {
       if (data.ok) { st.exists = true; render(); toast('Programa de fidelidade salvo.'); }
       else fail(data.error || 'Erro ao salvar.');
@@ -217,6 +310,14 @@
   $('fp-plus').addEventListener('click', function () { st.visits = clamp(st.visits + 1); render(); });
   $('fp-visits').addEventListener('change', function (e) { st.visits = clamp(e.target.value); render(); });
   $('fp-reward').addEventListener('input', function () { $('fp-err').hidden = true; render(); });
+  ['fp-pct', 'fp-fix'].forEach(function (id) { $(id).addEventListener('input', function () { $('fp-err').hidden = true; render(); }); });
+  document.querySelectorAll('.fp-type').forEach(function (b) {
+    b.addEventListener('click', function () { st.type = b.dataset.type; $('fp-err').hidden = true; render(); });
+  });
+  $('fp-svcs').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-svc]'); if (!b) return;
+    st.serviceId = Number(b.dataset.svc); $('fp-err').hidden = true; render();
+  });
   $('fp-save').addEventListener('click', save);
   $('fp-back').addEventListener('click', function (e) {
     if (document.referrer && document.referrer.indexOf(location.origin) === 0 && history.length > 1) { e.preventDefault(); history.back(); }

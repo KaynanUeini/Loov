@@ -8,6 +8,7 @@ class User < ApplicationRecord
   has_many :support_tickets,       dependent: :destroy
   has_many :notification_reads,    dependent: :destroy
   has_many :push_tokens,           dependent: :destroy
+  has_many :loyalty_rewards,       dependent: :delete_all
   has_many :favorite_car_washes,   dependent: :destroy
   has_many :favorite_shops,        through: :favorite_car_washes, source: :car_wash
   has_many :sent_invitations,      class_name: "AttendantInvitation", foreign_key: :inviter_id,   dependent: :destroy

@@ -10,11 +10,17 @@ module Owner
     def show
       program = @car_wash.loyalty_program
       data = program ? {
-        exists:           true,
-        active:           program.active,
-        visits_required:  program.visits_required,
-        reward_description: program.reward_description
-      } : { exists: false }
+        exists:             true,
+        active:             program.active,
+        visits_required:    program.visits_required,
+        reward_description: program.reward_description,
+        reward_type:        program.reward_type,
+        reward_value:       program.reward_value&.to_f,
+        reward_service_id:  program.reward_service_id,
+        valid_days:         program.valid_days
+      } : { exists: false, valid_days: LoyaltyProgram::VALIDADE_PADRAO }
+      # Serviços pro "serviço grátis".
+      data[:services] = @car_wash.services.order(:price).map { |sv| { id: sv.id, title: sv.title, price: sv.price.to_f } }
       respond_to do |format|
         format.html do
           @program_json = data
@@ -28,9 +34,14 @@ module Owner
     def upsert
       program = @car_wash.loyalty_program || @car_wash.build_loyalty_program
 
+      # reward_type ausente = versão antiga do app (só o texto): vira brinde.
+      tipo = params[:reward_type].presence || (program.persisted? ? program.reward_type : "gift")
       program.assign_attributes(
         visits_required:    params[:visits_required].to_i,
-        reward_description: params[:reward_description].to_s.strip,
+        reward_description: params[:reward_description].to_s.strip.presence || program.reward_description,
+        reward_type:        tipo,
+        reward_value:       %w[percent fixed].include?(tipo) ? params[:reward_value].presence&.to_s&.tr(",", ".")&.to_d : nil,
+        reward_service_id:  tipo == "free_service" ? params[:reward_service_id].presence : nil,
         active:             params[:active] != false && params[:active] != "false"
       )
 
@@ -50,7 +61,8 @@ module Owner
                          .where("scheduled_at >= ?", program.created_at)
                          .group(:user_id).count.values
       meta = program.visits_required
-      { clientes: visitas.size, recompensas: visitas.sum { |v| v / meta } }
+      { clientes: visitas.size, recompensas: visitas.sum { |v| v / meta },
+        vales: LoyaltyReward.livres.where(car_wash_id: @car_wash.id).count }
     end
 
     def set_car_wash

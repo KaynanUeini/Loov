@@ -209,6 +209,19 @@
   @keyframes bkspin { to { transform: rotate(360deg); } }
   .bk-break { margin: 0 20px; padding: 18px; background: var(--paper); border: 1px solid var(--stone); border-radius: 20px; }
   .bk-brow { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 14px; }
+  /* Vale de fidelidade no resumo: ligado por padrão (o cliente quer usar o
+     que ganhou); a chave guarda pra outra vez. */
+  .bk-vale { display: flex; align-items: center; gap: 10px; margin: 8px 0 4px; padding: 10px 12px; border-radius: 14px; background: var(--sand); }
+  .bk-vale.is-on { background: var(--coral-50); }
+  .bk-vale-ic { flex: 0 0 32px; height: 32px; border-radius: 50%; background: var(--paper); color: var(--coral-500); display: flex; align-items: center; justify-content: center; }
+  .bk-vale-t { flex: 1; min-width: 0; }
+  .bk-vale-t b { display: block; font-size: 13.5px; font-weight: 600; color: var(--ink); }
+  .bk-vale-t small { display: block; font-size: 12px; color: var(--graphite); }
+  .bk-vale-v { font-size: 14px; font-weight: 600; color: var(--coral-700); white-space: nowrap; }
+  .bk-vale-sw { position: relative; flex: 0 0 44px; height: 26px; border: 0; border-radius: 13px; background: var(--stone); cursor: pointer; transition: background .2s; }
+  .bk-vale-sw::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(25,20,15,.2); transition: transform .2s; }
+  .bk-vale-sw[aria-checked="true"] { background: var(--coral-500); }
+  .bk-vale-sw[aria-checked="true"]::after { transform: translateX(18px); }
   .bk-brow span { color: var(--graphite); }
   .bk-brow b { font-weight: 600; }
   .bk-bdiv { height: 1px; background: var(--stone); margin: 10px 0; }
@@ -408,9 +421,22 @@
     faltas: current_user.faltas_recentes.count, ativos: current_user.agendamentos_comuns_ativos.count,
     limite: User::LIMITE_AGENDAMENTOS, has_card: current_user.has_payment_method?, card: current_user.card_display
   } : {}).to_json) %>;
+  // Vale de fidelidade do cliente aqui (LoyaltyReward): quanto abate de cada
+  // serviço. Entra sozinho no resumo; o cliente pode guardar pra depois.
+  <% vale = is_client ? LoyaltyReward.disponivel_para(current_user, @car_wash) : nil %>
+  var VALE = <%= raw json_escape((vale ? {
+    short: vale.resumo_curto, description: vale.description, type: vale.reward_type,
+    expires: vale.expires_at.in_time_zone("America/Sao_Paulo").strftime("%d/%m"),
+    descontos: @car_wash.services.to_h { |sv| [sv.id, vale.desconto_para(sv, sv.price.to_f)] }
+  } : nil).to_json) %>;
   var PCT = <%= Appointment::PREPAYMENT_PCT %>, PCT_LABEL = Math.round(PCT * 100) + '%';
+  var MIN_PREPAGO = <%= Appointment::PREPAGO_MINIMO %>;
   var STRIPE_PK = <%= raw json_escape(ENV['STRIPE_PUBLISHABLE_KEY'].to_s.to_json) %>;
-  function comSinal() { return RULES.restricao === 'sinal'; }
+  // Com o vale cobrindo quase tudo não há sinal (o Stripe não cobra abaixo de R$ 0,50).
+  function comSinal() { return RULES.restricao === 'sinal' && (!bk.service || sinalDe(totalDe(bk.service)) >= MIN_PREPAGO); }
+  function usaVale() { return !!VALE && bk.useReward; }
+  function descontoDe(s) { return usaVale() ? Number(VALE.descontos[s.id] || 0) : 0; }
+  function totalDe(s) { return Math.max(0, Math.round((Number(s.price) - descontoDe(s)) * 100) / 100); }
   function bloqueado() { return RULES.restricao === 'bloqueio'; }
   function noLimite() { return RULES.limite && RULES.ativos >= RULES.limite; }
   function sinalDe(price) { return Math.round(Number(price) * PCT * 100) / 100; }
@@ -615,7 +641,7 @@
   }
 
   // ── Agendamento ─────────────────────────────────────────────────────────
-  var bk = { service: null, step: 1, dateIdx: 0, time: null, times: [], loading: false, submitting: false, error: null, seq: 0 };
+  var bk = { service: null, step: 1, dateIdx: 0, time: null, times: [], loading: false, submitting: false, error: null, seq: 0, useReward: true };
   var dates = (function () { var b = new Date(), out = []; for (var i = 0; i < 15; i++) { var d = new Date(b); d.setDate(b.getDate() + i); out.push(d); } return out; })();
   function dayLabel(d) { return d.toDateString() === new Date().toDateString() ? 'hoje' : WD_SHORT[d.getDay()]; }
   function svcById(id) { return services.filter(function (s) { return String(s.id) === String(id); })[0]; }
@@ -641,7 +667,7 @@
     var s = bk.service;
     return '<div class="bk-sum-logo">' + LoovLogos.logoOf(CW) + '</div>' +
       '<div class="bk-sum-txt"><div class="bk-sum-shop">' + esc(CW.name) + '</div><div class="bk-sum-svc">' + esc(s.title) + ' · ' + (s.duration || 30) + 'min</div></div>' +
-      '<div class="bk-sum-price">R$' + money(s.price) + '</div>';
+      '<div class="bk-sum-price">R$' + money(totalDe(s)) + '</div>';
   }
   function whenText() {
     var d = dates[bk.dateIdx];
@@ -656,12 +682,13 @@
     var w = whenText();
     $('bk-aside-sum').innerHTML = '<div class="bk-sum">' + sumHtml() + '</div>' +
       '<div class="bk-aside-line"><span>Quando</span><b>' + (w ? esc(w) : 'Escolha dia e horário') + '</b></div>' +
+      (usaVale() && descontoDe(s) ? '<div class="bk-aside-line"><span>Vale</span><b>' + esc(VALE.short) + '</b></div>' : '') +
       '<div class="bk-aside-line"><span>Pagamento</span><b>' + (comSinal() ? 'Sinal de ' + PCT_LABEL + ' no cartão' : 'No lava-rápido') + '</b></div>';
-    $('bk-total').textContent = 'R$' + money(s.price);
+    $('bk-total').textContent = 'R$' + money(totalDe(s));
     var cta = $('bk-cta'), travado = bloqueado() || noLimite();
     cta.disabled = (bk.step === 1 && (!bk.time || travado)) || bk.submitting;
     var rotulo = bk.step === 1 ? 'Continuar'
-      : comSinal() ? (RULES.has_card ? 'Pagar sinal R$ ' + money(sinalDe(s.price), 2) : 'Cadastrar cartão')
+      : comSinal() ? (RULES.has_card ? 'Pagar sinal R$ ' + money(sinalDe(totalDe(s)), 2) : 'Cadastrar cartão')
       : 'Confirmar';
     cta.innerHTML = bk.submitting ? '<span class="bk-spin"></span>' : rotulo + ' ' + icon('arrow-right', 16);
     $('bk-step').innerHTML = bk.step === 1 ? step1Html() : step2Html();
@@ -723,15 +750,16 @@
       '<div class="bk-lab" style="margin-top:24px">Resumo</div>' +
       '<div class="bk-break">' +
         '<div class="bk-brow"><span>' + esc(s.title) + '</span><b>R$ ' + money(s.price, 2) + '</b></div>' +
+        valeHtml(s) +
         '<div class="bk-bdiv"></div>' +
-        '<div class="bk-brow bk-btot"><span>Total</span><b>R$ ' + money(s.price, 2) + '</b></div>' +
+        '<div class="bk-brow bk-btot"><span>Total</span><b>R$ ' + money(totalDe(s), 2) + '</b></div>' +
       '</div>' +
       '<div class="bk-lab" style="margin-top:24px">Pagamento</div>' +
       (comSinal()
         ? '<div class="bk-break">' +
-            '<div class="bk-brow"><span>Sinal agora, no cartão ' + PCT_LABEL + '</span><b>R$ ' + money(sinalDe(s.price), 2) + '</b></div>' +
+            '<div class="bk-brow"><span>Sinal agora, no cartão ' + PCT_LABEL + '</span><b>R$ ' + money(sinalDe(totalDe(s)), 2) + '</b></div>' +
             '<div class="bk-bdiv"></div>' +
-            '<div class="bk-brow"><span>Na chegada, no lava-rápido</span><b>R$ ' + money(Math.max(0, Number(s.price) - sinalDe(s.price)), 2) + '</b></div>' +
+            '<div class="bk-brow"><span>Na chegada, no lava-rápido</span><b>R$ ' + money(Math.max(0, totalDe(s) - sinalDe(totalDe(s))), 2) + '</b></div>' +
             '<div class="bk-bdiv"></div>' +
             '<div class="bk-brow"><span>' + icon('credit-card', 14) + ' ' + esc(RULES.has_card ? RULES.card : 'Nenhum cartão cadastrado') + '</span>' +
               '<a href="' + cardUrl() + '">' + (RULES.has_card ? 'Trocar' : 'Cadastrar') + '</a></div>' +
@@ -742,6 +770,20 @@
             '<span class="bk-radio">' + icon('check', 12, { 'stroke-width': 3 }) + '</span></div>' +
           '<p class="bk-rulenote">Cancelamento grátis até 2 horas antes. Faltas sem cancelar contam: com 2 em 90 dias, o agendamento comum passa a pedir um sinal no cartão.</p>') +
       '<div class="bk-err' + (bk.error ? '' : ' is-off') + '">' + icon('alert-circle', 14) + '<span>' + esc(bk.error || '') + '</span></div>';
+  }
+
+  // Linha do vale no resumo, ligada por padrão; "Guardar" deixa pra outra vez.
+  // Brinde não muda o preço: só avisa que vai ser entregue.
+  function valeHtml(s) {
+    if (!VALE) return '';
+    var d = Number(VALE.descontos[s.id] || 0), on = bk.useReward;
+    var valor = VALE.type === 'gift' ? (on ? 'no balcão' : '') : (on ? '−R$ ' + money(d, 2) : '');
+    return '<div class="bk-vale' + (on ? ' is-on' : '') + '">' +
+      '<span class="bk-vale-ic">' + icon('gift', 15) + '</span>' +
+      '<span class="bk-vale-t"><b>Vale de fidelidade</b><small>' + esc(VALE.short) + ' · até ' + esc(VALE.expires) + '</small></span>' +
+      (valor ? '<b class="bk-vale-v">' + valor + '</b>' : '') +
+      '<button type="button" class="bk-vale-sw" role="switch" aria-checked="' + on + '" aria-label="Usar o vale neste agendamento" data-vale></button>' +
+    '</div>';
   }
 
   function loadTimes() {
@@ -773,7 +815,7 @@
     fetch('/car_washes/' + CW.id + '/appointments', {
       method: 'POST', credentials: 'same-origin',
       headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF },
-      body: JSON.stringify({ appointment: { car_wash_id: CW.id, service_id: bk.service.id, date: ymd(dates[bk.dateIdx]), time: bk.time } })
+      body: JSON.stringify({ appointment: { car_wash_id: CW.id, service_id: bk.service.id, date: ymd(dates[bk.dateIdx]), time: bk.time }, use_reward: usaVale() })
     }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (data) { return { ok: r.ok, data: data }; }); })
       .then(function (res) {
         if (res.data.code === 'card_required') { location.href = cardUrl(); return; }
@@ -817,9 +859,10 @@
         '<div class="ok-div"></div>' +
         '<div class="ok-shop"><div class="ok-logo">' + LoovLogos.logoOf(CW) + '</div>' +
           '<div class="ok-shop-t"><b>' + esc(CW.name) + '</b><small>' + esc(s.title) + ' · ' + (s.duration || 30) + 'min</small></div>' +
-          '<div class="ok-price">R$' + money(s.price) + '</div></div>' +
+          '<div class="ok-price">R$' + money(totalDe(s)) + '</div></div>' +
+        (usaVale() ? '<div class="ok-div"></div><p class="ok-deposit">Vale de fidelidade aplicado: ' + esc(VALE.short) + '.</p>' : '') +
         (deposit ? '<div class="ok-div"></div><p class="ok-deposit">Sinal de R$ ' + money(deposit, 2) + ' pago no cartão. O restante, R$ ' +
-          money(Math.max(0, Number(s.price) - deposit), 2) + ', você paga no lava-rápido.</p>' : '') +
+          money(Math.max(0, totalDe(s) - deposit), 2) + ', você paga no lava-rápido.</p>' : '') +
       '</div>' +
       '<div class="ok-actions"><a class="ok-primary" href="/appointments">Ver meus agendamentos</a><a class="ok-ghost" href="/' + COORDS_QS + '">Voltar pra home</a></div>' +
     '</div>';
@@ -848,6 +891,7 @@
     if ((t = e.target.closest('button[data-time]'))) { bk.time = t.dataset.time; renderBooking(); return; }
     if (e.target.closest('[data-edit-when]') || e.target.closest('#bk-back')) { history.back(); return; }
     if (e.target.closest('#bk-cta')) { cta(); return; }
+    if (e.target.closest('[data-vale]')) { bk.useReward = !bk.useReward; renderBooking(); return; }
     if (e.target.id === 'cw-login') { closeLogin(); return; }
   });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeLogin(); });

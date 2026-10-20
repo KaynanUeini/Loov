@@ -217,7 +217,7 @@
       <div class="fd-eyebrow">Recompensas · Fidelidade</div>
       <% if @cards.any? %>
         <h1 class="fd-title">Seus <em>carimbos</em>.</h1>
-        <p class="fd-lead">Cada lavagem concluída vira um carimbo; o último é o prêmio.</p>
+        <p class="fd-lead">Cada lavagem concluída vira um carimbo. Completou, ganha um vale pra próxima visita.</p>
       <% else %>
         <h1 class="fd-title">Carimbos</h1>
       <% end %>
@@ -230,7 +230,7 @@
             n      = c[:visits_required]
             faltam = c[:milestone] ? 0 : n - c[:filled]
             cols   = n <= 6 ? n : [8, (n / 2.0).ceil].min
-            estado = c[:milestone] ? "is-done" : (faltam == 1 ? "is-close" : "")
+            estado = (c[:milestone] || c[:reward]) ? "is-done" : (faltam == 1 ? "is-close" : "")
             hist   = c[:history] || []
           %>
           <article class="lc <%= estado %>" data-tema="<%= tema_do_cartao[c[:car_wash_id]] %>" data-id="<%= c[:car_wash_id] %>" data-total="<%= c[:visits_total] %>" data-filled="<%= c[:filled] %>">
@@ -256,15 +256,23 @@
                     </div>
                     <div class="lc-foot">
                       <div class="lc-left">
-                        <% if c[:milestone] %>
-                          <b>Completo!</b><small>Recompensa liberada nesta visita. O próximo cartão começa na sua próxima lavagem.</small>
+                        <% vale = c[:reward] %>
+                        <% if vale %>
+                          <% ate = Time.iso8601(vale[:expires_at]).in_time_zone("America/Sao_Paulo").strftime("%d/%m") %>
+                          <b><%= vale[:state] == "reservado" ? "Vale reservado" : "Vale ativo" %></b><small><%= vale[:short] %> · <%= vale[:state] == "reservado" ? "entra no seu próximo horário" : "vale até #{ate}, na próxima visita" %>.</small>
+                        <% elsif c[:milestone] %>
+                          <b>Completo!</b><small>O vale da recompensa vale na sua próxima visita.</small>
                         <% elsif faltam == 1 %>
                           <b>Falta 1</b><small>Na próxima visita você ganha.</small>
                         <% else %>
                           <b>Faltam <%= faltam %></b><small>visitas pra recompensa.</small>
                         <% end %>
                       </div>
-                      <button type="button" class="lc-btn" data-flip>Detalhes<i data-feather="rotate-cw" style="width:13px;height:13px"></i></button>
+                      <% if c[:reward] && c[:reward][:state] == "disponivel" %>
+                        <a class="lc-btn is-solid" href="<%= car_wash_path(c[:car_wash_id]) %><%= qs %>">Usar<i data-feather="arrow-right" style="width:13px;height:13px"></i></a>
+                      <% else %>
+                        <button type="button" class="lc-btn" data-flip>Detalhes<i data-feather="rotate-cw" style="width:13px;height:13px"></i></button>
+                      <% end %>
                     </div>
                   </div>
                 </div>

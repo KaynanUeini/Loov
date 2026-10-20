@@ -619,6 +619,15 @@
     .od-rail-all svg { display:block; }
   }
 
+  /* Vale de fidelidade no cartão do atendimento */
+  .owner-dash-reward { display:flex; align-items:center; gap:8px; margin-top:8px; padding:7px 10px; border:0; border-radius:10px; background:var(--od-coral-50); color:var(--od-coral-700); font-size:.75rem; font-weight:600; line-height:1.3; text-align:left; width:100%; }
+  .owner-dash-reward i { flex-shrink:0; }
+  .owner-dash-reward span { flex:1; min-width:0; }
+  .owner-dash-reward.is-offer { cursor:pointer; border:1px dashed var(--od-coral-500); background:transparent; }
+  .owner-dash-reward.is-offer:hover { background:var(--od-coral-50); }
+  .owner-dash-reward.is-offer b { flex-shrink:0; padding:3px 10px; border-radius:100px; background:var(--od-coral-500); color:#fff; font-size:.7rem; }
+  .owner-dash-reward.is-soft { background:var(--od-sand); color:var(--od-graphite); font-weight:500; }
+
   /* ── Header buttons (sino + msg + loyalty) - estilos dos extras ── */
   .owner-dash-icon-btn {
     width:40px; height:40px; border-radius:20px;
@@ -1203,6 +1212,21 @@
       ? `<div class="owner-dash-meta">${escapeHtml(appt.vehicle)}</div>`
       : '';
 
+    // Fidelidade: vale aplicado (desconto já no valor, ou brinde a entregar),
+    // vale livre que dá pra aplicar no balcão, ou o aviso de que esta visita
+    // completa o cartão (o cliente ganha o vale pra próxima).
+    let rewardHtml = '';
+    if (appt.reward) {
+      const r = appt.reward;
+      rewardHtml = `<div class="owner-dash-reward"><i class="fas fa-gift"></i><span>${r.type === 'gift'
+        ? 'Entregar: ' + escapeHtml(r.description)
+        : 'Vale: ' + escapeHtml(r.short) + (r.discount ? ' · −' + fmtMoney(r.discount, 2) + ' já no valor' : '')}</span></div>`;
+    } else if (appt.reward_available && !isFinalized) {
+      rewardHtml = `<button type="button" class="owner-dash-reward is-offer" data-action="reward"><i class="fas fa-gift"></i><span>Cliente tem vale: ${escapeHtml(appt.reward_available.short)}</span><b>Aplicar</b></button>`;
+    } else if (appt.loyalty?.milestone && !isFinalized) {
+      rewardHtml = `<div class="owner-dash-reward is-soft"><i class="fas fa-star"></i><span>Completa o cartão nesta visita: ganha o vale pra próxima</span></div>`;
+    }
+
     card.innerHTML = `
       <div class="owner-dash-card-top">
         ${timeBarHtml}
@@ -1220,6 +1244,7 @@
             ${escapeHtml(appt.service)} · <span class="owner-dash-meta-price">${fmtMoney(charge, 2)}</span>
           </div>
           ${vehicleHtml}
+          ${rewardHtml}
         </div>
         <div class="owner-dash-card-right">${rightHtml}</div>
       </div>
@@ -1246,6 +1271,7 @@
         if (act === 'revert')  return doAction(appt, 'revert',  btn);
         if (act === 'edit')    return openEditSheet(appt);
         if (act === 'cancel')  return openCancelSheet(appt);
+        if (act === 'reward')  return doAction(appt, 'apply_reward', btn);
       });
     });
 
@@ -1269,6 +1295,7 @@
     if (path === 'attend')  showToast('Atendimento finalizado.', 'success');
     if (path === 'no_show') showToast('Marcado como ausente.', 'info');
     if (path === 'revert')  showToast('Reversão concluída.', 'info');
+    if (path === 'apply_reward') showToast('Vale aplicado.', 'success');
     await loadDashboard(true);
   }
 

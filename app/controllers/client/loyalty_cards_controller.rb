@@ -15,6 +15,12 @@ module Client
       cards = LoyaltyProgram.where(active: true).includes(:car_wash)
                             .map { |lp| lp.cartao_para(current_user, historico: true) }
                             .select { |c| c[:visits_total].positive? }
+      # Vale ganho e ainda não usado (o que vence primeiro), por lava-rápido.
+      vales = LoyaltyReward.nao_usados.where(user_id: current_user.id)
+                           .where("expires_at > ?", Time.current)
+                           .includes(:car_wash, :appointment).order(:expires_at)
+                           .group_by(&:car_wash_id)
+      cards.each { |c| c[:reward] = vales[c[:car_wash_id]]&.first&.as_cliente }
 
       respond_to do |format|
         format.html do
