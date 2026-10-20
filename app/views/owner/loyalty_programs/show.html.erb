@@ -1,0 +1,228 @@
+<%#
+  Programa de fidelidade do dono — página própria, no modelo das páginas da
+  conta (Mensagens, Aprovações). Antes o atalho levava pro dashboard e
+  abria uma folha por cima, sem um voltar pra onde estava.
+
+    · Cabeçalho padrão (shared/page_head) e, com o programa criado, dois
+      números grandes (clientes com cartão, recompensas ganhas) — números
+      como herói, no jeito da wiemer.
+    · Configurar à esquerda: status, visitas (passo de 1 a 50), o que o
+      cliente ganha e Salvar. Mesma API do app (POST /owner/loyalty_program).
+    · À direita, "Como o cliente vê" (o cartão escuro, igual ao da tela
+      Fidelidade do cliente) atualizando enquanto edita, e "Como funciona".
+    · No celular a coluna da direita desce pra baixo do Salvar.
+%>
+<script src="/vendor/feather-4.29.2.min.js"></script>
+
+<style>
+  .fp { background: var(--cream); color: var(--ink); min-height: 100vh; padding-top: 60px; }
+  .loov-nav { background: var(--cream) !important; }
+  .fp *, .fp *::before, .fp *::after { box-sizing: border-box; }
+  .fp button { font-family: inherit; line-height: normal; cursor: pointer; }
+  .fp svg.feather { display: block; flex-shrink: 0; }
+  .fp-wrap { width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 20px 64px; }
+  .fp-grid { display: grid; gap: 28px; padding-top: 28px; }
+
+  .fp-stats { display: flex; gap: 32px; margin-top: 24px; }
+  .fp-stat b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 40px; line-height: 1; letter-spacing: -0.03em; }
+  .fp-stat small { display: block; margin-top: 6px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; color: var(--ash); }
+
+  .fp-label { display: block; margin: 24px 0 8px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--ash); }
+  .fp-label:first-child { margin-top: 0; }
+
+  .fp-box { padding: 16px; border-radius: 16px; background: var(--paper); border: 1px solid var(--stone); }
+  .fp-status { display: flex; align-items: center; gap: 12px; transition: background .2s, border-color .2s; }
+  .fp-status.is-on { background: var(--coral-50); border-color: var(--coral-100); }
+  .fp-status-t { flex: 1; min-width: 0; }
+  .fp-status-t b { display: block; font-size: 15px; font-weight: 600; }
+  .fp-status.is-on .fp-status-t b { color: var(--coral-700); }
+  .fp-status-t small { display: block; margin-top: 2px; font-size: 12.5px; line-height: 17px; color: var(--graphite); }
+  .fp-switch { position: relative; flex: 0 0 50px; height: 30px; border: 0; border-radius: 15px; background: var(--stone); transition: background .2s; }
+  .fp-switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 2px 4px rgba(25,20,15,.2); transition: transform .2s; }
+  .fp-switch[aria-checked="true"] { background: var(--coral-500); }
+  .fp-switch[aria-checked="true"]::after { transform: translateX(20px); }
+
+  .fp-cfg { display: flex; align-items: center; gap: 12px; }
+  .fp-cfg-t { flex: 1; min-width: 0; }
+  .fp-cfg-t b { display: block; font-size: 15px; font-weight: 600; }
+  .fp-cfg-t small { display: block; margin-top: 2px; font-size: 12.5px; color: var(--graphite); }
+  .fp-step { display: flex; align-items: center; gap: 4px; padding: 4px; border-radius: 999px; background: var(--sand); }
+  .fp-step button { width: 38px; height: 38px; border: 0; border-radius: 50%; background: var(--paper); color: var(--ink); display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 2px rgba(25,20,15,.08); }
+  .fp-step button[disabled] { opacity: .35; cursor: default; }
+  .fp .fp-step input { width: 48px; padding: 0 !important; border: 0 !important; background: transparent !important; box-shadow: none !important; text-align: center; font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; color: var(--ink); outline: none; -moz-appearance: textfield; }
+  .fp-step input::-webkit-outer-spin-button, .fp-step input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+  .fp .fp-input { display: block; width: 100%; padding: 14px 16px !important; border: 1px solid var(--stone) !important; border-radius: 16px !important; background: var(--paper) !important; box-shadow: none !important; outline: none; font: inherit; font-size: 15px; color: var(--ink); transition: border-color .15s, box-shadow .15s; }
+  .fp .fp-input:focus { border-color: var(--coral-500) !important; box-shadow: 0 0 0 4px rgba(221,120,82,.14) !important; }
+  .fp-counter { margin-top: 6px; text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--ash); }
+  .fp-err { display: flex; gap: 8px; align-items: center; margin-top: 12px; padding: 11px 12px; border-radius: 12px; background: #f6d4d4; color: var(--rose-500, #c0392b); font-size: 13px; font-weight: 600; }
+  .fp-err[hidden] { display: none; }
+  .fp-save { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 18px; padding: 16px; border: 0; border-radius: 100px; background: var(--coral-500); color: var(--cream); font-size: 15px; font-weight: 600; transition: background .15s, opacity .15s; }
+  .fp-save:hover { background: var(--coral-700); }
+  .fp-save[disabled] { opacity: .5; cursor: default; background: var(--coral-500); }
+  .fp-spin { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(250,250,246,.35); border-top-color: var(--cream); animation: fpspin .8s linear infinite; }
+  @keyframes fpspin { to { transform: rotate(360deg); } }
+
+  /* Como o cliente vê: o cartão escuro da tela Fidelidade do cliente. */
+  .fp-card { padding: 20px; border-radius: 22px; background: var(--ink); color: var(--cream); box-shadow: 0 18px 40px -24px rgba(25,20,15,.6); }
+  .fp-card-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .fp-card-h b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 16px; }
+  .fp-card-h small { display: block; margin-top: 3px; font-size: 12.5px; color: #bdb5a6; overflow-wrap: anywhere; }
+  .fp-card-badge { flex-shrink: 0; padding: 4px 10px; border-radius: 100px; background: rgba(221,120,82,.18); color: var(--coral-300, #e8a48a); font-family: 'JetBrains Mono', monospace; font-size: 10.5px; }
+  .fp-stamps { display: flex; gap: 5px; margin-top: 16px; }
+  .fp-stamps i { flex: 1; height: 28px; border-radius: 7px; background: rgba(255,255,255,.08); display: flex; align-items: center; justify-content: center; color: var(--cream); }
+  .fp-stamps i.is-on { background: var(--coral-500); }
+  .fp-card-cap { margin-top: 12px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .6px; color: #9e9688; }
+  .fp-card.is-off { opacity: .55; }
+
+  .fp-how { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+  .fp-how li { display: flex; gap: 12px; align-items: flex-start; font-size: 13px; line-height: 19px; color: var(--graphite); }
+  .fp-how-ic { flex: 0 0 30px; height: 30px; border-radius: 10px; background: var(--sand); color: var(--coral-500); display: flex; align-items: center; justify-content: center; }
+
+  .fp-toast { position: fixed; left: 16px; right: 16px; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); z-index: 70; max-width: 440px; margin: 0 auto; padding: 13px 16px; border-radius: 14px; background: var(--ink); color: var(--cream); font-size: 13px; box-shadow: 0 14px 36px -16px rgba(40,35,28,.6); transform: translateY(16px); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+  .fp-toast.is-on { opacity: 1; transform: none; }
+
+  @media (min-width: 720px) { .fp-grid { padding-top: 36px; } .fp-stat b { font-size: 48px; } }
+  @media (min-width: 960px) {
+    .fp-wrap { padding: 0 40px 80px; }
+    .fp-grid { grid-template-columns: minmax(0, 1fr) 360px; gap: 48px; align-items: start; }
+    .fp-side { position: sticky; top: 84px; }
+  }
+</style>
+
+<div class="fp">
+  <div class="fp-wrap">
+    <%= render "shared/page_head", back_href: edit_user_registration_path, back_id: "fp-back", eyebrow: "Recompensa",
+               title: "Programa de fidelidade", lead: "Cada visita concluída vira um carimbo. Quem completa o cartão ganha a recompensa." %>
+
+    <% if @stats %>
+      <div class="fp-stats">
+        <div class="fp-stat"><b><%= @stats[:clientes] %></b><small><%= @stats[:clientes] == 1 ? "CLIENTE COM CARTÃO" : "CLIENTES COM CARTÃO" %></small></div>
+        <div class="fp-stat"><b><%= @stats[:recompensas] %></b><small><%= @stats[:recompensas] == 1 ? "RECOMPENSA GANHA" : "RECOMPENSAS GANHAS" %></small></div>
+      </div>
+    <% end %>
+
+    <div class="fp-grid">
+      <section aria-label="Configurar o programa">
+        <span class="fp-label">Status</span>
+        <div class="fp-box fp-status" id="fp-status">
+          <div class="fp-status-t"><b id="fp-status-v">Ativo</b><small id="fp-status-note"></small></div>
+          <button type="button" class="fp-switch" id="fp-active" role="switch" aria-checked="true" aria-label="Programa ativo"></button>
+        </div>
+
+        <span class="fp-label">Configuração</span>
+        <div class="fp-box fp-cfg">
+          <div class="fp-cfg-t"><b>Visitas para a recompensa</b><small>Entre 1 e 50 visitas</small></div>
+          <div class="fp-step">
+            <button type="button" id="fp-minus" aria-label="Menos uma visita"><i data-feather="minus" style="width:16px;height:16px"></i></button>
+            <input type="number" id="fp-visits" min="1" max="50" value="5" inputmode="numeric" aria-label="Visitas">
+            <button type="button" id="fp-plus" aria-label="Mais uma visita"><i data-feather="plus" style="width:16px;height:16px"></i></button>
+          </div>
+        </div>
+
+        <label class="fp-label" for="fp-reward">O que o cliente ganha</label>
+        <input type="text" class="fp-input" id="fp-reward" maxlength="120" placeholder="Ex.: Lavagem simples grátis, 20% de desconto">
+        <div class="fp-counter" id="fp-count">0/120</div>
+        <div class="fp-err" id="fp-err" hidden></div>
+        <button type="button" class="fp-save" id="fp-save">Salvar alterações</button>
+      </section>
+
+      <aside class="fp-side" aria-label="Pré-visualização">
+        <span class="fp-label">Como o cliente vê</span>
+        <div class="fp-card" id="fp-card">
+          <div class="fp-card-h"><div><b><%= @car_wash.name %></b><small id="fp-prev-reward"></small></div><span class="fp-card-badge" id="fp-prev-badge"></span></div>
+          <div class="fp-stamps" id="fp-prev-stamps"></div>
+          <div class="fp-card-cap" id="fp-prev-cap"></div>
+        </div>
+
+        <span class="fp-label">Como funciona</span>
+        <ul class="fp-how">
+          <li><span class="fp-how-ic"><i data-feather="calendar" style="width:14px;height:14px"></i></span>Cada visita concluída conta um carimbo no cartão do cliente.</li>
+          <li><span class="fp-how-ic"><i data-feather="award" style="width:14px;height:14px"></i></span><span id="fp-how-goal"></span></li>
+          <li><span class="fp-how-ic"><i data-feather="bell" style="width:14px;height:14px"></i></span>O cliente é avisado quando está perto de completar.</li>
+          <li><span class="fp-how-ic"><i data-feather="refresh-cw" style="width:14px;height:14px"></i></span>Depois da recompensa, o cartão zera e começa um novo ciclo.</li>
+        </ul>
+      </aside>
+    </div>
+  </div>
+  <div class="fp-toast" id="fp-toast" role="status" aria-live="polite"></div>
+</div>
+
+<script>
+(function () {
+  var DATA = <%= raw json_escape(@program_json.to_json) %>;
+  var CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content;
+  var MIN = 1, MAX = 50;
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function fi(n, s) { return (window.feather && feather.icons[n]) ? feather.icons[n].toSvg({ width: s || 16, height: s || 16 }) : ''; }
+  function clamp(n) { return Math.max(MIN, Math.min(MAX, parseInt(n, 10) || MIN)); }
+  var st = {
+    exists: !!DATA.exists,
+    active: DATA.exists ? !!DATA.active : true,
+    visits: DATA.exists ? clamp(DATA.visits_required) : 5
+  };
+  $('fp-reward').value = DATA.exists ? (DATA.reward_description || '') : '';
+  var tt = null;
+  function toast(msg) {
+    var t = $('fp-toast'); t.textContent = msg; t.classList.add('is-on');
+    clearTimeout(tt); tt = setTimeout(function () { t.classList.remove('is-on'); }, 3200);
+  }
+
+  // Sem programa ainda, o botão diz o que acontece: cria.
+  function saveLabel() { return st.exists ? 'Salvar alterações' : 'Criar programa'; }
+  function render() {
+    var v = st.visits, reward = $('fp-reward').value.trim();
+    $('fp-active').setAttribute('aria-checked', st.active);
+    $('fp-status').classList.toggle('is-on', st.active);
+    $('fp-status-v').textContent = st.active ? 'Ativo' : 'Pausado';
+    $('fp-status-note').textContent = st.active
+      ? (st.exists ? 'Clientes estão juntando carimbos pra ganhar a recompensa.' : 'Ao salvar, cada visita concluída passa a contar um carimbo.')
+      : 'As visitas não contam carimbo enquanto estiver pausado.';
+    $('fp-visits').value = v;
+    $('fp-minus').disabled = v <= MIN;
+    $('fp-plus').disabled = v >= MAX;
+    $('fp-count').textContent = $('fp-reward').value.length + '/120';
+    // Prévia com 60% preenchido, como no app.
+    var filled = Math.floor(v * 0.6), shown = Math.min(v, 10), html = '';
+    for (var i = 0; i < shown; i++) html += '<i class="' + (i < filled ? 'is-on' : '') + '">' + (i < filled ? fi('check', 13) : '') + '</i>';
+    $('fp-prev-stamps').innerHTML = html;
+    $('fp-prev-reward').textContent = reward || 'Descreva a recompensa';
+    $('fp-prev-badge').textContent = filled + '/' + v;
+    $('fp-prev-cap').textContent = filled + ' DE ' + v + ' VISITAS (EXEMPLO)' + (v > 10 ? ' · MOSTRANDO 10' : '');
+    $('fp-card').classList.toggle('is-off', !st.active);
+    if (!$('fp-save').disabled) $('fp-save').textContent = saveLabel();
+    $('fp-how-goal').textContent = 'Ao completar ' + v + ' visita' + (v > 1 ? 's' : '') + ', o cliente ganha a recompensa.';
+  }
+
+  function fail(t) { $('fp-err').innerHTML = fi('alert-circle', 14) + '<span>' + esc(t) + '</span>'; $('fp-err').hidden = false; }
+  function save() {
+    var reward = $('fp-reward').value.trim(), btn = $('fp-save');
+    $('fp-err').hidden = true;
+    if (!reward) { $('fp-reward').focus(); return fail('Diga o que o cliente ganha ao completar.'); }
+    btn.disabled = true; btn.innerHTML = '<span class="fp-spin"></span>';
+    fetch('/owner/loyalty_program', {
+      method: 'POST', headers: { 'X-CSRF-Token': CSRF, 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ visits_required: st.visits, reward_description: reward, active: st.active })
+    }).then(function (r) { return r.json().catch(function () { return {}; }); }).then(function (data) {
+      if (data.ok) { st.exists = true; render(); toast('Programa de fidelidade salvo.'); }
+      else fail(data.error || 'Erro ao salvar.');
+    }).catch(function () { fail('Erro de conexão.'); }).then(function () {
+      btn.disabled = false; btn.textContent = saveLabel();
+    });
+  }
+
+  $('fp-active').addEventListener('click', function () { st.active = !st.active; render(); });
+  $('fp-minus').addEventListener('click', function () { st.visits = clamp(st.visits - 1); render(); });
+  $('fp-plus').addEventListener('click', function () { st.visits = clamp(st.visits + 1); render(); });
+  $('fp-visits').addEventListener('change', function (e) { st.visits = clamp(e.target.value); render(); });
+  $('fp-reward').addEventListener('input', function () { $('fp-err').hidden = true; render(); });
+  $('fp-save').addEventListener('click', save);
+  $('fp-back').addEventListener('click', function (e) {
+    if (document.referrer && document.referrer.indexOf(location.origin) === 0 && history.length > 1) { e.preventDefault(); history.back(); }
+  });
+
+  if (window.feather) feather.replace();
+  render();
+})();
+</script>

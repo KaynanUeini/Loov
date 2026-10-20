@@ -419,6 +419,7 @@
     display:flex; align-items:center; gap:14px; padding:16px;
     background:var(--od-paper); border:1px solid var(--od-stone);
     border-radius:16px; cursor:pointer; transition:background .15s;
+    color:inherit; text-decoration:none;
   }
   .owner-dash-loyalty:hover { background:var(--od-sand); }
   .owner-dash-loyalty-icon {
@@ -589,52 +590,6 @@
   .activation-dismiss { background:none; border:none; color:var(--od-ash); font-size:.7rem; cursor:pointer; padding:0; }
   .activation-dismiss:hover { color:var(--od-graphite); }
 
-  /* ── Folhas do painel: Aprovações, Mensagens e Fidelidade ──
-     Mesmo desenho das folhas da Conta e da Equipe: sobe de baixo no
-     celular, centraliza no desktop; cabeçalho mono coral + título Space
-     Grotesk; ícones Feather como no app. Ficam acima da barra do site e do
-     convite "Ativar alertas" (1500); abaixo só o pedido Last Minute (2000). */
-  .lx-bg { position:fixed; inset:0; z-index:1600; display:flex; align-items:flex-end; justify-content:center; background:rgba(25,20,15,.5); opacity:0; pointer-events:none; transition:opacity .2s; }
-  .lx-bg.open { opacity:1; pointer-events:auto; }
-  .lx-sheet { width:100%; max-width:480px; max-height:92vh; display:flex; flex-direction:column; background:var(--paper); color:var(--ink); border-radius:28px 28px 0 0; transform:translateY(24px); transition:transform .25s; box-shadow:0 30px 80px -30px rgba(25,20,15,.45); }
-  .lx-sheet.is-wide { max-width:560px; }
-  .lx-bg.open .lx-sheet { transform:none; }
-  .lx-sheet *, .lx-sheet *::before, .lx-sheet *::after { box-sizing:border-box; }
-  .lx-sheet button { font-family:inherit; line-height:normal; cursor:pointer; }
-  .lx-sheet svg.feather { display:block; flex-shrink:0; }
-  .lx-handle { width:40px; height:4px; margin:10px auto 0; border-radius:2px; background:var(--stone); flex-shrink:0; }
-  .lx-h { display:flex; align-items:flex-start; gap:12px; padding:18px 20px 12px; flex-shrink:0; }
-  .lx-h-t { flex:1; min-width:0; }
-  .lx-eyebrow { font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:1.6px; text-transform:uppercase; color:var(--coral-500); }
-  .lx-h h2 { margin:4px 0 0 !important; font-family:'Space Grotesk',sans-serif !important; font-weight:700; font-size:24px; letter-spacing:-0.6px; line-height:1.1; color:var(--ink) !important; display:flex; align-items:center; gap:10px; }
-  .lx-count { min-width:26px; height:26px; padding:0 8px; border-radius:13px; background:var(--coral-500); color:var(--cream); font-family:'Inter',sans-serif; font-size:12px; font-weight:600; letter-spacing:0; display:inline-flex; align-items:center; justify-content:center; }
-  .lx-x { flex:0 0 36px; height:36px; border:0; border-radius:50%; background:var(--sand); color:var(--ink); display:flex; align-items:center; justify-content:center; transition:background .15s; }
-  .lx-x:hover { background:var(--stone); }
-  .lx-b { flex:1; min-height:0; overflow-y:auto; padding:4px 20px 16px; }
-  .lx-foot { flex-shrink:0; padding:12px 20px calc(18px + env(safe-area-inset-bottom,0px)); border-top:1px solid var(--stone); background:var(--paper); border-radius:0 0 28px 28px; }
-  .lx-label { display:block; margin:18px 0 8px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--ash); }
-  .lx-label:first-child { margin-top:4px; }
-  .lx-note { display:flex; gap:8px; align-items:flex-start; padding:11px 12px; border-radius:12px; background:var(--coral-50); color:var(--coral-700); font-size:12.5px; line-height:18px; }
-  .lx-note svg { margin-top:2px; }
-  .lx-note.is-quiet { background:var(--sand); color:var(--graphite); }
-  .lx-primary { width:100%; display:flex; align-items:center; justify-content:center; gap:8px; padding:15px; border:0; border-radius:100px; background:var(--coral-500); color:var(--cream); font-size:14px; font-weight:600; transition:opacity .15s, background .15s; }
-  .lx-primary:hover { background:var(--coral-700); }
-  .lx-primary[disabled] { opacity:.55; cursor:default; background:var(--coral-500); }
-  .lx-err { display:flex; gap:8px; align-items:center; margin-top:12px; padding:11px 12px; border-radius:12px; background:#f6d4d4; color:var(--rose-500,#c0392b); font-size:13px; font-weight:600; }
-  .lx-err[hidden] { display:none; }
-  .lx-spin { width:18px; height:18px; border-radius:50%; border:2.5px solid rgba(250,250,246,.35); border-top-color:var(--cream); animation:lxspin .8s linear infinite; }
-  .lx-spin.is-dark { border-color:var(--stone); border-top-color:var(--coral-500); }
-  @keyframes lxspin { to { transform:rotate(360deg); } }
-  .lx-empty { display:flex; flex-direction:column; align-items:center; gap:6px; padding:36px 16px 28px; text-align:center; color:var(--graphite); font-size:13px; }
-  .lx-empty .lx-empty-ic { width:60px; height:60px; margin-bottom:8px; border-radius:50%; background:var(--coral-50); border:1px solid var(--coral-100); color:var(--coral-500); display:flex; align-items:center; justify-content:center; }
-  .lx-empty b { font-family:'Space Grotesk',sans-serif; font-size:17px; color:var(--ink); }
-  .lx-sheet .lx-input, .lx-sheet .lx-textarea { display:block; width:100%; padding:12px 14px !important; border:1px solid transparent !important; border-radius:14px !important; background:var(--sand) !important; box-shadow:none !important; outline:none; font:inherit; font-size:15px; color:var(--ink); transition:border-color .15s, box-shadow .15s; }
-  .lx-sheet .lx-input:focus, .lx-sheet .lx-textarea:focus { border-color:var(--coral-500) !important; box-shadow:0 0 0 4px rgba(221,120,82,.14) !important; }
-  .lx-textarea { resize:none; height:112px; line-height:1.45; }
-  .lx-counter { margin-top:6px; text-align:right; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--ash); }
-  .lx-counter.is-near { color:var(--coral-700); }
-  .lx-av { flex:0 0 36px; height:36px; border-radius:50%; background:var(--coral-50); color:var(--coral-700); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:600; }
-
   /* Aprovações no painel — o cartão vem do kit (owner/pending_changes/_kit).
      Tela grande: coluna "Esperando você" no espaço em branco à direita do
      conteúdo (a lateral do "tocando agora" do Spotify). Tela menor: uma
@@ -664,61 +619,13 @@
     .od-rail-all svg { display:block; }
   }
 
-  /* Mensagens (OwnerMensagensScreen) */
-  .lx-seg { display:flex; padding:4px; gap:2px; border-radius:999px; background:var(--sand); border:1px solid var(--stone); }
-  .lx-seg button { flex:1; height:38px; border:0; border-radius:999px; background:transparent; color:var(--graphite); font-size:13px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:6px; transition:background .15s, color .15s; }
-  .lx-seg button:hover { color:var(--ink); }
-  .lx-seg button[aria-pressed="true"] { background:var(--coral-500); color:var(--cream); box-shadow:0 2px 6px rgba(220,120,82,.25); }
-  .lx-seg-help { margin:8px 2px 0; font-size:12px; line-height:17px; color:var(--graphite); }
-
-  /* Fidelidade (OwnerLoyaltyScreen) */
-  .loy-status { display:flex; align-items:center; gap:12px; padding:14px 16px; border-radius:16px; border:1px solid var(--stone); background:var(--cream); transition:background .2s, border-color .2s; }
-  .loy-status.is-on { background:var(--coral-50); border-color:var(--coral-100); }
-  .loy-status-t { flex:1; min-width:0; }
-  .loy-status-t small { display:block; font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:1px; color:var(--ash); }
-  .loy-status-t b { display:block; margin-top:2px; font-size:14px; font-weight:600; }
-  .loy-status.is-on .loy-status-t b { color:var(--coral-700); }
-  .loy-switch { position:relative; flex:0 0 50px; height:30px; border:0; border-radius:15px; background:var(--stone); transition:background .2s; }
-  .loy-switch::after { content:''; position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:50%; background:#fff; box-shadow:0 2px 4px rgba(25,20,15,.2); transition:transform .2s; }
-  .loy-switch[aria-checked="true"] { background:var(--coral-500); }
-  .loy-switch[aria-checked="true"]::after { transform:translateX(20px); }
-  .loy-cfg { display:flex; align-items:center; gap:12px; }
-  .loy-cfg-t { flex:1; min-width:0; }
-  .loy-cfg-t b { display:block; font-size:14px; font-weight:600; }
-  .loy-cfg-t small { display:block; margin-top:1px; font-size:12px; color:var(--graphite); }
-  .loy-step { display:flex; align-items:center; gap:4px; padding:4px; border-radius:999px; background:var(--sand); }
-  .loy-step button { width:34px; height:34px; border:0; border-radius:50%; background:var(--paper); color:var(--ink); display:flex; align-items:center; justify-content:center; box-shadow:0 1px 2px rgba(25,20,15,.08); }
-  .loy-step button[disabled] { opacity:.35; cursor:default; }
-  .loy-step input { width:44px; padding:0 !important; border:0 !important; background:transparent !important; box-shadow:none !important; text-align:center; font-family:'Space Grotesk',sans-serif; font-size:18px; font-weight:600; color:var(--ink); outline:none; -moz-appearance:textfield; }
-  .loy-step input::-webkit-outer-spin-button, .loy-step input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
-  /* Prévia: o mesmo cartão de carimbos que o cliente vê na Conta. */
-  .loy-card { padding:18px; border-radius:20px; background:var(--ink); color:var(--cream); }
-  .loy-card-h { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
-  .loy-card-h b { display:block; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:15px; }
-  .loy-card-h small { display:block; margin-top:2px; font-size:12px; color:#bdb5a6; }
-  .loy-card-badge { flex-shrink:0; padding:4px 10px; border-radius:100px; background:rgba(221,120,82,.18); color:var(--coral-300,#e8a48a); font-family:'JetBrains Mono',monospace; font-size:10.5px; }
-  .loy-stamps { display:flex; gap:4px; margin-top:14px; }
-  .loy-stamps i { flex:1; height:26px; border-radius:6px; background:rgba(255,255,255,.08); display:flex; align-items:center; justify-content:center; color:var(--cream); }
-  .loy-stamps i.is-on { background:var(--coral-500); }
-  .loy-card-cap { margin-top:10px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.6px; color:#9e9688; }
-  .loy-how { margin:0; padding:0; list-style:none; display:grid; gap:10px; }
-  .loy-how li { display:flex; gap:10px; align-items:flex-start; font-size:12.5px; line-height:18px; color:var(--graphite); }
-  .loy-how-ic { flex:0 0 28px; height:28px; border-radius:9px; background:var(--sand); color:var(--coral-500); display:flex; align-items:center; justify-content:center; }
-
-  @media (min-width:720px) {
-    .lx-bg { align-items:center; padding:24px; }
-    .lx-sheet { border-radius:28px; max-height:88vh; }
-    .lx-handle { display:none; }
-    .lx-h { padding-top:24px; }
-  }
-
   /* ── Header buttons (sino + msg + loyalty) - estilos dos extras ── */
   .owner-dash-icon-btn {
     width:40px; height:40px; border-radius:20px;
     background:var(--od-sand); border:none;
     display:flex; align-items:center; justify-content:center;
     color:var(--od-ink); cursor:pointer; flex-shrink:0; transition:background .15s;
-    position:relative;
+    position:relative; text-decoration:none;
   }
   .owner-dash-icon-btn:hover { background:var(--od-stone); }
   .owner-dash-icon-btn .od-mini-badge {
@@ -791,55 +698,6 @@
   </div>
 </div>
 
-<%# ── Folha: Programa de fidelidade (porte da OwnerLoyaltyScreen) ────── %>
-<% if current_user.owner? %>
-<div class="lx-bg" id="loyalty-modal-overlay" aria-hidden="true">
-  <div class="lx-sheet" role="dialog" aria-modal="true" aria-labelledby="loy-t">
-    <div class="lx-handle"></div>
-    <div class="lx-h">
-      <div class="lx-h-t"><div class="lx-eyebrow">Recompensa</div><h2 id="loy-t">Programa de fidelidade</h2></div>
-      <button type="button" class="lx-x" id="loyalty-modal-close" aria-label="Fechar"><i data-feather="x" style="width:18px;height:18px"></i></button>
-    </div>
-    <div class="lx-b">
-      <div class="loy-status" id="loy-status">
-        <div class="loy-status-t"><small>STATUS DO PROGRAMA</small><b id="loy-status-v">Ativo</b></div>
-        <button type="button" class="loy-switch" id="loyalty-active" role="switch" aria-checked="true" aria-label="Programa ativo"></button>
-      </div>
-      <div class="lx-note is-quiet" id="loy-status-note" style="margin-top:10px"></div>
-
-      <span class="lx-label">Configuração</span>
-      <div class="loy-cfg">
-        <div class="loy-cfg-t"><b>Visitas para a recompensa</b><small>Entre 1 e 50 visitas</small></div>
-        <div class="loy-step">
-          <button type="button" id="loy-minus" aria-label="Menos uma visita"><i data-feather="minus" style="width:16px;height:16px"></i></button>
-          <input type="number" id="loyalty-visits" min="1" max="50" value="5" inputmode="numeric" aria-label="Visitas">
-          <button type="button" id="loy-plus" aria-label="Mais uma visita"><i data-feather="plus" style="width:16px;height:16px"></i></button>
-        </div>
-      </div>
-      <span class="lx-label">O que o cliente ganha</span>
-      <input type="text" class="lx-input" id="loyalty-reward" maxlength="120" placeholder="Ex.: Lavagem simples grátis, 20% de desconto">
-      <div class="lx-counter" id="loy-count">0/120</div>
-
-      <span class="lx-label">Como o cliente vê</span>
-      <div class="loy-card">
-        <div class="loy-card-h"><div><b><%= @car_wash&.name || "Seu lava-rápido" %></b><small id="loy-prev-reward"></small></div><span class="loy-card-badge" id="loy-prev-badge"></span></div>
-        <div class="loy-stamps" id="loy-prev-stamps"></div>
-        <div class="loy-card-cap" id="loy-prev-cap"></div>
-      </div>
-
-      <span class="lx-label">Como funciona</span>
-      <ul class="loy-how">
-        <li><span class="loy-how-ic"><i data-feather="calendar" style="width:14px;height:14px"></i></span>Cada visita concluída conta um carimbo no cartão do cliente.</li>
-        <li><span class="loy-how-ic"><i data-feather="award" style="width:14px;height:14px"></i></span><span id="loy-how-goal"></span></li>
-        <li><span class="loy-how-ic"><i data-feather="bell" style="width:14px;height:14px"></i></span>O cliente é avisado quando está perto de completar.</li>
-        <li><span class="loy-how-ic"><i data-feather="refresh-cw" style="width:14px;height:14px"></i></span>Depois da recompensa, o cartão zera e começa um novo ciclo.</li>
-      </ul>
-      <div class="lx-err" id="loyalty-error" hidden></div>
-    </div>
-    <div class="lx-foot"><button type="button" class="lx-primary" id="loyalty-save-btn">Salvar alterações</button></div>
-  </div>
-</div>
-<% end %>
 
 <%# ── MODAL EDITAR SERVIÇO (bottom sheet) ── %>
 <div class="owner-dash-modal-overlay" id="od-edit-overlay">
@@ -986,9 +844,9 @@
         <i class="fas fa-paper-plane"></i>
       </a>
       <% if current_user.owner? %>
-      <button class="owner-dash-icon-btn" id="od-loyalty-btn" onclick="openLoyaltyModal()" title="Programa de fidelidade">
+      <a class="owner-dash-icon-btn" id="od-loyalty-btn" href="<%= owner_loyalty_program_path %>" title="Programa de fidelidade" aria-label="Programa de fidelidade">
         <i class="fas fa-star"></i>
-      </button>
+      </a>
       <% end %>
       <button class="owner-dash-bell" id="od-bell-btn" title="Notificações">
         <i class="fas fa-bell"></i>
@@ -1089,14 +947,14 @@
     <%# Loyalty card — JS controla visibilidade %>
     <div id="od-loyalty-block" style="display:none;">
       <div class="owner-dash-section-eyebrow">FIDELIDADE</div>
-      <div class="owner-dash-loyalty" onclick="openLoyaltyModal()">
+      <a class="owner-dash-loyalty" href="<%= owner_loyalty_program_path %>">
         <div class="owner-dash-loyalty-icon"><i class="fas fa-gift"></i></div>
         <div class="owner-dash-loyalty-text">
           <div class="owner-dash-loyalty-title" id="od-loyalty-title">A cada N visitas</div>
           <div class="owner-dash-loyalty-desc" id="od-loyalty-desc"></div>
         </div>
         <span class="owner-dash-loyalty-badge">ATIVO</span>
-      </div>
+      </a>
     </div>
 
     <div style="height:60px;"></div>
@@ -1843,30 +1701,6 @@
       onDone: () => { apvSig = null; loadApprovals(); }
     });
   }
-  // Ícone Feather em string (o painel usa Font Awesome; as folhas novas,
-  // Feather, como o app).
-  const fi = (n, s = 16) => (window.feather && feather.icons[n]) ? feather.icons[n].toSvg({ width: s, height: s }) : '';
-
-  // Folhas do painel: abrir/fechar com foco e trava de rolagem.
-  let lxLastFocus = null;
-  function lxOpen(id) {
-    lxLastFocus = document.activeElement;
-    const bg = document.getElementById(id);
-    bg.classList.add('open'); bg.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
-    setTimeout(() => bg.querySelector('.lx-x')?.focus(), 60);
-  }
-  function lxClose(id) {
-    const bg = document.getElementById(id);
-    if (!bg || !bg.classList.contains('open')) return;
-    bg.classList.remove('open'); bg.setAttribute('aria-hidden', 'true');
-    if (!document.querySelector('.lx-bg.open')) document.body.style.overflow = '';
-    lxLastFocus?.focus?.();
-  }
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') document.querySelectorAll('.lx-bg.open').forEach(bg => lxClose(bg.id));
-  });
-  document.querySelectorAll('.lx-bg').forEach(bg => bg.addEventListener('click', e => { if (e.target === bg) lxClose(bg.id); }));
 
   // ── ACTIVATION CHECKLIST DISMISS ─────────────────────────────────────
   window.dismissActivation = function() {
@@ -1885,72 +1719,6 @@
   }
 
 
-  // ── FIDELIDADE (OwnerLoyaltyScreen) ───────────────────────────────────
-  const LOY_MIN = 1, LOY_MAX = 50;
-  const loy = { active: true, visits: 5, exists: false };
-  function loyRender() {
-    const sw = document.getElementById('loyalty-active'); if (!sw) return;
-    const v = loy.visits, reward = document.getElementById('loyalty-reward').value.trim();
-    sw.setAttribute('aria-checked', loy.active);
-    document.getElementById('loy-status').classList.toggle('is-on', loy.active);
-    document.getElementById('loy-status-v').textContent = loy.active ? 'Ativo' : 'Pausado';
-    const note = document.getElementById('loy-status-note');
-    note.innerHTML = loy.active
-      ? fi('award', 14) + '<span>' + (loy.exists ? 'Clientes estão juntando carimbos pra ganhar a recompensa.' : 'Ao salvar, cada visita concluída passa a contar um carimbo.') + '</span>'
-      : fi('pause-circle', 14) + '<span>Pausado: as visitas não contam carimbo enquanto estiver assim.</span>';
-    document.getElementById('loyalty-visits').value = v;
-    document.getElementById('loy-minus').disabled = v <= LOY_MIN;
-    document.getElementById('loy-plus').disabled = v >= LOY_MAX;
-    document.getElementById('loy-count').textContent = document.getElementById('loyalty-reward').value.length + '/120';
-    // Prévia com 60% preenchido, como no app.
-    const filled = Math.floor(v * 0.6), shown = Math.min(v, 10);
-    let st = '';
-    for (let i = 0; i < shown; i++) st += `<i class="${i < filled ? 'is-on' : ''}">${i < filled ? fi('check', 13) : ''}</i>`;
-    document.getElementById('loy-prev-stamps').innerHTML = st;
-    document.getElementById('loy-prev-reward').textContent = reward || 'Descreva a recompensa';
-    document.getElementById('loy-prev-badge').textContent = `${filled}/${v}`;
-    document.getElementById('loy-prev-cap').textContent = `${filled} DE ${v} VISITAS (EXEMPLO)${v > 10 ? ' · MOSTRANDO 10' : ''}`;
-    document.getElementById('loy-how-goal').textContent = `Ao completar ${v} visita${v > 1 ? 's' : ''}, o cliente ganha a recompensa.`;
-  }
-  const loyClamp = n => Math.max(LOY_MIN, Math.min(LOY_MAX, parseInt(n, 10) || LOY_MIN));
-  window.openLoyaltyModal = function() {
-    document.getElementById('loyalty-error').hidden = true;
-    fetch('/owner/loyalty_program', { headers: { Accept: 'application/json' } })
-      .then(r => r.json()).catch(() => ({}))
-      .then(data => {
-        loy.exists = !!data.exists;
-        loy.active = data.exists ? !!data.active : true;
-        loy.visits = data.exists ? loyClamp(data.visits_required) : 5;
-        document.getElementById('loyalty-reward').value = data.exists ? (data.reward_description || '') : '';
-        loyRender();
-        lxOpen('loyalty-modal-overlay');
-      });
-  };
-  window.saveLoyaltyProgram = async function() {
-    const btn = document.getElementById('loyalty-save-btn'), errEl = document.getElementById('loyalty-error');
-    const reward = document.getElementById('loyalty-reward').value.trim();
-    const fail = t => { errEl.innerHTML = fi('alert-circle', 14) + '<span>' + escapeHtml(t) + '</span>'; errEl.hidden = false; };
-    errEl.hidden = true;
-    if (!reward) { document.getElementById('loyalty-reward').focus(); return fail('Diga o que o cliente ganha ao completar.'); }
-    btn.disabled = true; btn.innerHTML = '<span class="lx-spin"></span>';
-    try {
-      const res = await fetch('/owner/loyalty_program', {
-        method: 'POST', headers: { 'X-CSRF-Token': CSRF, 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ visits_required: loy.visits, reward_description: reward, active: loy.active })
-      });
-      const data = await res.json().catch(() => ({}));
-      if (data.ok) { lxClose('loyalty-modal-overlay'); showToast('Programa de fidelidade salvo!', 'success'); loadDashboard(true); }
-      else fail(data.error || 'Erro ao salvar.');
-    } catch (e) { fail('Erro de conexão.'); }
-    btn.disabled = false; btn.textContent = 'Salvar alterações';
-  };
-  document.getElementById('loyalty-active')?.addEventListener('click', () => { loy.active = !loy.active; loyRender(); });
-  document.getElementById('loy-minus')?.addEventListener('click', () => { loy.visits = loyClamp(loy.visits - 1); loyRender(); });
-  document.getElementById('loy-plus')?.addEventListener('click', () => { loy.visits = loyClamp(loy.visits + 1); loyRender(); });
-  document.getElementById('loyalty-visits')?.addEventListener('change', e => { loy.visits = loyClamp(e.target.value); loyRender(); });
-  document.getElementById('loyalty-reward')?.addEventListener('input', loyRender);
-  document.getElementById('loyalty-save-btn')?.addEventListener('click', saveLoyaltyProgram);
-  document.getElementById('loyalty-modal-close')?.addEventListener('click', () => lxClose('loyalty-modal-overlay'));
   if (window.feather) feather.replace();
 
   // ── CANCEL MODAL LEGADO (mantido pra compatibilidade) ───────────────
@@ -2017,7 +1785,7 @@
     const ATALHOS = {
       mensagem: () => { location.href = '<%= owner_messages_path %>'; },
       <% if current_user.owner? %>
-      fidelidade: window.openLoyaltyModal,
+      fidelidade: () => { location.href = '<%= owner_loyalty_program_path %>'; },
       aprovacoes: () => { location.href = '<%= owner_pending_changes_path %>'; },
       <% end %>
     };

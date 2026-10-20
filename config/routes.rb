@@ -110,7 +110,7 @@ Rails.application.routes.draw do
     post 'onboarding/car_wash', to: 'onboarding#save_car_wash', as: :onboarding_car_wash
     post 'onboarding/hours',    to: 'onboarding#save_hours',    as: :onboarding_hours
     post 'onboarding/services', to: 'onboarding#save_services', as: :onboarding_services
-    get  'loyalty_program', to: 'loyalty_programs#show'
+    get  'loyalty_program', to: 'loyalty_programs#show', as: :loyalty_program
     post 'loyalty_program', to: 'loyalty_programs#upsert'
     patch 'checkins/:id/cancel', to: 'checkins#cancel', as: :checkin_cancel
 
