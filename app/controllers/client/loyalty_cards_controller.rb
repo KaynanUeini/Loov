@@ -12,34 +12,36 @@ module Client
     # endereço a mais — o formato antigo continua igual).
     # HTML (site): a tela Fidelidade, porte da ClientFidelidadeScreen.
     def index
-      cards = LoyaltyProgram.where(active: true).includes(:car_wash)
-                            .map { |lp| lp.cartao_para(current_user, historico: true) }
-                            .select { |c| c[:visits_total].positive? }
-      com_cartao = cards.map { |c| c[:car_wash_id] }
-      # Depois de usar o vale, o cartão novo só aparece com o primeiro
-      # carimbo — vazio não tem o que mostrar.
-      cards = com_cartoes_completos(cards).reject { |c| c[:filled].zero? }
+      cards = cartoes_visiveis
 
       respond_to do |format|
         format.html do
           @cards  = cards
-          @nearby = programas_perto(com_cartao)
+          @nearby = programas_perto(cards.map { |c| c[:car_wash_id] })
         end
         format.json { render json: cards }
       end
     end
 
     # GET /client/loyalty_cards/nearby?latitude=&longitude=
-    # Lava-rápidos com programa ativo onde o cliente ainda não tem cartão,
+    # Lava-rápidos com programa ativo onde o cliente não tem cartão aberto,
     # do mais perto pro mais longe (sem localização, os mais recentes).
+    # Quem já usou o vale e ainda não voltou entra aqui de novo: o cartão
+    # acabou, e o convite é começar outro.
     def nearby
-      com_cartao = LoyaltyProgram.where(active: true).includes(:car_wash)
-                                 .select { |lp| lp.cartao_para(current_user)[:visits_total].positive? }
-                                 .map(&:car_wash_id)
-      render json: programas_perto(com_cartao)
+      render json: programas_perto(cartoes_visiveis.map { |c| c[:car_wash_id] })
     end
 
     private
+
+    # Os cartões que aparecem na Fidelidade. Depois de usar o vale, o cartão
+    # novo só aparece com o primeiro carimbo — vazio não tem o que mostrar.
+    def cartoes_visiveis
+      cards = LoyaltyProgram.where(active: true).includes(:car_wash)
+                            .map { |lp| lp.cartao_para(current_user, historico: true) }
+                            .select { |c| c[:visits_total].positive? }
+      com_cartoes_completos(cards).reject { |c| c[:filled].zero? }
+    end
 
     # Cartão completo vira um cartão à parte, com o vale que ele deu, até o
     # vale ser usado; a visita seguinte já abre um cartão novo do mesmo
