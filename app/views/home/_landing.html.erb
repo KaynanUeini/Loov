@@ -12,6 +12,14 @@
     6. Para lava-rápidos — o lado do dono.
     7. Fecho com o "Vazou." gigante.
 
+  Movimento (inspiração: viture.com — a rolagem conta a história): rolagem
+  suave (Lenis) e animação presa à rolagem (GSAP ScrollTrigger), as duas em
+  public/vendor. O hero sobe em camadas; a faixa de serviços acelera com a
+  rolagem; "Três toques" prende o celular na tela e troca a tela a cada
+  passo; o Disponível cresce até ocupar a tela; os números contam; o
+  "Vazou." do fecho se enche de baixo pra cima. Sem as bibliotecas ou com
+  prefers-reduced-motion, a página fica estática e completa.
+
   Toda frase aqui é fato do produto (conferido no código): Disponível = 30
   min e 35% pago no app; lembrete na véspera; avaliação só de quem foi
   atendido; dono grátis na fase de testes. Movimento respeita
@@ -138,12 +146,6 @@
   /* ── 3. Como funciona ────────────────────────────────────────────── */
   .lh-section { padding: 140px 0; }
   .lh-h2 { font-size: clamp(40px, 5.2vw, 76px) !important; line-height: 1; letter-spacing: -0.045em; max-width: 14ch; margin-top: 18px !important; }
-  .lh-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 72px; }
-  .lh-step { padding: 36px 32px 40px; border-radius: 28px; background: var(--paper); border: 1px solid var(--stone); transition: transform .3s ease, box-shadow .3s ease; }
-  .lh-step:hover { transform: translateY(-6px); box-shadow: 0 30px 60px -36px rgba(40,35,28,.35); }
-  .lh-step-n { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 72px; line-height: 1; letter-spacing: -0.05em; color: var(--coral-500); }
-  .lh-step h3 { font-size: 28px !important; letter-spacing: -0.03em; margin-top: 44px !important; }
-  .lh-step p { margin-top: 12px !important; font-size: 16.5px; line-height: 1.55; color: var(--graphite); }
 
   /* ── 4. Disponível ───────────────────────────────────────────────── */
   .lh-dark { position: relative; background: var(--obsidian); color: var(--cream); border-radius: 44px; margin: 0 16px; overflow: hidden; isolation: isolate; }
@@ -213,6 +215,79 @@
   .lh-foot a { color: var(--graphite) !important; text-decoration: none; margin-left: 22px; }
   .lh-foot a:hover { color: var(--ink) !important; }
 
+  /* ── 3. Três toques: celular preso na tela, tela troca por passo ──── */
+  .lh-how { position: relative; }
+  .lh-how-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 64px; align-items: center; }
+  .lh-how-steps { list-style: none; margin: 56px 0 0; padding: 0; display: grid; gap: 10px; }
+  .lh-how-step { display: grid; grid-template-columns: 88px 1fr; gap: 8px 20px; padding: 22px 0; border-top: 1px solid var(--stone); }
+  .lh-how-step .n { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 56px; line-height: .9; letter-spacing: -0.05em; color: var(--coral-500); }
+  .lh-how-step h3 { font-size: 30px !important; letter-spacing: -0.03em; }
+  .lh-how-step p { grid-column: 2; font-size: 16.5px; line-height: 1.55; color: var(--graphite); }
+  .lh-how-phone { display: flex; justify-content: center; }
+  .lh-how-box { position: relative; width: calc(320px * var(--s, 1)); height: calc(650px * var(--s, 1)); }
+  .lh-how-box .lh-phone { position: absolute; top: 0; left: 0; transform: scale(var(--s, 1)) rotateY(-6deg); transform-origin: top left; }
+  .lh-how-bar { display: flex; gap: 6px; margin-top: 28px; }
+  .lh-how-bar i { flex: 1; height: 4px; border-radius: 4px; background: var(--stone); overflow: hidden; }
+  .lh-how-bar i b { display: block; height: 100%; background: var(--coral-500); transform-origin: left; transform: scaleX(0); }
+  /* Telas do celular: uma por passo. Sem movimento, só a primeira. */
+  .lh-scr { position: absolute; inset: 0; padding: 52px 18px 18px; display: flex; flex-direction: column; transition: opacity .5s ease, transform .6s cubic-bezier(.2,.8,.2,1); }
+  .lh-scr + .lh-scr { opacity: 0; transform: translateX(14%); }
+  .lh-scr.is-past { opacity: 0; transform: translateX(-14%); }
+  .lh-scr.is-on { opacity: 1; transform: none; }
+  .lh-scr-k { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.4px; color: var(--ash); text-transform: uppercase; }
+  .lh-scr-t { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 23px; letter-spacing: -0.03em; margin: 4px 0 14px; }
+  .lh-svc { display: flex; justify-content: space-between; align-items: center; padding: 13px 14px; border-radius: 14px; border: 1px solid var(--stone); background: var(--paper); margin-bottom: 8px; font-size: 13.5px; font-weight: 600; transition: border-color .4s ease, background .4s ease; }
+  .lh-svc small { display: block; font-weight: 400; font-size: 11.5px; color: var(--graphite); margin-top: 2px; }
+  .lh-svc span { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px; }
+  .lh-scr.is-on .lh-svc.is-pick { border-color: var(--coral-500); background: var(--coral-50); transition-delay: .45s; }
+  .lh-days { display: flex; gap: 6px; margin-bottom: 14px; }
+  .lh-days span { flex: 1; text-align: center; padding: 8px 0; border-radius: 12px; border: 1px solid var(--stone); font-size: 11px; color: var(--graphite); background: var(--paper); }
+  .lh-days span b { display: block; font-family: 'Space Grotesk', sans-serif; font-size: 17px; color: var(--ink); }
+  .lh-days span.is-on { background: var(--ink); border-color: var(--ink); color: #cfc8bb; }
+  .lh-days span.is-on b { color: var(--cream); }
+  .lh-times { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+  .lh-times span { text-align: center; padding: 10px 0; border-radius: 11px; border: 1px solid var(--stone); background: var(--paper); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; transition: background .35s ease, color .35s ease, border-color .35s ease, transform .35s ease; }
+  .lh-times span.is-off { color: var(--ash); text-decoration: line-through; background: transparent; }
+  .lh-scr.is-on .lh-times span.is-pick { background: var(--coral-500); border-color: var(--coral-500); color: #fff; transform: scale(1.06); transition-delay: .45s; }
+  .lh-scr-cta { margin-top: auto; height: 48px; border-radius: 99px; background: var(--ink); color: var(--cream); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; }
+  .lh-done { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .lh-done-check { width: 92px; height: 92px; border-radius: 50%; background: #2fa36b; display: flex; align-items: center; justify-content: center; transform: scale(.4); opacity: 0; transition: transform .6s cubic-bezier(.3,1.6,.5,1) .25s, opacity .3s ease .25s; }
+  .lh-scr.is-on .lh-done-check { transform: none; opacity: 1; }
+  .lh-done b { font-family: 'Space Grotesk', sans-serif; font-size: 26px; letter-spacing: -0.03em; margin-top: 20px; }
+  .lh-done span { font-size: 13px; color: var(--graphite); margin-top: 4px; }
+  .lh-done-rows { width: 100%; margin-top: 26px; display: grid; gap: 8px; text-align: left; }
+  .lh-done-rows div { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; background: var(--paper); border: 1px solid var(--stone); font-size: 12.5px; color: var(--graphite); opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .5s ease; }
+  .lh-done-rows div b { color: var(--ink); font-weight: 600; }
+  .lh-scr.is-on .lh-done-rows div { opacity: 1; transform: none; }
+  .lh-scr.is-on .lh-done-rows div:nth-child(1) { transition-delay: .6s; }
+  .lh-scr.is-on .lh-done-rows div:nth-child(2) { transition-delay: .75s; }
+  .lh-stars { color: var(--coral-500); letter-spacing: 2px; margin-left: auto; }
+
+  .lh-how-box .lh-phone { width: 320px; height: 650px; }
+  /* Com movimento (JS): a seção presa ocupa a tela, centrada. */
+  .lh-motion .lh-how { padding: 0; }
+  .lh-motion .lh-how-pinned { min-height: 100vh; display: flex; align-items: center; padding: 84px 0 24px; }
+  .lh-motion .lh-how-pinned > .lh-wrap { width: 100%; }
+  /* Com movimento (JS): os passos acendem um por vez. */
+  .lh-motion .lh-how-step { opacity: .28; transition: opacity .4s ease; }
+  .lh-motion .lh-how-step.is-on { opacity: 1; }
+
+  /* ── 4b. Números ─────────────────────────────────────────────────── */
+  .lh-stats { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--ink); }
+  .lh-stat { padding: 34px 28px 8px 0; }
+  .lh-stat + .lh-stat { padding-left: 28px; border-left: 1px solid var(--stone); }
+  .lh-stat b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: clamp(56px, 6.4vw, 104px); line-height: .95; letter-spacing: -0.05em; font-variant-numeric: tabular-nums; }
+  .lh-stat b small { font-size: .42em; letter-spacing: -0.02em; margin-left: 4px; }
+  .lh-stat > span { display: block; margin-top: 14px; max-width: 22ch; font-size: 15.5px; line-height: 1.45; color: var(--graphite); }
+
+  /* Fecho: o "Vazou." se enche de baixo pra cima (contorno → tinta). */
+  .lh-motion .lh-end-word .w {
+    color: transparent; -webkit-text-stroke: 2px var(--ink);
+    background: linear-gradient(to top, var(--ink) var(--fill, 0%), transparent var(--fill, 0%));
+    -webkit-background-clip: text; background-clip: text;
+  }
+  .lh-end-word em { display: inline-block; }
+
   /* ── Responsivo ──────────────────────────────────────────────────── */
   @media (max-width: 960px) {
     .lh-wrap { padding: 0 22px; }
@@ -220,8 +295,25 @@
     .lh-hero-grid, .lh-dark-grid, .lh-owner { grid-template-columns: 1fr; gap: 56px; }
     .lh-phone { transform: none; width: 290px; height: 590px; }
     .lh-section { padding: 96px 0; }
-    .lh-steps { grid-template-columns: 1fr; margin-top: 48px; }
-    .lh-step h3 { margin-top: 28px !important; }
+    .lh-how-grid { grid-template-columns: 1fr; gap: 28px; }
+    .lh-how-steps { margin-top: 28px; }
+    .lh-how-step { grid-template-columns: 56px 1fr; padding: 16px 0; }
+    .lh-how-step .n { font-size: 40px; }
+    .lh-how-step h3 { font-size: 24px !important; }
+    .lh-how-box .lh-phone { transform: scale(var(--s, 1)); }
+    /* Celular preso (com movimento): só o passo da vez aparece embaixo. */
+    .lh-motion .lh-how-pinned { display: flex; flex-direction: column; justify-content: center; min-height: 100svh; padding: 76px 0 24px; }
+    .lh-motion .lh-how-pinned .lh-how-grid { gap: 18px; }
+    .lh-motion .lh-how-pinned .lh-how-phone { order: -1; }
+    .lh-motion .lh-how-pinned .lh-h2, .lh-motion .lh-how-pinned .lh-eyebrow { display: none; }
+    .lh-motion .lh-how-pinned .lh-how-steps { margin-top: 0; }
+    .lh-motion .lh-how-pinned .lh-how-step { display: none; border-top: 0; }
+    .lh-motion .lh-how-pinned .lh-how-step.is-on { display: grid; }
+    .lh-how-bar { margin-top: 12px; }
+    .lh-stats { grid-template-columns: 1fr 1fr; }
+    .lh-stat { padding: 24px 16px 20px 0; }
+    .lh-stat:nth-child(3) { padding-left: 0; border-left: 0; }
+    .lh-stat:nth-child(n+3) { border-top: 1px solid var(--stone); }
     .lh-dark { margin: 0 8px; border-radius: 32px; }
     .lh-item { grid-template-columns: 52px minmax(0, 1fr) auto; gap: 14px; }
     .lh-item-n, .lh-item-go { display: none; }
@@ -235,6 +327,7 @@
     .lh-marquee-track, .lh-hero::before, .lh-dot-live { animation: none; }
     .lh-toast { animation: none; transform: none; }
     .lh-bars span { transform: none; transition: none; }
+    .lh-scr, .lh-done-check, .lh-done-rows div { transition: none; }
   }
 </style>
 
@@ -243,7 +336,7 @@
   <%# ── 1. Hero ───────────────────────────────────────────────────────── %>
   <section class="lh-hero">
     <div class="lh-wrap lh-hero-grid">
-      <div>
+      <div class="lh-hero-copy">
         <div class="lh-eyebrow lh-hero-after" style="animation-delay:.05s">O app do lava-rápido</div>
         <h1 class="lh-kinetic" aria-label="Chegou. Lavou. Vazou.">
           <span aria-hidden="true">Chegou.</span>
@@ -266,6 +359,7 @@
       </div>
 
       <div class="lh-phone-stage" aria-hidden="true">
+        <div class="lh-phone-float" id="lh-phone-float">
         <div class="lh-phone" id="lh-phone">
           <div class="lh-screen">
             <div class="lh-notch"></div>
@@ -302,6 +396,7 @@
             </div>
           </div>
         </div>
+        </div>
       </div>
     </div>
   </section>
@@ -316,32 +411,80 @@
   </div>
 
   <%# ── 3. Como funciona ─────────────────────────────────────────────── %>
-  <section class="lh-section">
-    <div class="lh-wrap">
-      <div class="lh-eyebrow lh-reveal">Como funciona</div>
-      <h2 class="lh-h2 lh-reveal" data-delay="1">Três toques. Carro limpo.</h2>
-      <div class="lh-steps">
-        <div class="lh-step lh-reveal" data-delay="1">
-          <div class="lh-step-n">01</div>
-          <h3>Escolha</h3>
-          <p>Veja quem está aberto agora, os serviços de cada lugar e o preço antes de sair de casa.</p>
+  <%# Com movimento, a seção fica presa na tela e a rolagem passa os três
+      passos: o celular troca de tela (escolher o serviço, o horário,
+      agendado) e o passo da vez acende. Sem movimento, tudo à vista. %>
+  <section class="lh-section lh-how" id="lh-how">
+    <div class="lh-how-pinned">
+      <div class="lh-wrap lh-how-grid">
+        <div>
+          <div class="lh-eyebrow lh-reveal">Como funciona</div>
+          <h2 class="lh-h2 lh-reveal" data-delay="1">Três toques. Carro limpo.</h2>
+          <ol class="lh-how-steps">
+            <li class="lh-how-step is-on" data-step="0">
+              <span class="n">01</span><h3>Escolha</h3>
+              <p>Veja quem está aberto agora, os serviços de cada lugar e o preço antes de sair de casa.</p>
+            </li>
+            <li class="lh-how-step" data-step="1">
+              <span class="n">02</span><h3>Agende</h3>
+              <p>Escolha o horário. A confirmação chega na hora — e um lembrete, na véspera.</p>
+            </li>
+            <li class="lh-how-step" data-step="2">
+              <span class="n">03</span><h3>Vazou</h3>
+              <p>Chegou, lavou, foi embora. Depois, avalie — aqui só avalia quem foi atendido.</p>
+            </li>
+          </ol>
+          <div class="lh-how-bar" aria-hidden="true"><i><b></b></i><i><b></b></i><i><b></b></i></div>
         </div>
-        <div class="lh-step lh-reveal" data-delay="2">
-          <div class="lh-step-n">02</div>
-          <h3>Agende</h3>
-          <p>Escolha o horário. A confirmação chega na hora — e um lembrete, na véspera.</p>
-        </div>
-        <div class="lh-step lh-reveal" data-delay="3">
-          <div class="lh-step-n">03</div>
-          <h3>Vazou</h3>
-          <p>Chegou, lavou, foi embora. Depois, avalie — aqui só avalia quem foi atendido.</p>
+
+        <div class="lh-how-phone" aria-hidden="true">
+          <div class="lh-how-box" id="lh-how-box">
+            <div class="lh-phone">
+              <div class="lh-screen" style="padding:0">
+                <div class="lh-notch" style="z-index:2"></div>
+                <div class="lh-scr is-on" data-scr="0">
+                  <div class="lh-scr-k">Lavagem completa · aberto</div>
+                  <div class="lh-scr-t">Serviços</div>
+                  <div class="lh-svc"><div>Lavagem simples<small>Por fora, 30 min</small></div><span>R$ 40</span></div>
+                  <div class="lh-svc is-pick"><div>Lavagem completa<small>Dentro e fora, 1 h</small></div><span>R$ 70</span></div>
+                  <div class="lh-svc"><div>Higienização<small>Bancos e carpete, 3 h</small></div><span>R$ 220</span></div>
+                  <div class="lh-svc"><div>Polimento<small>Brilho e proteção, 4 h</small></div><span>R$ 280</span></div>
+                  <div class="lh-scr-cta">Escolher horário</div>
+                </div>
+                <div class="lh-scr" data-scr="1">
+                  <div class="lh-scr-k">Lavagem completa · R$ 70</div>
+                  <div class="lh-scr-t">Quando?</div>
+                  <div class="lh-days">
+                    <span class="is-on">HOJE<b>21</b></span><span>QUI<b>22</b></span><span>SEX<b>23</b></span><span>SÁB<b>24</b></span>
+                  </div>
+                  <div class="lh-times">
+                    <span class="is-off">09:00</span><span>10:30</span><span class="is-off">11:00</span>
+                    <span>13:00</span><span class="is-pick">14:30</span><span>15:00</span>
+                    <span>16:30</span><span class="is-off">17:00</span><span>18:00</span>
+                  </div>
+                  <div class="lh-scr-cta">Confirmar agendamento</div>
+                </div>
+                <div class="lh-scr" data-scr="2">
+                  <div class="lh-done">
+                    <div class="lh-done-check"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+                    <b>Agendado!</b>
+                    <span>Lavagem completa · hoje às 14:30</span>
+                    <div class="lh-done-rows">
+                      <div>🔔 <span><b>Lembrete</b> na véspera</span></div>
+                      <div>⭐ <span><b>Avalie</b> depois de lavar</span><span class="lh-stars">★★★★★</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </section>
 
   <%# ── 4. Disponível ────────────────────────────────────────────────── %>
-  <section class="lh-dark">
+  <section class="lh-dark" id="lh-dark">
     <div class="lh-wrap"><div class="lh-section lh-dark-grid">
       <div>
         <div class="lh-eyebrow lh-reveal">Disponível</div>
@@ -365,6 +508,20 @@
         </div>
       </div>
     </div></div>
+  </section>
+
+  <%# ── 4b. Números (fatos do produto; contam ao aparecer) ───────────── %>
+  <section class="lh-section" style="padding-bottom:0">
+    <div class="lh-wrap">
+      <div class="lh-stats">
+        <% if active_count > 0 %>
+          <div class="lh-stat lh-reveal"><b data-count="<%= active_count %>"><%= active_count %></b><span>lava-rápidos já recebem agendamentos pela Loov</span></div>
+        <% end %>
+        <div class="lh-stat lh-reveal" data-delay="1"><b><span data-count="30">30</span><small>min</small></b><span>pra vaga do Disponível começar</span></div>
+        <div class="lh-stat lh-reveal" data-delay="2"><b><span data-count="35">35</span><small>%</small></b><span>pagos no app garantem a vaga; o resto, lá</span></div>
+        <div class="lh-stat lh-reveal" data-delay="3"><b data-count="3">3</b><span>toques do app ao carro limpo</span></div>
+      </div>
+    </div>
   </section>
 
   <%# ── 5. Perto de você ─────────────────────────────────────────────── %>
@@ -427,7 +584,7 @@
       </div>
       <div class="lh-dash lh-reveal" data-delay="2" id="lh-dash" aria-hidden="true">
         <div class="lh-dash-label">Lucro do mês</div>
-        <div class="lh-dash-big">R$ 8.420</div>
+        <div class="lh-dash-big">R$ <span data-count="8420" data-thousands>8.420</span></div>
         <span class="lh-dash-pill">Margem 32%</span>
         <div class="lh-bars">
           <% [[62, 38], [70, 40], [58, 36], [82, 42], [90, 44], [76, 40]].each_with_index do |(rev, cost), i| %>
@@ -444,7 +601,7 @@
   <%# ── 7. Fecho ─────────────────────────────────────────────────────── %>
   <section class="lh-end">
     <div class="lh-wrap">
-      <div class="lh-end-word lh-reveal">Vazou<em>.</em></div>
+      <div class="lh-end-word" id="lh-end-word"><span class="w">Vazou</span><em>.</em></div>
       <p class="lh-reveal" data-delay="1">Seu próximo carro limpo está a três toques.</p>
       <a href="<%= new_user_registration_path %>" class="lh-btn lh-btn--primary lh-reveal" data-delay="2">
         Criar conta grátis
@@ -457,6 +614,10 @@
 </div>
 
 <%= render "shared/loov_logos" %>
+<link rel="stylesheet" href="/vendor/lenis-1.1.13.css">
+<script src="/vendor/gsap-3.12.5.min.js"></script>
+<script src="/vendor/ScrollTrigger-3.12.5.min.js"></script>
+<script src="/vendor/lenis-1.1.13.min.js"></script>
 <script>
   (function () {
     var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -536,18 +697,133 @@
       }
     }
 
-    // Revelar ao rolar.
+    // ── Movimento preso à rolagem ────────────────────────────────────────
+    // Sem GSAP/Lenis (falhou o carregamento) ou com prefers-reduced-motion:
+    // tudo à vista, sem animação.
+    var root = document.querySelector('.lh');
+    var motion = !reduce && window.gsap && window.ScrollTrigger && window.Lenis;
     var els = document.querySelectorAll('.lh-reveal, #lh-dash');
-    if (reduce || !('IntersectionObserver' in window)) {
+    function contar(el) {
+      var alvo = parseInt(el.getAttribute('data-count'), 10), mil = el.hasAttribute('data-thousands');
+      var fmt = function (n) { n = Math.round(n); return mil ? n.toLocaleString('pt-BR') : String(n); };
+      if (!motion) { el.textContent = fmt(alvo); return; }
+      var o = { v: 0 };
+      gsap.to(o, { v: alvo, duration: 1.6, ease: 'power3.out', onUpdate: function () { el.textContent = fmt(o.v); } });
+    }
+
+    if (!motion) {
       els.forEach(function (el) { el.classList.add('is-in'); });
     } else {
-      var io = new IntersectionObserver(function (entries) {
-        entries.forEach(function (e) {
-          if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }
+      root.classList.add('lh-motion');
+      gsap.registerPlugin(ScrollTrigger);
+
+      // Rolagem suave (só roda/trackpad; no toque o celular já é suave).
+      var lenis = new Lenis({ lerp: 0.1, wheelMultiplier: 1 });
+      lenis.on('scroll', ScrollTrigger.update);
+      gsap.ticker.add(function (t) { lenis.raf(t * 1000); });
+      gsap.ticker.lagSmoothing(0);
+      document.querySelectorAll('.lh a[href^="#"]').forEach(function (a) {
+        a.addEventListener('click', function (e) {
+          var alvo = document.querySelector(a.getAttribute('href'));
+          if (alvo) { e.preventDefault(); lenis.scrollTo(alvo, { offset: -60, duration: 1.4 }); }
         });
-      }, { threshold: 0.18, rootMargin: '0px 0px -40px 0px' });
-      els.forEach(function (el) { io.observe(el); });
+      });
+
+      // Revelar ao rolar.
+      els.forEach(function (el) {
+        ScrollTrigger.create({ trigger: el, start: 'top 88%', once: true, onEnter: function () { el.classList.add('is-in'); } });
+      });
+
+      // 1. Hero em camadas: o texto sobe devagar e some; o celular sobe mais
+      // rápido e se endireita; o brilho de fundo acompanha.
+      var hero = document.querySelector('.lh-hero');
+      gsap.to('.lh-hero-copy', { yPercent: -14, opacity: 0.15, ease: 'none', scrollTrigger: { trigger: hero, start: 'top top', end: 'bottom top', scrub: true } });
+      gsap.to('#lh-phone-float', { y: -140, rotate: -4, scale: 0.94, ease: 'none', scrollTrigger: { trigger: hero, start: 'top top', end: 'bottom top', scrub: true } });
+
+      // 2. Faixa de serviços: acelera e inclina com a velocidade da rolagem,
+      // e inverte o sentido quando a pessoa sobe.
+      var track = document.querySelector('.lh-marquee-track');
+      if (track) {
+        track.style.animation = 'none';
+        var loop = gsap.to(track, { xPercent: -50, duration: 40, ease: 'none', repeat: -1 });
+        var skew = gsap.quickTo(track, 'skewX', { duration: 0.4, ease: 'power3' });
+        ScrollTrigger.create({
+          onUpdate: function (st) {
+            var v = st.getVelocity();
+            loop.timeScale(gsap.utils.clamp(-6, 6, (st.direction || 1) * (1 + Math.abs(v) / 400)));
+            skew(gsap.utils.clamp(-8, 8, -v / 250));
+          }
+        });
+        ScrollTrigger.addEventListener('scrollEnd', function () { gsap.to(loop, { timeScale: 1, duration: 0.6 }); skew(0); });
+      }
+
+      // 3. Três toques: a seção fica presa enquanto a rolagem passa os
+      // passos. No celular (tela pequena) o aparelho encolhe pra caber.
+      var how = document.getElementById('lh-how');
+      var box = document.getElementById('lh-how-box');
+      var steps = how.querySelectorAll('.lh-how-step');
+      var scrs = how.querySelectorAll('.lh-scr');
+      var bars = how.querySelectorAll('.lh-how-bar b');
+      function escala() {
+        var pequeno = window.innerWidth < 961;
+        var s = pequeno ? Math.min(0.66, (window.innerHeight - 290) / 650) : Math.min(1, (window.innerHeight - 140) / 650);
+        box.style.setProperty('--s', Math.max(0.42, s).toFixed(3));
+      }
+      escala();
+      window.addEventListener('resize', escala);
+      var atual = -1;
+      function passo(i) {
+        if (i === atual) return;
+        atual = i;
+        steps.forEach(function (el, k) { el.classList.toggle('is-on', k === i); });
+        scrs.forEach(function (el, k) { el.classList.toggle('is-on', k === i); el.classList.toggle('is-past', k < i); });
+      }
+      passo(0);
+      ScrollTrigger.create({
+        trigger: how.querySelector('.lh-how-pinned'), start: 'top top', end: '+=220%', pin: true, scrub: true,
+        onUpdate: function (st) {
+          var p = st.progress * 3;
+          passo(Math.min(2, Math.floor(p)));
+          bars.forEach(function (b, k) { b.style.transform = 'scaleX(' + gsap.utils.clamp(0, 1, p - k).toFixed(3) + ')'; });
+        }
+      });
+
+      // 4. Disponível: o cartão escuro cresce até ocupar a tela, como a
+      // Viture troca o clima da página.
+      var dark = document.getElementById('lh-dark');
+      gsap.fromTo(dark, { clipPath: 'inset(0% 5% 0% 5% round 44px)' }, {
+        clipPath: 'inset(0% 0% 0% 0% round 0px)', ease: 'none',
+        scrollTrigger: { trigger: dark, start: 'top 95%', end: 'top 15%', scrub: true }
+      });
+      dark.style.margin = '0';
+      dark.style.borderRadius = '0';
+
+      // 6. Painel do dono: inclina de leve e se endireita ao entrar.
+      gsap.fromTo('#lh-dash', { rotateX: 14, transformPerspective: 1200, y: 40 }, {
+        rotateX: 0, y: 0, ease: 'none', scrollTrigger: { trigger: '#lh-dash', start: 'top bottom', end: 'center 60%', scrub: true }
+      });
+
+      // 7. Fecho: "Vazou" se enche de baixo pra cima; ao encher, o ponto cai.
+      var word = document.getElementById('lh-end-word');
+      var dot = word.querySelector('em');
+      gsap.set(dot, { y: -220, opacity: 0 });
+      var caiu = false;
+      ScrollTrigger.create({
+        trigger: word, start: 'top 90%', end: 'bottom 55%', scrub: true,
+        onUpdate: function (st) {
+          word.querySelector('.w').style.setProperty('--fill', (st.progress * 100).toFixed(1) + '%');
+          if (st.progress > 0.96 && !caiu) { caiu = true; gsap.to(dot, { y: 0, opacity: 1, duration: 0.9, ease: 'bounce.out' }); }
+          if (st.progress < 0.5 && caiu) { caiu = false; gsap.to(dot, { y: -220, opacity: 0, duration: 0.3 }); }
+        }
+      });
     }
+
+    // Números contam ao aparecer.
+    document.querySelectorAll('.lh [data-count]').forEach(function (el) {
+      if (!motion) return;
+      el.textContent = '0';
+      ScrollTrigger.create({ trigger: el, start: 'top 88%', once: true, onEnter: function () { contar(el); } });
+    });
 
     // Celular acompanha o mouse de leve (só desktop, só com movimento).
     var phone = document.getElementById('lh-phone');
