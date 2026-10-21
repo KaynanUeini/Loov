@@ -57,8 +57,10 @@ class LoyaltyProgram < ApplicationRecord
 
   # Cartão de carimbos de um cliente neste programa — o mesmo cálculo da
   # Conta, da tela Fidelidade e da página do lava-rápido (site e app).
-  # Conta só lavagens concluídas depois que o programa foi criado. A visita
-  # que completa o cartão gera um vale (LoyaltyReward) pra próxima visita.
+  # Conta só lavagens concluídas depois que o programa foi criado, fora a
+  # que usou o vale (Appointment.que_contam_carimbo). A visita que completa
+  # o cartão gera um vale (LoyaltyReward) pra próxima visita; depois que o
+  # vale é usado, o cartão novo começa vazio.
   #
   # historico: true acrescenta as visitas do ciclo deste cartão (data +
   # serviço, mais recente primeiro) pro verso do cartão na tela Fidelidade —
@@ -66,12 +68,12 @@ class LoyaltyProgram < ApplicationRecord
   def cartao_para(user, historico: false)
     visitas_scope = if user
       user.appointments.where(car_wash_id: car_wash_id, status: "attended")
-          .where("scheduled_at >= ?", created_at)
+          .where("scheduled_at >= ?", created_at).que_contam_carimbo
     end
     visitas  = visitas_scope ? visitas_scope.count : 0
     meta     = visits_required
     ciclo    = visitas % meta
-    completo = visitas.positive? && ciclo.zero?
+    completo = visitas.positive? && ciclo.zero? && !vale_usado_depois?(user, visitas_scope)
     cartao = {
       car_wash_id:        car_wash_id,
       car_wash_name:      car_wash.name,
@@ -90,6 +92,15 @@ class LoyaltyProgram < ApplicationRecord
   end
 
   private
+
+  # O cliente já usou o vale do cartão que completou por último: o cartão
+  # do momento é o novo, ainda sem carimbo.
+  def vale_usado_depois?(user, visitas_scope)
+    ultima = visitas_scope.maximum(:scheduled_at)
+    uso = LoyaltyReward.where(user_id: user.id, car_wash_id: car_wash_id).where.not(used_at: nil)
+                       .joins(:appointment).maximum("appointments.scheduled_at")
+    ultima && uso && uso > ultima
+  end
 
   def dinheiro(v)
     format("%.2f", v.to_f).sub(".", ",").sub(",00", "")

@@ -30,6 +30,7 @@ module Owner
           counts = Appointment
             .where(car_wash_id: car_wash.id, user_id: user_ids, status: "attended")
             .where("scheduled_at >= ?", loyalty.created_at)
+            .que_contam_carimbo
             .group(:user_id)
             .count
           loyalty_counts = counts
@@ -373,10 +374,12 @@ module Owner
         if loyalty && a.user_id.present?
           base_visits = loyalty_counts[a.user_id].to_i
           goal        = loyalty.visits_required
-          # Para agendamentos ainda não finalizados, projeta +1 (igual à visão do cliente)
-          proj_visits  = a.status == "attended" ? base_visits : base_visits + 1
+          # Para agendamentos ainda não finalizados, projeta +1 (igual à visão
+          # do cliente) — menos a visita com vale, que não conta carimbo.
+          com_vale     = a.vale_aplicado.present?
+          proj_visits  = a.status == "attended" || com_vale ? base_visits : base_visits + 1
           proj_cycle   = proj_visits % goal
-          milestone    = proj_cycle == 0
+          milestone    = proj_cycle == 0 && !com_vale
           filled       = milestone ? goal : proj_cycle
           loyalty_data = {
             visits:    proj_visits,

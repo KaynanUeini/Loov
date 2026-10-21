@@ -289,7 +289,7 @@
                       <% end %>
                     </ul>
                     <div class="lc-foot">
-                      <a class="lc-btn is-solid" href="<%= car_wash_path(c[:car_wash_id]) %><%= qs %>"><i data-feather="calendar" style="width:14px;height:14px"></i>Agendar e ganhar carimbo</a>
+                      <a class="lc-btn is-solid" href="<%= car_wash_path(c[:car_wash_id]) %><%= qs %>"><i data-feather="calendar" style="width:14px;height:14px"></i><%= c[:reward] ? "Agendar e usar o vale" : "Agendar e ganhar carimbo" %></a>
                       <button type="button" class="lc-btn" data-flip aria-label="Voltar pra frente do cartão"><i data-feather="rotate-ccw" style="width:14px;height:14px"></i></button>
                     </div>
                   </div>

@@ -58,7 +58,7 @@ module Owner
     # conta do cartão (LoyaltyProgram#cartao_para), só que de todos de uma vez.
     def numeros(program)
       visitas = @car_wash.appointments.where(status: "attended").where.not(user_id: nil)
-                         .where("scheduled_at >= ?", program.created_at)
+                         .where("scheduled_at >= ?", program.created_at).que_contam_carimbo
                          .group(:user_id).count.values
       meta = program.visits_required
       { clientes: visitas.size, recompensas: visitas.sum { |v| v / meta },

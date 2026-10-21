@@ -72,6 +72,11 @@ class Appointment < ApplicationRecord
   scope :no_show,            -> { where(status: "no_show") }
   scope :cancelled,          -> { where(status: "cancelled") }
   scope :rejected,           -> { where(status: "rejected") }
+  # A lavagem em que o cliente usou o vale de fidelidade não conta carimbo:
+  # ela é a recompensa. O cartão novo começa a pontuar na visita seguinte.
+  scope :que_contam_carimbo, -> {
+    where.not(id: LoyaltyReward.where.not(used_at: nil).where.not(appointment_id: nil).select(:appointment_id))
+  }
 
   # Agendamentos disponíveis com aceite expirado (para o job de limpeza)
   scope :expired_pending, -> {
@@ -277,6 +282,8 @@ class Appointment < ApplicationRecord
 
   def emitir_vale_se_completou
     return if walk_in? || user_id.nil?
+    # Visita paga com o vale não conta carimbo, então não completa cartão.
+    return if LoyaltyReward.where(appointment_id: id).where.not(used_at: nil).exists?
     programa = car_wash.loyalty_program
     return unless programa&.active? && scheduled_at >= programa.created_at
 

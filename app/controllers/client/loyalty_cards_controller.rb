@@ -15,12 +15,15 @@ module Client
       cards = LoyaltyProgram.where(active: true).includes(:car_wash)
                             .map { |lp| lp.cartao_para(current_user, historico: true) }
                             .select { |c| c[:visits_total].positive? }
-      cards = com_cartoes_completos(cards)
+      com_cartao = cards.map { |c| c[:car_wash_id] }
+      # Depois de usar o vale, o cartão novo só aparece com o primeiro
+      # carimbo — vazio não tem o que mostrar.
+      cards = com_cartoes_completos(cards).reject { |c| c[:filled].zero? }
 
       respond_to do |format|
         format.html do
           @cards  = cards
-          @nearby = programas_perto(cards.map { |c| c[:car_wash_id] })
+          @nearby = programas_perto(com_cartao)
         end
         format.json { render json: cards }
       end
@@ -65,7 +68,7 @@ module Client
       meta = atual[:visits_required]
       ganho = vale.earned_appointment
       visitas = current_user.appointments.where(car_wash_id: vale.car_wash_id, status: "attended")
-                            .where("scheduled_at <= ?", ganho.scheduled_at)
+                            .where("scheduled_at <= ?", ganho.scheduled_at).que_contam_carimbo
                             .includes(:service).order(scheduled_at: :desc).limit(meta)
       atual.merge(
         card_key:           "vale-#{vale.id}",
