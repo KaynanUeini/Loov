@@ -27,8 +27,8 @@
   .fn-wrap { width: 100%; max-width: 1240px; margin: 0 auto; padding: 0 20px 64px; }
   .fn-mono { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--ash); }
 
-  .fn-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 18px; padding: 28px 0 22px; }
-  .fn-head h1 { margin: 6px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: clamp(40px, 6vw, 76px); line-height: .95; letter-spacing: -0.045em; color: var(--ink) !important; }
+  /* Cabeçalho padrão (shared/page_head), igual a Notificações e Aprovações. */
+  .fn-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 18px; padding: 0 0 22px; }
   .fn-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
   .fn-seg { display: flex; gap: 4px; padding: 4px; background: var(--sand); border-radius: 100px; overflow-x: auto; scrollbar-width: none; }
   .fn-seg::-webkit-scrollbar { display: none; }
@@ -234,7 +234,7 @@
 <div class="fn">
   <div class="fn-wrap">
     <div class="fn-head">
-      <div><div class="fn-mono">Visão geral</div><h1>Financeiro</h1></div>
+      <div><%= render "shared/page_head", back_href: root_path, back_id: "fn-back", eyebrow: "Visão geral", title: "Financeiro" %></div>
       <div class="fn-tools">
         <div class="fn-seg" role="group" aria-label="Período">
           <button type="button" data-period="day">Hoje</button>
@@ -659,6 +659,10 @@
 
   // Redesenha o gráfico se a janela mudar de largura.
   var rzT = null; window.addEventListener('resize', function () { clearTimeout(rzT); rzT = setTimeout(function () { if (st.data) renderChart(); }, 150); });
+  // Voltar: volta pra onde veio dentro do site; sem histórico, painel.
+  document.getElementById('fn-back').addEventListener('click', function (e) {
+    if (document.referrer && document.referrer.indexOf(location.origin) === 0 && history.length > 1) { e.preventDefault(); history.back(); }
+  });
   if (window.feather) feather.replace();
   load();
 })();

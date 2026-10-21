@@ -22,13 +22,10 @@
   .ia [hidden] { display: none !important; }
   .ia button { font-family: inherit; cursor: pointer; }
   .ia svg.feather { display: block; flex-shrink: 0; }
-  .ia-wrap { max-width: 1180px; margin: 0 auto; padding: 88px 20px 96px; }
+  .ia-wrap { max-width: 1180px; margin: 0 auto; padding: 60px 20px 96px; }
 
   /* Cabeçalho */
   .ia-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 28px; }
-  .ia-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; color: var(--coral-500); text-transform: uppercase; }
-  .ia-title { margin: 6px 0 0; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 34px; letter-spacing: -1px; line-height: 1.05; }
-  .ia-sub { margin: 10px 0 0; max-width: 560px; color: var(--graphite); font-size: 15px; line-height: 1.5; }
   .ia-refresh { display: inline-flex; align-items: center; gap: 8px; padding: 11px 18px; border: 1px solid var(--stone); border-radius: 100px; background: var(--paper); color: var(--ink); font-size: 14px; font-weight: 600; transition: background .15s, border-color .15s; white-space: nowrap; }
   .ia-refresh:hover { background: var(--sand); }
 
@@ -118,8 +115,7 @@
   .ia-howto { margin-top: 14px; padding: 0 4px; font-size: 12.5px; line-height: 1.55; color: var(--ash); }
 
   @media (min-width: 980px) {
-    .ia-wrap { padding: 104px 32px 112px; }
-    .ia-title { font-size: 52px; letter-spacing: -1.8px; }
+    .ia-wrap { padding: 60px 32px 112px; }
     .ia-grid { grid-template-columns: minmax(0, 1fr) 340px; gap: 40px; align-items: start; }
     .ia-side { position: sticky; top: 96px; }
     /* No computador o botão já está na coluna lateral, sempre à vista. */
@@ -140,9 +136,8 @@
   <div class="ia-wrap">
     <div class="ia-head">
       <div>
-        <div class="ia-eyebrow">Análise</div>
-        <h1 class="ia-title">IA insights</h1>
-        <p class="ia-sub">O que fazer esta semana no seu lava-rápido, a partir das vendas, serviços, clientes e agenda.</p>
+        <%= render "shared/page_head", back_href: root_path, back_id: "ia-back", eyebrow: "Análise", title: "IA insights",
+                   lead: "O que fazer esta semana no seu lava-rápido, a partir das vendas, serviços, clientes e agenda." %>
       </div>
       <button type="button" class="ia-refresh" id="ia-refresh" hidden><i data-feather="refresh-cw" style="width:15px;height:15px"></i>Gerar nova análise</button>
     </div>
@@ -426,6 +421,10 @@
   });
   $('ia-save').addEventListener('click', salvarFoco);
 
+  // Voltar: volta pra onde veio dentro do site; sem histórico, painel.
+  document.getElementById('ia-back').addEventListener('click', function (e) {
+    if (document.referrer && document.referrer.indexOf(location.origin) === 0 && history.length > 1) { e.preventDefault(); history.back(); }
+  });
   if (window.feather) feather.replace();
   carregar();
 })();

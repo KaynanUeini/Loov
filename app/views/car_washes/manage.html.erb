@@ -23,16 +23,9 @@
     font-family: 'JetBrains Mono', monospace; font-size: 11px;
     letter-spacing: 1.6px; text-transform: uppercase; color: var(--ash);
   }
-  .gm-head { padding: 28px 0 24px; }
-  .gm-head .gm-mono { color: var(--coral-500); }
-  .gm-head h1 {
-    margin: 6px 0 0 !important;
-    font-family: 'Space Grotesk', sans-serif !important; font-weight: 700;
-    font-size: clamp(40px, 6vw, 72px); line-height: .95; letter-spacing: -0.045em;
-    color: var(--ink) !important;
-  }
-  .gm-head p { margin: 12px 0 0; color: var(--graphite); font-size: 15px; }
-  .gm-head p strong { color: var(--ink); font-weight: 600; }
+  /* Cabeçalho padrão (shared/page_head), igual a Notificações e Aprovações. */
+  .gm-head { padding-bottom: 24px; }
+  .gm-head .lp-lead strong { color: var(--ink); font-weight: 600; }
 
   .gm-banner {
     display: flex; gap: 12px; align-items: flex-start;
@@ -410,9 +403,8 @@
 <div class="gm">
   <div class="gm-wrap">
     <div class="gm-head">
-      <div class="gm-mono">Configuração</div>
-      <h1>Gerenciar</h1>
-      <p>Endereço, horários, serviços e fechamentos de <strong><%= @car_wash.name %></strong>.</p>
+      <%= render "shared/page_head", back_href: root_path, back_id: "gm-back", eyebrow: "Configuração", title: "Gerenciar",
+                 lead: safe_join(["Endereço, horários, serviços e fechamentos de ", content_tag(:strong, @car_wash.name), "."]) %>
     </div>
 
     <% if @is_attendant %>
@@ -1369,6 +1361,11 @@
   const hash = location.hash.replace('#', '');
   if (SECTIONS.some(s => s.key === hash)) { ui.active = hash; ui.open.add(hash); }
   document.querySelectorAll('[data-ic]').forEach(el => { el.outerHTML = ic(el.dataset.ic, 16); });
+  // Voltar: volta pra onde veio dentro do site; sem histórico, painel.
+  document.getElementById('gm-back').addEventListener('click', function (e) {
+    if (document.referrer && document.referrer.indexOf(location.origin) === 0 && history.length > 1) { e.preventDefault(); history.back(); }
+  });
+  if (window.feather) feather.replace({ width: 18, height: 18 });
   render();
   if (ui.open.size && window.innerWidth < 1000) {
     document.getElementById(`sec-${hash}`)?.scrollIntoView({ block: 'start' });

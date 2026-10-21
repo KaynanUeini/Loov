@@ -21,13 +21,8 @@
   .eq-wrap { width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 20px 80px; }
   .eq-mono { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ash); }
 
-  .eq-head { padding: 28px 0 22px; }
-  .eq-head .eq-mono { color: var(--coral-500); }
-  .eq-head h1 {
-    margin: 6px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700;
-    font-size: clamp(40px, 6vw, 76px); line-height: .95; letter-spacing: -0.045em; color: var(--ink) !important;
-  }
-  .eq-head p { margin: 12px 0 0; max-width: 46ch; font-size: 14px; line-height: 20px; color: var(--graphite); }
+  /* Cabeçalho padrão (shared/page_head), igual a Notificações e Aprovações. */
+  .eq-head { padding-bottom: 22px; }
 
   /* Números da equipe: tipografia no lugar de cards, como na Agenda. */
   .eq-stats { display: grid; grid-template-columns: repeat(2, 1fr); border-top: 1px solid var(--stone); border-bottom: 1px solid var(--stone); margin-bottom: 26px; }
@@ -119,9 +114,8 @@
 <div class="eq">
   <div class="eq-wrap">
     <header class="eq-head">
-      <div class="eq-mono">Equipe</div>
-      <h1>Funcionários.</h1>
-      <p>Quem atende no balcão entra com a própria conta: faz check-in, vê a agenda e lança custos. Faturamento e lucro ficam só com você.</p>
+      <%= render "shared/page_head", back_href: root_path, back_id: "eq-back", eyebrow: "Equipe", title: "Funcionários",
+                 lead: "Quem atende no balcão entra com a própria conta: faz check-in, vê a agenda e lança custos. Faturamento e lucro ficam só com você." %>
     </header>
 
     <div class="eq-stats">
@@ -344,6 +338,10 @@
   });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSheets(); });
 
+  // Voltar: volta pra onde veio dentro do site; sem histórico, painel.
+  document.getElementById('eq-back').addEventListener('click', function (e) {
+    if (document.referrer && document.referrer.indexOf(location.origin) === 0 && history.length > 1) { e.preventDefault(); history.back(); }
+  });
   if (window.feather) feather.replace();
   load();
   if (FLASH.notice) toast(FLASH.notice); else if (FLASH.alert) toast(FLASH.alert, true);
