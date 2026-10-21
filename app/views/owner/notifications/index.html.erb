@@ -60,7 +60,7 @@
 
 <div class="nt">
   <div class="nt-wrap">
-    <%= render "shared/page_head", back_href: "/users/edit", back_id: "nt-back", eyebrow: "Central",
+    <%= render "shared/page_head", back_href: voltar_do_dono, back_id: "nt-back", eyebrow: "Central",
                title: "Notificações", title_id: "nt-title", lead_id: "nt-lead" %>
     <div id="nt-body"></div>
   </div>
@@ -148,9 +148,6 @@
     var t;
     if ((t = e.target.closest('[data-more]'))) { var id = t.dataset.more; open[id] = !open[id]; render(); return; }
     if ((t = e.target.closest('[data-tap]'))) { tap(t.dataset.tap); return; }
-  });
-  $('nt-back').addEventListener('click', function (e) {
-    if (document.referrer && document.referrer.indexOf(location.origin) === 0 && history.length > 1) { e.preventDefault(); history.back(); }
   });
 
   if (window.feather) feather.replace();

@@ -118,7 +118,7 @@
 
 <div class="fp">
   <div class="fp-wrap">
-    <%= render "shared/page_head", back_href: edit_user_registration_path, back_id: "fp-back", eyebrow: "Recompensa",
+    <%= render "shared/page_head", back_href: voltar_do_dono, back_id: "fp-back", eyebrow: "Recompensa",
                title: "Programa de fidelidade", lead: "Cada visita concluída vira um carimbo. Quem completa o cartão ganha um vale pra próxima visita." %>
 
     <% if @stats %>
@@ -319,9 +319,6 @@
     st.serviceId = Number(b.dataset.svc); $('fp-err').hidden = true; render();
   });
   $('fp-save').addEventListener('click', save);
-  $('fp-back').addEventListener('click', function (e) {
-    if (document.referrer && document.referrer.indexOf(location.origin) === 0 && history.length > 1) { e.preventDefault(); history.back(); }
-  });
 
   if (window.feather) feather.replace();
   render();

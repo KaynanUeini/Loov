@@ -403,7 +403,7 @@
 <div class="gm">
   <div class="gm-wrap">
     <div class="gm-head">
-      <%= render "shared/page_head", back_href: root_path, back_id: "gm-back", eyebrow: "Configuração", title: "Gerenciar",
+      <%= render "shared/page_head", back_href: voltar_do_dono, back_id: "gm-back", eyebrow: "Configuração", title: "Gerenciar",
                  lead: safe_join(["Endereço, horários, serviços e fechamentos de ", content_tag(:strong, @car_wash.name), "."]) %>
     </div>
 
@@ -1361,10 +1361,6 @@
   const hash = location.hash.replace('#', '');
   if (SECTIONS.some(s => s.key === hash)) { ui.active = hash; ui.open.add(hash); }
   document.querySelectorAll('[data-ic]').forEach(el => { el.outerHTML = ic(el.dataset.ic, 16); });
-  // Voltar: volta pra onde veio dentro do site; sem histórico, painel.
-  document.getElementById('gm-back').addEventListener('click', function (e) {
-    if (document.referrer && document.referrer.indexOf(location.origin) === 0 && history.length > 1) { e.preventDefault(); history.back(); }
-  });
   if (window.feather) feather.replace({ width: 18, height: 18 });
   render();
   if (ui.open.size && window.innerWidth < 1000) {

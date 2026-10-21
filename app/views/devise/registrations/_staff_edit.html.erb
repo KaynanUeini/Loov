@@ -43,14 +43,14 @@
       <div class="ac-left">
         <div class="ac-title"><div class="ac-mono">Conta</div><h1><%= first_name %></h1></div>
         <div class="ac-id">
-          <a class="ac-stat" href="<%= owner_car_wash_appointments_path %>"><b><%= rs[:today] %></b><small><%= rs[:today] == 1 ? "AGENDADO HOJE" : "AGENDADOS HOJE" %></small></a>
+          <a class="ac-stat" href="<%= owner_car_wash_appointments_path(de: "conta") %>"><b><%= rs[:today] %></b><small><%= rs[:today] == 1 ? "AGENDADO HOJE" : "AGENDADOS HOJE" %></small></a>
           <span class="ac-sep"></span>
-          <a class="ac-stat is-fav" href="<%= owner_car_wash_appointments_path %>"><b><%= rs[:month_attended] %></b><small><%= rs[:month_attended] == 1 ? "ATENDIDO NO MÊS" : "ATENDIDOS NO MÊS" %></small></a>
+          <a class="ac-stat is-fav" href="<%= owner_car_wash_appointments_path(de: "conta") %>"><b><%= rs[:month_attended] %></b><small><%= rs[:month_attended] == 1 ? "ATENDIDO NO MÊS" : "ATENDIDOS NO MÊS" %></small></a>
         </div>
 
         <div class="ac-sec"><h2>Seu lava-rápido</h2><small class="st-role"><%= dono ? "DONO" : "ATENDENTE" %></small></div>
         <% if cw %>
-          <a class="ac-veh" href="<%= manage_car_wash_path(cw[:id]) %>">
+          <a class="ac-veh" href="<%= manage_car_wash_path(cw[:id], de: "conta") %>">
             <span class="ac-veh-ic"><i data-feather="map-pin" style="width:20px;height:20px"></i></span>
             <span class="ac-veh-t"><b><%= cw[:name] %></b><small><%= cw[:address].presence || "Endereço não cadastrado" %></small></span>
             <span class="ac-veh-go"><i data-feather="chevron-right" style="width:18px;height:18px"></i></span>
@@ -67,7 +67,7 @@
       <div class="ac-right">
         <div class="ac-list">
           <% items.each do |it| %>
-            <a class="ac-item" href="<%= it[:href] %>">
+            <a class="ac-item" href="<%= it[:href] %>?de=conta">
               <span class="ac-item-ic"><i data-feather="<%= it[:icon] %>" style="width:18px;height:18px"></i></span>
               <span class="ac-item-t"><b><%= it[:label] %></b><small<%= it[:badge] ? raw(%( id="st-#{it[:badge]}-sub")) : "" %>><%= it[:desc] %></small></span>
               <% if it[:badge] %><span class="ac-badge is-off" id="st-<%= it[:badge] %>-badge"></span><% end %>

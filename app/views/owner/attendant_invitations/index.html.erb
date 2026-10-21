@@ -114,7 +114,7 @@
 <div class="eq">
   <div class="eq-wrap">
     <header class="eq-head">
-      <%= render "shared/page_head", back_href: root_path, back_id: "eq-back", eyebrow: "Equipe", title: "Funcionários",
+      <%= render "shared/page_head", back_href: voltar_do_dono, back_id: "eq-back", eyebrow: "Equipe", title: "Funcionários",
                  lead: "Quem atende no balcão entra com a própria conta: faz check-in, vê a agenda e lança custos. Faturamento e lucro ficam só com você." %>
     </header>
 
@@ -338,10 +338,6 @@
   });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeSheets(); });
 
-  // Voltar: volta pra onde veio dentro do site; sem histórico, painel.
-  document.getElementById('eq-back').addEventListener('click', function (e) {
-    if (document.referrer && document.referrer.indexOf(location.origin) === 0 && history.length > 1) { e.preventDefault(); history.back(); }
-  });
   if (window.feather) feather.replace();
   load();
   if (FLASH.notice) toast(FLASH.notice); else if (FLASH.alert) toast(FLASH.alert, true);

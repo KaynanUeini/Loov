@@ -93,7 +93,7 @@
 
 <div class="mg">
   <div class="mg-wrap">
-    <%= render "shared/page_head", back_href: edit_user_registration_path, back_id: "mg-back", eyebrow: "Comunicação",
+    <%= render "shared/page_head", back_href: voltar_do_dono, back_id: "mg-back", eyebrow: "Comunicação",
                title: "Mensagens", lead: "Avise quem tem horário hoje. Chega como notificação no app e no site." %>
 
     <div class="mg-grid">
@@ -226,9 +226,6 @@
   });
   $('mg-body').addEventListener('input', onType);
   $('mg-send').addEventListener('click', send);
-  $('mg-back').addEventListener('click', function (e) {
-    if (document.referrer && document.referrer.indexOf(location.origin) === 0 && history.length > 1) { e.preventDefault(); history.back(); }
-  });
 
   renderList(); renderSent(); onType();
   if (window.feather) feather.replace();

@@ -25,12 +25,8 @@
   }
 
   /* ── Cabeçalho ── */
-  .ag-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 18px; padding: 28px 0 22px; }
-  .ag-head .ag-mono { color: var(--coral-500); }
-  .ag-head h1 {
-    margin: 6px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700;
-    font-size: clamp(40px, 6vw, 76px); line-height: .95; letter-spacing: -0.045em; color: var(--ink) !important;
-  }
+  /* Cabeçalho padrão (shared/page_head), igual a Notificações e Aprovações. */
+  .ag-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 18px; padding: 0 0 22px; }
   .ag-seg {
     display: inline-flex; padding: 4px; gap: 2px; border-radius: 999px;
     background: var(--sand); border: 1px solid var(--stone);
@@ -225,7 +221,7 @@
 <div class="ag">
   <div class="ag-wrap">
     <div class="ag-head">
-      <div><div class="ag-mono">Agenda</div><h1>Agendamentos</h1></div>
+      <div><%= render "shared/page_head", back_href: voltar_do_dono, back_id: "ag-back", eyebrow: "Agenda", title: "Agendamentos" %></div>
       <div class="ag-seg" role="group" aria-label="Período">
         <button type="button" data-days="1" aria-pressed="true">Hoje</button>
         <button type="button" data-days="7" aria-pressed="false">7 dias</button>
@@ -536,6 +532,7 @@
     document.querySelectorAll('.ag-seg button').forEach(x => x.setAttribute('aria-pressed', String(Number(x.dataset.days) === qd)));
   }
   document.querySelectorAll('[data-ic]').forEach(el => { el.outerHTML = ic(el.dataset.ic, 16); });
+  if (window.feather) feather.replace({ width: 18, height: 18 });
   load();
   // Agenda viva: recarrega a cada minuto (entra reserva do Last Minute) e o
   // "começa em" anda junto sem o dono precisar atualizar a página.

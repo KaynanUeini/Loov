@@ -136,7 +136,7 @@
   <div class="ia-wrap">
     <div class="ia-head">
       <div>
-        <%= render "shared/page_head", back_href: root_path, back_id: "ia-back", eyebrow: "Análise", title: "IA insights",
+        <%= render "shared/page_head", back_href: voltar_do_dono, back_id: "ia-back", eyebrow: "Análise", title: "IA insights",
                    lead: "O que fazer esta semana no seu lava-rápido, a partir das vendas, serviços, clientes e agenda." %>
       </div>
       <button type="button" class="ia-refresh" id="ia-refresh" hidden><i data-feather="refresh-cw" style="width:15px;height:15px"></i>Gerar nova análise</button>
@@ -421,10 +421,6 @@
   });
   $('ia-save').addEventListener('click', salvarFoco);
 
-  // Voltar: volta pra onde veio dentro do site; sem histórico, painel.
-  document.getElementById('ia-back').addEventListener('click', function (e) {
-    if (document.referrer && document.referrer.indexOf(location.origin) === 0 && history.length > 1) { e.preventDefault(); history.back(); }
-  });
   if (window.feather) feather.replace();
   carregar();
 })();

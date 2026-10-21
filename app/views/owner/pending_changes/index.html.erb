@@ -33,7 +33,7 @@
 
 <div class="ap">
   <div class="ap-wrap">
-    <%= render "shared/page_head", back_href: root_path, back_id: "ap-back", eyebrow: "Fluxo de aprovação",
+    <%= render "shared/page_head", back_href: voltar_do_dono, back_id: "ap-back", eyebrow: "Fluxo de aprovação",
                title: "Aprovações", title_id: "ap-title", lead_id: "ap-lead" %>
     <div id="ap-body"></div>
   </div>
@@ -64,9 +64,6 @@
   LoovApv.bind($('ap-body'), {
     toast: toast,
     onDone: function () { render(LoovApv.list()); }
-  });
-  $('ap-back').addEventListener('click', function (e) {
-    if (document.referrer && document.referrer.indexOf(location.origin) === 0 && history.length > 1) { e.preventDefault(); history.back(); }
   });
 
   // A lista vem embutida (render na hora); o load só sincroniza o kit.
