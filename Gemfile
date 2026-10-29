@@ -48,3 +48,5 @@ gem "resend", "~> 1.0"
 gem "devise-jwt", "~> 0.13.0"
 
 gem "caxlsx", "~> 4.5"
+
+gem "aws-sdk-s3", "~> 1.170", require: false # fotos da ficha do carro no Cloudflare R2

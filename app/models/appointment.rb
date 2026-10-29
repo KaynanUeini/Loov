@@ -5,6 +5,9 @@ class Appointment < ApplicationRecord
   has_one :review, dependent: :destroy
   # Vale de fidelidade usado neste atendimento (ver LoyaltyReward).
   has_one :vale_aplicado, class_name: "LoyaltyReward", foreign_key: :appointment_id, inverse_of: :appointment
+  # Ficha do carro na entrada. delete (não destroy): a ficha é readonly e só
+  # some junto com o atendimento quando a conta do lava-rápido é apagada.
+  has_one :vehicle_check, dependent: :delete
 
   # Fidelidade acompanha o status: concluir marca o vale aplicado como usado e,
   # se esta visita completou o cartão, dá um vale novo pra próxima; desfazer o

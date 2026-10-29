@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_10_21_120000) do
+ActiveRecord::Schema[7.1].define(version: 2026_10_29_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -145,6 +145,9 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_21_120000) do
     t.datetime "paused_until"
     t.datetime "paused_at"
     t.integer "last_minute_pct", default: 0, null: false
+    t.boolean "vehicle_check_enabled", default: false, null: false
+    t.string "vehicle_check_mode", default: "choose", null: false
+    t.boolean "vehicle_check_skippable", default: true, null: false
     t.index ["active"], name: "index_car_washes_on_active"
     t.index ["user_id"], name: "index_car_washes_on_user_id"
   end
@@ -420,6 +423,27 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_21_120000) do
     t.index ["stripe_customer_id"], name: "index_users_on_stripe_customer_id", unique: true, where: "(stripe_customer_id IS NOT NULL)"
   end
 
+  create_table "vehicle_checks", force: :cascade do |t|
+    t.bigint "car_wash_id", null: false
+    t.bigint "appointment_id", null: false
+    t.bigint "recorded_by_id", null: false
+    t.string "plate"
+    t.string "vehicle_model"
+    t.string "mode", null: false
+    t.jsonb "photos", default: [], null: false
+    t.jsonb "marks", default: [], null: false
+    t.text "notes"
+    t.datetime "recorded_at", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["appointment_id"], name: "index_vehicle_checks_on_appointment_id", unique: true
+    t.index ["car_wash_id", "plate"], name: "index_vehicle_checks_on_car_wash_id_and_plate"
+    t.index ["car_wash_id"], name: "index_vehicle_checks_on_car_wash_id"
+    t.index ["expires_at"], name: "index_vehicle_checks_on_expires_at"
+    t.index ["recorded_by_id"], name: "index_vehicle_checks_on_recorded_by_id"
+  end
+
   add_foreign_key "ai_insight_runs", "ai_insights"
   add_foreign_key "ai_insight_runs", "car_washes"
   add_foreign_key "ai_insights", "car_washes"
@@ -454,4 +478,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_21_120000) do
   add_foreign_key "support_ticket_messages", "users"
   add_foreign_key "support_tickets", "car_washes"
   add_foreign_key "support_tickets", "users"
+  add_foreign_key "vehicle_checks", "appointments"
+  add_foreign_key "vehicle_checks", "car_washes"
+  add_foreign_key "vehicle_checks", "users", column: "recorded_by_id"
 end

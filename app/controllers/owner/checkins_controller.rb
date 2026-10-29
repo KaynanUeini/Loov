@@ -40,7 +40,7 @@ module Owner
       appointments = car_wash.appointments
         .where(scheduled_at: today_start..today_end)
         .where.not(status: %w[cancelled awaiting_payment])
-        .includes(:service, :user, :vale_aplicado)
+        .includes(:service, :user, :vale_aplicado, :vehicle_check)
         .order(:scheduled_at)
         .map { |a| serialize_appointment(a, loyalty, loyalty_counts) }
 
@@ -49,7 +49,7 @@ module Owner
       unresolved_past = car_wash.appointments
         .where(status: "confirmed", walk_in: false)
         .where("scheduled_at < ?", today_start)
-        .includes(:service, :user)
+        .includes(:service, :user, :vehicle_check)
         .order(:scheduled_at)
         .map { |a| serialize_appointment(a, loyalty, loyalty_counts) }
 
@@ -82,6 +82,13 @@ module Owner
         appointments:    appointments,
         unresolved_past: unresolved_past,
         services:        services,
+        # Ficha do carro: o card do app oferece a ficha de entrada quando ligada.
+        vehicle_check: {
+          enabled:          car_wash.vehicle_check_enabled,
+          mode:             car_wash.vehicle_check_mode,
+          skippable:        car_wash.vehicle_check_skippable,
+          photos_available: FichaStorage.configurado?
+        },
         loyalty: loyalty ? {
           active:           true,
           visits_required:  loyalty.visits_required,
@@ -448,6 +455,9 @@ module Owner
         status_color:     status_color(a.status),
         phone_last4:      phone_last4,
         vehicle:          vehicle,
+        plate:            a.user&.vehicle_plate,
+        vehicle_model:    a.user&.vehicle_model,
+        vehicle_check:    a.vehicle_check && { id: a.vehicle_check.id, mode: a.vehicle_check.mode },
         show_code:        show_code,
         is_disponivel:    is_disponivel,
         prepayment_amount: prepayment,

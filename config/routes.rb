@@ -116,6 +116,14 @@ Rails.application.routes.draw do
     post 'loyalty_program', to: 'loyalty_programs#upsert'
     patch 'checkins/:id/cancel', to: 'checkins#cancel', as: :checkin_cancel
 
+    # Ficha do carro na entrada (só app, por enquanto).
+    get   'vehicle_checks/settings',              to: 'vehicle_checks#settings'
+    patch 'vehicle_checks/settings',              to: 'vehicle_checks#settings_update'
+    get   'vehicle_checks',                       to: 'vehicle_checks#index'
+    get   'vehicle_checks/:id',                   to: 'vehicle_checks#show', as: :vehicle_check
+    post  'checkins/:id/vehicle_check/uploads',   to: 'vehicle_checks#uploads'
+    post  'checkins/:id/vehicle_check',           to: 'vehicle_checks#create'
+
     resources :attendant_invitations, only: [:index, :create, :destroy] do
       collection do
         get  ':token/accept', to: 'attendant_invitations#accept',    as: :accept
