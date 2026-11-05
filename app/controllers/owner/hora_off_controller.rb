@@ -13,8 +13,10 @@ module Owner
     LIMITES = {
       hora_off_desconto_max: 5..50,
       margem_minima:         0..80,
-      hora_pico_pct:         0..30
+      hora_pico_pct:         0..30,
+      taxas_venda_pct:       0..30
     }.freeze
+    CUSTO_MAXIMO = 1000 # R$ por lavagem: acima disso é erro de digitação
 
     # GET /owner/hora_off
     def show
@@ -23,7 +25,8 @@ module Owner
 
     # PATCH /owner/hora_off
     #   { hora_off_enabled, hora_pico_enabled, chuva_enabled,
-    #     desconto_max, margem_minima, pico_pct,
+    #     desconto_max, margem_minima, pico_pct, taxas_pct,
+    #     custo_lavagem (R$; vazio ou null tira o piso),
     #     grade: [{ dia, faixa, nivel }], servicos: [{ id, incluido }] }
     # Tudo opcional: manda só o que mudou.
     def update
@@ -32,11 +35,22 @@ module Owner
         chuva_enabled: :hora_off_chuva_enabled }.each do |param, coluna|
         attrs[coluna] = bool(params[param]) if params.key?(param)
       end
-      { desconto_max: :hora_off_desconto_max, margem_minima: :margem_minima, pico_pct: :hora_pico_pct }.each do |param, coluna|
+      { desconto_max: :hora_off_desconto_max, margem_minima: :margem_minima,
+        pico_pct: :hora_pico_pct, taxas_pct: :taxas_venda_pct }.each do |param, coluna|
         next unless params.key?(param)
         valor = Integer(params[param].to_s, exception: false)
         return erro("Valor inválido em #{param}.") unless valor && LIMITES[coluna].cover?(valor)
         attrs[coluna] = valor
+      end
+      if params.key?(:custo_lavagem)
+        bruto = params[:custo_lavagem].to_s.strip.tr(",", ".")
+        if bruto.empty?
+          attrs[:custo_lavagem] = nil
+        else
+          custo = Float(bruto, exception: false)
+          return erro("Custo por lavagem inválido.") unless custo && custo >= 0 && custo <= CUSTO_MAXIMO
+          attrs[:custo_lavagem] = custo.zero? ? nil : custo.round(2)
+        end
       end
 
       celulas  = Array(params[:grade]).map { |c| c.respond_to?(:permit) ? c.permit(:dia, :faixa, :nivel).to_h : c.to_h }
@@ -80,7 +94,6 @@ module Owner
 
     def payload
       precos = PrecoDinamico.new(@car_wash)
-      custo  = @car_wash.custo_por_lavagem
       dias   = @car_wash.operating_hours.map(&:day_of_week).uniq.sort
       {
         hora_off_enabled:  @car_wash.hora_off_enabled,
@@ -89,7 +102,10 @@ module Owner
         desconto_max:      @car_wash.hora_off_desconto_max,
         margem_minima:     @car_wash.margem_minima,
         pico_pct:          @car_wash.hora_pico_pct,
-        escada:            PrecoDinamico::ESCADA.map { |limite, pct| { horas: (limite / 1.hour).to_i, pct: pct } },
+        taxas_pct:         @car_wash.taxas_venda_pct,
+        custo_lavagem:     @car_wash.custo_lavagem&.to_f,
+        taxa_loov_last_minute: PrecoDinamico::TAXA_LOOV_LAST_MINUTE,
+        escada:            PrecoDinamico::ESCADA.map { |limite, pct| { minutos: (limite / 1.minute).to_i, pct: pct } },
         desconto_last_minute: PrecoDinamico::DESCONTO_LAST_MINUTE,
         extra_chuva:       PrecoDinamico::EXTRA_CHUVA,
         limites:           LIMITES.transform_values { |r| { min: r.min, max: r.max } },
@@ -101,14 +117,18 @@ module Owner
                                { dia: dia, faixa: faixa, nivel: nivel, padrao: nivel == DemandCell.nivel_padrao(dia, faixa) }
                              }
                            },
-        # Sem custo lançado, o piso não existe e o painel pede pra lançar.
-        custo:             custo && custo.merge(mes: custo[:mes].strftime("%Y-%m")),
-        piso:              precos.piso,
+        # Sem custo informado, o piso não existe e o painel pede o custo.
+        piso:              precos.piso(false),
+        piso_last_minute:  precos.piso(true),
         servicos:          @car_wash.services.order(:price).map { |s|
                              faixa = precos.faixa(s)
+                             piso  = precos.piso(true)
                              { id: s.id, title: s.title, price: s.price.to_f,
                                incluido: precos.aplica?(s), incluido_padrao: s.last_minute?,
-                               min: faixa[:min], max: faixa[:max] }
+                               min: faixa[:min], max: faixa[:max],
+                               # Piso a 10% da tabela ou menos: quase não sobra
+                               # desconto, e o painel avisa.
+                               piso_trava: !!(piso && piso >= s.price.to_f * 0.9) }
                            }
       }
     end

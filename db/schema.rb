@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_11_04_120000) do
+ActiveRecord::Schema[7.1].define(version: 2026_11_05_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -157,6 +157,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_11_04_120000) do
     t.integer "hora_off_desconto_max", default: 25, null: false
     t.integer "margem_minima", default: 35, null: false
     t.integer "hora_pico_pct", default: 15, null: false
+    t.decimal "custo_lavagem", precision: 8, scale: 2
+    t.integer "taxas_venda_pct", default: 10, null: false
     t.index ["active"], name: "index_car_washes_on_active"
     t.index ["user_id"], name: "index_car_washes_on_user_id"
   end

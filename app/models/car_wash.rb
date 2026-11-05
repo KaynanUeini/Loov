@@ -268,8 +268,9 @@ class CarWash < ApplicationRecord
   # ── Hora Off e Hora Pico ──────────────────────────────────────────────────
   #
   # O preço segue a procura do horário (PrecoDinamico). Esta parte responde só
-  # o que é do lava-rápido: a grade, o custo de uma lavagem e se alguma das
-  # duas está ligada. Com as duas desligadas tudo funciona como antes.
+  # o que é do lava-rápido: a grade e se alguma das duas está ligada. O custo
+  # de uma lavagem a mais (custo_lavagem) é o dono que informa. Com as duas
+  # desligadas tudo funciona como antes.
   def preco_dinamico_ativo?
     hora_off_enabled || hora_pico_enabled
   end
@@ -298,27 +299,6 @@ class CarWash < ApplicationRecord
   def faixas_da_grade
     abre_a_noite = operating_hours.any? { |oh| oh.closes_at && oh.closes_at.seconds_since_midnight > 18 * 3600 }
     abre_a_noite ? DemandCell::FAIXAS : DemandCell::FAIXAS - ["noite"]
-  end
-
-  # Quanto custa uma lavagem, pro piso de margem da Hora Off: os custos do mês
-  # fechado mais recente (até três meses pra trás) divididos pelas lavagens
-  # feitas nele. Sem custo lançado ou sem lavagem, nil — aí vale só o teto de
-  # desconto, e o painel pede pro dono lançar os custos.
-  def custo_por_lavagem(referencia = Time.current)
-    ref = referencia.in_time_zone("America/Sao_Paulo").to_date
-    (1..3).each do |atras|
-      mes   = ref.beginning_of_month << atras
-      custo = monthly_costs.find_by(year: mes.year, month: mes.month)
-      next unless custo && custo.total.to_f.positive?
-
-      lavagens = appointments.attended
-                             .where(scheduled_at: mes.in_time_zone.all_month)
-                             .count
-      next if lavagens.zero?
-
-      return { valor: (custo.total.to_f / lavagens).round(2), mes: mes, lavagens: lavagens, total: custo.total.to_f.round(2) }
-    end
-    nil
   end
 
   def capacity_for(date_or_time)

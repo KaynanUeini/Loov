@@ -510,8 +510,6 @@
   const money = n => 'R$ ' + (parseFloat(n) || 0).toFixed(2).replace('.', ',');
 
   const reais = n => 'R$ ' + Math.round(n).toLocaleString('pt-BR');
-  const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-  const nomeMes = ym => MESES[(parseInt(String(ym).split('-')[1], 10) || 1) - 1];
   let localSeq = 0;
   const lid = () => `_l${++localSeq}`;
 
@@ -585,7 +583,8 @@
     return {
       hora_off_enabled: !!d.hora_off_enabled, hora_pico_enabled: !!d.hora_pico_enabled,
       chuva_enabled: !!d.chuva_enabled, desconto_max: d.desconto_max,
-      margem_minima: d.margem_minima, pico_pct: d.pico_pct,
+      margem_minima: d.margem_minima, pico_pct: d.pico_pct, taxas_pct: d.taxas_pct,
+      custo_lavagem: d.custo_lavagem ?? null,
       grade: Object.fromEntries(d.grade.map(c => [`${c.dia}-${c.faixa}`, c.nivel])),
       servicos: Object.fromEntries(d.servicos.map(s => [s.id, !!s.incluido])),
     };
@@ -609,12 +608,17 @@
   // Mesmas contas de PrecoDinamico (piso e faixa), pra a prévia acompanhar o
   // que o dono mexe antes de salvar. Quem decide o preço de verdade é o
   // servidor.
-  function hoPiso() {
-    const c = ho.server?.custo;
-    if (!c) return null;
-    const m = Math.min(90, Math.max(0, ho.st.margem_minima));
-    return Math.ceil(c.valor / (1 - m / 100));
+  // Piso = custo de uma lavagem a mais ÷ (1 − taxas − margem); no Last Minute
+  // a fatia da Loov entra nas taxas.
+  function hoPiso(lastMinute) {
+    const custo = Number(ho.st.custo_lavagem) || 0;
+    if (custo <= 0) return null;
+    const fatias = ho.st.taxas_pct + ho.st.margem_minima + (lastMinute ? ho.server.taxa_loov_last_minute : 0);
+    return Math.ceil(custo / (1 - Math.min(fatias, 90) / 100));
   }
+  // Parâmetro do painel → coluna do limite no servidor.
+  const HO_LIMITE = { desconto_max: 'hora_off_desconto_max', margem_minima: 'margem_minima', pico_pct: 'hora_pico_pct', taxas_pct: 'taxas_venda_pct' };
+  const fmtMin = m => m % 60 ? `${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}` : `${m / 60}h`;
   function hoFaixa(s) {
     const t = s.price;
     if (!ho.st.servicos[s.id]) return null;
@@ -622,7 +626,7 @@
     if (ho.st.hora_off_enabled) {
       const maior = ho.server.desconto_last_minute + (ho.st.chuva_enabled ? ho.server.extra_chuva : 0);
       min = Math.round(t * (100 - Math.min(ho.st.desconto_max, maior)) / 100);
-      const piso = hoPiso();
+      const piso = hoPiso(true);
       if (piso) min = Math.max(min, piso);
       min = Math.min(min, t);
     }
@@ -827,7 +831,7 @@
       const sw = (key, label) => `<button type="button" class="gm-switch" role="switch" data-ho-sw="${key}"
         aria-checked="${!!S[key]}" aria-label="${label}" ${dis}></button>`;
       const stepper = (key, label, passo) => {
-        const lim = D.limites[{ desconto_max: 'hora_off_desconto_max', margem_minima: 'margem_minima', pico_pct: 'hora_pico_pct' }[key]];
+        const lim = D.limites[HO_LIMITE[key]];
         const v = S[key];
         return `<div class="gm-step">
           <button type="button" data-ho-step="${key}" data-ho-d="-${passo}" ${!hoPode() || v - passo < lim.min ? 'disabled' : ''} aria-label="Diminuir ${label}">${ic('minus', 16)}</button>
@@ -836,7 +840,9 @@
         </div>`;
       };
       const exemplo = D.servicos.find(s => S.servicos[s.id]);
-      const piso = hoPiso();
+      const piso = hoPiso(false), pisoLm = hoPiso(true);
+      // Piso a 10% da tabela ou menos: a Hora Off quase não consegue descontar.
+      const travados = D.servicos.filter(s => S.servicos[s.id] && pisoLm && pisoLm >= s.price * 0.9);
 
       let html = IS_ATTENDANT ? `<div class="gm-banner info">${ic('info', 16)}<span>Só o dono muda a Hora Off e a Hora Pico.</span></div>` : '';
 
@@ -871,17 +877,30 @@
           <div class="gm-ho-lim"><label class="gm-label" style="margin:0">Desconto máximo</label>
             ${stepper('desconto_max', 'o desconto máximo', 5)}
             <div class="gm-hint" style="margin:0">Somando a escada e a chuva, nunca passa disso.</div></div>
+          <div class="gm-ho-lim"><label class="gm-label" style="margin:0" for="ho-custo">Custo de uma lavagem a mais</label>
+            <div class="gm-step" style="padding:0 14px;gap:6px">
+              <span style="font-family:'Space Grotesk',sans-serif;font-weight:600;color:var(--graphite)">R$</span>
+              <input id="ho-custo" data-ho-custo value="${S.custo_lavagem != null ? esc(String(S.custo_lavagem).replace('.', ',')) : ''}"
+                placeholder="8" inputmode="decimal" maxlength="7" ${dis}
+                style="width:72px;height:44px;text-align:left;font-size:18px">
+            </div>
+            <div class="gm-hint" style="margin:0">Produto, comissão do lavador e um pouco de água e luz. Aluguel e salários não entram: você paga de qualquer jeito.</div></div>
+          <div class="gm-ho-lim"><label class="gm-label" style="margin:0">Taxas sobre a venda</label>
+            ${stepper('taxas_pct', 'as taxas sobre a venda', 1)}
+            <div class="gm-hint" style="margin:0">Imposto e taxa do cartão ou Pix. No Last Minute, os ${D.taxa_loov_last_minute}% da Loov entram sozinhos.</div></div>
           <div class="gm-ho-lim"><label class="gm-label" style="margin:0">Margem mínima</label>
             ${stepper('margem_minima', 'a margem mínima', 5)}
-            <div class="gm-hint" style="margin:0">${D.custo
-              ? `Seu custo por lavagem em ${esc(nomeMes(D.custo.mes))} foi <b>${money(D.custo.valor)}</b> (${money(D.custo.total)} ÷ ${D.custo.lavagens} lavagens). Com ${S.margem_minima}%, nada sai por menos de <b>${reais(piso)}</b>.`
-              : `Lance seus <a href="/owner/monthly_costs">custos do mês</a> pra Loov proteger sua margem. Sem eles, vale só o desconto máximo.`}</div></div>
-        </div>`;
+            <div class="gm-hint" style="margin:0">O que precisa sobrar de cada lavagem com desconto, depois do custo e das taxas.</div></div>
+        </div>
+        <div class="gm-ho-value">${ic('shield', 16)}<span>${piso
+          ? `Nada sai por menos de <b>${reais(piso)}</b> no agendamento e <b>${reais(pisoLm)}</b> no Last Minute. Conta: ${money(S.custo_lavagem)} ÷ (1 − ${S.taxas_pct}% − ${S.margem_minima}%).`
+          : `Informe o custo de uma lavagem a mais pra Loov proteger sua margem. Sem ele, vale só o desconto máximo.`}</span></div>
+        ${travados.length ? `<div class="gm-banner warn" style="margin:12px 0 0">${ic('alert-triangle', 16)}<span>Com esses números, a Hora Off quase não consegue dar desconto em ${esc(travados.map(s => s.title).join(', '))}: o piso fica perto da tabela. Confira o custo de uma lavagem a mais.</span></div>` : ''}`;
 
       // 3. Hora Off
-      const escada = [...D.escada].sort((a, b) => b.horas - a.horas);
+      const escada = [...D.escada].sort((a, b) => b.minutos - a.minutos);
       const degraus = [
-        ...escada.map((e, i) => ({ pct: e.pct, txt: i === 0 ? `a partir de ${e.horas}h antes` : `${e.horas}h antes` })),
+        ...escada.map((e, i) => ({ pct: e.pct, txt: i === 0 ? `a partir de ${fmtMin(e.minutos)} antes` : `${fmtMin(e.minutos)} antes` })),
         { pct: D.desconto_last_minute, txt: '30 min antes · Last Minute' },
       ];
       const cores = ['var(--coral-100)', 'var(--coral-300)', 'var(--coral-500)', 'var(--coral-700)'];
@@ -892,7 +911,7 @@
         <div class="gm-ho-card-b">
           <div class="gm-ho-ss" style="margin:0">Quanto mais perto do horário, maior o desconto. Quem agenda com antecedência paga a tabela.</div>
           <div class="gm-ho-ladder">${degraus.map((g, i) => `<div><div class="gm-ho-bar"><i style="height:${24 + i * 20}px;background:${cores[i]}"></i></div><b>−${g.pct}%</b><span>${g.txt}</span></div>`).join('')}</div>
-          <div class="gm-hint" style="margin:0">Seu lava-rápido ganha o selo Hora Off no app e no site quando há horário com desconto nas próximas ${escada[0].horas}h.</div>
+          <div class="gm-hint" style="margin:0">Seu lava-rápido ganha o selo Hora Off no app e no site quando há horário com desconto nas próximas ${fmtMin(escada[0].minutos)}.</div>
           <div class="gm-ho-row">${ic('cloud-rain', 18)}
             <div style="flex:1;min-width:0"><div class="gm-ho-row-t">Chuva prevista no bairro</div>
               <div class="gm-ho-row-s">Mais −${D.extra_chuva}% nos horários fracos do dia. Horário normal e forte não muda com chuva.</div></div>
@@ -1062,6 +1081,17 @@
   // ── Eventos ───────────────────────────────────────────────────────────
   const root = document.querySelector('.gm');
 
+  // Custo de uma lavagem a mais: aplica ao sair do campo ou no Enter (o
+  // re-render a cada tecla tiraria o foco no meio da digitação).
+  root.addEventListener('change', e => {
+    if (!('hoCusto' in e.target.dataset) || !hoPode()) return;
+    const bruto = e.target.value.trim().replace(/\./g, '').replace(',', '.');
+    const n = parseFloat(bruto);
+    if (bruto && (isNaN(n) || n < 0 || n > 1000)) toast('error', 'Informe o custo em reais, por exemplo 8 ou 7,50.');
+    ho.st.custo_lavagem = bruto && !isNaN(n) && n > 0 && n <= 1000 ? Math.round(n * 100) / 100 : null;
+    render();
+  });
+
   root.addEventListener('input', e => {
     const f = e.target.dataset.f;
     if (f) {
@@ -1128,7 +1158,7 @@
       if (d.hoSw)   { ho.st[d.hoSw] = !ho.st[d.hoSw]; render(); return; }
       if (d.hoSvc)  { ho.st.servicos[d.hoSvc] = !ho.st.servicos[d.hoSvc]; render(); return; }
       if (d.hoStep) {
-        const lim = ho.server.limites[{ desconto_max: 'hora_off_desconto_max', margem_minima: 'margem_minima', pico_pct: 'hora_pico_pct' }[d.hoStep]];
+        const lim = ho.server.limites[HO_LIMITE[d.hoStep]];
         ho.st[d.hoStep] = Math.min(lim.max, Math.max(lim.min, ho.st[d.hoStep] + Number(d.hoD)));
         render(); return;
       }
@@ -1184,6 +1214,7 @@
 
   root.addEventListener('keydown', e => {
     if (e.key !== 'Enter' || e.target.tagName !== 'INPUT') return;
+    if ('hoCusto' in e.target.dataset) { e.preventDefault(); e.target.blur(); return; }
     const hf = e.target.closest('[data-hour-form]'); if (hf) { e.preventDefault(); return confirmHour(hf); }
     const sf = e.target.closest('[data-svc-form]');  if (sf) { e.preventDefault(); return confirmSvc(sf); }
   });
@@ -1395,7 +1426,8 @@
     const body = {
       hora_off_enabled: S.hora_off_enabled, hora_pico_enabled: S.hora_pico_enabled,
       chuva_enabled: S.chuva_enabled, desconto_max: S.desconto_max,
-      margem_minima: S.margem_minima, pico_pct: S.pico_pct,
+      margem_minima: S.margem_minima, pico_pct: S.pico_pct, taxas_pct: S.taxas_pct,
+      custo_lavagem: S.custo_lavagem ?? '',
       grade: Object.entries(S.grade).map(([k, nivel]) => { const [dia, faixa] = k.split('-'); return { dia: Number(dia), faixa, nivel }; }),
       servicos: Object.entries(S.servicos).map(([id, incluido]) => ({ id: Number(id), incluido })),
     };

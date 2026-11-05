@@ -25,11 +25,16 @@ class PrecoDinamico
   end
 
   # [antecedência máxima, % de desconto] — o primeiro degrau que couber vale.
-  # Quem agenda com mais de 12h de antecedência paga a tabela: o desconto é pra
-  # quem preenche um horário que ia sobrar, não pra quem viria de qualquer jeito.
-  ESCADA = [[2.hours, 15], [6.hours, 10], [12.hours, 5]].freeze
+  # Quem agenda com mais de 6h de antecedência paga a tabela: o desconto é pra
+  # quem preenche um horário que ia sobrar, não pra quem viria de qualquer
+  # jeito. Janela curta de propósito: desconto que começa cedo ensina o cliente
+  # a esperar, e aí ele deixa de agendar pelo preço cheio.
+  ESCADA = [[90.minutes, 15], [3.hours, 10], [6.hours, 5]].freeze
   DESCONTO_LAST_MINUTE = 20
   EXTRA_CHUVA          = 5
+  # Fatia da Loov no Last Minute (Appointment::COMMISSION_PCT): entra no piso
+  # de quem vende por ali, porque sai do que o dono recebe.
+  TAXA_LOOV_LAST_MINUTE = (Appointment::COMMISSION_PCT * 100).round
 
   attr_reader :car_wash, :agora
 
@@ -64,18 +69,32 @@ class PrecoDinamico
     return { min: tabela, max: tabela } unless aplica?(service)
 
     maior_desconto = DESCONTO_LAST_MINUTE + (car_wash.hora_off_chuva_enabled ? EXTRA_CHUVA : 0)
-    min = car_wash.hora_off_enabled ? com_limites(tabela, [car_wash.hora_off_desconto_max.to_i, maior_desconto].min) : tabela
+    min = car_wash.hora_off_enabled ? com_limites(tabela, [car_wash.hora_off_desconto_max.to_i, maior_desconto].min, true) : tabela
     max = car_wash.hora_pico_enabled ? (tabela * (100 + car_wash.hora_pico_pct) / 100.0).round.to_f : tabela
     { min: min, max: max }
   end
 
-  # Abaixo disto a Hora Off não vende: o custo médio de uma lavagem mais a
-  # margem mínima do dono. nil sem custos lançados.
-  def piso
-    return @piso if defined?(@piso)
-    custo  = car_wash.custo_por_lavagem(agora)
-    margem = car_wash.margem_minima.to_i.clamp(0, 90)
-    @piso  = custo && (custo[:valor] / (1 - margem / 100.0)).ceil.to_f
+  # Abaixo disto a Hora Off não vende. É a conta da margem de contribuição:
+  # num horário que ia ficar vazio, uma lavagem a mais só custa o variável
+  # (produto, comissão, um pouco de água e luz), e o preço precisa cobrir isso,
+  # as taxas sobre a venda e a margem mínima do dono:
+  #
+  #   piso = custo da lavagem ÷ (1 − taxas − margem)
+  #
+  # No Last Minute a fatia da Loov entra nas taxas. Sem o custo informado, nil:
+  # vale só o teto de desconto.
+  def piso(last_minute = false)
+    @piso ||= {}
+    return @piso[last_minute] if @piso.key?(last_minute)
+
+    custo = car_wash.custo_lavagem.to_f
+    return @piso[last_minute] = nil unless custo.positive?
+
+    fatias = car_wash.taxas_venda_pct.to_i + car_wash.margem_minima.to_i +
+             (last_minute ? TAXA_LOOV_LAST_MINUTE : 0)
+    # Taxa e margem somando 90% ou mais não deixam o que dividir: o piso fica
+    # dez vezes o custo, que já é "não dê desconto".
+    @piso[last_minute] = (custo / (1 - [fatias, 90].min / 100.0)).ceil.to_f
   end
 
   def aplica?(service)
@@ -99,7 +118,7 @@ class PrecoDinamico
 
     pct  += EXTRA_CHUVA if car_wash.hora_off_chuva_enabled && chuva?(slot.to_date)
     pct   = [pct, car_wash.hora_off_desconto_max.to_i].min
-    preco = com_limites(tabela, pct)
+    preco = com_limites(tabela, pct, last_minute)
     return pela_tabela(tabela) if preco >= tabela
 
     Resultado.new(preco: preco, tabela: tabela, tipo: "off", pct: pct)
@@ -121,9 +140,10 @@ class PrecoDinamico
 
   # Tabela menos o desconto, arredondado, nunca abaixo do piso nem acima da
   # tabela.
-  def com_limites(tabela, pct)
+  def com_limites(tabela, pct, last_minute)
     preco = (tabela * (100 - pct) / 100.0).round.to_f
-    preco = [preco, piso].max if piso
+    minimo = piso(last_minute)
+    preco = [preco, minimo].max if minimo
     [preco, tabela].min
   end
 
