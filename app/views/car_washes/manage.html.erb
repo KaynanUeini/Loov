@@ -362,7 +362,17 @@
   .gm-calc-tr b { color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .gm-calc-tr.total { background: var(--sand); color: var(--ink); font-weight: 600; font-size: 15px; }
   .gm-calc-tr.total b { font-family: 'Space Grotesk', sans-serif; font-size: 18px; }
-  .gm-calc-link { border: 0; background: none; padding: 0; color: var(--coral-700); font-size: 12.5px; font-weight: 600; text-decoration: underline; cursor: pointer; align-self: flex-start; }
+  /* Ação é botão, não link (Apple, Nike): pílula com contorno escuro, mesma
+     altura do campo ao lado. Contorno e não preenchido pra não disputar com
+     "Salvar alterações", que é a ação principal da tela. */
+  .gm-ho-custo-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .gm-ho-calc-btn {
+    display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 18px;
+    border-radius: 999px; border: 1.5px solid var(--ink); background: var(--paper); color: var(--ink);
+    font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s, color .15s;
+  }
+  .gm-ho-calc-btn:hover { background: var(--ink); color: var(--cream); }
+  .gm-ho-calc-btn:active { transform: scale(.97); }
   .gm-cf-banner {
     display: flex; gap: 12px; align-items: flex-start; margin-top: 14px;
     background: var(--coral-50); border: 1px solid var(--coral-100); border-radius: 16px; padding: 14px;
@@ -490,7 +500,7 @@
 
 <div class="gm-ov" id="gm-calc" hidden>
   <div class="gm-modal wide" role="dialog" aria-modal="true" aria-labelledby="gm-calc-t">
-    <h3 id="gm-calc-t">Quanto custa uma lavagem a mais?</h3>
+    <h3 id="gm-calc-t">Quanto custa cada lavagem?</h3>
     <p>Responda com o que você já sabe do dia a dia. A Loov faz a conta.</p>
     <div id="gm-calc-body"></div>
   </div>
@@ -525,6 +535,7 @@
   const CUSTOM_IC = {
     'hora-off':  '<circle cx="12" cy="12" r="9"/><path d="M12 12l3-3M12 12v5M9.8 14.8L12 17l2.2-2.2"/>',
     'hora-pico': '<circle cx="12" cy="12" r="9"/><path d="M12 12l3 3M12 12V7M9.8 9.2L12 7l2.2 2.2"/>',
+    'calc':      '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01"/>',
   };
   const ic = (name, size = 16) => CUSTOM_IC[name]
     ? `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${CUSTOM_IC[name]}</svg>`
@@ -734,7 +745,7 @@
           <div class="gm-calc-tr"><span>Lavador, por carro</span><b>${money(c.lavador)}</b></div>
           <div class="gm-calc-tr"><span>Produto: ${money(numBr(calc.r.produtos) || 0)} ÷ ${c.carrosMes} carros</span><b>${money(c.produto)}</b></div>
           <div class="gm-calc-tr"><span>Água e luz: metade de ${money(numBr(calc.r.agua_luz) || 0)} ÷ ${c.carrosMes} carros</span><b>${money(c.agua)}</b></div>
-          <div class="gm-calc-tr total"><span>Uma lavagem a mais</span><b>≈ ${reais(c.usar)}</b></div>
+          <div class="gm-calc-tr total"><span>Custo de lavagem</span><b>≈ ${reais(c.usar)}</b></div>
         </div>
         <div class="gm-hint">${c.carrosMes} carros no mês: ${c.carrosDia} por dia, ${c.dias} ${c.dias === 1 ? 'dia' : 'dias'} por semana.
           Estimamos que metade da conta de água e luz vem das lavagens; a outra metade chega mesmo sem lavar nada.</div>
@@ -988,15 +999,17 @@
           <div class="gm-ho-lim"><label class="gm-label" style="margin:0">Desconto máximo</label>
             ${stepper('desconto_max', 'o desconto máximo', 5)}
             <div class="gm-hint" style="margin:0">Somando a escada e a chuva, nunca passa disso.</div></div>
-          <div class="gm-ho-lim"><label class="gm-label" style="margin:0" for="ho-custo">Custo de uma lavagem a mais</label>
-            <div class="gm-step" style="padding:0 14px;gap:6px">
-              <span style="font-family:'Space Grotesk',sans-serif;font-weight:600;color:var(--graphite)">R$</span>
-              <input id="ho-custo" data-ho-custo value="${S.custo_lavagem != null ? esc(String(S.custo_lavagem).replace('.', ',')) : ''}"
-                placeholder="8" inputmode="decimal" maxlength="7" ${dis}
-                style="width:72px;height:44px;text-align:left;font-size:18px">
+          <div class="gm-ho-lim"><label class="gm-label" style="margin:0" for="ho-custo">Custo de lavagem</label>
+            <div class="gm-ho-custo-row">
+              <div class="gm-step" style="padding:0 14px;gap:6px">
+                <span style="font-family:'Space Grotesk',sans-serif;font-weight:600;color:var(--graphite)">R$</span>
+                <input id="ho-custo" data-ho-custo value="${S.custo_lavagem != null ? esc(String(S.custo_lavagem).replace('.', ',')) : ''}"
+                  placeholder="8" inputmode="decimal" maxlength="7" ${dis}
+                  style="width:64px;height:44px;text-align:left;font-size:18px">
+              </div>
+              ${hoPode() ? `<button type="button" class="gm-ho-calc-btn" data-ho-calc>${ic('calc', 16)} Calcular</button>` : ''}
             </div>
-            <div class="gm-hint" style="margin:0">Produto, comissão do lavador e um pouco de água e luz. Aluguel e salários não entram: você paga de qualquer jeito.</div>
-            ${hoPode() ? `<button type="button" class="gm-calc-link" data-ho-calc>Não sei, calcular pra mim</button>` : ''}</div>
+            <div class="gm-hint" style="margin:0">Quanto gasta cada carro lavado: produto, comissão do lavador e um pouco de água e luz. Aluguel e salários não entram. Não sabe? Toque em Calcular.</div></div>
           <div class="gm-ho-lim"><label class="gm-label" style="margin:0">Taxas sobre a venda</label>
             ${stepper('taxas_pct', 'as taxas sobre a venda', 1)}
             <div class="gm-hint" style="margin:0">Imposto e taxa do cartão ou Pix. No Last Minute, os ${D.taxa_loov_last_minute}% da Loov entram sozinhos.</div></div>
@@ -1006,8 +1019,8 @@
         </div>
         <div class="gm-ho-value">${ic('shield', 16)}<span>${piso
           ? `Nada sai por menos de <b>${reais(piso)}</b> no agendamento e <b>${reais(pisoLm)}</b> no Last Minute. Conta: ${money(S.custo_lavagem)} ÷ (1 − ${S.taxas_pct}% − ${S.margem_minima}%).`
-          : `Informe o custo de uma lavagem a mais pra Loov proteger sua margem. Sem ele, vale só o desconto máximo.`}</span></div>
-        ${travados.length ? `<div class="gm-banner warn" style="margin:12px 0 0">${ic('alert-triangle', 16)}<span>Com esses números, a Hora Off quase não consegue dar desconto em ${esc(travados.map(s => s.title).join(', '))}: o piso fica perto da tabela. Confira o custo de uma lavagem a mais.</span></div>` : ''}`;
+          : `Informe o custo de lavagem pra Loov proteger sua margem. Sem ele, vale só o desconto máximo.`}</span></div>
+        ${travados.length ? `<div class="gm-banner warn" style="margin:12px 0 0">${ic('alert-triangle', 16)}<span>Com esses números, a Hora Off quase não consegue dar desconto em ${esc(travados.map(s => s.title).join(', '))}: o piso fica perto da tabela. Confira o custo de lavagem.</span></div>` : ''}`;
 
       // 3. Hora Off
       const escada = [...D.escada].sort((a, b) => b.minutos - a.minutos);
