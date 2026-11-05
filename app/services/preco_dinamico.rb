@@ -6,8 +6,8 @@
 # o caminho que cria recusava), por isso nenhum controller faz conta de preço.
 #
 # As regras, na ordem em que são aplicadas:
-#   - Hora Off e Hora Pico desligadas: tudo como antes. O agendamento comum sai
-#     pela tabela e o Last Minute pelo ajuste em % do serviço.
+#   - Hora Off e Hora Pico desligadas: tudo pela tabela, o Last Minute também
+#     (o ajuste em % por serviço foi aposentado; ver Service#preco_last_minute).
 #   - Só entram lavagens (ou o serviço que o dono incluiu). O resto, tabela.
 #   - Horário fraco, Hora Off ligada: desconto que cresce conforme o horário
 #     chega perto ainda livre (ESCADA), maior no Last Minute, mais um extra com

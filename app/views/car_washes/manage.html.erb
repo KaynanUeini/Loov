@@ -159,67 +159,91 @@
   .gm-ibtn:disabled { opacity: .5; cursor: wait; }
   .gm-empty { color: var(--ash); font-size: 13px; margin: 4px 0 10px; }
 
-  /* ── Serviços: Agendamento | Last Minute ──
-     Controle segmentado da Apple (trilho sand, segmento ativo em paper com
-     sombra leve) separa as duas formas de vender. No Last Minute, um único
-     ajuste em %: stepper grande no centro (− e + de 5 em 5, número
-     editável, como o seletor de quantidade da Apple Store) e a tabela de
-     preços logo abaixo, no estilo de ficha técnica da wiemer: rótulos mono,
-     linhas finas, o número que importa em coral. */
-  .gm-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 3px; background: var(--sand); border-radius: 12px; margin-bottom: 16px; }
-  .gm-seg button {
-    display: flex; align-items: center; justify-content: center; gap: 6px;
-    border: 0; background: transparent; border-radius: 10px; padding: 10px 8px;
-    font-size: 13.5px; font-weight: 600; color: var(--graphite); cursor: pointer;
-    transition: background .15s, color .15s, box-shadow .15s;
+  /* ── Hora Off e Hora Pico ──
+     Ordem de leitura = ordem de decisão: a grade diz ONDE o preço muda, os
+     limites dizem ATÉ ONDE, e cada função vem num cartão próprio com o seu
+     interruptor (Hora Off coral claro, Hora Pico escuro), pra ler como duas
+     coisas diferentes e não como continuação uma da outra. */
+  .gm-ho-step { display: flex; align-items: baseline; gap: 10px; margin: 24px 0 12px; }
+  .gm-ho-step:first-of-type { margin-top: 8px; }
+  .gm-ho-num {
+    width: 24px; height: 24px; border-radius: 50%; flex: none;
+    background: var(--ink); color: var(--cream);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 13px;
   }
-  .gm-seg button:hover { color: var(--ink); }
-  .gm-seg button.on { background: var(--paper); color: var(--ink); box-shadow: 0 1px 3px rgba(40,35,28,.14), 0 0 0 .5px rgba(40,35,28,.06); }
-  .gm-seg button svg { color: var(--coral-500); }
-  .gm-seg button { white-space: nowrap; }
-  .gm-seg-tag { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--coral-50); color: var(--coral-700); font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
-
-  /* Um cartão por lavagem: nome e preços em cima (ficha técnica — rótulo
-     mono sobre o número), stepper embaixo. Cada lavagem com o seu ajuste. */
-  .gm-lmsvc { background: var(--cream); border: 1px solid var(--stone); border-radius: 16px; padding: 14px; margin-bottom: 10px; }
-  .gm-lmsvc.on { border-color: var(--coral-300); }
-  .gm-lmsvc-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-  .gm-lmsvc-prices { display: flex; gap: 18px; text-align: right; }
-  .gm-lmsvc-lab { display: block; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1.2px; color: var(--ash); margin-bottom: 3px; }
-  .gm-lmsvc-ctl { display: flex; align-items: center; gap: 14px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--stone); flex-wrap: wrap; }
-  .gm-lmstep-row { display: flex; align-items: center; gap: 10px; }
-  .gm-lmstep-btn {
-    width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
-    border: 1px solid var(--stone); background: var(--paper); color: var(--ink);
-    display: flex; align-items: center; justify-content: center; cursor: pointer;
-    transition: border-color .15s, background .15s, transform .08s;
+  .gm-ho-st { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 16px; color: var(--ink); }
+  .gm-ho-ss { color: var(--graphite); font-size: 13px; line-height: 1.5; margin-top: 2px; }
+  .gm-ho-grid-wrap { overflow-x: auto; }
+  /* Cabe inteira numa tela de 360px (6 dias de pelo menos 36px); só rola de
+     lado quando o lava-rápido abre os 7 dias numa tela estreita. */
+  .gm-ho-grid { display: grid; gap: 5px; min-width: 300px; }
+  .gm-ho-dh { text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; color: var(--graphite); padding: 2px 0; }
+  .gm-ho-fx { display: flex; flex-direction: column; justify-content: center; }
+  .gm-ho-fx b { font-size: 13px; color: var(--ink); }
+  .gm-ho-fx span { font-size: 11px; color: var(--graphite); }
+  .gm-ho-cell {
+    height: 44px; border-radius: 10px; border: 1px solid var(--stone); background: var(--cream);
+    display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform .08s;
   }
-  .gm-lmstep-btn:hover { border-color: var(--graphite); }
-  .gm-lmstep-btn:active { transform: scale(.94); }
-  .gm-lmstep-val { display: flex; align-items: baseline; justify-content: center; min-width: 92px; cursor: text; }
-  .gm-lmstep-val input {
-    width: 3.4ch; min-width: 0; border: 0 !important; background: none !important; box-shadow: none !important;
-    padding: 0 !important; text-align: right; outline: none;
-    font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 30px; line-height: 1; letter-spacing: -1px;
-    color: var(--ink); font-variant-numeric: tabular-nums;
+  .gm-ho-cell:active { transform: scale(.95); }
+  .gm-ho-cell:disabled { cursor: default; transform: none; }
+  .gm-ho-cell.fraco { background: var(--coral-50); border-color: var(--coral-100); color: var(--coral-700); }
+  .gm-ho-cell.forte { background: var(--ink); border-color: var(--ink); color: var(--cream); }
+  .gm-ho-legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 10px; font-size: 12px; color: var(--graphite); }
+  .gm-ho-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 4px; margin-right: 6px; vertical-align: -1px; border: 1px solid var(--stone); background: var(--cream); }
+  .gm-ho-legend i.fraco { background: var(--coral-50); border-color: var(--coral-100); }
+  .gm-ho-legend i.forte { background: var(--ink); border-color: var(--ink); }
+  .gm-ho-lims { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .gm-ho-lim { background: var(--cream); border: 1px solid var(--stone); border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .gm-ho-lim .gm-step { align-self: flex-start; }
+  .gm-step-v { width: 56px; text-align: center; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 18px; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .gm-ho-value { display: flex; gap: 12px; align-items: center; margin-top: 14px; padding: 14px 16px; border-radius: 14px; background: var(--sand); color: var(--ink); font-size: 13.5px; line-height: 1.5; }
+  .gm-ho-value svg { flex: none; }
+  .gm-ho-card { margin-top: 26px; border-radius: 18px; overflow: hidden; border: 1px solid var(--coral-100); }
+  .gm-ho-card.pico { margin-top: 16px; border-color: var(--ink); }
+  .gm-ho-card-h { display: flex; align-items: center; gap: 12px; padding: 16px 18px; background: var(--coral-50); }
+  .gm-ho-card.pico .gm-ho-card-h { background: var(--ink); color: var(--cream); }
+  .gm-ho-card-ic { width: 36px; height: 36px; border-radius: 50%; flex: none; background: var(--paper); color: var(--coral-700); display: flex; align-items: center; justify-content: center; }
+  .gm-ho-card.pico .gm-ho-card-ic { background: rgba(250,250,246,.12); color: var(--cream); }
+  .gm-ho-card-t { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 18px; }
+  .gm-ho-card-s { font-size: 13px; color: var(--graphite); }
+  .gm-ho-card.pico .gm-ho-card-s { color: var(--stone); }
+  .gm-ho-card-b { padding: 16px 18px; background: var(--paper); display: flex; flex-direction: column; gap: 12px; }
+  /* Barra numa caixa de altura fixa, alinhada embaixo: o texto que quebra em
+     mais linhas no celular não desalinha os degraus. */
+  .gm-ho-ladder { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; align-items: start; }
+  .gm-ho-bar { height: 84px; display: flex; align-items: flex-end; }
+  .gm-ho-ladder i { display: block; width: 100%; border-radius: 8px 8px 0 0; }
+  .gm-ho-ladder b { display: block; margin-top: 6px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 18px; color: var(--coral-700); }
+  .gm-ho-ladder span { font-size: 12px; color: var(--graphite); }
+  .gm-ho-row { display: flex; align-items: center; gap: 14px; padding: 12px 14px; background: var(--cream); border: 1px solid var(--stone); border-radius: 14px; }
+  .gm-ho-row svg { flex: none; }
+  .gm-ho-row-t { font-size: 14.5px; font-weight: 600; color: var(--ink); }
+  .gm-ho-row-s { font-size: 12.5px; color: var(--graphite); margin-top: 2px; }
+  .gm-switch {
+    width: 52px; height: 32px; border-radius: 999px; border: 0; padding: 0; flex: none;
+    background: var(--stone); position: relative; cursor: pointer; transition: background .15s;
   }
-  .gm-lmstep-val input:focus { color: var(--coral-700); }
-  .gm-lmstep-val span { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 18px; color: var(--graphite); margin-left: 1px; }
-  .gm-lmstep-cap { font-size: 12.5px; font-weight: 600; color: var(--coral-700); }
-  .gm-lmstep-cap.zero { color: var(--graphite); font-weight: 500; }
-  .gm-lmtab-t { color: var(--ink); font-size: 14.5px; font-weight: 600; }
-  .gm-lmtab-d { color: var(--graphite); font-size: 11.5px; margin-top: 2px; }
-  .gm-lmtab-n { color: var(--graphite); font-size: 14px; font-variant-numeric: tabular-nums; }
-  .gm-lmtab-lm { color: var(--coral-700); font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 17px; font-variant-numeric: tabular-nums; }
-  .gm-lm-warn {
-    display: flex; gap: 8px; align-items: flex-start; margin-top: 12px; text-align: left;
-    background: #fbf3dc; border: 1px solid #ecd9a0; color: #6b5414;
-    border-radius: 12px; padding: 10px 12px; font-size: 12.5px; line-height: 1.45;
+  .gm-switch::after {
+    content: ""; position: absolute; left: 3px; top: 3px; width: 26px; height: 26px; border-radius: 50%;
+    background: var(--paper); box-shadow: 0 1px 2px rgba(0,0,0,.15); transition: transform .15s;
   }
-  .gm-lm-warn svg { flex-shrink: 0; margin-top: 1px; }
-  .gm-lm-note { color: var(--ash); font-size: 12px; margin-top: 12px; }
-  @media (max-width: 480px) {
-    .gm-lmsvc-prices { width: 100%; justify-content: flex-start; text-align: left; }
+  .gm-switch[aria-checked="true"] { background: var(--ink); }
+  .gm-switch[aria-checked="true"]::after { transform: translateX(20px); }
+  .gm-ho-card.pico .gm-switch { background: rgba(250,250,246,.25); }
+  .gm-ho-card.pico .gm-switch[aria-checked="true"] { background: var(--cream); }
+  .gm-ho-card.pico .gm-switch[aria-checked="true"]::after { background: var(--ink); }
+  .gm-switch:disabled { opacity: .55; cursor: default; }
+  .gm-ho-pico { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+  .gm-ho-svc { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--stone); }
+  .gm-ho-svc:first-child { border-top: 0; }
+  .gm-ho-money { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .gm-ho-pill { padding: 7px 14px; border-radius: 999px; border: 1px solid var(--stone); background: var(--paper); color: var(--ink); font-size: 12.5px; font-weight: 600; cursor: pointer; }
+  .gm-ho-pill:disabled { opacity: .55; cursor: default; }
+  @media (max-width: 560px) {
+    .gm-ho-lims { grid-template-columns: 1fr; }
+    .gm-ho-ladder b { font-size: 16px; }
   }
 
   .gm-add {
@@ -404,7 +428,7 @@
   <div class="gm-wrap">
     <div class="gm-head">
       <%= render "shared/page_head", back_href: voltar_do_dono, back_id: "gm-back", eyebrow: "Configuração", title: "Gerenciar",
-                 lead: safe_join(["Endereço, horários, serviços e fechamentos de ", content_tag(:strong, @car_wash.name), "."]) %>
+                 lead: safe_join(["Endereço, horários, serviços, Hora Off e fechamentos de ", content_tag(:strong, @car_wash.name), "."]) %>
     </div>
 
     <% if @is_attendant %>
@@ -472,24 +496,22 @@
   const DAY_SHORT = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
   const CATEGORIES = <%= raw Service::CATEGORIES.to_json %>;
 
-  const ic = (name, size = 16) => window.feather?.icons[name]
+  // Relógio com a seta pra baixo (Hora Off) e pra cima (Hora Pico): o mesmo
+  // desenho do app e do site do cliente, que o Feather não tem.
+  const CUSTOM_IC = {
+    'hora-off':  '<circle cx="12" cy="12" r="9"/><path d="M12 12l3-3M12 12v5M9.8 14.8L12 17l2.2-2.2"/>',
+    'hora-pico': '<circle cx="12" cy="12" r="9"/><path d="M12 12l3 3M12 12V7M9.8 9.2L12 7l2.2 2.2"/>',
+  };
+  const ic = (name, size = 16) => CUSTOM_IC[name]
+    ? `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${CUSTOM_IC[name]}</svg>`
+    : window.feather?.icons[name]
     ? feather.icons[name].toSvg({ width: size, height: size, 'stroke-width': 2 }) : '';
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
   const money = n => 'R$ ' + (parseFloat(n) || 0).toFixed(2).replace('.', ',');
 
-  // Last Minute só vende lavagem — mesma regra de Service.last_minute.
-  const isLm = s => s.category === 'Lavagem' || (!s.category && /lavagem/i.test(s.title || ''));
-  // Ajuste do Last Minute: um % por lavagem (services.last_minute_pct).
-  // Mesmo cálculo de Service#preco_last_minute: reais inteiros, mínimo R$ 1.
-  const LM_PASSO = 5, LM_ALERTA = 30, LM_MIN = -95, LM_MAX = 1000;
-  const pctDe = s => parseInt(s.lmPct, 10) || 0;
-  const lmDe = (price, pct) => {
-    const p = parseFloat(price) || 0;
-    return pct === 0 ? p : Math.max(1, Math.round(p * (100 + pct) / 100));
-  };
-  const fmtPct = n => (n > 0 ? '+' : '') + n + '%';
-  const clampPct = n => Math.min(LM_MAX, Math.max(LM_MIN, Math.round(n)));
-  const lmAjustados = () => activeSvcs().filter(s => isLm(s) && pctDe(s) !== 0).length;
+  const reais = n => 'R$ ' + Math.round(n).toLocaleString('pt-BR');
+  const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  const nomeMes = ym => MESES[(parseInt(String(ym).split('-')[1], 10) || 1) - 1];
   let localSeq = 0;
   const lid = () => `_l${++localSeq}`;
 
@@ -522,7 +544,6 @@
       services: (d.services || []).map(s => ({
         _l: lid(), id: s.id, title: s.title || '', category: s.category || '',
         description: s.description || '', price: String(s.price ?? ''), duration: String(s.duration ?? ''),
-        lmPct: String(s.last_minute_pct ?? 0),
         _destroy: false,
       })),
     };
@@ -536,7 +557,7 @@
     active: 'info',                       // painel do desktop
     open: new Set(),                      // acordeões do celular (todos fechados, como no app)
     editHour: null, addHour: false, addDays: new Set(),
-    editSvc: null, addSvc: false, svcTab: 'agenda',
+    editSvc: null, addSvc: false,
     addClosure: false, savingClosure: false, removingClosure: null,
     saving: false, checking: false, cep: false,
   };
@@ -547,7 +568,68 @@
       hours: s.hours.map(({ _l, ...h }) => h),
       services: s.services.map(({ _l, ...x }) => x) };
   }
-  const isDirty = () => JSON.stringify(strip(st)) !== original;
+  const mainDirty = () => JSON.stringify(strip(st)) !== original;
+  const isDirty = () => mainDirty() || hoDirty();
+
+  // ── Hora Off e Hora Pico ─────────────────────────────────────────────
+  // Estado próprio porque mora em outro endpoint (/owner/hora_off), mas salva
+  // no mesmo botão que o resto: pro dono é uma tela só.
+  const HO_URL = '/owner/hora_off';
+  const FAIXA_NOME = { manha: 'Manhã', almoco: 'Almoço', tarde: 'Tarde', noite: 'Noite' };
+  const FAIXA_HORA = { manha: 'até 12h', almoco: '12h às 14h', tarde: '14h às 18h', noite: 'depois das 18h' };
+  const NIVEL_NOME = { fraco: 'fraco', normal: 'normal', forte: 'forte' };
+  const PROXIMO    = { fraco: 'normal', normal: 'forte', forte: 'fraco' };
+  const ho = { server: null, st: null, original: '', loading: CAN_CHECK, error: false };
+
+  function hoFromServer(d) {
+    return {
+      hora_off_enabled: !!d.hora_off_enabled, hora_pico_enabled: !!d.hora_pico_enabled,
+      chuva_enabled: !!d.chuva_enabled, desconto_max: d.desconto_max,
+      margem_minima: d.margem_minima, pico_pct: d.pico_pct,
+      grade: Object.fromEntries(d.grade.map(c => [`${c.dia}-${c.faixa}`, c.nivel])),
+      servicos: Object.fromEntries(d.servicos.map(s => [s.id, !!s.incluido])),
+    };
+  }
+  function hoSet(d) {
+    ho.server = d; ho.st = hoFromServer(d); ho.original = JSON.stringify(ho.st);
+  }
+  function hoDirty() { return !!ho.st && JSON.stringify(ho.st) !== ho.original; }
+  const hoPode = () => !IS_ATTENDANT && !!ho.st;
+
+  async function hoLoad() {
+    if (!CAN_CHECK) return;
+    try {
+      const r = await fetch(HO_URL, { headers: { Accept: 'application/json' } });
+      if (!r.ok) throw new Error();
+      hoSet(await r.json()); ho.error = false;
+    } catch { ho.error = true; }
+    finally { ho.loading = false; render(); }
+  }
+
+  // Mesmas contas de PrecoDinamico (piso e faixa), pra a prévia acompanhar o
+  // que o dono mexe antes de salvar. Quem decide o preço de verdade é o
+  // servidor.
+  function hoPiso() {
+    const c = ho.server?.custo;
+    if (!c) return null;
+    const m = Math.min(90, Math.max(0, ho.st.margem_minima));
+    return Math.ceil(c.valor / (1 - m / 100));
+  }
+  function hoFaixa(s) {
+    const t = s.price;
+    if (!ho.st.servicos[s.id]) return null;
+    let min = t;
+    if (ho.st.hora_off_enabled) {
+      const maior = ho.server.desconto_last_minute + (ho.st.chuva_enabled ? ho.server.extra_chuva : 0);
+      min = Math.round(t * (100 - Math.min(ho.st.desconto_max, maior)) / 100);
+      const piso = hoPiso();
+      if (piso) min = Math.max(min, piso);
+      min = Math.min(min, t);
+    }
+    const max = ho.st.hora_pico_enabled ? Math.round(t * (100 + ho.st.pico_pct) / 100) : t;
+    return { min, max };
+  }
+  const hoContar = nivel => Object.values(ho.st.grade).filter(n => n === nivel).length;
   const activeHours = () => st.hours.filter(h => !h._destroy);
   const activeSvcs  = () => st.services.filter(s => !s._destroy);
   const defCap = () => parseInt(st.capacity, 10) || 1;
@@ -565,8 +647,14 @@
     }
     if (key === 'services') {
       const n = activeSvcs().length;
-      const aj = lmAjustados();
-      return n ? `${n} ${n === 1 ? 'serviço' : 'serviços'}${aj ? ` · ${aj} com ajuste no Last Minute` : ''}` : 'Nenhum serviço cadastrado';
+      return n ? `${n} ${n === 1 ? 'serviço' : 'serviços'}` : 'Nenhum serviço cadastrado';
+    }
+    if (key === 'precos') {
+      if (!ho.st) return ho.loading ? 'Carregando…' : 'Indisponível agora';
+      const on = [ho.st.hora_off_enabled && 'Off', ho.st.hora_pico_enabled && 'Pico'].filter(Boolean);
+      const grade = `${hoContar('fraco')} fracos · ${hoContar('forte')} fortes`;
+      if (!on.length) return `Desligadas · ${grade}`;
+      return `${on.length === 2 ? 'Off e Pico ligadas' : `Hora ${on[0]} ligada`} · ${grade}`;
     }
     const n = closures.length;
     return n ? `${n} ${n === 1 ? 'programado' : 'programados'}` : 'Nenhum programado';
@@ -577,7 +665,8 @@
   const SECTIONS = [
     { key: 'info',     title: 'Informações básicas',   icon: 'home',     lead: 'Nome e endereço que o cliente vê e que posiciona a loja no mapa.' },
     { key: 'hours',    title: 'Horários e capacidade', icon: 'clock',    lead: 'Quando a loja abre e quantos carros atende ao mesmo tempo.' },
-    { key: 'services', title: 'Serviços',              icon: 'tool',     lead: 'O que o cliente pode agendar, com preço e duração.' },
+    { key: 'services', title: 'Serviços',              icon: 'tool',     lead: 'O que o cliente pode agendar, com preço de tabela e duração.' },
+    { key: 'precos',   title: 'Hora Off e Hora Pico',  icon: 'hora-off', lead: 'O preço segue a procura: horário que ia ficar vazio fica mais barato, horário quase lotado fica mais caro no Last Minute.' },
     { key: 'closures', title: 'Fechamentos',           icon: 'calendar', lead: '' },
   ];
 
@@ -704,17 +793,7 @@
 
     services() {
       const svcs = activeSvcs();
-      const aj = lmAjustados();
-      // Duas formas de vender, cada uma no seu lugar (controle segmentado).
-      let html = `
-        <div class="gm-seg" role="tablist" aria-label="Tipo de venda">
-          <button type="button" role="tab" data-seg="agenda" class="${ui.svcTab === 'agenda' ? 'on' : ''}"
-            aria-selected="${ui.svcTab === 'agenda'}">${ic('calendar', 14)} Agendamento</button>
-          <button type="button" role="tab" data-seg="lm" class="${ui.svcTab === 'lm' ? 'on' : ''}"
-            aria-selected="${ui.svcTab === 'lm'}">${ic('zap', 14)} Last Minute${aj ? ` <span class="gm-seg-tag" title="${aj} ${aj === 1 ? 'lavagem ajustada' : 'lavagens ajustadas'}">${aj}</span>` : ''}</button>
-        </div>`;
-      if (ui.svcTab === 'lm') return html + lmView(svcs);
-      html += svcs.length ? '' : `<div class="gm-empty">Nenhum serviço cadastrado.</div>`;
+      let html = svcs.length ? '' : `<div class="gm-empty">Nenhum serviço cadastrado.</div>`;
       svcs.forEach(s => {
         const desc = s.description ? ` · ${esc(s.description.slice(0, 40))}` : '';
         html += `
@@ -733,6 +812,119 @@
       });
       html += ui.addSvc ? svcForm(null)
         : `<button type="button" class="gm-add" data-add="svc">${ic('plus', 14)} Adicionar serviço</button>`;
+      html += `<div class="gm-ho-value">${ic('zap', 16)}<span style="flex:1">O preço do Last Minute agora segue a procura de cada horário.</span>
+        <button type="button" class="gm-ho-pill" data-rail="precos">Ver Hora Off e Pico</button></div>`;
+      return html;
+    },
+
+    precos() {
+      if (!CAN_CHECK) return `<p class="gm-help">A Hora Off e a Hora Pico são ajustadas no lava-rápido ativo da sua conta. Entre por ele pra mudar.</p>`;
+      if (!ho.st) return ho.loading
+        ? `<div class="gm-empty">${ic('loader', 14)} Carregando…</div>`
+        : `<div class="gm-empty">Não foi possível carregar agora. <button type="button" class="gm-ho-pill" data-ho-retry>Tentar de novo</button></div>`;
+
+      const S = ho.st, D = ho.server, dis = hoPode() ? '' : 'disabled';
+      const sw = (key, label) => `<button type="button" class="gm-switch" role="switch" data-ho-sw="${key}"
+        aria-checked="${!!S[key]}" aria-label="${label}" ${dis}></button>`;
+      const stepper = (key, label, passo) => {
+        const lim = D.limites[{ desconto_max: 'hora_off_desconto_max', margem_minima: 'margem_minima', pico_pct: 'hora_pico_pct' }[key]];
+        const v = S[key];
+        return `<div class="gm-step">
+          <button type="button" data-ho-step="${key}" data-ho-d="-${passo}" ${!hoPode() || v - passo < lim.min ? 'disabled' : ''} aria-label="Diminuir ${label}">${ic('minus', 16)}</button>
+          <span class="gm-step-v">${key === 'pico_pct' ? '+' : ''}${v}%</span>
+          <button type="button" data-ho-step="${key}" data-ho-d="${passo}" ${!hoPode() || v + passo > lim.max ? 'disabled' : ''} aria-label="Aumentar ${label}">${ic('plus', 16)}</button>
+        </div>`;
+      };
+      const exemplo = D.servicos.find(s => S.servicos[s.id]);
+      const piso = hoPiso();
+
+      let html = IS_ATTENDANT ? `<div class="gm-banner info">${ic('info', 16)}<span>Só o dono muda a Hora Off e a Hora Pico.</span></div>` : '';
+
+      if (exemplo && S.hora_off_enabled) {
+        html += `<div class="gm-ho-value" style="margin-top:0">${ic('dollar-sign', 16)}<span>Um horário vazio rende <b>R$ 0</b>.
+          Na Hora Off, ${esc(exemplo.title.toLowerCase())} rende no mínimo <b>${reais(hoFaixa(exemplo).min)}</b>. O desconto é dinheiro que não existiria.</span></div>`;
+      }
+
+      // 1. Grade
+      const cols = `minmax(56px, 92px) repeat(${D.dias.length}, minmax(36px, 1fr))`;
+      html += `<div class="gm-ho-step"><span class="gm-ho-num">1</span><div>
+          <div class="gm-ho-st">Horários fracos e fortes</div>
+          <div class="gm-ho-ss">Fraco costuma ficar vazio, forte costuma lotar. Toque pra trocar entre fraco, normal e forte.</div></div></div>
+        <div class="gm-ho-grid-wrap"><div class="gm-ho-grid" style="grid-template-columns:${cols}">
+          <span></span>${D.dias.map(d => `<span class="gm-ho-dh">${DAY_SHORT[d].toUpperCase()}</span>`).join('')}
+          ${D.faixas.map(f => `
+            <span class="gm-ho-fx"><b>${FAIXA_NOME[f]}</b><span>${FAIXA_HORA[f]}</span></span>
+            ${D.dias.map(d => {
+              const n = S.grade[`${d}-${f}`] || 'normal';
+              return `<button type="button" class="gm-ho-cell ${n}" data-ho-cell="${d}-${f}" ${dis}
+                aria-label="${DAY_NAMES[d]}, ${FAIXA_NOME[f].toLowerCase()}: ${NIVEL_NOME[n]}">${n === 'fraco' ? ic('hora-off', 16) : n === 'forte' ? ic('hora-pico', 16) : ''}</button>`;
+            }).join('')}`).join('')}
+        </div></div>
+        <div class="gm-ho-legend"><span><i class="fraco"></i>Fraco · Hora Off</span><span><i></i>Normal · tabela</span><span><i class="forte"></i>Forte · Hora Pico</span></div>
+        <div class="gm-hint">Começa com o padrão da Loov: segunda a quinta de manhã e no almoço fracos, sexta à tarde e sábado fortes.</div>`;
+
+      // 2. Limites
+      html += `<div class="gm-ho-step"><span class="gm-ho-num">2</span><div>
+          <div class="gm-ho-st">Limites do desconto</div>
+          <div class="gm-ho-ss">Até onde o preço de um horário fraco pode descer.</div></div></div>
+        <div class="gm-ho-lims">
+          <div class="gm-ho-lim"><label class="gm-label" style="margin:0">Desconto máximo</label>
+            ${stepper('desconto_max', 'o desconto máximo', 5)}
+            <div class="gm-hint" style="margin:0">Somando a escada e a chuva, nunca passa disso.</div></div>
+          <div class="gm-ho-lim"><label class="gm-label" style="margin:0">Margem mínima</label>
+            ${stepper('margem_minima', 'a margem mínima', 5)}
+            <div class="gm-hint" style="margin:0">${D.custo
+              ? `Seu custo por lavagem em ${esc(nomeMes(D.custo.mes))} foi <b>${money(D.custo.valor)}</b> (${money(D.custo.total)} ÷ ${D.custo.lavagens} lavagens). Com ${S.margem_minima}%, nada sai por menos de <b>${reais(piso)}</b>.`
+              : `Lance seus <a href="/owner/monthly_costs">custos do mês</a> pra Loov proteger sua margem. Sem eles, vale só o desconto máximo.`}</div></div>
+        </div>`;
+
+      // 3. Hora Off
+      const escada = [...D.escada].sort((a, b) => b.horas - a.horas);
+      const degraus = [
+        ...escada.map((e, i) => ({ pct: e.pct, txt: i === 0 ? `a partir de ${e.horas}h antes` : `${e.horas}h antes` })),
+        { pct: D.desconto_last_minute, txt: '30 min antes · Last Minute' },
+      ];
+      const cores = ['var(--coral-100)', 'var(--coral-300)', 'var(--coral-500)', 'var(--coral-700)'];
+      html += `<div class="gm-ho-card">
+        <div class="gm-ho-card-h"><span class="gm-ho-card-ic">${ic('hora-off', 18)}</span>
+          <div style="flex:1;min-width:0"><div class="gm-ho-card-t">Hora Off</div><div class="gm-ho-card-s">Desconto nos horários fracos que ainda estão livres</div></div>
+          ${sw('hora_off_enabled', 'Hora Off')}</div>
+        <div class="gm-ho-card-b">
+          <div class="gm-ho-ss" style="margin:0">Quanto mais perto do horário, maior o desconto. Quem agenda com antecedência paga a tabela.</div>
+          <div class="gm-ho-ladder">${degraus.map((g, i) => `<div><div class="gm-ho-bar"><i style="height:${24 + i * 20}px;background:${cores[i]}"></i></div><b>−${g.pct}%</b><span>${g.txt}</span></div>`).join('')}</div>
+          <div class="gm-hint" style="margin:0">Seu lava-rápido ganha o selo Hora Off no app e no site quando há horário com desconto nas próximas ${escada[0].horas}h.</div>
+          <div class="gm-ho-row">${ic('cloud-rain', 18)}
+            <div style="flex:1;min-width:0"><div class="gm-ho-row-t">Chuva prevista no bairro</div>
+              <div class="gm-ho-row-s">Mais −${D.extra_chuva}% nos horários fracos do dia. Horário normal e forte não muda com chuva.</div></div>
+            ${sw('chuva_enabled', 'Desconto extra com chuva')}</div>
+        </div></div>`;
+
+      // 4. Hora Pico
+      const exPico = exemplo ? `${esc(exemplo.title)} de ${reais(exemplo.price)} sai por ${reais(Math.round(exemplo.price * (100 + S.pico_pct) / 100))}. ` : '';
+      html += `<div class="gm-ho-card pico">
+        <div class="gm-ho-card-h"><span class="gm-ho-card-ic">${ic('hora-pico', 18)}</span>
+          <div style="flex:1;min-width:0"><div class="gm-ho-card-t">Hora Pico</div><div class="gm-ho-card-s">Acréscimo nos horários fortes, só no Last Minute</div></div>
+          ${sw('hora_pico_enabled', 'Hora Pico')}</div>
+        <div class="gm-ho-card-b"><div class="gm-ho-pico">
+          <div style="flex:1 1 260px;min-width:0">
+            <div class="gm-ho-ss" style="margin:0">Horário forte que ainda tem vaga nos últimos 30 minutos sai mais caro: a vaga sem fila vale mais. ${exPico}</div>
+            <div class="gm-hint">O cliente vê só o preço final. Você aceita cada pedido, como hoje. Horário normal e fraco nunca têm acréscimo.</div>
+          </div>
+          ${stepper('pico_pct', 'o acréscimo da Hora Pico', 5)}
+        </div></div></div>`;
+
+      // Por serviço
+      html += `<div class="gm-ho-step"><div><div class="gm-ho-st">Por serviço</div>
+          <div class="gm-ho-ss">Lavagens entram por padrão. Os outros serviços ficam sempre na tabela, a não ser que você inclua.</div></div></div>
+        <div>${D.servicos.map(s => {
+          const fx = hoFaixa(s);
+          const faixa = !fx ? 'Sempre tabela' : fx.min === fx.max ? reais(fx.min) : `${reais(fx.min)} a ${reais(fx.max)}`;
+          return `<div class="gm-ho-svc">
+            <div style="flex:1;min-width:0"><div class="gm-item-t">${esc(s.title)}</div><div class="gm-item-s">Tabela ${reais(s.price)}</div></div>
+            <span class="gm-ho-money"${fx ? '' : ' style="color:var(--graphite);font-weight:500"'}>${faixa}</span>
+            <button type="button" class="gm-ho-pill" data-ho-svc="${s.id}" ${dis}>${S.servicos[s.id] ? 'Tirar' : 'Incluir'}</button>
+          </div>`;
+        }).join('') || '<div class="gm-empty">Nenhum serviço cadastrado.</div>'}</div>`;
       return html;
     },
 
@@ -810,52 +1002,6 @@
       </div>`;
   }
 
-  // Aba Last Minute: cada lavagem com o seu ajuste em % — subir uma, baixar
-  // outra, manter a que já tem boa margem. − e + andam de 5 em 5; o número é
-  // editável (qualquer inteiro, inclusive negativo pra dar desconto). Preço
-  // livre: acima de +30% só aparece um aviso naquela lavagem.
-  function lmView(svcs) {
-    const lms = svcs.filter(isLm);
-    const outros = svcs.length - lms.length;
-    let html = `
-      <p class="gm-help">Suas lavagens aparecem no Last Minute quando há vaga nos próximos 30 minutos.
-        Ajuste o preço de cada uma em relação ao agendamento: suba pela urgência, baixe pra encher um
-        horário que ficaria vazio, ou mantenha.</p>`;
-    if (!lms.length) {
-      return html + `<div class="gm-empty">Nenhuma lavagem cadastrada. Só lavagens entram no Last Minute; cadastre uma em Agendamento.</div>`;
-    }
-    lms.forEach(s => {
-      const pct = pctDe(s);
-      const cap = pct > 0 ? 'sobre o agendamento' : pct < 0 ? 'de desconto' : 'Mesmo preço do agendamento';
-      html += `
-        <div class="gm-lmsvc${pct ? ' on' : ''}">
-          <div class="gm-lmsvc-top">
-            <div style="min-width:0"><div class="gm-lmtab-t">${esc(s.title)}</div><div class="gm-lmtab-d">${esc(s.duration)} min</div></div>
-            <div class="gm-lmsvc-prices">
-              <div><span class="gm-lmsvc-lab">AGENDAMENTO</span><span class="gm-lmtab-n">${money(s.price)}</span></div>
-              <div><span class="gm-lmsvc-lab">LAST MINUTE</span><span class="gm-lmtab-lm">${money(lmDe(s.price, pct))}</span></div>
-            </div>
-          </div>
-          <div class="gm-lmsvc-ctl">
-            <div class="gm-lmstep-row">
-              <button type="button" class="gm-lmstep-btn" data-lm-step="-1" data-lm-svc="${s._l}" aria-label="Diminuir 5% em ${esc(s.title)}">${ic('minus', 16)}</button>
-              <label class="gm-lmstep-val">
-                <input data-lm-input data-lm-svc="${s._l}" value="${pct > 0 ? '+' + pct : pct}" inputmode="numeric" aria-label="Ajuste em % de ${esc(s.title)}">
-                <span>%</span>
-              </label>
-              <button type="button" class="gm-lmstep-btn" data-lm-step="1" data-lm-svc="${s._l}" aria-label="Aumentar 5% em ${esc(s.title)}">${ic('plus', 16)}</button>
-            </div>
-            <span class="gm-lmstep-cap${pct ? '' : ' zero'}">${pct < 0 ? Math.abs(pct) + '% ' + cap : pct > 0 ? fmtPct(pct) + ' ' + cap : cap}</span>
-          </div>
-          ${pct > LM_ALERTA ? `<div class="gm-lm-warn">${ic('alert-triangle', 14)}<span>Bem acima do agendamento: costuma
-            vender menos no Last Minute, porque o cliente vê os lava-rápidos lado a lado.</span></div>` : ''}
-        </div>`;
-    });
-    html += `<div class="gm-hint">Os botões mudam de 5 em 5%. Você também pode tocar no número e digitar outro valor.</div>`;
-    if (outros > 0) html += `<div class="gm-lm-note">Polimento, higienização e outros serviços não entram no Last Minute.</div>`;
-    return html;
-  }
-
   function svcForm(s) {
     const v = s || { title: '', category: '', description: '', price: '', duration: '' };
     const price = v.price !== '' ? String(v.price).replace('.', ',') : '';
@@ -916,18 +1062,6 @@
   // ── Eventos ───────────────────────────────────────────────────────────
   const root = document.querySelector('.gm');
 
-  // Ajuste do Last Minute digitado: aplica ao sair do campo ou no Enter
-  // (re-renderizar a cada tecla tiraria o foco no meio da digitação).
-  root.addEventListener('change', e => {
-    if (!('lmInput' in e.target.dataset)) return;
-    const svc = st.services.find(x => x._l === e.target.dataset.lmSvc);
-    if (!svc) return;
-    const n = parseInt(String(e.target.value).replace(/[^\d-]/g, ''), 10);
-    svc.lmPct = String(isNaN(n) ? 0 : clampPct(n));
-    if (!isNaN(n) && clampPct(n) !== n) toast('error', `O ajuste vai de ${LM_MIN}% a +${LM_MAX}%.`);
-    render();
-  });
-
   root.addEventListener('input', e => {
     const f = e.target.dataset.f;
     if (f) {
@@ -979,9 +1113,25 @@
     const d = b.dataset;
 
     if (d.rail) {
-      ui.active = d.rail; render();
+      // De dentro de uma seção (o atalho em Serviços), abre e rola até a
+      // outra; no celular ela é um acordeão fechado.
+      if (b.closest('.gm-sec-body')) openSectionFor(d.rail);
+      else { ui.active = d.rail; render(); }
       history.replaceState(null, '', `#${d.rail}`);
       return;
+    }
+
+    // Hora Off e Hora Pico
+    if ('hoRetry' in d) { ho.loading = true; render(); return hoLoad(); }
+    if (hoPode()) {
+      if (d.hoCell) { ho.st.grade[d.hoCell] = PROXIMO[ho.st.grade[d.hoCell] || 'normal']; render(); return; }
+      if (d.hoSw)   { ho.st[d.hoSw] = !ho.st[d.hoSw]; render(); return; }
+      if (d.hoSvc)  { ho.st.servicos[d.hoSvc] = !ho.st.servicos[d.hoSvc]; render(); return; }
+      if (d.hoStep) {
+        const lim = ho.server.limites[{ desconto_max: 'hora_off_desconto_max', margem_minima: 'margem_minima', pico_pct: 'hora_pico_pct' }[d.hoStep]];
+        ho.st[d.hoStep] = Math.min(lim.max, Math.max(lim.min, ho.st[d.hoStep] + Number(d.hoD)));
+        render(); return;
+      }
     }
     if (d.toggle) {
       ui.open.has(d.toggle) ? ui.open.delete(d.toggle) : ui.open.add(d.toggle);
@@ -1013,12 +1163,6 @@
     }
 
     // Serviços
-    if (d.seg) { ui.svcTab = d.seg; ui.editSvc = null; ui.addSvc = false; render(); return; }
-    if (d.lmStep) {
-      const svc = st.services.find(x => x._l === d.lmSvc);
-      if (svc) svc.lmPct = String(clampPct(pctDe(svc) + Number(d.lmStep) * LM_PASSO));
-      render(); return;
-    }
     if (d.add === 'svc')   { ui.addSvc = true; ui.editSvc = null; render(); return; }
     if (d.editSvc)         { ui.addSvc = false; ui.editSvc = ui.editSvc === d.editSvc ? null : d.editSvc; render(); return; }
     if ('svcCancel' in d)  { ui.addSvc = false; ui.editSvc = null; render(); return; }
@@ -1040,7 +1184,6 @@
 
   root.addEventListener('keydown', e => {
     if (e.key !== 'Enter' || e.target.tagName !== 'INPUT') return;
-    if ('lmInput' in e.target.dataset) { e.preventDefault(); e.target.blur(); return; }
     const hf = e.target.closest('[data-hour-form]'); if (hf) { e.preventDefault(); return confirmHour(hf); }
     const sf = e.target.closest('[data-svc-form]');  if (sf) { e.preventDefault(); return confirmSvc(sf); }
   });
@@ -1078,7 +1221,7 @@
     if (isNaN(dur) || dur < 1)  return toast('error', 'Informe uma duração válida em minutos.');
     const data = { title, category, description, price: p.toFixed(2), duration: String(dur) };
     if (form.dataset.svcForm === 'new') {
-      st.services.push({ _l: lid(), id: null, _destroy: false, lmPct: '0', ...data });
+      st.services.push({ _l: lid(), id: null, _destroy: false, ...data });
       ui.addSvc = false;
     } else {
       Object.assign(st.services.find(s => s._l === form.dataset.svcForm), data);
@@ -1204,8 +1347,13 @@
   }
 
   async function handleSave() {
-    if (!st.name.trim())   { openSectionFor('info'); document.querySelector('[data-f=name]')?.focus(); return toast('error', 'Informe o nome do lava-rápido.'); }
-    if (!st.numero.trim()) { openSectionFor('info'); document.querySelector('[data-f=numero]')?.focus(); return toast('error', 'Informe o número do endereço.'); }
+    // Só cobra os campos do lava-rápido quando é ele que vai ser salvo: quem
+    // mexeu só na Hora Off não pode ficar preso por um número de endereço que
+    // nunca foi cadastrado.
+    if (mainDirty()) {
+      if (!st.name.trim())   { openSectionFor('info'); document.querySelector('[data-f=name]')?.focus(); return toast('error', 'Informe o nome do lava-rápido.'); }
+      if (!st.numero.trim()) { openSectionFor('info'); document.querySelector('[data-f=numero]')?.focus(); return toast('error', 'Informe o número do endereço.'); }
+    }
 
     const newCap = defCap();
     const before = originalEffective();
@@ -1223,8 +1371,51 @@
     await persist();
   }
 
+  // Um botão pra tela inteira: o que mudou no lava-rápido vai pro update de
+  // sempre, o que mudou na Hora Off vai pro endpoint dela. Se o primeiro
+  // falha, o segundo não vai, pra não salvar metade sem o dono saber.
   async function persist() {
     ui.saving = true; renderBar(); renderConflict();
+    try {
+      const comMain = mainDirty();
+      if (comMain && !await persistMain()) return;
+      if (hoDirty() && !IS_ATTENDANT) {
+        if (await persistHo() && !comMain) toast('success', 'Hora Off e Hora Pico salvas.');
+      } else if (comMain && CAN_CHECK && !IS_ATTENDANT) {
+        // Serviço novo ou preço novo muda a lista e as faixas da Hora Off.
+        await hoLoad();
+      }
+    } finally {
+      ui.saving = false; render(); renderConflict();
+    }
+  }
+
+  async function persistHo() {
+    const S = ho.st;
+    const body = {
+      hora_off_enabled: S.hora_off_enabled, hora_pico_enabled: S.hora_pico_enabled,
+      chuva_enabled: S.chuva_enabled, desconto_max: S.desconto_max,
+      margem_minima: S.margem_minima, pico_pct: S.pico_pct,
+      grade: Object.entries(S.grade).map(([k, nivel]) => { const [dia, faixa] = k.split('-'); return { dia: Number(dia), faixa, nivel }; }),
+      servicos: Object.entries(S.servicos).map(([id, incluido]) => ({ id: Number(id), incluido })),
+    };
+    try {
+      const r = await fetch(HO_URL, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-Token': CSRF },
+        body: JSON.stringify(body),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) { toast('error', data.error || 'Não foi possível salvar a Hora Off.', 4000); return false; }
+      hoSet(data);
+      return true;
+    } catch {
+      toast('error', 'Falha de conexão ao salvar a Hora Off. Tente novamente.', 3500);
+      return false;
+    }
+  }
+
+  async function persistMain() {
     const hours = {}, svcs = {};
     st.hours.forEach((h, i) => {
       if (!h.id && h._destroy) return;
@@ -1235,8 +1426,7 @@
     });
     st.services.forEach((s, i) => {
       if (!s.id && s._destroy) return;
-      const a = { title: s.title, category: s.category, description: s.description, price: parseFloat(s.price), duration: parseInt(s.duration, 10),
-                  last_minute_pct: pctDe(s) };
+      const a = { title: s.title, category: s.category, description: s.description, price: parseFloat(s.price), duration: parseInt(s.duration, 10) };
       if (s.id) a.id = s.id;
       if (s._destroy) a._destroy = '1';
       svcs[i] = a;
@@ -1266,13 +1456,13 @@
         }
         original = JSON.stringify(strip(st));
         ui.editHour = ui.editSvc = null; ui.addHour = ui.addSvc = false;
-      } else {
-        toast('error', data.error || 'Não foi possível salvar. Tente novamente.', 4000);
+        return true;
       }
+      toast('error', data.error || 'Não foi possível salvar. Tente novamente.', 4000);
+      return false;
     } catch {
       toast('error', 'Falha de conexão. Tente novamente.', 3500);
-    } finally {
-      ui.saving = false; render(); renderConflict();
+      return false;
     }
   }
 
@@ -1280,6 +1470,7 @@
   document.getElementById('gm-discard').addEventListener('click', async () => {
     if (!await ask('Descartar alterações?', 'Tudo o que você mudou desde o último salvamento volta ao que estava.', 'Descartar')) return;
     st = fromServer(server);
+    if (ho.server) hoSet(ho.server);
     ui.editHour = ui.editSvc = null; ui.addHour = ui.addSvc = false;
     render();
   });
@@ -1363,6 +1554,7 @@
   document.querySelectorAll('[data-ic]').forEach(el => { el.outerHTML = ic(el.dataset.ic, 16); });
   if (window.feather) feather.replace({ width: 18, height: 18 });
   render();
+  hoLoad();
   if (ui.open.size && window.innerWidth < 1000) {
     document.getElementById(`sec-${hash}`)?.scrollIntoView({ block: 'start' });
   }

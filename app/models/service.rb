@@ -62,19 +62,14 @@ class Service < ApplicationRecord
   # Preço fixo por serviço (versão anterior) — substituído pelo ajuste em %.
   self.ignored_columns += ["last_minute_price"]
 
-  # Preço no Last Minute: o preço do agendamento com o ajuste em % deste
-  # serviço. O dono pode subir uma lavagem (urgência, taxa da Loov), baixar
-  # outra (encher horário vago) e manter uma que já tem boa margem. Livre — o
-  # cliente compara as lojas lado a lado. Reais inteiros (R$ 75, não R$ 74,75).
+  # Preço no Last Minute sem a Hora Off e a Hora Pico: a tabela. O ajuste em %
+  # por serviço (last_minute_pct) foi aposentado quando o preço passou a
+  # seguir a procura do horário (PrecoDinamico): com as duas funções ligadas,
+  # quem decide o Last Minute são elas; desligadas, ele vende pela tabela, sem
+  # um ajuste escondido que o dono não vê mais em lugar nenhum. A coluna fica
+  # no banco (dá pra voltar atrás), mas não entra mais em conta nenhuma.
   def preco_last_minute
-    pct = last_minute_pct.to_i
-    return price.to_f if pct.zero?
-
-    [(price.to_f * (100 + pct) / 100.0).round, 1].max.to_f
-  end
-
-  def preco_last_minute_proprio?
-    preco_last_minute != price.to_f
+    price.to_f
   end
 
   # Versão em Ruby do scope acima, pra validar um serviço já em memória sem ida
