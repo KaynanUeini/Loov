@@ -347,6 +347,22 @@
   .gm-modal p { margin: 8px 0 0; color: var(--graphite); font-size: 13.5px; line-height: 1.5; }
   .gm-modal .gm-form-acts { justify-content: flex-end; margin-top: 20px; }
   .gm-modal.wide { max-width: 560px; max-height: calc(100vh - 40px); overflow-y: auto; }
+
+  /* Calculadora do custo de uma lavagem a mais: perguntas do dia a dia do
+     dono (não "custo variável"), a conta montada na hora, linha por linha,
+     e um botão que usa o resultado. Ele confirma; a Loov não grava sozinha. */
+  .gm-calc-q { margin-top: 16px; }
+  .gm-calc-q .gm-label { margin: 0 0 6px; text-transform: none; letter-spacing: 0; font-family: Inter, sans-serif; font-size: 14px; font-weight: 600; color: var(--ink); }
+  .gm-calc-in { display: flex; align-items: center; gap: 8px; }
+  .gm-calc-in span { color: var(--graphite); font-size: 14px; }
+  .gm-calc-in .gm-input { max-width: 160px; }
+  .gm-calc-tbl { margin-top: 18px; border: 1px solid var(--stone); border-radius: 14px; overflow: hidden; }
+  .gm-calc-tr { display: flex; justify-content: space-between; gap: 12px; padding: 10px 14px; border-top: 1px solid var(--stone); font-size: 13.5px; color: var(--graphite); }
+  .gm-calc-tr:first-child { border-top: 0; }
+  .gm-calc-tr b { color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .gm-calc-tr.total { background: var(--sand); color: var(--ink); font-weight: 600; font-size: 15px; }
+  .gm-calc-tr.total b { font-family: 'Space Grotesk', sans-serif; font-size: 18px; }
+  .gm-calc-link { border: 0; background: none; padding: 0; color: var(--coral-700); font-size: 12.5px; font-weight: 600; text-decoration: underline; cursor: pointer; align-self: flex-start; }
   .gm-cf-banner {
     display: flex; gap: 12px; align-items: flex-start; margin-top: 14px;
     background: var(--coral-50); border: 1px solid var(--coral-100); border-radius: 16px; padding: 14px;
@@ -472,6 +488,14 @@
   </div>
 </div>
 
+<div class="gm-ov" id="gm-calc" hidden>
+  <div class="gm-modal wide" role="dialog" aria-modal="true" aria-labelledby="gm-calc-t">
+    <h3 id="gm-calc-t">Quanto custa uma lavagem a mais?</h3>
+    <p>Responda com o que você já sabe do dia a dia. A Loov faz a conta.</p>
+    <div id="gm-calc-body"></div>
+  </div>
+</div>
+
 <div class="gm-ov" id="gm-conflict" hidden>
   <div class="gm-modal wide" role="dialog" aria-modal="true" aria-labelledby="gm-cf-title">
     <h3 id="gm-cf-title">Reduzir capacidade</h3>
@@ -585,6 +609,7 @@
       chuva_enabled: !!d.chuva_enabled, desconto_max: d.desconto_max,
       margem_minima: d.margem_minima, pico_pct: d.pico_pct, taxas_pct: d.taxas_pct,
       custo_lavagem: d.custo_lavagem ?? null,
+      custo_calc: { ...(d.calculadora?.respostas || {}) },
       grade: Object.fromEntries(d.grade.map(c => [`${c.dia}-${c.faixa}`, c.nivel])),
       servicos: Object.fromEntries(d.servicos.map(s => [s.id, !!s.incluido])),
     };
@@ -634,6 +659,92 @@
     return { min, max };
   }
   const hoContar = nivel => Object.values(ho.st.grade).filter(n => n === nivel).length;
+
+  // ── Calculadora do custo de uma lavagem a mais ───────────────────────
+  // Quatro perguntas que o dono responde de cabeça. Lavagem a mais =
+  // comissão por carro + produto do mês ÷ carros do mês + metade da água e
+  // luz ÷ carros do mês. A metade é estimativa (a conta tem uma parte que
+  // vem mesmo sem lavar nada) e a tela diz isso.
+  const CALC_CAMPOS = [
+    { k: 'comissao',   t: 'Quanto o lavador ganha por carro?', pre: 'R$', ex: '6',
+      hint: 'Se ele ganha só diária, sem nada por carro, coloque 0. Se ganha porcentagem, coloque quanto dá num carro.' },
+    { k: 'produtos',   t: 'Quanto você gasta de produto por mês?', pre: 'R$', ex: '600', hint: 'Xampu, cera, pretinho, panos.' },
+    { k: 'agua_luz',   t: 'Quanto vêm as contas de água e luz por mês?', pre: 'R$', ex: '900', hint: 'As duas somadas.' },
+    { k: 'carros_dia', t: 'Quantos carros vocês lavam num dia normal?', suf: 'carros', ex: '15',
+      hint: 'Contando todos, não só os que chegam pela Loov.' },
+  ];
+  const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  const nomeMes = ym => MESES[(parseInt(String(ym).split('-')[1], 10) || 1) - 1];
+  const calc = { open: false, r: {}, doFinanceiro: {} };
+  const numBr = v => {
+    const t = String(v ?? '').trim().replace(/\./g, '').replace(',', '.');
+    const n = parseFloat(t);
+    return t === '' || isNaN(n) ? null : n;
+  };
+
+  function calcAbrir() {
+    const salvo = ho.st.custo_calc || {}, fin = ho.server.calculadora?.financeiro;
+    calc.doFinanceiro = {};
+    const pre = k => {
+      if (salvo[k] != null) return salvo[k];
+      if (fin && fin[k]) { calc.doFinanceiro[k] = true; return fin[k]; }
+      return '';
+    };
+    calc.r = { comissao: pre('comissao'), produtos: pre('produtos'), agua_luz: pre('agua_luz'), carros_dia: pre('carros_dia') };
+    calc.open = true;
+    document.getElementById('gm-calc').hidden = false;
+    calcRender(true);
+    document.querySelector('[data-calc=comissao]')?.focus();
+  }
+  function calcFechar() { calc.open = false; document.getElementById('gm-calc').hidden = true; }
+
+  function calcConta() {
+    const n = k => numBr(calc.r[k]);
+    const carrosDia = n('carros_dia');
+    if (!carrosDia || carrosDia <= 0) return null;
+    const dias = Math.max(1, ho.server.calculadora?.dias_semana || 6);
+    const carrosMes = Math.max(1, Math.round(carrosDia * dias * 30 / 7));
+    const lavador = n('comissao') || 0;
+    const produto = (n('produtos') || 0) / carrosMes;
+    const agua = (n('agua_luz') || 0) * 0.5 / carrosMes;
+    const total = lavador + produto + agua;
+    return { carrosDia, carrosMes, dias, lavador, produto, agua, total, usar: Math.max(1, Math.ceil(total)) };
+  }
+
+  function calcRender(full) {
+    const body = document.getElementById('gm-calc-body');
+    const fin = ho.server.calculadora?.financeiro;
+    if (full) {
+      body.innerHTML = CALC_CAMPOS.map(c => `
+        <div class="gm-calc-q"><label class="gm-label" for="calc-${c.k}">${c.t}</label>
+          <div class="gm-calc-in">${c.pre ? `<span>${c.pre}</span>` : ''}
+            <input class="gm-input" id="calc-${c.k}" data-calc="${c.k}" inputmode="decimal" maxlength="9"
+              placeholder="${c.ex}" value="${esc(String(calc.r[c.k] ?? '').replace('.', ','))}">
+            ${c.suf ? `<span>${c.suf}</span>` : ''}</div>
+          <div class="gm-hint">${c.hint}${calc.doFinanceiro[c.k] && fin ? ` Veio do seu financeiro de ${esc(nomeMes(fin.mes))}.` : ''}</div>
+        </div>`).join('') + '<div id="gm-calc-res"></div>';
+    }
+    const c = calcConta();
+    const menor = Math.min(...ho.server.servicos.filter(s => ho.st.servicos[s.id]).map(s => s.price), Infinity);
+    const alto = c && isFinite(menor) && c.usar > menor * 0.4;
+    document.getElementById('gm-calc-res').innerHTML = !c
+      ? `<div class="gm-hint" style="margin-top:16px">Responda quantos carros vocês lavam num dia normal pra ver a conta.</div>
+         <div class="gm-form-acts"><button type="button" class="gm-btn ghost" data-calc-cancel>Cancelar</button></div>`
+      : `<div class="gm-calc-tbl">
+          <div class="gm-calc-tr"><span>Lavador, por carro</span><b>${money(c.lavador)}</b></div>
+          <div class="gm-calc-tr"><span>Produto: ${money(numBr(calc.r.produtos) || 0)} ÷ ${c.carrosMes} carros</span><b>${money(c.produto)}</b></div>
+          <div class="gm-calc-tr"><span>Água e luz: metade de ${money(numBr(calc.r.agua_luz) || 0)} ÷ ${c.carrosMes} carros</span><b>${money(c.agua)}</b></div>
+          <div class="gm-calc-tr total"><span>Uma lavagem a mais</span><b>≈ ${reais(c.usar)}</b></div>
+        </div>
+        <div class="gm-hint">${c.carrosMes} carros no mês: ${c.carrosDia} por dia, ${c.dias} ${c.dias === 1 ? 'dia' : 'dias'} por semana.
+          Estimamos que metade da conta de água e luz vem das lavagens; a outra metade chega mesmo sem lavar nada.</div>
+        ${alto ? `<div class="gm-banner warn" style="margin:12px 0 0">${ic('alert-triangle', 16)}<span>Esse valor parece alto perto do preço das suas lavagens.
+          Confira os carros por dia e o gasto com produto.</span></div>` : ''}
+        <div class="gm-form-acts">
+          <button type="button" class="gm-btn ghost" data-calc-cancel>Cancelar</button>
+          <button type="button" class="gm-btn primary" data-calc-use>${ic('check', 14)} Usar ${reais(c.usar)}</button>
+        </div>`;
+  }
   const activeHours = () => st.hours.filter(h => !h._destroy);
   const activeSvcs  = () => st.services.filter(s => !s._destroy);
   const defCap = () => parseInt(st.capacity, 10) || 1;
@@ -884,7 +995,8 @@
                 placeholder="8" inputmode="decimal" maxlength="7" ${dis}
                 style="width:72px;height:44px;text-align:left;font-size:18px">
             </div>
-            <div class="gm-hint" style="margin:0">Produto, comissão do lavador e um pouco de água e luz. Aluguel e salários não entram: você paga de qualquer jeito.</div></div>
+            <div class="gm-hint" style="margin:0">Produto, comissão do lavador e um pouco de água e luz. Aluguel e salários não entram: você paga de qualquer jeito.</div>
+            ${hoPode() ? `<button type="button" class="gm-calc-link" data-ho-calc>Não sei, calcular pra mim</button>` : ''}</div>
           <div class="gm-ho-lim"><label class="gm-label" style="margin:0">Taxas sobre a venda</label>
             ${stepper('taxas_pct', 'as taxas sobre a venda', 1)}
             <div class="gm-hint" style="margin:0">Imposto e taxa do cartão ou Pix. No Last Minute, os ${D.taxa_loov_last_minute}% da Loov entram sozinhos.</div></div>
@@ -1153,6 +1265,7 @@
 
     // Hora Off e Hora Pico
     if ('hoRetry' in d) { ho.loading = true; render(); return hoLoad(); }
+    if ('hoCalc' in d && hoPode()) { return calcAbrir(); }
     if (hoPode()) {
       if (d.hoCell) { ho.st.grade[d.hoCell] = PROXIMO[ho.st.grade[d.hoCell] || 'normal']; render(); return; }
       if (d.hoSw)   { ho.st[d.hoSw] = !ho.st[d.hoSw]; render(); return; }
@@ -1428,6 +1541,7 @@
       chuva_enabled: S.chuva_enabled, desconto_max: S.desconto_max,
       margem_minima: S.margem_minima, pico_pct: S.pico_pct, taxas_pct: S.taxas_pct,
       custo_lavagem: S.custo_lavagem ?? '',
+      custo_calc: S.custo_calc,
       grade: Object.entries(S.grade).map(([k, nivel]) => { const [dia, faixa] = k.split('-'); return { dia: Number(dia), faixa, nivel }; }),
       servicos: Object.entries(S.servicos).map(([id, incluido]) => ({ id: Number(id), incluido })),
     };
@@ -1507,6 +1621,31 @@
     render();
   });
   window.addEventListener('beforeunload', e => { if (isDirty()) { e.preventDefault(); e.returnValue = ''; } });
+
+  // ── Calculadora: eventos ─────────────────────────────────────────────
+  const calcOv = document.getElementById('gm-calc');
+  calcOv.addEventListener('input', e => {
+    const k = e.target.dataset.calc;
+    if (!k) return;
+    calc.r[k] = e.target.value;
+    calcRender(false); // só a conta: refazer os campos tiraria o cursor
+  });
+  calcOv.addEventListener('click', e => {
+    if (e.target === calcOv) return calcFechar();
+    const b = e.target.closest('button'); if (!b) return;
+    if ('calcCancel' in b.dataset) return calcFechar();
+    if ('calcUse' in b.dataset) {
+      const c = calcConta(); if (!c) return;
+      ho.st.custo_lavagem = c.usar;
+      ho.st.custo_calc = Object.fromEntries(CALC_CAMPOS.map(f => [f.k, numBr(calc.r[f.k])]).filter(([, v]) => v != null));
+      calcFechar(); render();
+      toast('info', `Custo de ${reais(c.usar)} preenchido. Salve as alterações pra valer.`, 3500);
+    }
+  });
+  calcOv.addEventListener('keydown', e => {
+    if (e.key === 'Escape') calcFechar();
+    if (e.key === 'Enter' && e.target.dataset.calc) e.preventDefault();
+  });
 
   // ── Conflito de capacidade ───────────────────────────────────────────
   const cf = { windows: [], newCap: 1, cancelling: null, open: false };

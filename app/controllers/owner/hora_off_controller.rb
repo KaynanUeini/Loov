@@ -17,6 +17,14 @@ module Owner
       taxas_venda_pct:       0..30
     }.freeze
     CUSTO_MAXIMO = 1000 # R$ por lavagem: acima disso é erro de digitação
+    # Respostas da calculadora do custo e o teto de cada uma (acima é erro de
+    # digitação). carros_dia é por dia; os outros, em reais.
+    CALCULADORA = {
+      "comissao"   => 500,
+      "produtos"   => 100_000,
+      "agua_luz"   => 100_000,
+      "carros_dia" => 500
+    }.freeze
 
     # GET /owner/hora_off
     def show
@@ -51,6 +59,19 @@ module Owner
           return erro("Custo por lavagem inválido.") unless custo && custo >= 0 && custo <= CUSTO_MAXIMO
           attrs[:custo_lavagem] = custo.zero? ? nil : custo.round(2)
         end
+      end
+
+      if params.key?(:custo_calc)
+        bruto = params[:custo_calc].respond_to?(:permit) ? params[:custo_calc].permit(*CALCULADORA.keys).to_h : {}
+        calc = {}
+        bruto.each do |campo, valor|
+          texto = valor.to_s.strip.tr(",", ".")
+          next if texto.empty?
+          numero = Float(texto, exception: false)
+          return erro("Valor inválido na calculadora.") unless numero && numero >= 0 && numero <= CALCULADORA[campo]
+          calc[campo] = numero.round(2)
+        end
+        attrs[:custo_lavagem_calc] = calc
       end
 
       celulas  = Array(params[:grade]).map { |c| c.respond_to?(:permit) ? c.permit(:dia, :faixa, :nivel).to_h : c.to_h }
@@ -105,6 +126,13 @@ module Owner
         taxas_pct:         @car_wash.taxas_venda_pct,
         custo_lavagem:     @car_wash.custo_lavagem&.to_f,
         taxa_loov_last_minute: PrecoDinamico::TAXA_LOOV_LAST_MINUTE,
+        # "Calcular pra mim": as respostas guardadas e, pra pré-preencher, o
+        # que o dono já lançou no financeiro.
+        calculadora:       {
+                             respostas:   @car_wash.custo_lavagem_calc || {},
+                             financeiro:  financeiro_recente,
+                             dias_semana: dias.size
+                           },
         escada:            PrecoDinamico::ESCADA.map { |limite, pct| { minutos: (limite / 1.minute).to_i, pct: pct } },
         desconto_last_minute: PrecoDinamico::DESCONTO_LAST_MINUTE,
         extra_chuva:       PrecoDinamico::EXTRA_CHUVA,
@@ -131,6 +159,26 @@ module Owner
                                piso_trava: !!(piso && piso >= s.price.to_f * 0.9) }
                            }
       }
+    end
+
+    # Produto e água + luz do mês mais recente lançado (o atual ou até três
+    # pra trás). Água e luz separadas são o formato novo; meses antigos têm
+    # tudo junto em utilities.
+    def financeiro_recente
+      hoje = Date.current
+      (0..3).each do |atras|
+        mes   = hoje.beginning_of_month << atras
+        custo = @car_wash.monthly_costs.find_by(year: mes.year, month: mes.month)
+        next unless custo
+
+        agua_luz = custo.water.to_f + custo.electricity.to_f
+        agua_luz = custo.utilities.to_f if agua_luz.zero?
+        produtos = custo.products.to_f
+        next if produtos.zero? && agua_luz.zero?
+
+        return { mes: mes.strftime("%Y-%m"), produtos: produtos.round(2), agua_luz: agua_luz.round(2) }
+      end
+      nil
     end
 
     def bool(valor)
