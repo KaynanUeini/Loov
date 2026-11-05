@@ -152,20 +152,27 @@ module Owner
       return render json: { error: "Serviço não encontrado." }, status: :not_found unless service
 
       price = params[:price_override].present? ? params[:price_override].to_f : nil
-      # Reserva do Last Minute trocando de lavagem sem preço digitado: vale o
-      # preço do Last Minute do serviço novo, não o do agendamento comum.
-      if price.nil? && @appointment.disponivel? && service.preco_last_minute_proprio?
-        price = service.preco_last_minute
-      end
-      vale = @appointment.vale_aplicado
-      if price.nil? && vale
-        # Trocou de serviço com vale aplicado: o desconto é refeito sobre o
-        # serviço novo (vale de serviço grátis em outro serviço abate até o
-        # preço do serviço do vale; o cliente paga a diferença).
-        base     = @appointment.disponivel? ? service.preco_last_minute : service.price.to_f
-        desconto = vale.desconto_para(service, base)
-        @appointment.update!(service: service, price_override: (base - desconto).round(2),
-                             reward_discount: desconto.positive? ? desconto : nil)
+      vale  = @appointment.vale_aplicado
+      # Sem preço digitado, o serviço novo sai pela mesma regra que valeu na
+      # reserva: o mesmo horário, com o relógio do momento em que o cliente
+      # reservou (Hora Off / Hora Pico, ou o ajuste do Last Minute de antes).
+      # Agendamento sem cliente (avulso) não passa pela regra: é tabela.
+      if price.nil? && !@appointment.walk_in?
+        preco = PrecoDinamico.new(car_wash, agora: @appointment.created_at)
+                             .para(service, @appointment.scheduled_at, last_minute: @appointment.disponivel?)
+        @appointment.service = service
+        @appointment.aplicar_preco(preco)
+        if vale
+          # Trocou de serviço com vale aplicado: o desconto é refeito sobre o
+          # serviço novo (vale de serviço grátis em outro serviço abate até o
+          # preço do serviço do vale; o cliente paga a diferença).
+          desconto = vale.desconto_para(service, preco.preco)
+          @appointment.price_override  = (preco.preco - desconto).round(2) if desconto.positive?
+          @appointment.reward_discount = desconto.positive? ? desconto : nil
+        else
+          @appointment.reward_discount = nil
+        end
+        @appointment.save!
       else
         # Preço digitado pelo dono vale como está (o vale segue marcado).
         @appointment.update!(service: service, price_override: price, reward_discount: price.nil? ? nil : @appointment.reward_discount)

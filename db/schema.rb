@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_10_29_120000) do
+ActiveRecord::Schema[7.1].define(version: 2026_11_04_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -79,6 +79,9 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_29_120000) do
     t.datetime "attended_at"
     t.datetime "reminder_sent_at"
     t.decimal "reward_discount", precision: 10, scale: 2
+    t.decimal "preco_tabela", precision: 10, scale: 2
+    t.decimal "preco_dinamico", precision: 10, scale: 2
+    t.string "preco_tipo"
     t.index ["acceptance_expires_at"], name: "index_appointments_on_acceptance_expires_at"
     t.index ["appointment_type"], name: "index_appointments_on_appointment_type"
     t.index ["attended_at"], name: "index_appointments_on_attended_at"
@@ -148,6 +151,12 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_29_120000) do
     t.boolean "vehicle_check_enabled", default: false, null: false
     t.string "vehicle_check_mode", default: "choose", null: false
     t.boolean "vehicle_check_skippable", default: true, null: false
+    t.boolean "hora_off_enabled", default: false, null: false
+    t.boolean "hora_pico_enabled", default: false, null: false
+    t.boolean "hora_off_chuva_enabled", default: true, null: false
+    t.integer "hora_off_desconto_max", default: 25, null: false
+    t.integer "margem_minima", default: 35, null: false
+    t.integer "hora_pico_pct", default: 15, null: false
     t.index ["active"], name: "index_car_washes_on_active"
     t.index ["user_id"], name: "index_car_washes_on_user_id"
   end
@@ -162,6 +171,27 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_29_120000) do
     t.datetime "updated_at", null: false
     t.index ["monthly_cost_id", "cost_type"], name: "index_custom_cost_lines_on_monthly_cost_id_and_cost_type"
     t.index ["monthly_cost_id"], name: "index_custom_cost_lines_on_monthly_cost_id"
+  end
+
+  create_table "demand_cells", force: :cascade do |t|
+    t.bigint "car_wash_id", null: false
+    t.integer "dia", null: false
+    t.string "faixa", null: false
+    t.string "nivel", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["car_wash_id", "dia", "faixa"], name: "index_demand_cells_on_car_wash_id_and_dia_and_faixa", unique: true
+    t.index ["car_wash_id"], name: "index_demand_cells_on_car_wash_id"
+  end
+
+  create_table "demand_snapshots", force: :cascade do |t|
+    t.bigint "car_wash_id", null: false
+    t.date "semana", null: false
+    t.jsonb "grade", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["car_wash_id", "semana"], name: "index_demand_snapshots_on_car_wash_id_and_semana", unique: true
+    t.index ["car_wash_id"], name: "index_demand_snapshots_on_car_wash_id"
   end
 
   create_table "favorite_car_washes", force: :cascade do |t|
@@ -362,6 +392,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_29_120000) do
     t.string "category"
     t.decimal "last_minute_price"
     t.integer "last_minute_pct", default: 0, null: false
+    t.boolean "hora_off_incluido"
     t.index ["car_wash_id"], name: "index_services_on_car_wash_id"
   end
 
@@ -455,6 +486,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_10_29_120000) do
   add_foreign_key "car_wash_closures", "car_washes"
   add_foreign_key "car_washes", "users"
   add_foreign_key "custom_cost_lines", "monthly_costs"
+  add_foreign_key "demand_cells", "car_washes"
+  add_foreign_key "demand_snapshots", "car_washes"
   add_foreign_key "favorite_car_washes", "car_washes"
   add_foreign_key "favorite_car_washes", "users"
   add_foreign_key "loyalty_programs", "car_washes"

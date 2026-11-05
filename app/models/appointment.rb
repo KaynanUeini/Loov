@@ -205,6 +205,11 @@ class Appointment < ApplicationRecord
   # daquele momento, então dá pra reconstruí-lo sem coluna extra.
   def preco_ajustado?
     return false if price_override.blank?
+    # Preço da Hora Off ou da Hora Pico também não é ajuste do dono: compara
+    # com o que elas decidiram na reserva (antes do vale, se houve).
+    if preco_tipo.present?
+      return (price_override.to_f + reward_discount.to_f - preco_dinamico.to_f).abs > 0.05
+    end
     # Desconto do vale de fidelidade não é ajuste do dono: o preço antes do
     # vale tem que bater com o de tabela (ou o do Last Minute).
     if reward_discount.to_f.positive?
@@ -214,6 +219,21 @@ class Appointment < ApplicationRecord
     return true unless disponivel? && prepayment_amount.to_f.positive?
 
     (price_override.to_f - prepayment_amount.to_f / PREPAYMENT_PCT).abs > 0.05
+  end
+
+  # Grava o preço decidido por PrecoDinamico num atendimento ainda não salvo.
+  # price_override só quando o preço difere da tabela (é o que o resto da base
+  # espera); os campos preco_* só quando a Hora Off ou a Hora Pico decidiram.
+  # O vale, se houver, entra depois e abate deste preço.
+  def aplicar_preco(resultado)
+    self.price_override = resultado.preco != resultado.tabela ? resultado.preco : nil
+    if resultado.dinamico?
+      self.preco_tabela   = resultado.tabela
+      self.preco_dinamico = resultado.preco
+      self.preco_tipo     = resultado.tipo
+    else
+      self.preco_tabela = self.preco_dinamico = self.preco_tipo = nil
+    end
   end
 
   # Calcula e armazena os valores de pré-pagamento e comissão

@@ -20,7 +20,14 @@ module Client
     def preview
       car_wash = CarWash.find(params[:car_wash_id])
       service  = car_wash.services.find(params[:service_id])
-      base     = params[:kind] == "disponivel" ? service.preco_last_minute : service.price.to_f
+      # Com o horário (&slot=), o vale abate do preço daquele horário (Hora Off
+      # / Hora Pico). Sem ele, como antes: Last Minute pelo ajuste do serviço.
+      slot     = params[:slot].present? ? Time.zone.parse(params[:slot]) : nil
+      base     = if slot
+                   PrecoDinamico.new(car_wash).para(service, slot, last_minute: params[:kind] == "disponivel").preco
+                 else
+                   params[:kind] == "disponivel" ? service.preco_last_minute : service.price.to_f
+                 end
       vale     = LoyaltyReward.disponivel_para(current_user, car_wash)
       desconto = vale ? vale.desconto_para(service, base) : 0
       render json: {

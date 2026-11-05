@@ -430,6 +430,9 @@ class CarWashesController < ApplicationController
 
         available = []
         current   = inicio
+        # Cada horário com o seu preço (Hora Off / Hora Pico). Sem as duas
+        # ligadas, sai a tabela, como antes.
+        precos    = PrecoDinamico.new(@car_wash, agora: now)
 
         while current + duration <= closes_at_min
           time_end    = current + duration
@@ -448,7 +451,8 @@ class CarWashesController < ApplicationController
           if overlapping < capacity_per_slot && !pausado && !(is_today && current < lock_threshold)
             available << {
               time:            format("%02d:%02d", current / 60, current % 60),
-              disponivel_only: false
+              disponivel_only: false,
+              price:           precos.para(service, inicio_slot).preco
             }
           end
 
@@ -471,7 +475,9 @@ class CarWashesController < ApplicationController
           lm = @car_wash.last_minute_slot(now, service)
           if lm && lm.to_date == date
             hhmm = lm.strftime("%H:%M")
-            available << { time: hhmm, disponivel_only: true } unless available.any? { |a| a[:time] == hhmm }
+            unless available.any? { |a| a[:time] == hhmm }
+              available << { time: hhmm, disponivel_only: true, price: precos.para(service, lm, last_minute: true).preco }
+            end
           end
         end
 

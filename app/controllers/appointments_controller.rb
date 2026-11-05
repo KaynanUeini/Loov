@@ -186,7 +186,12 @@ class AppointmentsController < ApplicationController
       # Vale de fidelidade: entra sozinho (o cliente desliga mandando
       # use_reward=false). Com o vale cobrindo quase tudo, não há sinal pra
       # cobrar — o Stripe não cobra abaixo de R$ 0,50.
-      vale = usar_vale? ? @appointment.aplicar_vale_disponivel(service.price.to_f) : nil
+      # Preço do horário (Hora Off / Hora Pico), recalculado aqui: o servidor
+      # não confia no preço que o app mostrou. Ele só pode ter ficado igual ou
+      # mais barato desde a listagem, porque o desconto cresce com o tempo.
+      preco = PrecoDinamico.new(@car_wash).para(service, start_time)
+      @appointment.aplicar_preco(preco)
+      vale = usar_vale? ? @appointment.aplicar_vale_disponivel(preco.preco) : nil
       com_sinal &&= (@appointment.effective_price * Appointment::PREPAYMENT_PCT).round(2) >= Appointment::PREPAGO_MINIMO
 
       # Com sinal, o horário fica preso só enquanto o banco cobra (como o

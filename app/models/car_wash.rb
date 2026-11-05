@@ -11,6 +11,8 @@ class CarWash < ApplicationRecord
   has_one :loyalty_program, dependent: :destroy
   has_many :loyalty_rewards, dependent: :delete_all
   has_many :vehicle_checks,  dependent: :delete_all
+  has_many :demand_cells,     dependent: :delete_all
+  has_many :demand_snapshots, dependent: :delete_all
 
   accepts_nested_attributes_for :operating_hours, allow_destroy: true, reject_if: :all_blank
   accepts_nested_attributes_for :services,        allow_destroy: true, reject_if: :all_blank
@@ -261,6 +263,62 @@ class CarWash < ApplicationRecord
 
   def retomar!
     update!(paused_until: nil, paused_at: nil)
+  end
+
+  # ── Hora Off e Hora Pico ──────────────────────────────────────────────────
+  #
+  # O preço segue a procura do horário (PrecoDinamico). Esta parte responde só
+  # o que é do lava-rápido: a grade, o custo de uma lavagem e se alguma das
+  # duas está ligada. Com as duas desligadas tudo funciona como antes.
+  def preco_dinamico_ativo?
+    hora_off_enabled || hora_pico_enabled
+  end
+
+  # A grade inteira, { "1-manha" => "fraco", ... }: o que o dono gravou por
+  # cima do padrão da Loov. `detect` em memória pelo mesmo motivo de
+  # capacity_for: available_times pergunta dezenas de vezes por request.
+  def grade_demanda
+    (0..6).each_with_object({}) do |dia, grade|
+      DemandCell::FAIXAS.each do |faixa|
+        grade["#{dia}-#{faixa}"] = nivel_demanda_em(dia, faixa)
+      end
+    end
+  end
+
+  def nivel_demanda_em(dia, faixa)
+    gravada = demand_cells.detect { |c| c.dia == dia && c.faixa == faixa }
+    gravada ? gravada.nivel : DemandCell.nivel_padrao(dia, faixa)
+  end
+
+  def nivel_demanda(slot)
+    nivel_demanda_em(slot.wday, DemandCell.faixa_de(slot))
+  end
+
+  # A noite só existe na grade de quem fica aberto depois das 18h.
+  def faixas_da_grade
+    abre_a_noite = operating_hours.any? { |oh| oh.closes_at && oh.closes_at.seconds_since_midnight > 18 * 3600 }
+    abre_a_noite ? DemandCell::FAIXAS : DemandCell::FAIXAS - ["noite"]
+  end
+
+  # Quanto custa uma lavagem, pro piso de margem da Hora Off: os custos do mês
+  # fechado mais recente (até três meses pra trás) divididos pelas lavagens
+  # feitas nele. Sem custo lançado ou sem lavagem, nil — aí vale só o teto de
+  # desconto, e o painel pede pro dono lançar os custos.
+  def custo_por_lavagem(referencia = Time.current)
+    ref = referencia.in_time_zone("America/Sao_Paulo").to_date
+    (1..3).each do |atras|
+      mes   = ref.beginning_of_month << atras
+      custo = monthly_costs.find_by(year: mes.year, month: mes.month)
+      next unless custo && custo.total.to_f.positive?
+
+      lavagens = appointments.attended
+                             .where(scheduled_at: mes.in_time_zone.all_month)
+                             .count
+      next if lavagens.zero?
+
+      return { valor: (custo.total.to_f / lavagens).round(2), mes: mes, lavagens: lavagens, total: custo.total.to_f.round(2) }
+    end
+    nil
   end
 
   def capacity_for(date_or_time)

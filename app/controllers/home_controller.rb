@@ -148,11 +148,14 @@ class HomeController < ApplicationController
         cabem = wash_services.select { |s| cw.last_minute_cabe?(available_slot, s) }
         next if cabem.empty?
 
+        # Mesmo preço que a lista do Last Minute mostra (Hora Off / Hora Pico).
+        precos = PrecoDinamico.new(cw, agora: now)
+
         @disponivel_slots << {
           car_wash:    cw,
           slot:        available_slot,
           services:    cabem,
-          min_price:   cabem.map(&:preco_last_minute).min,
+          min_price:   cabem.map { |s| precos.para(s, available_slot, last_minute: true).preco }.min,
           distance_km: cw.distance_to([lat, lon], :km).round(1)
         }
       end

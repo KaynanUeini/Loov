@@ -30,7 +30,15 @@ module Internal
         Rails.logger.error("[Internal::Reminders] lembrete de vale falhou: #{e.message}")
         { vales_lembrados: "erro" }
       end
-      render json: AppointmentReminders.run!.merge(ia).merge(vales)
+      # Foto semanal da grade da Hora Off / Hora Pico: também pega carona no
+      # gatilho diário e só grava na primeira passada de cada semana.
+      fotos = begin
+        { grades_fotografadas: DemandSnapshot.registrar_semana! }
+      rescue => e
+        Rails.logger.error("[Internal::Reminders] foto da grade falhou: #{e.message}")
+        { grades_fotografadas: "erro" }
+      end
+      render json: AppointmentReminders.run!.merge(ia).merge(vales).merge(fotos)
     end
   end
 end

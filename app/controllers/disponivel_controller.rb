@@ -85,11 +85,17 @@ class DisponivelController < ApplicationController
       distance_km = (@lat && @lon && cw.has_valid_coordinates?) ?
         cw.distance_to([@lat, @lon], :km).round(2) : nil
 
+      # Preço do Last Minute de cada lavagem nesta vaga (Hora Off / Hora Pico,
+      # ou o ajuste em % de antes, com as duas desligadas).
+      precos = PrecoDinamico.new(cw, agora: window_start)
+      preco_de = fitting.to_h { |s| [s.id, precos.para(s, slot, last_minute: true)] }
+
       @available_slots << {
         car_wash:    cw,
         services:    fitting,
         slots:       [slot],
-        min_price:   fitting.map(&:preco_last_minute).min,
+        precos:      preco_de,
+        min_price:   preco_de.values.map(&:preco).min,
         distance_km: distance_km
       }
     end
@@ -143,10 +149,13 @@ class DisponivelController < ApplicationController
               {
                 id:          svc.id,
                 title:       svc.title,
-                price:       svc.preco_last_minute,
+                price:       s[:precos][svc.id].preco,
                 # Preço do agendamento comum, pra tela mostrar o desconto
                 # (riscado) quando o Last Minute sai mais barato.
                 regular_price: svc.price.to_f,
+                # Selo Hora Off no card. A Hora Pico nunca é dita ao cliente:
+                # ele vê só o preço.
+                hora_off:    s[:precos][svc.id].tipo == "off",
                 duration:    svc.duration,
                 category:    svc.category,
                 description: svc.description
@@ -185,7 +194,8 @@ class DisponivelController < ApplicationController
       return
     end
 
-    @total_price = @service.preco_last_minute
+    @preco       = PrecoDinamico.new(@car_wash).para(@service, @slot, last_minute: true)
+    @total_price = @preco.preco
     # Vale de fidelidade do cliente neste lava-rápido (entra sozinho).
     @vale        = LoyaltyReward.disponivel_para(current_user, @car_wash)
     @preco_cheio = @total_price
@@ -251,15 +261,16 @@ class DisponivelController < ApplicationController
         scheduled_at:          slot,
         status:                "pending_acceptance",
         appointment_type:      "disponivel",
-        acceptance_expires_at: expires_at,
-        # Preço do Last Minute congelado na reserva: se o dono mudar depois,
-        # o cliente paga o que viu.
-        price_override:        (service.preco_last_minute if service.preco_last_minute_proprio?)
+        acceptance_expires_at: expires_at
       )
+      # Preço do Last Minute congelado na reserva: se o dono mudar depois, o
+      # cliente paga o que viu. Vem do mesmo cálculo que montou a lista.
+      preco = PrecoDinamico.new(car_wash).para(service, slot, last_minute: true)
+      appointment.aplicar_preco(preco)
       # Vale de fidelidade também vale no Last Minute, sobre o preço dele. O
       # sinal e a comissão saem do valor com desconto; se o vale cobre quase
       # tudo, não há sinal (o Stripe não cobra abaixo de R$ 0,50).
-      vale = usar_vale? ? appointment.aplicar_vale_disponivel(service.preco_last_minute) : nil
+      vale = usar_vale? ? appointment.aplicar_vale_disponivel(preco.preco) : nil
       # Valores informativos (pré-pagamento teórico, comissão) — úteis para DRE/relatórios
       appointment.calculate_disponivel_amounts!
       appointment.prepayment_amount = 0 if appointment.prepayment_amount.to_f < Appointment::PREPAGO_MINIMO

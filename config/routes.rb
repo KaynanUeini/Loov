@@ -117,6 +117,10 @@ Rails.application.routes.draw do
     patch 'checkins/:id/cancel', to: 'checkins#cancel', as: :checkin_cancel
 
     # Ficha do carro na entrada (só app, por enquanto).
+    # Hora Off e Hora Pico: grade, limites e as duas funções (PrecoDinamico).
+    get   'hora_off', to: 'hora_off#show'
+    patch 'hora_off', to: 'hora_off#update'
+
     get   'vehicle_checks/settings',              to: 'vehicle_checks#settings'
     patch 'vehicle_checks/settings',              to: 'vehicle_checks#settings_update'
     get   'vehicle_checks',                       to: 'vehicle_checks#index'
