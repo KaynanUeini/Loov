@@ -295,10 +295,22 @@ class CarWash < ApplicationRecord
     nivel_demanda_em(slot.wday, DemandCell.faixa_de(slot))
   end
 
-  # A noite só existe na grade de quem fica aberto depois das 18h.
+  # A grade só tem as faixas em que o lava-rápido atende em algum dia: quem
+  # fecha às 18h não vê Noite, quem abre às 13h não vê Manhã. Perguntar se um
+  # horário em que a loja está fechada é fraco ou forte não tem resposta.
   def faixas_da_grade
-    abre_a_noite = operating_hours.any? { |oh| oh.closes_at && oh.closes_at.seconds_since_midnight > 18 * 3600 }
-    abre_a_noite ? DemandCell::FAIXAS : DemandCell::FAIXAS - ["noite"]
+    DemandCell::FAIXAS.select { |faixa| operating_hours.any? { |oh| atende_na_faixa?(oh, faixa) } }
+  end
+
+  # Neste dia da semana o lava-rápido atende nesta faixa? A faixa de um
+  # horário é a de quando a lavagem começa, então basta abrir antes do fim da
+  # faixa e fechar depois do começo dela.
+  def atende_na_faixa?(dia_ou_hora, faixa)
+    oh = dia_ou_hora.is_a?(Integer) ? operating_hours.detect { |h| h.day_of_week == dia_ou_hora } : dia_ou_hora
+    return false unless oh&.opens_at && oh&.closes_at
+    abre  = oh.opens_at.seconds_since_midnight
+    fecha = oh.closes_at.seconds_since_midnight
+    abre < DemandCell::FIM_FAIXA[faixa] * 3600 && fecha > DemandCell::INICIO_FAIXA[faixa] * 3600
   end
 
   def capacity_for(date_or_time)

@@ -11,6 +11,7 @@ class DemandCell < ApplicationRecord
   # Onde cada faixa começa, em horas. A do slot é decidida pelo horário de
   # início: uma lavagem das 11:30 às 12:30 é da manhã.
   INICIO_FAIXA = { "manha" => 0, "almoco" => 12, "tarde" => 14, "noite" => 18 }.freeze
+  FIM_FAIXA    = { "manha" => 12, "almoco" => 14, "tarde" => 18, "noite" => 24 }.freeze
 
   validates :dia,   inclusion: { in: 0..6 }
   validates :faixa, inclusion: { in: FAIXAS }

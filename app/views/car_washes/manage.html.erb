@@ -190,9 +190,11 @@
   .gm-ho-cell:disabled { cursor: default; transform: none; }
   .gm-ho-cell.fraco { background: var(--coral-50); border-color: var(--coral-100); color: var(--coral-700); }
   .gm-ho-cell.forte { background: var(--ink); border-color: var(--ink); color: var(--cream); }
+  .gm-ho-cell.fechado { background: repeating-linear-gradient(135deg, var(--sand) 0 6px, transparent 6px 12px); border-style: dashed; cursor: default; }
   .gm-ho-legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 10px; font-size: 12px; color: var(--graphite); }
   .gm-ho-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 4px; margin-right: 6px; vertical-align: -1px; border: 1px solid var(--stone); background: var(--cream); }
   .gm-ho-legend i.fraco { background: var(--coral-50); border-color: var(--coral-100); }
+  .gm-ho-legend i.fechado { background: repeating-linear-gradient(135deg, var(--sand) 0 3px, transparent 3px 6px); border-style: dashed; }
   .gm-ho-legend i.forte { background: var(--ink); border-color: var(--ink); }
   .gm-ho-lims { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .gm-ho-lim { background: var(--cream); border: 1px solid var(--stone); border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
@@ -669,7 +671,9 @@
     const max = ho.st.hora_pico_enabled ? Math.round(t * (100 + ho.st.pico_pct) / 100) : t;
     return { min, max };
   }
-  const hoContar = nivel => Object.values(ho.st.grade).filter(n => n === nivel).length;
+  // Só conta o que o lava-rápido atende: célula de dia fechado não é horário.
+  const hoAberto = k => ho.server.grade.some(c => `${c.dia}-${c.faixa}` === k && c.aberto !== false);
+  const hoContar = nivel => Object.entries(ho.st.grade).filter(([k, n]) => n === nivel && hoAberto(k)).length;
 
   // ── Calculadora do custo de uma lavagem a mais ───────────────────────
   // Quatro perguntas que o dono responde de cabeça. Lavagem a mais =
@@ -968,11 +972,6 @@
 
       let html = IS_ATTENDANT ? `<div class="gm-banner info">${ic('info', 16)}<span>Só o dono muda a Hora Off e a Hora Pico.</span></div>` : '';
 
-      if (exemplo && S.hora_off_enabled) {
-        html += `<div class="gm-ho-value" style="margin-top:0">${ic('dollar-sign', 16)}<span>Um horário vazio rende <b>R$ 0</b>.
-          Na Hora Off, ${esc(exemplo.title.toLowerCase())} rende no mínimo <b>${reais(hoFaixa(exemplo).min)}</b>. O desconto é dinheiro que não existiria.</span></div>`;
-      }
-
       // 1. Grade
       const cols = `minmax(56px, 92px) repeat(${D.dias.length}, minmax(36px, 1fr))`;
       html += `<div class="gm-ho-step"><span class="gm-ho-num">1</span><div>
@@ -984,11 +983,14 @@
             <span class="gm-ho-fx"><b>${FAIXA_NOME[f]}</b><span>${FAIXA_HORA[f]}</span></span>
             ${D.dias.map(d => {
               const n = S.grade[`${d}-${f}`] || 'normal';
+              // Dia que não atende nessa faixa (sábado até 12h, à tarde):
+              // célula apagada, sem toque.
+              if (!hoAberto(`${d}-${f}`)) return `<span class="gm-ho-cell fechado" aria-label="${DAY_NAMES[d]}, ${FAIXA_NOME[f].toLowerCase()}: fechado"></span>`;
               return `<button type="button" class="gm-ho-cell ${n}" data-ho-cell="${d}-${f}" ${dis}
                 aria-label="${DAY_NAMES[d]}, ${FAIXA_NOME[f].toLowerCase()}: ${NIVEL_NOME[n]}">${n === 'fraco' ? ic('hora-off', 16) : n === 'forte' ? ic('hora-pico', 16) : ''}</button>`;
             }).join('')}`).join('')}
         </div></div>
-        <div class="gm-ho-legend"><span><i class="fraco"></i>Fraco · Hora Off</span><span><i></i>Normal · tabela</span><span><i class="forte"></i>Forte · Hora Pico</span></div>
+        <div class="gm-ho-legend"><span><i class="fraco"></i>Fraco · Hora Off</span><span><i></i>Normal · tabela</span><span><i class="forte"></i>Forte · Hora Pico</span>${D.grade.some(c => c.aberto === false) ? '<span><i class="fechado"></i>Fechado</span>' : ''}</div>
         <div class="gm-hint">Começa com o padrão da Loov: segunda a quinta de manhã e no almoço fracos, sexta à tarde e sábado fortes.</div>`;
 
       // 2. Limites

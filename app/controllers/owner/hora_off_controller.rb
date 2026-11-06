@@ -142,7 +142,10 @@ module Owner
         grade:             dias.flat_map { |dia|
                              @car_wash.faixas_da_grade.map { |faixa|
                                nivel = @car_wash.nivel_demanda_em(dia, faixa)
-                               { dia: dia, faixa: faixa, nivel: nivel, padrao: nivel == DemandCell.nivel_padrao(dia, faixa) }
+                               # aberto: false é o dia que não atende nessa
+                               # faixa (sábado até 12h, à tarde): a tela apaga.
+                               { dia: dia, faixa: faixa, nivel: nivel, padrao: nivel == DemandCell.nivel_padrao(dia, faixa),
+                                 aberto: @car_wash.atende_na_faixa?(dia, faixa) }
                              }
                            },
         # Sem custo informado, o piso não existe e o painel pede o custo.
