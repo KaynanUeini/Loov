@@ -102,12 +102,20 @@ class CarWashesController < ApplicationController
         # Selo Hora Off: só quem tem desconto pra achar nas próximas horas. A
         # ocupação vem numa consulta só pra todos que têm a Hora Off ligada.
         com_hora_off = collection.select { |cw| cw.hora_off_enabled && !closed_today_ids.include?(cw.id) }
-        hora_off_ids = Set.new
+        # Com o selo vem a melhor oferta agendável ("R$ 30 às 22h"), a mais
+        # barata entre os serviços que entram na Hora Off.
+        hora_off_ids    = Set.new
+        hora_off_oferta = {}
         if com_hora_off.any?
           janela = PrecoDinamico::ESCADA.map(&:first).max + 3.hours
           Appointment.with_preloaded_occupancy(com_hora_off.map(&:id), from: now_br - 1.minute, to: now_br + janela) do
             com_hora_off.each do |cw|
-              hora_off_ids << cw.id if PrecoDinamico.new(cw, agora: now_br).desconto_em_breve?
+              motor = PrecoDinamico.new(cw, agora: now_br)
+              next unless motor.desconto_em_breve?
+              hora_off_ids << cw.id
+              melhor = cw.services.filter_map { |s| motor.melhor_oferta(s)&.merge(service_id: s.id) }
+                         .min_by { |o| [o[:preco], o[:slot]] }
+              hora_off_oferta[cw.id] = oferta_json(melhor) if melhor
             end
           end
         end
@@ -145,6 +153,7 @@ class CarWashesController < ApplicationController
             longitude:     cw.longitude,
             open_now:      open_now,
             hora_off:      hora_off_ids.include?(cw.id),
+            hora_off_oferta: hora_off_oferta[cw.id],
             rating_avg:    rating_info[:avg],
             reviews_count: rating_info[:count],
             services: cw.services.sort_by { |s| s.title.to_s }.map { |s|
@@ -215,6 +224,7 @@ class CarWashesController < ApplicationController
 
     # Próxima vaga (em minutos a partir de agora) — null se fechado o dia inteiro.
     next_slot_minutes = next_available_slot_minutes(cw, now_sp)
+    ofertas = ofertas_hora_off(cw)
 
     {
       id:                cw.id,
@@ -280,10 +290,32 @@ class CarWashesController < ApplicationController
           price:       s.price.to_f,
           duration:    s.duration,
           last_minute_pct:   s.last_minute_pct,
-          last_minute_price: s.preco_last_minute
+          last_minute_price: s.preco_last_minute,
+          hora_off_oferta:   ofertas[s.id]
         }
       }
     }
+  end
+
+  # A melhor oferta da Hora Off de cada serviço, { service_id => oferta }.
+  # A página mostra o preço junto do horário em que ele vale e, ao tocar,
+  # abre o agendamento já nele.
+  private def ofertas_hora_off(cw)
+    return {} unless cw.hora_off_enabled
+
+    agora  = Time.current.in_time_zone("America/Sao_Paulo")
+    motor  = PrecoDinamico.new(cw, agora: agora)
+    janela = PrecoDinamico::ESCADA.map(&:first).max + 3.hours
+    Appointment.with_preloaded_occupancy([cw.id], from: agora - 1.minute, to: agora + janela) do
+      cw.services.each_with_object({}) do |s, h|
+        o = motor.melhor_oferta(s)
+        h[s.id] = oferta_json(o) if o
+      end
+    end
+  end
+
+  private def oferta_json(o)
+    { preco: o[:preco], tabela: o[:tabela], slot: o[:slot].iso8601, service_id: o[:service_id] }.compact
   end
 
   def new

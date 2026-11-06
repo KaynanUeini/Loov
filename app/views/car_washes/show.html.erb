@@ -109,6 +109,18 @@
   .cw-svc-pc { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
   .cw-svc-price { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -0.5px; white-space: nowrap; }
   .cw-svc-go { display: inline-flex; align-items: center; gap: 1px; font-size: 11px; font-weight: 600; color: var(--coral-500); }
+  /* Oferta da Hora Off: faixa colada embaixo do cartão do serviço, um botão
+     próprio (a ação abre o agendamento já no horário). Preço e horário juntos,
+     pra não prometer o desconto em qualquer horário. */
+  .cw-svc-g { display: flex; flex-direction: column; }
+  .cw-svc-g.has-off > .cw-svc { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+  .cw-svc-off { display: flex; align-items: center; gap: 8px; width: 100%; padding: 11px 16px; margin-top: -1px; text-align: left; background: var(--coral-50); border: 1px solid var(--coral-100); border-radius: 0 0 16px 16px; color: var(--coral-700); font-size: 12.5px; transition: border-color .15s; }
+  .cw-svc-off:hover { border-color: var(--coral-500); }
+  .cw-svc-off-ic { display: inline-flex; }
+  .cw-svc-off-t { flex: 1; min-width: 0; }
+  .cw-svc-off-t b { font-weight: 600; }
+  .cw-svc-off-t s { color: var(--ash); margin-left: 4px; }
+  .cw-svc-off-go { display: inline-flex; color: var(--coral-500); }
   .cw-empty { padding: 40px 0; text-align: center; color: var(--graphite); font-size: 14px; }
   .cw-empty svg { margin: 0 auto 12px; color: var(--ash); }
 
@@ -563,19 +575,40 @@
       : '<div class="cw-loy">' + inner + '</div>';
   }
 
+  // "hoje às 22h", "amanhã às 0h30". O slot vem no horário do lava-rápido
+  // (-03:00); lido do texto, não do relógio do navegador.
+  function quandoOferta(iso) {
+    var dia = iso.slice(0, 10), h = Number(iso.slice(11, 13)), m = iso.slice(14, 16);
+    var hoje = ymd(new Date()), amanha = ymd(new Date(Date.now() + 864e5));
+    var quando = dia === hoje ? 'hoje' : dia === amanha ? 'amanhã' : dia.slice(8, 10) + '/' + dia.slice(5, 7);
+    return quando + ' às ' + h + 'h' + (m === '00' ? '' : m);
+  }
+  function ofertaHtml(s, o, bookable) {
+    var tag = bookable ? 'button type="button" data-svc="' + s.id + '" data-slot="' + esc(o.slot) + '"' : 'div';
+    return '<' + tag + ' class="cw-svc-off">' +
+      '<span class="cw-svc-off-ic">' + HORA_OFF_IC + '</span>' +
+      '<span class="cw-svc-off-t"><b>Hora Off</b> · R$ ' + money(o.preco) + '<s>R$ ' + money(o.tabela) + '</s> ' + quandoOferta(o.slot) + '</span>' +
+      (bookable ? '<span class="cw-svc-off-go">' + icon('chevron-right', 14) + '</span>' : '') +
+    '</' + (bookable ? 'button' : 'div') + '>';
+  }
+
   function renderServices() {
     var bookable = IS_CLIENT || !SIGNED_IN;
     if (!services.length) { $('cw-pane-servicos').innerHTML = '<div class="cw-empty">Este lava-rápido ainda não cadastrou serviços.</div>'; return; }
     $('cw-pane-servicos').innerHTML = (bookable ? '<div class="cw-hint">Toque num serviço para agendar</div>' : '') +
       '<div class="cw-svcs">' + services.map(function (s, i) {
-        return '<' + (bookable ? 'button type="button" data-svc="' + s.id + '"' : 'div') + ' class="cw-svc' + (bookable ? '' : ' is-static') + '">' +
+        var o = s.hora_off_oferta;
+        return '<div class="cw-svc-g' + (o ? ' has-off' : '') + '">' +
+          '<' + (bookable ? 'button type="button" data-svc="' + s.id + '"' : 'div') + ' class="cw-svc' + (bookable ? '' : ' is-static') + '">' +
           '<span class="cw-svc-ic">' + icon(catIcon(s.category, i), 20) + '</span>' +
           '<span class="cw-svc-txt"><span class="cw-svc-name" style="display:block">' + esc(s.title) + '</span>' +
             (s.description ? '<span class="cw-svc-desc">' + esc(s.description) + '</span>' : '') +
             '<span class="cw-svc-dur" style="display:block">' + (s.duration || 30) + ' min</span></span>' +
           '<span class="cw-svc-pc"><span class="cw-svc-price">R$' + money(s.price) + '</span>' +
             (bookable ? '<span class="cw-svc-go">Agendar' + icon('chevron-right', 14) + '</span>' : '') + '</span>' +
-        '</' + (bookable ? 'button' : 'div') + '>';
+          '</' + (bookable ? 'button' : 'div') + '>' +
+          (o ? ofertaHtml(s, o, bookable) : '') +
+        '</div>';
       }).join('') + '</div>';
   }
 
@@ -680,12 +713,19 @@
     window.scrollTo(0, 0);
   }
 
-  function openBooking(svcId, push) {
+  // Com `slot` (a oferta da Hora Off), o agendamento abre no dia dela e já
+  // com o horário escolhido, se ele ainda estiver livre quando a lista chegar.
+  function openBooking(svcId, push, slot) {
     var s = svcById(svcId); if (!s) return;
     if (!IS_CLIENT) { openLogin(); return; }
     var same = bk.service && bk.service.id === s.id;
     bk.service = s; bk.step = 1; bk.error = null;
     if (!same) { bk.time = null; bk.dateIdx = 0; }
+    if (slot) {
+      var idx = dates.map(ymd).indexOf(slot.slice(0, 10));
+      if (idx !== -1) { same = same && idx === bk.dateIdx; bk.dateIdx = idx; bk.pref = slot.slice(11, 16); }
+      if (same) { bk.time = bk.times.some(function (t) { return t.time === bk.pref && t.available !== false && !t.disponivel_only; }) ? bk.pref : bk.time; bk.pref = null; }
+    }
     if (push) history.pushState({ v: 'book', svc: s.id, step: 1 }, '', '#agendar-' + s.id);
     showView('book');
     renderBooking();
@@ -834,7 +874,12 @@
       .catch(function () { return []; })
       .then(function (list) {
         if (my !== bk.seq) return; // trocou de dia no meio do caminho
-        bk.times = Array.isArray(list) ? list : []; bk.loading = false; renderBooking();
+        bk.times = Array.isArray(list) ? list : []; bk.loading = false;
+        if (bk.pref) {
+          var pref = bk.pref; bk.pref = null;
+          if (bk.times.some(function (t) { return t.time === pref && !t.disponivel_only; })) bk.time = pref;
+        }
+        renderBooking();
       });
   }
 
@@ -923,7 +968,7 @@
   document.addEventListener('click', function (e) {
     var t;
     if ((t = e.target.closest('.cw-seg button'))) { setTab(t.dataset.tab); return; }
-    if ((t = e.target.closest('[data-svc]'))) { openBooking(t.dataset.svc, true); return; }
+    if ((t = e.target.closest('[data-svc]'))) { openBooking(t.dataset.svc, true, t.dataset.slot); return; }
     if (e.target.closest('#cw-fav')) { toggleFav(); return; }
     if ((t = e.target.closest('[data-day]'))) { var i = Number(t.dataset.day); if (i !== bk.dateIdx) { bk.dateIdx = i; loadTimes(); } return; }
     if ((t = e.target.closest('button[data-time]'))) { bk.time = t.dataset.time; renderBooking(); return; }

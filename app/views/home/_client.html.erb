@@ -145,6 +145,8 @@
   .ch-off { flex: 0 0 20px; width: 20px; height: 20px; border-radius: 50%; background: var(--coral-50); color: var(--coral-700); display: inline-flex; align-items: center; justify-content: center; margin-left: 2px; }
   .ch-off-pill { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 9px; border-radius: 999px; background: var(--coral-50); color: var(--coral-700); font-size: 12px; font-weight: 600; }
   .ch-lm .ch-off { background: rgba(232,154,124,.18); color: #e89a7c; }
+  .ch-meta-off { display: flex; align-items: center; gap: 4px; margin-top: 3px; font-size: 12.5px; font-weight: 600; color: var(--coral-700); }
+  .ch-row.is-closed .ch-meta-off { color: var(--graphite); }
   .ch-lm-name-line { display: flex; align-items: center; gap: 6px; }
   .ch-lm-name-line .ch-lm-name { min-width: 0; }
   .ch-name { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; letter-spacing: -0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -709,6 +711,14 @@
     return 'Fechado';
   }
   function money(v) { return 'R$ ' + Number(v).toFixed(2).replace('.', ',').replace(/,00$/, ''); }
+  // A melhor oferta da Hora Off do lava-rápido: "R$ 30 às 22h" (ou "amanhã às
+  // 0h30"). O slot vem no horário do lava-rápido; lido do texto, não do relógio
+  // do navegador.
+  function ofertaTxt(o) {
+    var h = Number(o.slot.slice(11, 13)), m = o.slot.slice(14, 16);
+    var hoje = new Date(), dia = hoje.getFullYear() + '-' + String(hoje.getMonth() + 1).padStart(2, '0') + '-' + String(hoje.getDate()).padStart(2, '0');
+    return money(o.preco) + (o.slot.slice(0, 10) === dia ? '' : ' amanhã') + ' às ' + h + 'h' + (m === '00' ? '' : m);
+  }
   function pricedServices(cw) {
     return (cw.services || []).filter(function (s) { return Number(s.price) > 0; })
       .sort(function (a, b) { return Number(a.price) - Number(b.price); });
@@ -724,7 +734,7 @@
     var meta = [cw.bairro ? esc(cw.bairro) : null, dist,
       reviews ? '<span class="ch-star">' + icon('star', 13, { color: '#d6a419', fill: '#d6a419' }) + rating.toFixed(1).replace('.', ',') + ' <span style="color:var(--graphite);font-weight:400">(' + reviews + ')</span></span>' : null
     ].filter(Boolean).join(' · ') +
-      (cw.hora_off ? ' <span class="ch-off-pill">' + icon('hora-off', 12) + 'Hora Off</span>' : '');
+      (cw.hora_off ? ' <span class="ch-off-pill">' + icon('hora-off', 12) + 'Hora Off' + (cw.hora_off_oferta ? ' · ' + ofertaTxt(cw.hora_off_oferta) : '') + '</span>' : '');
     var titles = (cw.services || []).map(function (x) { return x.title; }).filter(Boolean);
     var body = feature
       ? (svcs.length ? '<ul class="ch-specs">' + svcs.slice(0, 4).map(function (x) { return '<li><span>' + esc(x.title) + '</span><span>' + money(x.price) + '</span></li>'; }).join('') + '</ul>' +
@@ -778,7 +788,8 @@
       '<div class="ch-body"><div class="ch-name-line"><span class="ch-name">' + esc(cw.name) + '</span>' +
         (cw.hora_off ? '<span class="ch-off" role="img" aria-label="Hora Off" title="Hora Off">' + icon('hora-off', 12) + '</span>' : '') +
         (open ? '' : '<span class="ch-closed-tag">· FECHADO</span>') + '</div>' +
-        (meta ? '<div class="ch-meta">' + esc(meta) + '</div>' : '') + '</div>' +
+        (meta ? '<div class="ch-meta">' + esc(meta) + '</div>' : '') +
+        (cw.hora_off && cw.hora_off_oferta ? '<div class="ch-meta-off">Hora Off · ' + ofertaTxt(cw.hora_off_oferta) + '</div>' : '') + '</div>' +
       '<div class="ch-right">' +
         '<button type="button" class="ch-fav" data-fav="' + cw.id + '" aria-pressed="' + !!cw.favorited + '" aria-label="' + (cw.favorited ? 'Remover dos favoritos' : 'Adicionar aos favoritos') + '">' + icon('heart', 20) + '</button>' +
         '<span class="ch-rate' + (reviews ? '' : ' is-empty') + '">' + icon('star', 12, { color: reviews && open ? '#d6a419' : 'var(--ash)' }) + (reviews ? rating.toFixed(1).replace('.', ',') : '—') + '</span>' +

@@ -85,17 +85,47 @@ class PrecoDinamico
     servico = car_wash.services.select { |s| aplica?(s) }.min_by { |s| s.duration.to_i }
     return false unless servico
 
-    passo  = CarWash::PASSO_LAST_MINUTE.minutes
-    limite = agora + ESCADA.map(&:first).max
-    slot   = agora.beginning_of_hour + ((agora.min / passo.in_minutes).ceil * passo.in_minutes).minutes
-    while slot <= limite
-      return true if car_wash.nivel_demanda(slot) == "fraco" &&
-                     car_wash.aberto_em?(slot) &&
-                     !car_wash.pausado_para?(slot, agora) &&
-                     car_wash.last_minute_cabe?(slot, servico)
-      slot += passo
-    end
+    cada_horario_fraco { |slot| return true if car_wash.last_minute_cabe?(slot, servico) }
     false
+  end
+
+  # Até 45 min antes o cliente agenda pelo fluxo comum; dali em diante só pelo
+  # Last Minute (a mesma trava de available_times e do agendamento).
+  TRAVA_AGENDAMENTO = 45.minutes
+
+  # A melhor oferta da Hora Off que o cliente ainda consegue agendar: o
+  # horário fraco mais barato nas próximas 6h, com vaga pela duração inteira
+  # do serviço. { preco:, tabela:, slot: } ou nil. É o que a página do
+  # lava-rápido e a home mostram como "R$ 30 hoje às 22h": preço junto do
+  # horário, pra não prometer o desconto em qualquer horário. No empate de
+  # preço, o mais cedo.
+  def melhor_oferta(service)
+    return nil unless car_wash.hora_off_enabled && aplica?(service)
+
+    melhor = nil
+    cada_horario_fraco(a_partir_de: agora + TRAVA_AGENDAMENTO) do |slot|
+      next unless car_wash.last_minute_cabe?(slot, service)
+      r = para(service, slot)
+      next unless r.tipo == "off"
+      melhor = { preco: r.preco, tabela: r.tabela, slot: slot } if melhor.nil? || r.preco < melhor[:preco]
+    end
+    melhor
+  end
+
+  # Os horários (marcas de 30 min) de agora até o começo da escada que estão
+  # fracos na grade, com o lava-rápido aberto, sem pausa e sem fechamento.
+  # A vaga fica com quem pergunta: ela depende da duração do serviço.
+  def cada_horario_fraco(a_partir_de: agora)
+    passo  = CarWash::PASSO_LAST_MINUTE * 60
+    limite = agora + ESCADA.map(&:first).max
+    slot   = a_partir_de.beginning_of_day + ((a_partir_de.seconds_since_midnight / passo.to_f).ceil * passo).seconds
+    while slot <= limite
+      if car_wash.nivel_demanda(slot) == "fraco" && car_wash.aberto_em?(slot) &&
+         !car_wash.pausado_para?(slot, agora) && !fechado_no_dia?(slot.to_date)
+        yield slot
+      end
+      slot += passo.seconds
+    end
   end
 
   # Abaixo disto a Hora Off não vende. É a conta da margem de contribuição:
@@ -169,6 +199,12 @@ class PrecoDinamico
     minimo = piso(last_minute)
     preco = [preco, minimo].max if minimo
     [preco, tabela].min
+  end
+
+  def fechado_no_dia?(dia)
+    @fechado ||= {}
+    return @fechado[dia] if @fechado.key?(dia)
+    @fechado[dia] = car_wash.closed_on?(dia)
   end
 
   def chuva?(dia)
