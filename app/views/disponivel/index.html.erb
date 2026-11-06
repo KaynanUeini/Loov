@@ -92,6 +92,12 @@
   .dp-fav { flex: 0 0 26px; height: 26px; border-radius: 50%; background: rgba(250,250,246,.08); display: flex; align-items: center; justify-content: center; color: rgba(250,250,246,.5); }
   .dp-chev { color: rgba(250,250,246,.35); transition: transform .2s; }
   .dp-card:hover .dp-chev { transform: translateX(3px); color: rgba(250,250,246,.6); }
+  /* Selo Hora Off: o relógio com a seta pra baixo, num tom de coral que se lê
+     no cartão escuro. A Hora Pico não tem selo: o cliente vê só o preço. */
+  .dp-off { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; background: rgba(232,154,124,.18); color: #e89a7c; display: inline-flex; align-items: center; justify-content: center; }
+  .dp-offrow { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0 0 10px; padding: 12px 14px; border-radius: 14px; background: var(--coral-50); font-size: 13.5px; color: var(--ink); }
+  .dp-offrow span { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
+  .dp-offrow b { font-family: 'Space Grotesk', sans-serif; font-weight: 600; color: var(--coral-700); white-space: nowrap; }
   .dp-rate { flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 100px; background: rgba(250,250,246,.08); font-size: 11px; font-weight: 600; }
 
   .dp-state { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 56px var(--pad) 80px; }
@@ -327,6 +333,7 @@
     type: v.reward_type, value: v.reward_value.to_f, service_id: v.reward_service_id, short: v.resumo_curto,
     expires: v.expires_at.in_time_zone("America/Sao_Paulo").strftime("%d/%m") }] }.to_json) %>;
   var useReward = true;
+  var HORA_OFF_IC = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 12l3-3M12 12v5M9.8 14.8L12 17l2.2-2.2"/></svg>';
   function valeDe(cw) { return cw && VALES[cw.id] || null; }
   function descontoDe(cw, svc) {
     var v = valeDe(cw); if (!v || !useReward || !svc) return 0;
@@ -450,6 +457,7 @@
       '<div class="dp-shop"><div class="dp-logo">' + LoovLogos.logoOf(cw) + '</div>' +
         '<div class="dp-shop-txt"><div class="dp-shop-name">' + esc(cw.name) + '</div>' +
         '<div class="dp-shop-meta">' + esc(meta) + (differs ? ' · <span class="dp-when">às ' + fmtTime(it.slots[0]) + (mins > 0 && mins < 1000 ? ' (em ' + mins + 'min)' : '') + '</span>' : '') + '</div></div>' +
+        ((it.services || []).some(function (s) { return s.hora_off; }) ? '<span class="dp-off" role="img" aria-label="Hora Off" title="Hora Off">' + HORA_OFF_IC + '</span>' : '') +
         (cw.favorited ? '<span class="dp-fav" title="Favorito">' + icon('heart', 13) + '</span>' : '') +
         (reviews ? '<span class="dp-rate">' + icon('star', 10, { color: 'var(--coral-500)' }) + rating.toFixed(1).replace('.', ',') + '</span>' : '') +
         '<span class="dp-chev">' + icon('chevron-right', 20) + '</span></div>' +
@@ -609,7 +617,9 @@
     var cardLine = !SIGNED_IN ? ''
       : HAS_CARD ? '<div class="dp-pay-card">' + icon('credit-card', 15) + '<span>' + esc(CARD_TXT) + '</span><a href="' + cardUrl(cw.id) + '">Trocar</a></div>'
       : '<div class="dp-pay-card missing">' + icon('credit-card', 15) + '<span>Para reservar no Last Minute você precisa de um cartão cadastrado. É ele que garante a vaga.</span></div>';
-    return valeRow + '<div class="dp-pay">' +
+    var hoff = svc.hora_off ? Math.round((Number(svc.regular_price) - Number(svc.price)) * 100) / 100 : 0;
+    var offRow = hoff > 0 ? '<div class="dp-offrow"><span>' + HORA_OFF_IC + 'Desconto Hora Off</span><b>−R$ ' + money(hoff, 2) + '</b></div>' : '';
+    return offRow + valeRow + '<div class="dp-pay">' +
       '<div class="dp-pay-row now"><span>Agora, no cartão<em>' + PCT_LABEL + '</em></span><b>R$ ' + money(now, 2) + '</b></div>' +
       '<div class="dp-pay-row"><span>Na chegada, no lava-rápido<em>' + REST_LABEL + '</em></span><b>R$ ' + money(rest, 2) + '</b></div>' +
       cardLine + '</div>';

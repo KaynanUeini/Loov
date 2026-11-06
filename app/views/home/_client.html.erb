@@ -139,6 +139,14 @@
   .ch-row.is-closed .ch-thumb { background: var(--sand); color: var(--ash); }
   .ch-body { flex: 1; min-width: 0; }
   .ch-name-line { display: flex; align-items: center; gap: 4px; }
+  /* Selo Hora Off: relógio com a seta pra baixo (o mesmo do app e do painel).
+     Na lista e no Last Minute só o ícone; no card de computador, ícone e
+     nome, porque ali sobra espaço e a palavra explica o ícone. */
+  .ch-off { flex: 0 0 20px; width: 20px; height: 20px; border-radius: 50%; background: var(--coral-50); color: var(--coral-700); display: inline-flex; align-items: center; justify-content: center; margin-left: 2px; }
+  .ch-off-pill { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 9px; border-radius: 999px; background: var(--coral-50); color: var(--coral-700); font-size: 12px; font-weight: 600; }
+  .ch-lm .ch-off { background: rgba(232,154,124,.18); color: #e89a7c; }
+  .ch-lm-name-line { display: flex; align-items: center; gap: 6px; }
+  .ch-lm-name-line .ch-lm-name { min-width: 0; }
   .ch-name { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; letter-spacing: -0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .ch-row.is-closed .ch-name { color: var(--graphite); }
   .ch-closed-tag { flex-shrink: 0; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: .5px; color: var(--ash); }
@@ -407,7 +415,10 @@
     { key: 'oxi',               label: 'Oxi-sanitiz.',     icon: 'filter',     patterns: ['oxi', 'sanitiz'] },
     { key: 'outros',            label: 'Outros',           icon: 'grid',       patterns: ['outros', 'outras'] }
   ];
+  // Hora Off só aparece quando algum lava-rápido perto tem desconto pra achar
+  // nas próximas horas: filtro que volta vazio é pior que filtro nenhum.
   var FILTERS = [
+    { key: 'hora off',           label: 'Hora Off',           icon: 'hora-off', so_com: 'hora_off' },
     { key: 'aberto agora',       label: 'Aberto agora',       icon: 'clock' },
     { key: 'perto de mim',       label: 'Perto de mim',       icon: 'map-pin' },
     { key: 'melhores avaliados', label: 'Melhores avaliados', icon: 'star' }
@@ -435,6 +446,10 @@
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function icon(name, size, extra) {
+    // Selo Hora Off: o Feather não tem o relógio com a seta pra baixo.
+    if (name === 'hora-off') {
+      return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 12l3-3M12 12v5M9.8 14.8L12 17l2.2-2.2"/></svg>';
+    }
     if (!window.feather || !feather.icons[name]) return '';
     return feather.icons[name].toSvg(Object.assign({ width: size, height: size }, extra || {}));
   }
@@ -480,7 +495,7 @@
         // Mantém a lista anterior: um soluço do servidor não apaga a tela.
         state.error = e.message && e.message.indexOf('Erro') === 0 ? e.message : 'Não foi possível conectar ao servidor.';
       })
-      .finally(function () { state.loading = false; renderError(); renderList(); if (state.searchMode) renderSearch(); });
+      .finally(function () { state.loading = false; renderError(); renderFilters(); renderList(); if (state.searchMode) renderSearch(); });
   }
 
   function loadDisponiveis() {
@@ -629,7 +644,9 @@
         '<div class="ch-lm-stats"><div class="ch-lm-stat"><div class="ch-lm-val">' + (price ? '<span class="ch-lm-cur">R$ </span>' + esc(price) : '—') + '</div><div class="ch-lm-lab">A PARTIR DE</div></div>' +
         '<div class="ch-lm-div"></div><div class="ch-lm-stat"><div class="ch-lm-val">' + esc(dist || '—') + '</div><div class="ch-lm-lab">DISTÂNCIA</div></div></div>' +
         '<div class="ch-lm-shop"><div class="ch-lm-logo">' + logoOf(cw) + '</div><div class="ch-lm-text">' +
-          '<div class="ch-lm-name">' + esc(cw.name) + '</div>' +
+          '<div class="ch-lm-name-line"><div class="ch-lm-name">' + esc(cw.name) + '</div>' +
+            ((it.services || []).some(function (s) { return s.hora_off; }) ? '<span class="ch-off" role="img" aria-label="Hora Off" title="Hora Off">' + icon('hora-off', 12) + '</span>' : '') +
+          '</div>' +
           (street ? '<div class="ch-lm-sub">' + esc(street) + '</div>' : '') +
           '<div class="ch-lm-sub">' + esc(cw.bairro || cw.cidade || '—') + (differs ? ' · <span class="ch-lm-cd">às ' + time + '</span>' : '') + '</div>' +
         '</div></div>' +
@@ -664,8 +681,10 @@
     clear.style.display = n ? 'inline-flex' : 'none';
     clear.querySelector('span').textContent = n > 1 ? 'Limpar filtros (' + n + ')' : 'Limpar filtro';
   }
+  function temHoraOff() { return state.shops.some(function (cw) { return cw.hora_off; }); }
   function renderFilters() {
-    $('ch-filters').innerHTML = FILTERS.map(function (f) {
+    if (state.filter === 'hora off' && !temHoraOff()) state.filter = null;
+    $('ch-filters').innerHTML = FILTERS.filter(function (f) { return !f.so_com || temHoraOff(); }).map(function (f) {
       return '<button type="button" class="ch-pill" aria-pressed="' + (state.filter === f.key) + '" data-filter="' + f.key + '">' + icon(f.icon, 13) + f.label + '</button>';
     }).join('') + '<button type="button" class="ch-pill-clear" id="ch-filter-clear" style="display:' + (state.filter ? 'inline-flex' : 'none') + '">' + icon('x', 13) + 'Limpar</button>';
   }
@@ -704,7 +723,8 @@
     var svcs = pricedServices(cw);
     var meta = [cw.bairro ? esc(cw.bairro) : null, dist,
       reviews ? '<span class="ch-star">' + icon('star', 13, { color: '#d6a419', fill: '#d6a419' }) + rating.toFixed(1).replace('.', ',') + ' <span style="color:var(--graphite);font-weight:400">(' + reviews + ')</span></span>' : null
-    ].filter(Boolean).join(' · ');
+    ].filter(Boolean).join(' · ') +
+      (cw.hora_off ? ' <span class="ch-off-pill">' + icon('hora-off', 12) + 'Hora Off</span>' : '');
     var titles = (cw.services || []).map(function (x) { return x.title; }).filter(Boolean);
     var body = feature
       ? (svcs.length ? '<ul class="ch-specs">' + svcs.slice(0, 4).map(function (x) { return '<li><span>' + esc(x.title) + '</span><span>' + money(x.price) + '</span></li>'; }).join('') + '</ul>' +
@@ -737,6 +757,7 @@
     var list = state.shops.slice();
     if (state.categories.length) list = list.filter(function (cw) { return state.categories.every(function (k) { return matchesCategory(cw.services, k); }); });
     if (state.filter === 'aberto agora') list = list.filter(isOpenNow);
+    if (state.filter === 'hora off') list = list.filter(function (cw) { return cw.hora_off; });
     if (state.filter === 'perto de mim') {
       list.sort(function (a, b) { return (a.distance_km == null ? Infinity : a.distance_km) - (b.distance_km == null ? Infinity : b.distance_km); });
     } else if (state.filter === 'melhores avaliados') {
@@ -754,7 +775,9 @@
     var meta = [cw.bairro, fmtDistance(cw.distance_km)].filter(Boolean).join(' · ');
     return '<a class="ch-row' + (open ? '' : ' is-closed') + '" href="/car_washes/' + cw.id + '" data-open-shop="' + cw.id + '">' +
       '<div class="ch-thumb has-logo">' + logoOf(cw) + '</div>' +
-      '<div class="ch-body"><div class="ch-name-line"><span class="ch-name">' + esc(cw.name) + '</span>' + (open ? '' : '<span class="ch-closed-tag">· FECHADO</span>') + '</div>' +
+      '<div class="ch-body"><div class="ch-name-line"><span class="ch-name">' + esc(cw.name) + '</span>' +
+        (cw.hora_off ? '<span class="ch-off" role="img" aria-label="Hora Off" title="Hora Off">' + icon('hora-off', 12) + '</span>' : '') +
+        (open ? '' : '<span class="ch-closed-tag">· FECHADO</span>') + '</div>' +
         (meta ? '<div class="ch-meta">' + esc(meta) + '</div>' : '') + '</div>' +
       '<div class="ch-right">' +
         '<button type="button" class="ch-fav" data-fav="' + cw.id + '" aria-pressed="' + !!cw.favorited + '" aria-label="' + (cw.favorited ? 'Remover dos favoritos' : 'Adicionar aos favoritos') + '">' + icon('heart', 20) + '</button>' +

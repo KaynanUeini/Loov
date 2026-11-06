@@ -99,6 +99,19 @@ class CarWashesController < ApplicationController
           .where("start_date <= ? AND end_date >= ?", today, today)
           .distinct.pluck(:car_wash_id).to_set
 
+        # Selo Hora Off: só quem tem desconto pra achar nas próximas horas. A
+        # ocupação vem numa consulta só pra todos que têm a Hora Off ligada.
+        com_hora_off = collection.select { |cw| cw.hora_off_enabled && !closed_today_ids.include?(cw.id) }
+        hora_off_ids = Set.new
+        if com_hora_off.any?
+          janela = PrecoDinamico::ESCADA.map(&:first).max + 3.hours
+          Appointment.with_preloaded_occupancy(com_hora_off.map(&:id), from: now_br - 1.minute, to: now_br + janela) do
+            com_hora_off.each do |cw|
+              hora_off_ids << cw.id if PrecoDinamico.new(cw, agora: now_br).desconto_em_breve?
+            end
+          end
+        end
+
         render json: collection.map { |cw|
           # Hora de hoje do lava-rápido (pode não existir se fechado no dia)
           today_oh = cw.operating_hours.find { |oh| oh.day_of_week.to_i == today_dow }
@@ -131,6 +144,7 @@ class CarWashesController < ApplicationController
             latitude:      cw.latitude,
             longitude:     cw.longitude,
             open_now:      open_now,
+            hora_off:      hora_off_ids.include?(cw.id),
             rating_avg:    rating_info[:avg],
             reviews_count: rating_info[:count],
             services: cw.services.sort_by { |s| s.title.to_s }.map { |s|

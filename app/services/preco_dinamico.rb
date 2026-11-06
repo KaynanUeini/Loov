@@ -74,6 +74,30 @@ class PrecoDinamico
     { min: min, max: max }
   end
 
+  # Tem horário com desconto da Hora Off daqui até o começo da escada (6h)? É
+  # o que acende o selo e põe o lava-rápido no filtro Hora Off do cliente:
+  # selo sem desconto pra achar seria promessa que o cliente não encontra.
+  # Mesmas regras do preço: horário fraco, lava-rápido aberto e sem pausa, e
+  # vaga pela duração inteira da lavagem mais curta que entra na Hora Off.
+  def desconto_em_breve?
+    return false unless car_wash.hora_off_enabled
+
+    servico = car_wash.services.select { |s| aplica?(s) }.min_by { |s| s.duration.to_i }
+    return false unless servico
+
+    passo  = CarWash::PASSO_LAST_MINUTE.minutes
+    limite = agora + ESCADA.map(&:first).max
+    slot   = agora.beginning_of_hour + ((agora.min / passo.in_minutes).ceil * passo.in_minutes).minutes
+    while slot <= limite
+      return true if car_wash.nivel_demanda(slot) == "fraco" &&
+                     car_wash.aberto_em?(slot) &&
+                     !car_wash.pausado_para?(slot, agora) &&
+                     car_wash.last_minute_cabe?(slot, servico)
+      slot += passo
+    end
+    false
+  end
+
   # Abaixo disto a Hora Off não vende. É a conta da margem de contribuição:
   # num horário que ia ficar vazio, uma lavagem a mais só custa o variável
   # (produto, comissão, um pouco de água e luz), e o preço precisa cobrir isso,

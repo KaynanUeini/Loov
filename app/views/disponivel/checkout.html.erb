@@ -68,6 +68,18 @@
           <span class="ck-row-label">Horário</span>
           <span class="ck-row-val"><%= @slot.strftime("%H:%M") %> — hoje, <%= @slot.strftime("%d/%m") %></span>
         </div>
+        <% if @preco&.tipo == "off" %>
+        <%# Hora Off: o desconto aparece explicado. A Hora Pico nunca é dita ao
+            cliente — ali ele vê só o valor. %>
+        <div class="ck-row">
+          <span class="ck-row-label"><%= @service.title %></span>
+          <span class="ck-row-val">R$ <%= number_with_precision(@preco.tabela, precision: 2) %></span>
+        </div>
+        <div class="ck-row">
+          <span class="ck-row-label">Desconto Hora Off</span>
+          <span class="ck-row-val" style="color:var(--coral-700)">−R$ <%= number_with_precision(@preco.tabela - @preco.preco, precision: 2) %></span>
+        </div>
+        <% end %>
         <div class="ck-row">
           <span class="ck-row-label">Valor total</span>
           <span class="ck-row-val">R$ <%= number_with_precision(@total_price, precision: 2) %></span>
