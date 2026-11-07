@@ -56,8 +56,10 @@ module Owner
       return render json: { error: "Este carro já tem ficha." }, status: :conflict if @appointment.vehicle_check
 
       mode = params[:mode].to_s
-      if mode == "skipped" && !@car_wash.vehicle_check_skippable && !current_user.owner?
-        return render json: { error: "O dono pediu ficha em todo carro." }, status: :forbidden
+      # Ficha obrigatória: ninguém pula, nem o dono. Pra liberar um carro sem
+      # ficha, o dono desliga a obrigatoriedade na configuração da ficha.
+      if mode == "skipped" && !@car_wash.vehicle_check_skippable
+        return render json: { error: "A ficha é obrigatória neste lava-rápido." }, status: :forbidden
       end
       if mode.in?(%w[photos sketch]) && !modo_permitido?(mode)
         return render json: { error: "O lava-rápido usa outro modo de ficha." }, status: :unprocessable_entity

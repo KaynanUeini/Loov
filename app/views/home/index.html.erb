@@ -1020,8 +1020,11 @@
       '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
     })[c]);
   }
+  // Ficha obrigatória: o serviço começa quando a ficha é feita (servico_desde),
+  // não no horário marcado. Ficha antes da hora já põe o carro em serviço.
   function isInService(appt) {
-    const start = new Date(appt.scheduled_at).getTime();
+    const marcado = new Date(appt.scheduled_at).getTime();
+    const start = Math.min(marcado, appt.servico_desde ? new Date(appt.servico_desde).getTime() : marcado);
     const elapsed = Date.now() - start;
     if (elapsed < 0) return false;
     if (appt.status === 'confirmed') return true;
@@ -1032,7 +1035,9 @@
     return false;
   }
   function liveProgress(appt) {
-    const start = new Date(appt.scheduled_at).getTime();
+    // Esperando a ficha: o tempo não anda até ela ser feita (no app).
+    if (appt.aguardando_ficha) return { progress: 0, etaMinutes: null, phase: 'aguardando ficha' };
+    const start = new Date(appt.servico_desde || appt.scheduled_at).getTime();
     const duration = Math.max(1, Number(appt.duration) || 30) * 60 * 1000;
     const elapsed = Date.now() - start;
     const progress = Math.min(100, Math.max(0, Math.round((elapsed / duration) * 100)));
@@ -1163,7 +1168,7 @@
     if (inService) {
       rightHtml = `
         <span class="owner-dash-phase">${escapeHtml(phase)}</span>
-        <span class="owner-dash-eta">${etaMinutes}m</span>
+        ${etaMinutes != null ? `<span class="owner-dash-eta">${etaMinutes}m</span>` : ''}
       `;
     } else if (isFinalized) {
       rightHtml = isNoShow

@@ -27,6 +27,12 @@ class CarWash < ApplicationRecord
   geocoded_by :geocoding_address
   after_validation :geocode, if: :should_geocode?
 
+  # Ficha de entrada ligada e sem permissão de pular: o carro só é finalizado
+  # com a ficha feita, e o tempo do serviço conta a partir dela.
+  def ficha_obrigatoria?
+    vehicle_check_enabled && !vehicle_check_skippable
+  end
+
   # Endereço público do logo que o dono subiu (LogoStorage), ou nil: aí o site
   # e o app desenham o logo gerado pelo nome.
   def logo_url
