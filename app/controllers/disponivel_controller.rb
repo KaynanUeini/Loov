@@ -22,7 +22,7 @@ class DisponivelController < ApplicationController
     .map(&:car_wash_id).uniq
 
     car_washes_scope = CarWash.where(id: open_car_wash_ids).distinct
-    car_washes_scope = car_washes_scope.near([@lat, @lon], 5, units: :km) if @lat && @lon
+    car_washes_scope = car_washes_scope.near([@lat, @lon], RelevanciaLastMinute::RAIO_KM, units: :km) if @lat && @lon
 
     # Exclui lava-rápidos com fechamento ativo cobrindo HOJE (férias,
     # feriado, manutenção). Sub-query mais eficiente que ruby filter.
@@ -103,28 +103,33 @@ class DisponivelController < ApplicationController
 
     # Belt-and-suspenders: dedup final pelo id do car_wash
     @available_slots.uniq! { |s| s[:car_wash].id }
-    @available_slots.sort_by! { |s| [s[:slots].first, s[:min_price]] }
+
+    # Batch de rating pra evitar N+1 quando renderizar cards do
+    # Last Minute no mobile (que agora mostra ⭐ no canto superior).
+    slot_cw_ids = @available_slots.map { |s| s[:car_wash].id }
+    rating_map = Review.where(car_wash_id: slot_cw_ids)
+                       .group(:car_wash_id)
+                       .pluck(:car_wash_id, Arel.sql("AVG(rating)"), Arel.sql("COUNT(*)"))
+                       .each_with_object({}) { |(id, avg, count), h|
+                         h[id] = { avg: avg.to_f.round(1), count: count.to_i }
+                       }
+
+    # Batch dos favoritos do cliente logado — index é opcional-auth
+    # (skip authenticate_user!), então current_user pode ser nil.
+    # O card do Last Minute mostra um marcador cinza pros favoritados.
+    favorite_ids = current_user ?
+      current_user.favorite_car_washes.where(car_wash_id: slot_cw_ids).pluck(:car_wash_id).to_set :
+      Set.new
+
+    # Ordem "Relevância": distância, preço do horário, avaliação, favorito e
+    # lavagens oferecidas, cada um com seu peso (RelevanciaLastMinute).
+    @available_slots = RelevanciaLastMinute.new(
+      @available_slots, avaliacoes: rating_map, favoritos: favorite_ids, usuario: current_user
+    ).ordenar
 
     respond_to do |format|
       format.html
       format.json do
-        # Batch de rating pra evitar N+1 quando renderizar cards do
-        # Last Minute no mobile (que agora mostra ⭐ no canto superior).
-        slot_cw_ids = @available_slots.map { |s| s[:car_wash].id }
-        rating_map = Review.where(car_wash_id: slot_cw_ids)
-                           .group(:car_wash_id)
-                           .pluck(:car_wash_id, Arel.sql("AVG(rating)"), Arel.sql("COUNT(*)"))
-                           .each_with_object({}) { |(id, avg, count), h|
-                             h[id] = { avg: avg.to_f.round(1), count: count.to_i }
-                           }
-
-        # Batch dos favoritos do cliente logado — index é opcional-auth
-        # (skip authenticate_user!), então current_user pode ser nil.
-        # O card do Last Minute mostra um marcador cinza pros favoritados.
-        favorite_ids = current_user ?
-          current_user.favorite_car_washes.where(car_wash_id: slot_cw_ids).pluck(:car_wash_id).to_set :
-          Set.new
-
         render json: @available_slots.map { |s|
           cw = s[:car_wash]
           r  = rating_map[cw.id] || { avg: 0.0, count: 0 }
