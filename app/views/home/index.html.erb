@@ -556,12 +556,14 @@
   .owner-dash-btn-coral:disabled { opacity:.6; cursor:wait; }
 
   /* ── Toast (mantém visual existente) ── */
-  .toast-container { position:fixed; bottom:28px; left:50%; transform:translateX(-50%); z-index:1700; display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none; }
-  .toast { display:inline-flex; align-items:center; gap:8px; padding:10px 18px; border-radius:100px; font-family:'Inter',sans-serif; font-size:.78rem; font-weight:600; backdrop-filter:blur(16px); box-shadow:0 8px 24px rgba(40,35,28,.18); opacity:0; transform:translateY(12px); animation:toastIn .3s ease forwards; pointer-events:none; }
-  .toast.success { background:rgba(221,120,82,.12); border:1px solid rgba(221,120,82,.3); color:var(--od-coral-700); }
-  .toast.error   { background:rgba(200,80,80,.12); border:1px solid rgba(200,80,80,.3); color:var(--od-rose-500); }
-  .toast.warning { background:rgba(214,177,74,.12); border:1px solid rgba(214,177,74,.3); color:var(--od-amber-500); }
-  .toast.info    { background:rgba(75,142,192,.12); border:1px solid rgba(75,142,192,.3); color:var(--od-pool-500); }
+  .toast-container { position:fixed; bottom:28px; left:16px; right:16px; z-index:1700; display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none; }
+  /* Com o convite "Ativar alertas do Last Minute" no rodapé, o aviso sobe pra não ficar por cima dele. */
+  body:has(#lma-enable:not([hidden])) .toast-container { bottom:104px; }
+  /* O toast das páginas do site (Mensagens, Fidelidade, Equipe): pílula escura,
+     texto claro, a cor só no ícone. */
+  .toast { display:inline-flex; align-items:center; gap:10px; max-width:min(440px, calc(100vw - 32px)); padding:13px 18px; border-radius:14px; background:#28231c; color:#fafaf6; font-family:'Inter',sans-serif; font-size:13px; line-height:18px; font-weight:500; box-shadow:0 14px 36px -16px rgba(40,35,28,.6); opacity:0; transform:translateY(12px); animation:toastIn .3s ease forwards; pointer-events:none; }
+  .toast i { color:#dd7852; }
+  .toast.error i { color:#f0a3a3; }
   .toast.out { animation:toastOut .3s ease forwards; }
   @keyframes toastIn  { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
   @keyframes toastOut { from{opacity:1;transform:translateY(0)} to{opacity:0;transform:translateY(-8px)} }
@@ -852,11 +854,6 @@
       <a class="owner-dash-icon-btn" id="od-msg-btn" href="<%= owner_messages_path %>" title="Enviar mensagem" aria-label="Mensagens">
         <i class="fas fa-paper-plane"></i>
       </a>
-      <% if current_user.owner? %>
-      <a class="owner-dash-icon-btn" id="od-loyalty-btn" href="<%= owner_loyalty_program_path %>" title="Programa de fidelidade" aria-label="Programa de fidelidade">
-        <i class="fas fa-star"></i>
-      </a>
-      <% end %>
       <button class="owner-dash-bell" id="od-bell-btn" title="Notificações">
         <i class="fas fa-bell"></i>
         <span class="od-dot"></span>
@@ -953,19 +950,6 @@
       <div class="owner-dash-empty"><i class="fas fa-circle-notch fa-spin"></i> Carregando atendimentos...</div>
     </div>
 
-    <%# Loyalty card — JS controla visibilidade %>
-    <div id="od-loyalty-block" style="display:none;">
-      <div class="owner-dash-section-eyebrow">FIDELIDADE</div>
-      <a class="owner-dash-loyalty" href="<%= owner_loyalty_program_path %>">
-        <div class="owner-dash-loyalty-icon"><i class="fas fa-gift"></i></div>
-        <div class="owner-dash-loyalty-text">
-          <div class="owner-dash-loyalty-title" id="od-loyalty-title">A cada N visitas</div>
-          <div class="owner-dash-loyalty-desc" id="od-loyalty-desc"></div>
-        </div>
-        <span class="owner-dash-loyalty-badge">ATIVO</span>
-      </a>
-    </div>
-
     <div style="height:60px;"></div>
   </main>
 
@@ -995,7 +979,6 @@
   let allServices    = [];
   let allAppointments = [];
   let unresolvedPast = [];
-  let loyaltyData    = null;
   let actionLoadingId = null;
   let editingAppt = null;
   let cancelTarget = null;
@@ -1345,17 +1328,6 @@
       banner.classList.add('hidden');
     }
 
-    // Loyalty card
-    const loyaltyBlock = document.getElementById('od-loyalty-block');
-    if (loyaltyData?.active) {
-      loyaltyBlock.style.display = '';
-      document.getElementById('od-loyalty-title').textContent =
-        `A cada ${loyaltyData.visits_required} visitas`;
-      document.getElementById('od-loyalty-desc').textContent =
-        loyaltyData.reward_description || '';
-    } else {
-      loyaltyBlock.style.display = 'none';
-    }
   }
 
   // ── Pausa (Last Minute + agendamentos) ────────────────────────────────
@@ -1482,7 +1454,6 @@
         if (seen.has(a.id)) return false;
         seen.add(a.id); return true;
       });
-      loyaltyData = data.loyalty || null;
 
       // Hero + KPIs
       document.getElementById('od-revenue').textContent  = fmtMoney(summary.revenue_today || 0, 2);

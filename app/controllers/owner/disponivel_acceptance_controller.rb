@@ -198,6 +198,9 @@ module Owner
         prepayment:     appointment.prepayment_amount,
         commission:     appointment.commission_amount,
         owner_net:      appointment.owner_prepayment_net,
+        # O que o dono recebe no balcão quando o cliente chega: o serviço menos
+        # o que já ficou garantido no cartão. É o "Você recebe" do aceite.
+        on_arrival:     (appointment.effective_price - appointment.prepayment_amount.to_f).clamp(0, Float::INFINITY).round(2),
         scheduled_at:   appointment.scheduled_at.strftime("%H:%M"),
         scheduled_date: appointment.scheduled_at.strftime("%d/%m/%Y")
       }
