@@ -13,6 +13,7 @@
 %>
 <script src="/vendor/feather-4.29.2.min.js" nonce="<%= csp_nonce %>"></script>
 <%= render "shared/loov_logos" %>
+<script src="/logo/processa.js" nonce="<%= csp_nonce %>"></script>
 
 <style>
   .loov-nav { background: var(--cream) !important; }
@@ -121,8 +122,15 @@
   .gm-logo-img svg { width: 100%; height: 100%; display: block; }
   .gm-logo .gm-hint { margin-top: 3px; }
   .gm-logo-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-  /* Enquadrar: o quadrado é o que sai; arrasta e aproxima. */
-  .gm-crop { position: relative; width: 260px; max-width: 100%; aspect-ratio: 1; margin: 16px auto 0; border-radius: 22%; overflow: hidden; background: #fff; box-shadow: 0 0 0 1px var(--stone); touch-action: none; cursor: grab; }
+  /* Enquadrar: o quadrado é o que sai; arrasta e aproxima. O xadrez é a
+     transparência — o logo fica com a forma dele, sem moldura. */
+  .gm-crop { position: relative; width: 260px; max-width: 100%; aspect-ratio: 1; margin: 16px auto 0; border-radius: 12px; overflow: hidden; touch-action: none; cursor: grab;
+    background: repeating-conic-gradient(#ece8df 0% 25%, #fbfaf6 0% 50%) 0 0 / 20px 20px; box-shadow: 0 0 0 1px var(--stone); }
+  .gm-logo-fundo { display: flex; align-items: center; gap: 12px; width: 260px; max-width: 100%; margin: 14px auto 0; }
+  .gm-logo-fundo[hidden] { display: none; }
+  .gm-logo-fundo span { flex: 1; min-width: 0; }
+  .gm-logo-fundo b { display: block; font-size: 13.5px; color: var(--ink); }
+  .gm-logo-fundo small { display: block; font-size: 11.5px; line-height: 1.4; color: var(--graphite); }
   .gm-crop:active { cursor: grabbing; }
   .gm-crop canvas { width: 100%; height: 100%; display: block; }
   .gm-zoom { display: flex; align-items: center; gap: 10px; width: 260px; max-width: 100%; margin: 14px auto 0; color: var(--graphite); }
@@ -536,8 +544,12 @@
 <div class="gm-ov" id="gm-logo" hidden>
   <div class="gm-modal wide" role="dialog" aria-modal="true" aria-labelledby="gm-logo-t">
     <h3 id="gm-logo-t">Enquadre o logo</h3>
-    <p>Arraste a imagem pra posicionar e use o controle pra aproximar. O que fica dentro do quadrado é o que o cliente vê.</p>
+    <p id="gm-logo-lead"></p>
     <div class="gm-crop" id="gm-crop"><canvas id="gm-crop-c" width="512" height="512"></canvas></div>
+    <div class="gm-logo-fundo" id="gm-logo-fundo" hidden>
+      <span><b>Remover fundo</b><small>Tira o fundo liso da imagem pra o logo ficar só com a forma dele.</small></span>
+      <button type="button" class="gm-switch" role="switch" id="gm-logo-fundo-sw" aria-checked="true" aria-label="Remover fundo"></button>
+    </div>
     <label class="gm-zoom"><span id="gm-zoom-out"></span><input type="range" id="gm-crop-z" min="1" max="4" step="0.01" value="1" aria-label="Aproximar"><span id="gm-zoom-in"></span></label>
     <div class="gm-prev-lab">Como o cliente vê</div>
     <div class="gm-prev" id="gm-logo-prev"></div>
@@ -903,7 +915,9 @@
   // Vale na hora (como os fechamentos): enviar pro R2 e confirmar não passa
   // pelo "Salvar alterações". Usa os endpoints do lava-rápido vinculado, então
   // em outra loja do mesmo dono fica só a visualização.
-  const logo = { url: INITIAL.logo_url || null, busy: false, img: null, zoom: 1, x: 0, y: 0 };
+  // prep: as fontes prontas de LoovLogoProcessa (public/logo/processa.js, o
+  // mesmo tratamento do app). semFundo: a chave "Remover fundo".
+  const logo = { url: INITIAL.logo_url || null, busy: false, prep: null, semFundo: true, zoom: 1, dx: 0, dy: 0 };
   const LOGO_PODE = !IS_ATTENDANT && CAN_CHECK;
   const logoDe = url => LoovLogos.logoOf({ id: CW_ID, name: st.name || 'Seu lava-rápido', logo_url: url });
 
@@ -926,19 +940,20 @@
       </div>`;
   }
 
-  // Enquadrar: a imagem cabe inteira no quadrado no zoom 1 (logo largo fica
-  // com faixas brancas, em vez de cortado) e aproxima até 4×.
+  // Forma própria quando dá (fundo transparente ou liso removido); senão, a
+  // foto no quadrado de cantos arredondados.
+  const logoModo = () => (logo.prep.forma && (logo.prep.transparente || logo.semFundo)) ? 'forma' : 'foto';
   function cropDraw() {
-    const c = document.getElementById('gm-crop-c'), g = c.getContext('2d'), im = logo.img;
-    const base = Math.min(512 / im.width, 512 / im.height), k = base * logo.zoom;
-    const w = im.width * k, h = im.height * k;
-    // Maior que o quadrado: não deixa sobrar borda; menor: fica no centro.
-    logo.x = w > 512 ? Math.min(0, Math.max(512 - w, logo.x)) : (512 - w) / 2;
-    logo.y = h > 512 ? Math.min(0, Math.max(512 - h, logo.y)) : (512 - h) / 2;
-    g.fillStyle = '#fff'; g.fillRect(0, 0, 512, 512);
-    g.imageSmoothingQuality = 'high';
-    g.drawImage(im, logo.x, logo.y, w, h);
-    cropPreview(c.toDataURL('image/jpeg', 0.85));
+    const P = window.LoovLogoProcessa, modo = logoModo();
+    const r = P.compor(modo === 'forma' ? logo.prep.forma : logo.prep.foto, modo, logo.zoom, logo.dx, logo.dy);
+    logo.dx = modo === 'forma' ? Math.max(-256, Math.min(256, r.dx)) : r.dx;
+    logo.dy = modo === 'forma' ? Math.max(-256, Math.min(256, r.dy)) : r.dy;
+    const c = document.getElementById('gm-crop-c'), g = c.getContext('2d');
+    g.clearRect(0, 0, 512, 512); g.drawImage(r.canvas, 0, 0);
+    cropPreview(c.toDataURL('image/png'));
+    document.getElementById('gm-logo-lead').textContent = modo === 'forma'
+      ? 'O logo entra inteiro e fica com a forma dele. Se quiser, arraste pra posicionar e use o controle pra aproximar.'
+      : 'Essa imagem não tem fundo liso pra tirar, então ela preenche o quadrado. Arraste pra escolher a parte que aparece e aproxime se quiser.';
   }
   function cropPreview(url) {
     const nome = esc(st.name || 'Seu lava-rápido'), bairro = esc(st.bairro || 'Seu bairro');
@@ -946,6 +961,12 @@
     document.getElementById('gm-logo-prev').innerHTML = `
       <div class="gm-prev-lm">${l(40)}<div><div class="gm-prev-n">${nome}</div><div class="gm-prev-s">Last Minute · ${bairro}</div></div></div>
       <div class="gm-prev-row">${l(56)}<div><div class="gm-prev-n">${nome}</div><div class="gm-prev-s">Perto de você · ${bairro}</div></div></div>`;
+  }
+  function cropFundoSw() {
+    const box = document.getElementById('gm-logo-fundo');
+    // A chave só aparece quando há um fundo liso pra tirar.
+    box.hidden = !(logo.prep.fundoLiso && logo.prep.forma && !logo.prep.transparente);
+    document.getElementById('gm-logo-fundo-sw').setAttribute('aria-checked', String(logo.semFundo));
   }
   // Lida como data: e não blob: — a política de segurança do site (img-src)
   // só libera data: e https:, e o blob: não abria.
@@ -956,8 +977,10 @@
     fr.onload = () => {
       const im = new Image();
       im.onload = () => {
-        Object.assign(logo, { img: im, zoom: 1, x: 0, y: 0 });
+        try { logo.prep = window.LoovLogoProcessa.preparar(im); } catch { return falhou(); }
+        Object.assign(logo, { semFundo: true, zoom: 1, dx: 0, dy: 0 });
         document.getElementById('gm-crop-z').value = 1;
+        cropFundoSw();
         document.getElementById('gm-logo').hidden = false;
         cropDraw();
       };
@@ -967,16 +990,16 @@
     fr.readAsDataURL(file);
   }
   async function logoSend() {
-    if (!logo.img) return;
+    if (!logo.prep) return;
     document.getElementById('gm-logo').hidden = true;
     logo.busy = true; render();
     try {
-      const blob = await new Promise(r => document.getElementById('gm-crop-c').toBlob(r, 'image/jpeg', 0.9));
+      const blob = await new Promise(r => document.getElementById('gm-crop-c').toBlob(r, 'image/png'));
       const hdr = { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-Token': CSRF };
       let r = await fetch('/owner/logo/envio', { method: 'POST', headers: hdr });
       let d = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(d.error || 'Não deu pra enviar o logo agora.');
-      const put = await fetch(d.url, { method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: blob });
+      const put = await fetch(d.url, { method: 'PUT', headers: { 'Content-Type': 'image/png' }, body: blob });
       if (!put.ok) throw new Error('O envio da imagem falhou. Tente de novo.');
       r = await fetch('/owner/logo', { method: 'PATCH', headers: hdr, body: JSON.stringify({ key: d.key }) });
       d = await r.json().catch(() => ({}));
@@ -986,7 +1009,7 @@
     } catch (err) {
       toast('error', err.message || 'Não deu pra enviar o logo agora.', 4000);
     } finally {
-      logo.busy = false; logo.img = null; render();
+      logo.busy = false; logo.prep = null; render();
     }
   }
   async function logoRemove() {
@@ -1009,21 +1032,25 @@
     document.getElementById('gm-zoom-out').innerHTML = ic('minus', 14);
     document.getElementById('gm-zoom-in').innerHTML = ic('plus', 14);
     let drag = null;
-    box.addEventListener('pointerdown', e => { if (!logo.img) return; box.setPointerCapture(e.pointerId); drag = { px: e.clientX, py: e.clientY, x: logo.x, y: logo.y }; });
+    box.addEventListener('pointerdown', e => { if (!logo.prep) return; box.setPointerCapture(e.pointerId); drag = { px: e.clientX, py: e.clientY, dx: logo.dx, dy: logo.dy }; });
     box.addEventListener('pointermove', e => {
       if (!drag) return;
       const f = 512 / box.clientWidth;
-      logo.x = drag.x + (e.clientX - drag.px) * f; logo.y = drag.y + (e.clientY - drag.py) * f;
+      logo.dx = drag.dx + (e.clientX - drag.px) * f; logo.dy = drag.dy + (e.clientY - drag.py) * f;
       cropDraw();
     });
     const end = () => { drag = null; };
     box.addEventListener('pointerup', end); box.addEventListener('pointercancel', end);
     // Aproxima em torno do centro do quadrado.
     z.addEventListener('input', () => {
-      const im = logo.img; if (!im) return;
-      const base = Math.min(512 / im.width, 512 / im.height), antes = base * logo.zoom, depois = base * Number(z.value);
-      logo.x = 256 - (256 - logo.x) * depois / antes; logo.y = 256 - (256 - logo.y) * depois / antes;
-      logo.zoom = Number(z.value); cropDraw();
+      if (!logo.prep) return;
+      const k = Number(z.value) / logo.zoom;
+      logo.dx *= k; logo.dy *= k; logo.zoom = Number(z.value); cropDraw();
+    });
+    document.getElementById('gm-logo-fundo-sw').addEventListener('click', () => {
+      logo.semFundo = !logo.semFundo;
+      Object.assign(logo, { zoom: 1, dx: 0, dy: 0 }); z.value = 1;
+      cropFundoSw(); cropDraw();
     });
     document.getElementById('gm-logo-file').addEventListener('change', e => {
       const f = e.target.files[0]; e.target.value = '';
@@ -1033,9 +1060,9 @@
       cropOpen(f);
     });
     const ov = document.getElementById('gm-logo');
-    document.getElementById('gm-logo-no').addEventListener('click', () => { ov.hidden = true; logo.img = null; });
+    document.getElementById('gm-logo-no').addEventListener('click', () => { ov.hidden = true; logo.prep = null; });
     document.getElementById('gm-logo-yes').addEventListener('click', logoSend);
-    ov.addEventListener('click', e => { if (e.target === ov) { ov.hidden = true; logo.img = null; } });
+    ov.addEventListener('click', e => { if (e.target === ov) { ov.hidden = true; logo.prep = null; } });
   })();
 
   const BODY = {

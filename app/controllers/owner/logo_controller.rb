@@ -19,7 +19,7 @@ module Owner
     def update
       chave   = params[:key].to_s
       storage = LogoStorage.new
-      return erro("Envio inválido. Tente de novo.") unless chave.start_with?(LogoStorage.prefixo(@car_wash)) && chave.end_with?(".jpg")
+      return erro("Envio inválido. Tente de novo.") unless chave.start_with?(LogoStorage.prefixo(@car_wash)) && chave.end_with?(".png")
 
       tamanho = storage.tamanho(chave)
       return erro("A imagem não chegou. Tente de novo.") if tamanho.nil?

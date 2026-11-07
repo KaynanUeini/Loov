@@ -6,10 +6,11 @@
 # Mesmas credenciais da ficha; o que muda é o bucket e o endereço público dele
 # (o domínio r2.dev ou um domínio próprio ligado ao bucket).
 #
-# O site e o app reduzem a imagem pra 512×512 e enviam direto pro R2 por uma
-# URL assinada (PUT), sem passar pelo nosso servidor.
+# O site e o app tratam a imagem (public/logo/processa.js: tira fundo liso,
+# corta margens, PNG 512×512 transparente) e enviam direto pro R2 por uma URL
+# assinada (PUT), sem passar pelo nosso servidor.
 class LogoStorage < FichaStorage
-  # Um JPEG de 512×512 fica bem abaixo disso; acima é arquivo que não passou
+  # Um PNG de 512×512 fica bem abaixo disso; acima é arquivo que não passou
   # pela redução do site/app.
   TAMANHO_MAXIMO = 2.megabytes
 
@@ -25,7 +26,14 @@ class LogoStorage < FichaStorage
   # Nome novo a cada troca: o endereço muda junto com a imagem, então nenhum
   # cache (navegador, app, CDN) segura o logo antigo.
   def self.nova_chave(car_wash)
-    "#{prefixo(car_wash)}#{SecureRandom.hex(8)}.jpg"
+    "#{prefixo(car_wash)}#{SecureRandom.hex(8)}.png"
+  end
+
+  # PNG: o logo guarda a transparência e fica com a forma dele (redondo,
+  # escudo), sem fundo branco que viraria rebarba no card escuro.
+  def url_envio(chave)
+    presigner.presigned_url(:put_object, bucket: bucket, key: chave,
+                            content_type: "image/png", expires_in: UPLOAD_EXPIRA.to_i)
   end
 
   def self.url_publica(chave)
