@@ -151,6 +151,17 @@ class Appointment < ApplicationRecord
   end
 
   # ── HELPERS DE TIPO ───────────────────────────────────────────────────────
+  # Ficha de entrada obrigatória e ainda não feita: o dono ligou a ficha e
+  # não deixou o atendente pular, então o carro só sai como atendido com a
+  # ficha (fotos ou desenho, conforme o modo). Avulso nasce atendido e faz a
+  # ficha depois, no pátio. Uma ficha pulada vale: só o dono pula quando é
+  # obrigatória, e foi decisão dele.
+  def ficha_pendente?
+    return false if walk_in?
+    return false unless car_wash.vehicle_check_enabled && !car_wash.vehicle_check_skippable
+    vehicle_check.nil?
+  end
+
   def disponivel?
     appointment_type == "disponivel"
   end

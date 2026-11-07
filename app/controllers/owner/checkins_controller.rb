@@ -107,6 +107,13 @@ module Owner
 
     # PATCH /owner/checkins/:id/attend
     def attend
+      if @appointment.ficha_pendente?
+        return render json: {
+          error: "Este lava-rápido exige a ficha de entrada. Faça a ficha pelo app antes de finalizar.",
+          code:  "ficha_required"
+        }, status: :unprocessable_entity
+      end
+
       ActiveRecord::Base.transaction do
         # attended_at marca o fim REAL do serviço — usado pelo cálculo de
         # capacidade pra liberar o slot mesmo quando o serviço terminou
