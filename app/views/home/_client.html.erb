@@ -817,21 +817,23 @@
       return;
     }
     $('ch-count').textContent = list.length + (list.length === 1 ? ' lava-rápido' : ' lava-rápidos');
-    var shown = list.slice(0, state.visible), rest = list.length - shown.length;
+    // Destaque só na lista "pura" do primeiro aberto mais perto: com ordem
+    // por nota, o primeiro é o mais bem avaliado — o selo diz o que é.
+    var wide = wideMQ.matches, eyebrow = null;
+    if (wide && list[0] && isOpenNow(list[0])) {
+      eyebrow = state.filter === 'melhores avaliados' ? 'Mais bem avaliado' : 'Aberto e mais perto';
+    }
+    // O destaque ocupa dois espaços: com ele, um card a menos fecha as linhas
+    // (12 espaços dividem por 2, 3, 4 e 6 colunas) em vez de sobrar um sozinho.
+    var shown = list.slice(0, eyebrow ? state.visible - 1 : state.visible), rest = list.length - shown.length;
     var more = rest > 0
       ? '<div class="ch-more"><button type="button" id="ch-more">Mostrar mais · ' + rest + (rest === 1 ? ' restante' : ' restantes') + '</button></div>'
       : '<div style="height:32px"></div>';
     // Celular: as linhas do app, também em lotes — com 90 lojas de uma vez o
     // rodapé ficava a dezenas de telas de distância.
-    if (!wideMQ.matches) {
+    if (!wide) {
       el.innerHTML = '<div class="ch-grid">' + shown.map(shopRow).join('') + '</div>' + more;
       return;
-    }
-    // Destaque só na lista "pura" do primeiro aberto mais perto: com ordem
-    // por nota, o primeiro é o mais bem avaliado — o selo diz o que é.
-    var first = shown[0], eyebrow = null;
-    if (first && isOpenNow(first)) {
-      eyebrow = state.filter === 'melhores avaliados' ? 'Mais bem avaliado' : 'Aberto e mais perto';
     }
     el.innerHTML = '<div class="ch-cards">' + shown.map(function (cw, i) { return shopCard(cw, i === 0 && !!eyebrow, i === 0 ? eyebrow : null); }).join('') + '</div>' +
       more;
