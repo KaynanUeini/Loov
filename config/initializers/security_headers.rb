@@ -33,7 +33,8 @@ Rails.application.config.action_dispatch.default_headers = {
     "img-src 'self' data: https:",
     # viacep.com.br: busca de endereço pelo CEP no cadastro do lava-rápido.
     # Sem ele o navegador bloqueava a consulta e todo CEP dava "não encontrado".
-    "connect-src 'self' https://api.stripe.com https://api.anthropic.com https://viacep.com.br",
+    # *.r2.cloudflarestorage.com: o dono envia o logo direto pro R2 (LogoStorage).
+    "connect-src 'self' https://api.stripe.com https://api.anthropic.com https://viacep.com.br https://*.r2.cloudflarestorage.com",
     # hooks.stripe.com: janela de confirmação do banco (3DS) do Last Minute.
     "frame-src https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com",
     "object-src 'none'",

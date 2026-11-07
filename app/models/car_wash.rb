@@ -27,6 +27,13 @@ class CarWash < ApplicationRecord
   geocoded_by :geocoding_address
   after_validation :geocode, if: :should_geocode?
 
+  # Endereço público do logo que o dono subiu (LogoStorage), ou nil: aí o site
+  # e o app desenham o logo gerado pelo nome.
+  def logo_url
+    return nil if logo_key.blank? || ENV["R2_LOGOS_URL"].blank?
+    LogoStorage.url_publica(logo_key)
+  end
+
   # Campos que descrevem ONDE o lava-rápido fica. Mudar qualquer um destes
   # é motivo pra tentar geocodificar de novo -- antes só `address` disparava,
   # mas a tela de gerenciar edita logradouro/bairro/cidade/uf/cep como campos

@@ -37,6 +37,7 @@ module Owner
       render json: {
         id:                @car_wash.id,
         name:              @car_wash.name,
+        logo_url:          @car_wash.logo_url,
         cep:               @car_wash.cep,
         logradouro:        @car_wash.logradouro,
         numero:            @car_wash.numero,

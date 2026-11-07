@@ -76,6 +76,7 @@ module Client
       {
         id:            cw.id,
         name:          cw.name,
+        logo_url:      cw.logo_url,
         address:       cw.address,
         logradouro:    cw.logradouro,
         bairro:        cw.bairro,

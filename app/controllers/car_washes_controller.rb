@@ -138,6 +138,7 @@ class CarWashesController < ApplicationController
           data = {
             id:            cw.id,
             name:          cw.name,
+            logo_url:      cw.logo_url,
             address:       cw.address,
             favorited:     favorited_ids.include?(cw.id),
             logradouro:    cw.logradouro,
@@ -229,6 +230,7 @@ class CarWashesController < ApplicationController
     {
       id:                cw.id,
       name:              cw.name,
+      logo_url:          cw.logo_url,
       address:           cw.address,
       route_address:     cw.endereco_rota,
       favorited:         favorited,
@@ -638,6 +640,7 @@ class CarWashesController < ApplicationController
       {
         id:                cw.id,
         name:              cw.name,
+        logo_url:          cw.logo_url,
         cep:               cw.cep,
         logradouro:        cw.logradouro,
         numero:            cw.numero,

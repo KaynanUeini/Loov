@@ -121,6 +121,11 @@ Rails.application.routes.draw do
     get   'hora_off', to: 'hora_off#show'
     patch 'hora_off', to: 'hora_off#update'
 
+    # Logo do lava-rápido: URL de envio pro R2, confirmação e remoção.
+    post   'logo/envio', to: 'logo#envio'
+    patch  'logo',       to: 'logo#update'
+    delete 'logo',       to: 'logo#destroy'
+
     get   'vehicle_checks/settings',              to: 'vehicle_checks#settings'
     patch 'vehicle_checks/settings',              to: 'vehicle_checks#settings_update'
     get   'vehicle_checks',                       to: 'vehicle_checks#index'

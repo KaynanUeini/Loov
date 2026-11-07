@@ -77,6 +77,7 @@ class LoyaltyProgram < ApplicationRecord
     cartao = {
       car_wash_id:        car_wash_id,
       car_wash_name:      car_wash.name,
+      car_wash_logo_url:  car_wash.logo_url,
       reward_description: reward_description,
       visits_required:    meta,
       visits_total:       visitas,

@@ -325,6 +325,7 @@ class AppointmentsController < ApplicationController
         car_wash: {
           id:   a.car_wash.id,
           name: a.car_wash.name,
+          logo_url: a.car_wash.logo_url,
           # Coordenada e endereço pro botão "Ver rota" do card abrir o app de
           # mapas direto. Sem isso o app só conseguia levar pra tela do
           # lava-rápido, que não é rota.

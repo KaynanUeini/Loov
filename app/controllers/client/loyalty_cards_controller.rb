@@ -97,6 +97,7 @@ module Client
         {
           car_wash_id:        cw.id,
           car_wash_name:      cw.name,
+          car_wash_logo_url:  cw.logo_url,
           address:            cw.endereco_curto,
           distance_km:        dist,
           visits_required:    lp.visits_required,

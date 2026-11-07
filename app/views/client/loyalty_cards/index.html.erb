@@ -238,7 +238,7 @@
                   <span class="lc-orb"></span><span class="lc-pat"></span>
                   <div class="lc-in">
                     <div class="lc-top">
-                      <span class="lc-mono" data-logo="<%= c[:car_wash_id] %>" data-name="<%= c[:car_wash_name] %>"><%= sigla.(c[:car_wash_name]) %></span>
+                      <span class="lc-mono" data-logo="<%= c[:car_wash_id] %>" data-name="<%= c[:car_wash_name] %>" data-logo-url="<%= c[:car_wash_logo_url] %>"><%= sigla.(c[:car_wash_name]) %></span>
                       <span class="lc-id"><b><%= c[:car_wash_name] %></b><small><%= c[:reward_description] %></small></span>
                       <span class="lc-count"><small>CARIMBOS</small><b><%= c[:filled] %>/<%= n %></b></span>
                     </div>
@@ -317,7 +317,7 @@
         <% @nearby.each do |p| %>
           <a class="np lc" data-tema="<%= tema.(p[:car_wash_id]) %>" href="<%= car_wash_path(p[:car_wash_id]) %><%= qs %>">
             <div class="np-top">
-              <span class="lc-mono" data-logo="<%= p[:car_wash_id] %>" data-name="<%= p[:car_wash_name] %>"><%= sigla.(p[:car_wash_name]) %></span>
+              <span class="lc-mono" data-logo="<%= p[:car_wash_id] %>" data-name="<%= p[:car_wash_name] %>" data-logo-url="<%= p[:car_wash_logo_url] %>"><%= sigla.(p[:car_wash_name]) %></span>
               <% if p[:distance_km] %><span class="np-dist"><%= p[:distance_km].to_s.sub(".", ",") %> km</span><% end %>
             </div>
             <div><b><%= p[:car_wash_name] %></b><span class="np-addr"><%= p[:address] %></span></div>
@@ -342,7 +342,7 @@
   // Logo do lava-rápido no lugar das iniciais (sem JS, ficam as iniciais).
   if (window.LoovLogos) {
     document.querySelectorAll('[data-logo]').forEach(function (el) {
-      el.innerHTML = LoovLogos.logoOf({ id: el.dataset.logo, name: el.dataset.name });
+      el.innerHTML = LoovLogos.logoOf({ id: el.dataset.logo, name: el.dataset.name, logo_url: el.dataset.logoUrl || null });
       el.classList.add('is-logo');
     });
   }

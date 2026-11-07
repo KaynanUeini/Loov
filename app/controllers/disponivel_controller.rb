@@ -137,6 +137,7 @@ class DisponivelController < ApplicationController
             car_wash: {
               id:            cw.id,
               name:          cw.name,
+              logo_url:      cw.logo_url,
               address:       cw.address,
               logradouro:    cw.logradouro,
               numero:        cw.numero,

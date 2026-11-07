@@ -82,7 +82,7 @@ window.LoovLogos = window.LoovLogos || (function () {
     return '<svg viewBox="0 0 120 120" role="img" aria-label="Logo ' + esc(cw.name) + '" xmlns="http://www.w3.org/2000/svg">' + body + '</svg>';
   }
   function logoOf(cw) {
-    return cw.logo_url ? '<img src="' + esc(cw.logo_url) + '" alt="Logo ' + esc(cw.name) + '" style="width:100%;height:100%;object-fit:contain">' : logoSvg(cw);
+    return cw.logo_url ? '<img src="' + esc(cw.logo_url) + '" alt="Logo ' + esc(cw.name) + '" style="width:100%;height:100%;object-fit:cover;border-radius:22%;display:block">' : logoSvg(cw);
   }
 
   return { brandOf: brandOf, logoOf: logoOf, logoSvg: logoSvg };
