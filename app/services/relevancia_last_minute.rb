@@ -16,6 +16,10 @@ class RelevanciaLastMinute
   MEDIA_NEUTRA = 4.5
   PESO_NEUTRO  = 5
 
+  # Preço: perde a nota em proporção ao quanto passa do mais barato da lista;
+  # 50% mais caro vale metade, o dobro vale zero.
+  ACIMA_ZERA = 1.0
+
   # Variedade conta até 3 lavagens.
   TETO_VARIEDADE = 3
 
@@ -31,8 +35,7 @@ class RelevanciaLastMinute
 
   # Mais relevante primeiro; no empate, o horário mais cedo.
   def ordenar
-    precos = @itens.map { |i| i[:min_price].to_f }
-    @preco_min, @preco_max = precos.minmax
+    @preco_min = @itens.map { |i| i[:min_price].to_f }.select(&:positive?).min
     @itens.sort_by { |i| [-nota(i), i[:slots].first, i[:min_price].to_f] }
   end
 
@@ -61,13 +64,14 @@ class RelevanciaLastMinute
     (1 - (km - PERTO_KM) / (RAIO_KM - PERTO_KM)).clamp(0.0, 1.0)
   end
 
-  # Menor preço de lavagem comparado com os outros da lista. Ele já vem com a
-  # Hora Off ou a Hora Pico do horário, então as duas entram por aqui.
+  # Menor preço de lavagem comparado com o mais barato da lista. Ele já vem com
+  # a Hora Off ou a Hora Pico do horário, então as duas entram por aqui. Por
+  # porcentagem e não do mais barato ao mais caro: nessa escala o mais caro
+  # zerava a nota mesmo custando só R$ 5 a mais.
   def nota_preco(preco)
-    @preco_min ||= preco
-    @preco_max ||= preco
-    return 1.0 if @preco_max <= @preco_min
-    ((@preco_max - preco) / (@preco_max - @preco_min)).clamp(0.0, 1.0)
+    base = @preco_min || preco
+    return 1.0 unless base.to_f.positive? && preco.positive?
+    (1 - (preco / base - 1) / ACIMA_ZERA).clamp(0.0, 1.0)
   end
 
   # 5,0 vale 1; 3,0 ou menos vale 0.
