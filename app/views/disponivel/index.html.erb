@@ -204,8 +204,10 @@
   .dw-score img { width: 17px; height: 28px; }
   .dw-score em { font-style: normal; font-size: 8.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--coral-500); }
 
-  /* Passarinho: camada por cima da tela; só ele recebe clique. */
-  .dw-sky { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; }
+  /* Passarinho: camada por cima da tela; só ele recebe clique. Fixa na janela
+     (mesmo recorte da .dw), não absoluta: em tela baixa a espera rola, e a
+     camada absoluta rolava junto, cortando o voo no meio do card. */
+  .dw-sky { position: fixed; inset: 60px 0 0 0; z-index: 2; pointer-events: none; overflow: hidden; }
   .dw-bird { position: absolute; left: 0; top: 0; width: 56px; height: 92px; pointer-events: auto; cursor: pointer; border: 0; background: transparent; padding: 0; opacity: 0; will-change: transform; -webkit-tap-highlight-color: transparent; }
   .dw-bird img { position: absolute; left: var(--slack, 0px); top: var(--slack, 0px); width: 56px; height: 92px; opacity: 0; pointer-events: none; }
   .dw-bird img.on { opacity: 1; }
