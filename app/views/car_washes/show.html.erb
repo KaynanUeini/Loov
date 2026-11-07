@@ -114,7 +114,7 @@
      pra não prometer o desconto em qualquer horário. */
   .cw-svc-g { display: flex; flex-direction: column; }
   .cw-svc-g.has-off > .cw-svc { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
-  .cw-svc-off { display: flex; align-items: center; gap: 8px; width: 100%; padding: 11px 16px; margin-top: -1px; text-align: left; background: var(--coral-50); border: 1px solid var(--coral-100); border-radius: 0 0 16px 16px; color: var(--coral-700); font-size: 12.5px; transition: border-color .15s; }
+  .cw-svc-off { text-decoration: none !important; display: flex; align-items: center; gap: 8px; width: 100%; padding: 11px 16px; margin-top: -1px; text-align: left; background: var(--coral-50); border: 1px solid var(--coral-100); border-radius: 0 0 16px 16px; color: var(--coral-700); font-size: 12.5px; transition: border-color .15s; }
   .cw-svc-off:hover { border-color: var(--coral-500); }
   .cw-svc-off-ic { display: inline-flex; }
   .cw-svc-off-t { flex: 1; min-width: 0; }
@@ -227,6 +227,8 @@
   .bk-time.has-price { flex-direction: column; gap: 1px; height: 58px; }
   .bk-time-p { font-family: Inter, sans-serif; font-weight: 500; font-size: 12px; color: var(--graphite); }
   .bk-time.is-on .bk-time-p { color: var(--cream); }
+  /* Coral só quando o Last Minute sai mais barato; acima da tabela fica na cor do texto. */
+  .bk-time.is-lm .bk-time-p.is-menos { color: var(--coral-700); font-weight: 600; }
   .bk-off { display: inline-flex; align-items: center; gap: 8px; }
   .bk-off-ic { width: 20px; height: 20px; border-radius: 50%; background: var(--coral-50); color: var(--coral-700); display: inline-flex; align-items: center; justify-content: center; }
   .bk-off-v { color: var(--coral-700); }
@@ -583,13 +585,20 @@
     var quando = dia === hoje ? 'hoje' : dia === amanha ? 'amanhã' : dia.slice(8, 10) + '/' + dia.slice(5, 7);
     return quando + ' às ' + h + 'h' + (m === '00' ? '' : m);
   }
+  function lastMinuteUrl() { return '/disponivel' + (COORDS_QS ? COORDS_QS + '&' : '?') + 'car_wash_id=' + CW.id; }
+  // Oferta no Last Minute (os próximos 30 min) leva direto pra reserva de lá;
+  // a do agendamento comum abre o agendamento já no horário.
   function ofertaHtml(s, o, bookable) {
-    var tag = bookable ? 'button type="button" data-svc="' + s.id + '" data-slot="' + esc(o.slot) + '"' : 'div';
+    var lm = !!o.last_minute, tag;
+    if (!bookable) tag = 'div';
+    else if (lm) tag = 'a href="' + lastMinuteUrl() + '"';
+    else tag = 'button type="button" data-svc="' + s.id + '" data-slot="' + esc(o.slot) + '"';
+    var fim = !bookable ? 'div' : lm ? 'a' : 'button';
     return '<' + tag + ' class="cw-svc-off">' +
-      '<span class="cw-svc-off-ic">' + HORA_OFF_IC + '</span>' +
-      '<span class="cw-svc-off-t"><b>Hora Off</b> · R$ ' + money(o.preco) + '<s>R$ ' + money(o.tabela) + '</s> ' + quandoOferta(o.slot) + '</span>' +
+      '<span class="cw-svc-off-ic">' + (lm ? icon('zap', 12) : HORA_OFF_IC) + '</span>' +
+      '<span class="cw-svc-off-t"><b>Hora Off</b> · R$ ' + money(o.preco) + '<s>R$ ' + money(o.tabela) + '</s> ' + quandoOferta(o.slot) + (lm ? ' no Last Minute' : '') + '</span>' +
       (bookable ? '<span class="cw-svc-off-go">' + icon('chevron-right', 14) + '</span>' : '') +
-    '</' + (bookable ? 'button' : 'div') + '>';
+    '</' + fim + '>';
   }
 
   function renderServices() {
@@ -802,13 +811,16 @@
       // Off): num lava-rápido sem ela, repetir o mesmo preço em todo horário
       // é ruído.
       var tabela = Number(bk.service.price);
-      var comPreco = bk.times.some(function (t) { return !t.disponivel_only && t.price != null && Number(t.price) !== tabela; });
+      // A vaga do Last Minute entra na conta: é onde a Hora Off dá o maior
+      // desconto, e sem preço o cliente não sabia que ali saía mais barato.
+      var comPreco = bk.times.some(function (t) { return (!t.disponivel_only || CW.disponivel_eligible) && t.price != null && Number(t.price) !== tabela; });
       body = '<div class="bk-times">' + bk.times.map(function (t) {
         var ts = t.time || t, only = !!t.disponivel_only, lm = only && CW.disponivel_eligible, off = only && !CW.disponivel_eligible;
         if (lm) anyLm = true;
-        var cls = 'bk-time' + (ts === bk.time ? ' is-on' : '') + (lm ? ' is-lm' : '') + (off ? ' is-off' : '') + (comPreco && !only ? ' has-price' : '');
+        var cls = 'bk-time' + (ts === bk.time ? ' is-on' : '') + (lm ? ' is-lm' : '') + (off ? ' is-off' : '') + (comPreco && !off ? ' has-price' : '');
         // Vaga de última hora: vai pro Disponível já com esta loja aberta.
-        if (lm) return '<a class="' + cls + '" href="/disponivel' + (COORDS_QS ? COORDS_QS + '&' : '?') + 'car_wash_id=' + CW.id + '" title="Reservar pelo Last Minute">' + ts + '<span class="bk-time-zap">' + icon('zap', 9) + '</span></a>';
+        var precoLm = comPreco && t.price != null ? '<span class="bk-time-p' + (Number(t.price) < tabela ? ' is-menos' : '') + '">R$ ' + money(t.price) + '</span>' : '';
+        if (lm) return '<a class="' + cls + '" href="' + lastMinuteUrl() + '" title="Reservar pelo Last Minute">' + ts + precoLm + '<span class="bk-time-zap">' + icon('zap', 9) + '</span></a>';
         var preco = comPreco && !only ? '<span class="bk-time-p">R$ ' + money(t.price != null ? t.price : tabela) + '</span>' : '';
         return '<button type="button" class="' + cls + '" data-time="' + ts + '"' + (off ? ' disabled title="Só pelo Last Minute"' : '') + '>' + ts + preco + '</button>';
       }).join('') + '</div>' +

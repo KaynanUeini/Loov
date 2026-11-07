@@ -315,7 +315,8 @@ class CarWashesController < ApplicationController
   end
 
   private def oferta_json(o)
-    { preco: o[:preco], tabela: o[:tabela], slot: o[:slot].iso8601, service_id: o[:service_id] }.compact
+    { preco: o[:preco], tabela: o[:tabela], slot: o[:slot].iso8601, service_id: o[:service_id],
+      last_minute: o[:last_minute] }.compact
   end
 
   def new

@@ -99,10 +99,19 @@ class PrecoDinamico
   # lava-rápido e a home mostram como "R$ 30 hoje às 22h": preço junto do
   # horário, pra não prometer o desconto em qualquer horário. No empate de
   # preço, o mais cedo.
+  #
+  # A vaga do Last Minute (os próximos 30 min) também concorre, com
+  # last_minute: true: é onde o desconto é maior, e sem ela o cliente via
+  # "R$ 30 às 22h" sem saber que às 20h saía por R$ 28. Só lavagem entra no
+  # Last Minute, como em todo o resto.
   def melhor_oferta(service)
     return nil unless car_wash.hora_off_enabled && aplica?(service)
 
     melhor = nil
+    if service.last_minute? && (lm = car_wash.last_minute_slot(agora, service)) && !fechado_no_dia?(lm.to_date)
+      r = para(service, lm, last_minute: true)
+      melhor = { preco: r.preco, tabela: r.tabela, slot: lm, last_minute: true } if r.tipo == "off"
+    end
     cada_horario_fraco(a_partir_de: agora + TRAVA_AGENDAMENTO) do |slot|
       next unless car_wash.last_minute_cabe?(slot, service)
       r = para(service, slot)
