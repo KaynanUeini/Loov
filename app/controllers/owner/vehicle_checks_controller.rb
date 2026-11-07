@@ -43,7 +43,11 @@ module Owner
       return render json: { ok: true, conferida: false } if usadas.to_i > FichaConferencia::LIMITE_POR_ATENDIMENTO
 
       r = FichaConferencia.conferir(label, img)
-      render json: r ? r.merge(conferida: true) : { ok: true, conferida: false }
+      if r[:falha] || r["falha"]
+        render json: { ok: true, conferida: false, falha: r[:falha] || r["falha"] }
+      else
+        render json: r.merge(conferida: true)
+      end
     end
 
     # POST /owner/checkins/:id/vehicle_check/uploads  { labels: ["front", …] }
