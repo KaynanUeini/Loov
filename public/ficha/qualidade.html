@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ficha</title>
+<!--
+  Janela web escondida da ficha do carro (app): confere, no próprio celular e
+  sem custo, se a foto está escura, estourada ou tremida antes de ela seguir
+  (só as que passam vão pra conferência da IA, que é a parte paga).
+  App → window.loovFichaConferir({ id, b64 }) · página → { evento: 'qualidade', id, ok, motivo, medidas }
+  motivo: 'escura' | 'estourada' | 'tremida' (ou null quando ok)
+-->
+</head>
+<body>
+<script>
+(function () {
+  // Limites calibrados em fotos de carro reduzidas a 256 px de largura, de
+  // propósito conservadores: foto boa deu nitidez acima de 1.800 e brilho
+  // acima de 60; muito tremida ficou abaixo de 150, escura abaixo de 25. O
+  // meio-termo (meio borrada, penumbra) fica pra IA, que diz se dá pra ver.
+  var LADO = 256;
+  var ESCURA = 28;        // brilho médio (0–255) abaixo disto
+  var ESTOURADA = 0.35;   // fração de pixels quase brancos acima disto
+  var TREMIDA = 250;      // variância do laplaciano abaixo disto
+
+  function responder(o) {
+    var s = JSON.stringify(o);
+    if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(s);
+    else if (window.parent !== window) window.parent.postMessage(s, '*');
+  }
+
+  function medir(img) {
+    var k = LADO / img.width, w = LADO, h = Math.max(1, Math.round(img.height * k));
+    var c = document.createElement('canvas'); c.width = w; c.height = h;
+    var x = c.getContext('2d'); x.drawImage(img, 0, 0, w, h);
+    var d = x.getImageData(0, 0, w, h).data, n = w * h, g = new Float32Array(n), soma = 0, claros = 0;
+    for (var i = 0; i < n; i++) {
+      var v = 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2];
+      g[i] = v; soma += v; if (v > 245) claros++;
+    }
+    // Nitidez: variância do laplaciano (borda forte = foto firme).
+    var m = 0, m2 = 0, cont = 0;
+    for (var yy = 1; yy < h - 1; yy++) for (var xx = 1; xx < w - 1; xx++) {
+      var p = yy * w + xx, l = 4 * g[p] - g[p - 1] - g[p + 1] - g[p - w] - g[p + w];
+      m += l; m2 += l * l; cont++;
+    }
+    m /= cont;
+    return { brilho: soma / n, claros: claros / n, nitidez: m2 / cont - m * m };
+  }
+
+  function conferir(msg) {
+    if (typeof msg === 'string') { try { msg = JSON.parse(msg); } catch (e) { return; } }
+    if (!msg || !msg.b64) return;
+    var img = new Image();
+    img.onload = function () {
+      var me = medir(img), motivo = null;
+      if (me.brilho < ESCURA) motivo = 'escura';
+      else if (me.claros > ESTOURADA) motivo = 'estourada';
+      else if (me.nitidez < TREMIDA) motivo = 'tremida';
+      responder({ evento: 'qualidade', id: msg.id, ok: !motivo, motivo: motivo, medidas: me });
+    };
+    // Imagem que não abre não trava a ficha: passa.
+    img.onerror = function () { responder({ evento: 'qualidade', id: msg.id, ok: true, motivo: null }); };
+    img.src = 'data:image/jpeg;base64,' + msg.b64;
+  }
+
+  window.loovFichaConferir = conferir;
+  window.loovFichaMedir = medir;
+  window.addEventListener('message', function (e) { conferir(e.data); });
+  document.addEventListener('message', function (e) { conferir(e.data); });
+  responder({ evento: 'pronta' });
+})();
+</script>
+</body>
+</html>

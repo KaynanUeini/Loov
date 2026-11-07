@@ -6,6 +6,10 @@
 # readonly? cobre update e destroy; só o expurgo de fichas vencidas (5 anos)
 # apaga, com delete_all, que não passa por aqui.
 class VehicleCheck < ApplicationRecord
+  # Foto usada mesmo sem passar na conferência ("Usar mesmo assim"): o
+  # motivo fica gravado e o dono vê na ficha. Da conferência no celular
+  # (escura, estourada, tremida) ou da IA (sem carro, outro lado, sem nitidez).
+  FLAGS  = %w[escura estourada tremida sem_carro outro_lado sem_nitidez].freeze
   MODES  = %w[photos sketch skipped].freeze
   KINDS  = %w[risco amassado trincado outro].freeze
   # As 4 fotos guiadas são obrigatórias no modo fotos; detalhes são extras.
@@ -59,7 +63,11 @@ class VehicleCheck < ApplicationRecord
     self.plate = plate.to_s.upcase.gsub(/[^A-Z0-9]/, "").presence
     self.recorded_at = Time.current
     self.expires_at  = recorded_at + RETENCAO
-    self.photos = Array(photos).map { |p| p.to_h.stringify_keys.slice("label", "key", "kind") }
+    self.photos = Array(photos).map do |p|
+      p = p.to_h.stringify_keys.slice("label", "key", "kind", "flag")
+      p.delete("flag") unless FLAGS.include?(p["flag"])
+      p
+    end
     self.marks  = Array(marks).each_with_index.map do |m, i|
       m = m.to_h.stringify_keys
       x = m["x"].to_f.clamp(0.0, 1.0).round(4)

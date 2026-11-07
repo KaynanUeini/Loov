@@ -131,6 +131,7 @@ Rails.application.routes.draw do
     get   'vehicle_checks',                       to: 'vehicle_checks#index'
     get   'vehicle_checks/:id',                   to: 'vehicle_checks#show', as: :vehicle_check
     post  'checkins/:id/vehicle_check/uploads',   to: 'vehicle_checks#uploads'
+    post  'checkins/:id/vehicle_check/conferir',  to: 'vehicle_checks#conferir'
     post  'checkins/:id/vehicle_check',           to: 'vehicle_checks#create'
 
     resources :attendant_invitations, only: [:index, :create, :destroy] do

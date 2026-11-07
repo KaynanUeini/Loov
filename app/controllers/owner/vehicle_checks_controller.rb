@@ -7,7 +7,7 @@ module Owner
     before_action :ensure_owner_or_attendant
     before_action :set_car_wash
     before_action :ensure_owner, only: [:settings_update]
-    before_action :load_appointment, only: [:uploads, :create]
+    before_action :load_appointment, only: [:uploads, :create, :conferir]
 
     # GET /owner/vehicle_checks/settings
     def settings
@@ -26,6 +26,24 @@ module Owner
       end
       @car_wash.update_columns(attrs.merge(updated_at: Time.current)) if attrs.any?
       render json: settings_json
+    end
+
+    # POST /owner/checkins/:id/vehicle_check/conferir  { label, image }
+    # A IA confere uma foto guiada (FichaConferencia). image: JPEG em base64,
+    # já reduzido pelo app. Sem resposta da IA, { ok: true, conferida: false }:
+    # a foto passa, a conferência nunca trava a ficha.
+    def conferir
+      label = params[:label].to_s
+      img   = params[:image].to_s
+      return render json: { error: "Foto inválida." }, status: :unprocessable_entity unless FichaConferencia::ESPERADO.key?(label)
+      return render json: { error: "Foto grande demais." }, status: :unprocessable_entity if img.bytesize > 400_000 || img.blank?
+
+      chave = "ficha_conferencia:#{@appointment.id}"
+      usadas = Rails.cache.increment(chave, 1, expires_in: 6.hours) || (Rails.cache.write(chave, 1, expires_in: 6.hours) && 1)
+      return render json: { ok: true, conferida: false } if usadas.to_i > FichaConferencia::LIMITE_POR_ATENDIMENTO
+
+      r = FichaConferencia.conferir(label, img)
+      render json: r ? r.merge(conferida: true) : { ok: true, conferida: false }
     end
 
     # POST /owner/checkins/:id/vehicle_check/uploads  { labels: ["front", …] }
@@ -65,7 +83,7 @@ module Owner
         return render json: { error: "O lava-rápido usa outro modo de ficha." }, status: :unprocessable_entity
       end
 
-      photos = mode == "photos" ? Array(params[:photos]).map { |p| p.permit(:label, :key, :kind).to_h } : []
+      photos = mode == "photos" ? Array(params[:photos]).map { |p| p.permit(:label, :key, :kind, :flag).to_h } : []
       if photos.any?
         return render json: { error: "Fotos indisponíveis. Use o desenho." }, status: :service_unavailable unless FichaStorage.configurado?
         prefixo = FichaStorage.prefixo(@appointment)
@@ -194,7 +212,7 @@ module Owner
         expires_at: check.expires_at.iso8601,
         marks:      check.marks,
         photos:     check.photos.map do |p|
-          { label: p["label"], kind: p["kind"], url: storage&.url_leitura(p["key"]) }
+          { label: p["label"], kind: p["kind"], flag: p["flag"], url: storage&.url_leitura(p["key"]) }
         end
       )
     end
