@@ -24,38 +24,30 @@
 <div id="lm-alert" hidden>
   <div class="lma-ov"></div>
   <div class="lma-card" role="alertdialog" aria-modal="true" aria-labelledby="lma-svc" aria-describedby="lma-when">
+    <%# Compacto, o mesmo cartão escuro do app (OwnerDisponivelScreen): o tempo
+        com a barra que drena, o quê e quanto entra no balcão, quem e qual carro. %>
     <div class="lma-head">
-      <span class="lma-eyebrow"><i class="lma-dot"></i><span id="lma-eyebrow-txt">Last Minute · novo pedido</span></span>
-      <span class="lma-queue" id="lma-queue" hidden></span>
+      <span class="lma-eyebrow"><i class="lma-dot"></i><span id="lma-eyebrow-txt">Novo pedido · Last Minute</span></span>
+      <span class="lma-headr"><span class="lma-queue" id="lma-queue" hidden></span><b class="lma-count" id="lma-count">3:00</b></span>
     </div>
-
-    <div class="lma-ring-wrap">
-      <svg class="lma-ring" viewBox="0 0 120 120" aria-hidden="true">
-        <circle cx="60" cy="60" r="52" class="lma-ring-bg"/>
-        <circle cx="60" cy="60" r="52" class="lma-ring-fg" id="lma-ring"/>
-      </svg>
-      <div class="lma-count"><b id="lma-count">3:00</b><span>pra decidir</span></div>
-    </div>
+    <div class="lma-track"><i id="lma-bar"></i></div>
 
     <div class="lma-main">
-      <h3 class="lma-svc" id="lma-svc">—</h3>
-      <div class="lma-when" id="lma-when">—</div>
-      <div class="lma-client">
-        <span class="lma-av" id="lma-av">?</span>
-        <div style="min-width:0">
-          <div class="lma-name" id="lma-name">—</div>
-          <div class="lma-car" id="lma-car"></div>
-        </div>
+      <div class="lma-mtxt">
+        <h3 class="lma-svc" id="lma-svc">—</h3>
+        <div class="lma-when" id="lma-when">—</div>
       </div>
+      <div class="lma-mval"><b id="lma-rest">—</b><span>No balcão</span></div>
     </div>
 
-    <div class="lma-money">
-      <div class="lma-row"><span>Valor do serviço</span><b id="lma-total">—</b></div>
-      <div class="lma-row"><span>Garantido no cartão do cliente <em>35%</em></span><b id="lma-pre">—</b></div>
-      <div class="lma-row strong"><span>Você recebe na chegada</span><b id="lma-rest">—</b></div>
+    <div class="lma-client">
+      <span class="lma-av" id="lma-av">?</span>
+      <span class="lma-name" id="lma-name">—</span>
+      <span class="lma-car" id="lma-car"></span>
     </div>
+    <div class="lma-vals">Serviço <span id="lma-total">—</span> · <span id="lma-pre">—</span> já no cartão</div>
 
-    <button type="button" class="lma-mute" id="lma-mute" hidden>🔇 Som bloqueado pelo navegador · <u>toque pra ouvir</u></button>
+    <button type="button" class="lma-mute" id="lma-mute" hidden>Som bloqueado pelo navegador · toque pra ouvir</button>
 
     <div class="lma-actions" id="lma-actions">
       <button type="button" class="lma-btn lma-no" id="lma-no">Recusar</button>
@@ -76,59 +68,54 @@
   #lm-alert { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 16px; }
   .lma-ov { position: absolute; inset: 0; background: rgba(25,20,15,.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); animation: lmaFade .25s ease both; }
   .lma-card {
-    position: relative; width: 100%; max-width: 420px; max-height: calc(100vh - 32px); overflow-y: auto;
-    background: var(--paper, #fefefd); border-radius: 28px; padding: 22px 22px 20px;
-    box-shadow: 0 30px 80px rgba(25,20,15,.45); animation: lmaIn .38s cubic-bezier(.16,1,.3,1) both;
-    font-family: 'Inter', sans-serif; color: var(--ink, #28231c);
+    position: relative; width: 100%; max-width: 400px; max-height: calc(100vh - 32px); overflow-y: auto;
+    background: var(--ink, #28231c); color: var(--cream, #fafaf6); border-radius: 24px; padding: 18px;
+    box-shadow: 0 30px 80px rgba(25,20,15,.5); animation: lmaIn .38s cubic-bezier(.16,1,.3,1) both;
+    font-family: 'Inter', sans-serif;
   }
   @keyframes lmaFade { from { opacity: 0; } }
   @keyframes lmaIn { from { opacity: 0; transform: translateY(24px) scale(.96); } }
   .lma-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .lma-eyebrow { display: inline-flex; align-items: center; gap: 8px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--coral-500, #dd7852); }
+  #lm-alert.urgent .lma-eyebrow { color: var(--rose-500, #d05a5a); }
   .lma-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: lmaPulse 1s ease-in-out infinite; }
   @keyframes lmaPulse { 50% { opacity: .3; transform: scale(.7); } }
-  .lma-queue { font-size: 11.5px; font-weight: 600; color: var(--graphite, #575148); background: var(--sand, #f1eee6); border-radius: 999px; padding: 4px 10px; }
+  .lma-headr { display: inline-flex; align-items: center; gap: 10px; }
+  .lma-queue { font-size: 11px; font-weight: 600; color: var(--cream, #fafaf6); background: rgba(250,250,246,.1); border-radius: 999px; padding: 3px 9px; }
+  .lma-count { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 30px; line-height: 1; letter-spacing: -.8px; font-variant-numeric: tabular-nums; color: var(--cream, #fafaf6); }
+  #lm-alert.urgent .lma-count { color: var(--rose-500, #d05a5a); }
+  .lma-track { height: 4px; margin-top: 10px; border-radius: 2px; background: rgba(250,250,246,.12); overflow: hidden; }
+  .lma-track i { display: block; height: 100%; width: 100%; border-radius: 2px; background: var(--coral-500, #dd7852); transition: width .95s linear, background .3s; }
+  #lm-alert.urgent .lma-track i { background: var(--rose-500, #d05a5a); }
 
-  .lma-ring-wrap { position: relative; width: 132px; height: 132px; margin: 14px auto 6px; }
-  .lma-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
-  .lma-ring-bg { fill: none; stroke: var(--sand, #f1eee6); stroke-width: 8; }
-  .lma-ring-fg { fill: none; stroke: var(--coral-500, #dd7852); stroke-width: 8; stroke-linecap: round; stroke-dasharray: 326.73; transition: stroke-dashoffset .95s linear, stroke .3s; }
-  #lm-alert.urgent .lma-ring-fg { stroke: var(--rose-500, #d05a5a); }
-  .lma-count { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-  .lma-count b { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 32px; letter-spacing: -1px; font-variant-numeric: tabular-nums; }
-  .lma-count span { font-size: 11px; color: var(--ash, #ada699); margin-top: 2px; }
-  #lm-alert.urgent .lma-count b { color: var(--rose-500, #d05a5a); }
+  .lma-main { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-top: 14px; }
+  .lma-mtxt { min-width: 0; }
+  .lma-svc { margin: 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 600; font-size: 17px !important; letter-spacing: -.3px; color: var(--cream, #fafaf6) !important; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lma-when { margin-top: 2px; font-size: 12.5px; color: var(--ash, #ada699); }
+  .lma-mval { text-align: right; flex-shrink: 0; }
+  .lma-mval b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 24px; line-height: 1.1; letter-spacing: -.6px; font-variant-numeric: tabular-nums; }
+  .lma-mval span { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 1px; text-transform: uppercase; color: var(--ash, #ada699); }
 
-  .lma-main { text-align: center; }
-  .lma-svc { margin: 6px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 24px !important; letter-spacing: -.6px; color: var(--ink, #28231c) !important; line-height: 1.15; }
-  .lma-when { color: var(--graphite, #575148); font-size: 13.5px; margin-top: 4px; }
-  .lma-client { display: flex; align-items: center; gap: 10px; text-align: left; margin-top: 16px; padding: 12px 14px; background: var(--cream, #fafaf6); border: 1px solid var(--stone, #e0dbd0); border-radius: 16px; }
-  .lma-av { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--coral-50, #fbeae3); color: var(--coral-500, #dd7852); font-weight: 700; }
-  .lma-name { font-weight: 600; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .lma-car { display: flex; align-items: center; gap: 8px; margin-top: 3px; color: var(--graphite, #575148); font-size: 12.5px; flex-wrap: wrap; }
-  .lma-plate { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; letter-spacing: 1.5px; background: var(--ink, #28231c); color: var(--cream, #fafaf6); border-radius: 6px; padding: 2px 7px; }
+  .lma-client { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(250,250,246,.1); min-width: 0; }
+  .lma-av { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: rgba(221,120,82,.2); color: #e8a48a; font-weight: 600; font-size: 12.5px; }
+  .lma-name { font-weight: 600; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .lma-car { display: inline-flex; align-items: center; gap: 8px; color: var(--ash, #ada699); font-size: 12px; white-space: nowrap; }
+  .lma-plate { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.4px; background: var(--cream, #fafaf6); color: var(--ink, #28231c); border-radius: 5px; padding: 1px 6px; }
+  .lma-vals { margin-top: 6px; font-size: 11.5px; color: var(--ash, #ada699); }
 
-  .lma-money { margin-top: 12px; border: 1px solid var(--stone, #e0dbd0); border-radius: 16px; overflow: hidden; }
-  .lma-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 14px; font-size: 13.5px; color: var(--graphite, #575148); }
-  .lma-row + .lma-row { border-top: 1px solid var(--stone, #e0dbd0); }
-  .lma-row em { font-style: normal; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ash, #ada699); margin-left: 4px; }
-  .lma-row b { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; color: var(--ink, #28231c); font-variant-numeric: tabular-nums; }
-  .lma-row.strong span { color: var(--ink, #28231c); font-weight: 600; }
-  .lma-row.strong b { color: var(--coral-500, #dd7852); font-size: 17px; }
-
-  .lma-actions { display: grid; grid-template-columns: 1fr 1.6fr; gap: 10px; margin-top: 16px; }
-  .lma-btn { border-radius: 999px; padding: 15px 14px; font-size: 14.5px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background .15s, border-color .15s, opacity .15s, transform .15s; }
-  .lma-yes { background: var(--coral-500, #dd7852) !important; color: var(--cream, #fafaf6) !important; border: none !important; box-shadow: 0 6px 16px rgba(221,120,82,.3); }
+  .lma-actions { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; margin-top: 14px; }
+  .lma-btn { height: 48px; border-radius: 999px; font-size: 14.5px; font-weight: 600; cursor: pointer; font-family: inherit; transition: background .15s, border-color .15s, opacity .15s, transform .15s; }
+  .lma-yes { background: var(--coral-500, #dd7852) !important; color: var(--cream, #fafaf6) !important; border: none !important; }
   .lma-yes:hover:not(:disabled) { background: var(--coral-700, #9c4930) !important; transform: translateY(-1px); }
-  .lma-no { background: transparent; color: var(--graphite, #575148); border: 1px solid var(--stone, #e0dbd0); }
-  .lma-no:hover:not(:disabled) { border-color: var(--rose-500, #d05a5a); color: var(--rose-500, #d05a5a); }
+  .lma-no { background: transparent; color: var(--cream, #fafaf6); border: 1px solid rgba(250,250,246,.22); font-weight: 500; }
+  .lma-no:hover:not(:disabled) { border-color: var(--rose-500, #d05a5a); color: #f0a3a3; }
   .lma-btn:disabled { opacity: .55; cursor: wait; transform: none; }
-  .lma-result { margin-top: 16px; padding: 14px; border-radius: 16px; text-align: center; font-weight: 600; font-size: 14px; }
-  .lma-result.ok  { background: #e4f4ed; color: #2d6b4f; }
-  .lma-result.no  { background: var(--sand, #f1eee6); color: var(--graphite, #575148); }
-  .lma-result.err { background: #fdecec; color: var(--rose-500, #d05a5a); }
+  .lma-result { margin-top: 14px; padding: 12px; border-radius: 14px; text-align: center; font-weight: 600; font-size: 13.5px; line-height: 1.4; }
+  .lma-result.ok  { background: rgba(110,190,150,.16); color: #9fdcbb; }
+  .lma-result.no  { background: rgba(250,250,246,.08); color: var(--stone, #e0dbd0); }
+  .lma-result.err { background: rgba(208,90,90,.18); color: #f0a3a3; }
 
-  .lma-mute { display: block; width: 100%; margin-top: 14px; padding: 10px 12px; border: 1px dashed var(--coral-300, #eaa184); border-radius: 12px; background: var(--coral-50, #fdf3ee); color: var(--coral-700, #b5532f); font: 600 13px 'Inter', sans-serif; cursor: pointer; }
+  .lma-mute { display: block; width: 100%; margin-top: 12px; padding: 9px 12px; border: 1px dashed rgba(221,120,82,.55); border-radius: 12px; background: rgba(221,120,82,.1); color: #e8a48a; font: 600 13px 'Inter', sans-serif; cursor: pointer; }
 
   .lma-enable {
     position: fixed; left: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 1500;
@@ -159,7 +146,6 @@
   if (window.LoovLM) return;
   var CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
   var TTL = <%= Appointment::ACCEPTANCE_TTL.to_i %>;
-  var CIRC = 2 * Math.PI * 52;
   var $ = function (id) { return document.getElementById(id); };
   var root = $('lm-alert');
 
@@ -275,13 +261,13 @@
     $('lma-av').textContent = name.trim().charAt(0).toUpperCase() || '?';
     $('lma-name').textContent = name;
     var car = $('lma-car'); car.innerHTML = '';
-    if (a.vehicle_model) { var m = document.createElement('span'); m.textContent = a.vehicle_model; car.appendChild(m); }
     if (a.vehicle_plate) { var p = document.createElement('span'); p.className = 'lma-plate'; p.textContent = a.vehicle_plate; car.appendChild(p); }
+    if (a.vehicle_model) { var m = document.createElement('span'); m.textContent = a.vehicle_model; car.appendChild(m); }
     if (!a.vehicle_model && !a.vehicle_plate) car.textContent = 'Veículo não informado';
     var total = Number(a.service_price) || 0, pre = Number(a.prepayment) || 0;
     $('lma-total').textContent = brl(total);
-    $('lma-pre').textContent = pre ? brl(pre) : '—';
-    $('lma-rest').textContent = brl(Math.max(0, total - pre));
+    $('lma-pre').textContent = brl(pre);
+    $('lma-rest').textContent = brl(a.on_arrival != null ? a.on_arrival : Math.max(0, total - pre));
   }
 
   function renderQueue() {
@@ -297,7 +283,7 @@
     $('lma-actions').hidden = false; $('lma-result').hidden = true;
     $('lma-yes').disabled = $('lma-no').disabled = false;
     $('lma-yes').textContent = 'Aceitar pedido'; $('lma-no').textContent = 'Recusar';
-    $('lma-eyebrow-txt').textContent = 'Last Minute · novo pedido';
+    $('lma-eyebrow-txt').textContent = 'Novo pedido · Last Minute';
     root.hidden = false; renderQueue();
     document.documentElement.style.overflow = 'hidden';
     updateTick();
@@ -318,8 +304,10 @@
   function updateTick() {
     var s = secsLeft();
     $('lma-count').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
-    $('lma-ring').style.strokeDashoffset = String(CIRC * (1 - s / TTL));
-    root.classList.toggle('urgent', s <= 30 && !st.done);
+    $('lma-bar').style.width = Math.max(0, Math.min(100, s / TTL * 100)) + '%';
+    var urgente = s <= 30 && !st.done;
+    root.classList.toggle('urgent', urgente);
+    if (!st.done) $('lma-eyebrow-txt').textContent = urgente ? 'Últimos segundos' : 'Novo pedido · Last Minute';
     if (s <= 0 && !st.done && !st.acting) finish('no', 'Tempo esgotado. O pedido foi liberado e o cliente não foi cobrado.');
   }
 

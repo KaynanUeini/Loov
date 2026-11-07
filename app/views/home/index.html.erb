@@ -269,6 +269,12 @@
     border:1px solid var(--od-stone); border-radius:18px;
   }
   .owner-dash-card.inactive { background:var(--od-sand); border-color:var(--od-stone); }
+  /* Pendência da ficha: o ponto vermelho piscando do iOS/Spotify, no lugar da fase. */
+  .owner-dash-pend { display:inline-flex; align-items:center; gap:6px; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.8px; color:var(--od-rose-500); }
+  .owner-dash-pend i { width:7px; height:7px; border-radius:50%; background:currentColor; animation:odPend 1.4s ease-in-out infinite; }
+  @keyframes odPend { 50% { opacity:.25; } }
+  .owner-dash-pend-t { display:block; margin-top:3px; font-size:12px; color:var(--od-graphite); }
+  @media (prefers-reduced-motion: reduce) { .owner-dash-pend i { animation:none; } }
   .owner-dash-card-top { display:flex; align-items:center; gap:12px; }
   .owner-dash-time-bar { width:4px; height:38px; border-radius:2px; flex-shrink:0; }
   .owner-dash-time-bar.mint { background:var(--od-mint-500); }
@@ -1110,6 +1116,10 @@
     const showSecondaryActions = inService || isFuture || (isPast && isConfirmed);
 
     const card = document.createElement('div');
+    // Ficha obrigatória e não feita depois do horário: o serviço não começou
+    // (cliente não chegou ou falta a ficha). Sem sinal, parecia em andamento.
+    const esperandoFicha = inService && !!appt.aguardando_ficha;
+    const atrasoMin = esperandoFicha ? Math.max(0, Math.floor((Date.now() - new Date(appt.scheduled_at).getTime()) / 60000)) : 0;
     card.className = `owner-dash-card${isFinalized ? ' inactive' : ''}`;
     card.dataset.id = appt.id;
 
@@ -1148,7 +1158,13 @@
       : '';
 
     let rightHtml = '';
-    if (inService) {
+    if (esperandoFicha) {
+      // Pendência: um ponto vermelho piscando e duas palavras, sem mudar a cor do card.
+      rightHtml = `
+        <span class="owner-dash-pend"><i></i>SEM FICHA</span>
+        <span class="owner-dash-pend-t">há ${atrasoMin} min</span>
+      `;
+    } else if (inService) {
       rightHtml = `
         <span class="owner-dash-phase">${escapeHtml(phase)}</span>
         ${etaMinutes != null ? `<span class="owner-dash-eta">${etaMinutes}m</span>` : ''}
