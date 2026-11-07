@@ -814,6 +814,9 @@
       // A vaga do Last Minute entra na conta: é onde a Hora Off dá o maior
       // desconto, e sem preço o cliente não sabia que ali saía mais barato.
       var comPreco = bk.times.some(function (t) { return (!t.disponivel_only || CW.disponivel_eligible) && t.price != null && Number(t.price) !== tabela; });
+      // No pico só o Last Minute muda de preço: aí só ele mostra o valor, pra
+      // grade não apontar os outros horários como mais baratos.
+      var precoNosComuns = bk.times.some(function (t) { return !t.disponivel_only && t.price != null && Number(t.price) !== tabela; });
       body = '<div class="bk-times">' + bk.times.map(function (t) {
         var ts = t.time || t, only = !!t.disponivel_only, lm = only && CW.disponivel_eligible, off = only && !CW.disponivel_eligible;
         if (lm) anyLm = true;
@@ -821,7 +824,7 @@
         // Vaga de última hora: vai pro Disponível já com esta loja aberta.
         var precoLm = comPreco && t.price != null ? '<span class="bk-time-p' + (Number(t.price) < tabela ? ' is-menos' : '') + '">R$ ' + money(t.price) + '</span>' : '';
         if (lm) return '<a class="' + cls + '" href="' + lastMinuteUrl() + '" title="Reservar pelo Last Minute">' + ts + precoLm + '<span class="bk-time-zap">' + icon('zap', 9) + '</span></a>';
-        var preco = comPreco && !only ? '<span class="bk-time-p">R$ ' + money(t.price != null ? t.price : tabela) + '</span>' : '';
+        var preco = precoNosComuns && !only ? '<span class="bk-time-p">R$ ' + money(t.price != null ? t.price : tabela) + '</span>' : '';
         return '<button type="button" class="' + cls + '" data-time="' + ts + '"' + (off ? ' disabled title="Só pelo Last Minute"' : '') + '>' + ts + preco + '</button>';
       }).join('') + '</div>' +
       (anyLm ? '<div class="bk-lmnote"><span>' + icon('zap', 10) + '</span>Horário em cima da hora: reserva pelo Last Minute.</div>' : '');
