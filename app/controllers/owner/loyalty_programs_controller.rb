@@ -26,7 +26,8 @@ module Owner
           @program_json = data
           @stats = program ? numeros(program) : nil
         end
-        format.json { render json: data }
+        # Os mesmos números do topo do site, pro app mostrar igual.
+        format.json { render json: data.merge(stats: program ? numeros(program) : nil, car_wash_name: @car_wash.name) }
       end
     end
 

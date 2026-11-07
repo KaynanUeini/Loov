@@ -10,6 +10,12 @@ module Owner
     def index
       @clients_json = clients_today_list
       @sent_json = OwnerMessage.where(car_wash: @car_wash).includes(:recipient).order(created_at: :desc).limit(8).map { |m| serialize_sent(m) }
+      respond_to do |format|
+        format.html
+        # A mesma tela no app: clientes de hoje, as últimas enviadas e o nome
+        # da loja pra prévia da notificação.
+        format.json { render json: { clients: @clients_json, sent: @sent_json, car_wash_name: @car_wash.name } }
+      end
     end
 
     # POST /owner/messages
