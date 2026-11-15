@@ -473,7 +473,8 @@ module Owner
         vehicle_model:    a.user&.vehicle_model,
         vehicle_check:    a.vehicle_check && { id: a.vehicle_check.id, mode: a.vehicle_check.mode },
         # Ficha obrigatória: o tempo do painel espera a ficha e conta dela.
-        aguardando_ficha: a.status == "confirmed" && a.ficha_pendente?,
+        # Avulso nasce "attended", então entra pelo walk_in (cancelado não).
+        aguardando_ficha: (a.status == "confirmed" || (a.walk_in? && a.status == "attended")) && a.ficha_pendente?,
         servico_desde:    a.servico_desde&.iso8601,
         show_code:        show_code,
         is_disponivel:    is_disponivel,

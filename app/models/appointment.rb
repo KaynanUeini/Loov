@@ -153,11 +153,12 @@ class Appointment < ApplicationRecord
   # ── HELPERS DE TIPO ───────────────────────────────────────────────────────
   # Ficha de entrada obrigatória e ainda não feita: o dono ligou a ficha e
   # não deixou o atendente pular, então o carro só sai como atendido com a
-  # ficha (fotos ou desenho, conforme o modo). Avulso nasce atendido e faz a
-  # ficha depois, no pátio. Uma ficha pulada vale: com a ficha obrigatória
+  # ficha (fotos ou desenho, conforme o modo). Vale pro avulso também: ele
+  # nasce atendido, mas com a ficha obrigatória o serviço só começa quando a
+  # ficha é feita no pátio — antes o avulso escapava da regra e o tempo
+  # corria sem ficha. Uma ficha pulada vale: com a ficha obrigatória
   # ninguém pula, então pulada só existe de quando ela era opcional.
   def ficha_pendente?
-    return false if walk_in?
     return false unless car_wash.ficha_obrigatoria?
     vehicle_check.nil?
   end
@@ -166,7 +167,7 @@ class Appointment < ApplicationRecord
   # obrigatória, é a hora em que a ficha foi feita (o carro só entra depois
   # dela), não o horário marcado. nil = conta do horário marcado.
   def servico_desde
-    return nil if walk_in? || !car_wash.ficha_obrigatoria?
+    return nil unless car_wash.ficha_obrigatoria?
     vehicle_check&.recorded_at
   end
 

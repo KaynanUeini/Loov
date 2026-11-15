@@ -1018,8 +1018,12 @@
     if (elapsed < 0) return false;
     if (appt.status === 'confirmed') return true;
     if (appt.status === 'attended' && appt.walk_in) {
+      // Avulso sem a ficha obrigatória: fica no painel esperando, sem contar.
+      if (appt.aguardando_ficha) return true;
+      // A janela do avulso conta da ficha, quando ela manda no início.
+      const inicio = appt.servico_desde ? new Date(appt.servico_desde).getTime() : marcado;
       const duration = Math.max(1, Number(appt.duration) || 30) * 60 * 1000;
-      return elapsed < duration;
+      return Date.now() - inicio < duration;
     }
     return false;
   }
