@@ -164,6 +164,9 @@ module Owner
 
       price = params[:price_override].present? ? params[:price_override].to_f : nil
       vale  = @appointment.vale_aplicado
+      # "Encaixar mesmo assim": o dono vê o pátio e decide passar da
+      # capacidade, como no registro do avulso. Horário de fechar não se fura.
+      @appointment.skip_capacity_check = true if ActiveModel::Type::Boolean.new.cast(params[:force])
       # Sem preço digitado, o serviço novo sai pela mesma regra que valeu na
       # reserva: o mesmo horário, com o relógio do momento em que o cliente
       # reservou (Hora Off / Hora Pico, ou o ajuste do Last Minute de antes).
@@ -189,6 +192,26 @@ module Owner
         @appointment.update!(service: service, price_override: price, reward_discount: price.nil? ? nil : @appointment.reward_discount)
       end
       render json: { ok: true }.merge(serialize_appointment(@appointment))
+    rescue ActiveRecord::RecordInvalid => e
+      # A agenda ocupa a duração do serviço novo: trocar 5 por 60 min pode não
+      # caber. Antes o dono via "A validação falhou: Scheduled at horário sem
+      # capacidade (4/3 simultâneos...)"; agora a frase diz o que não cabe.
+      erros   = e.record.errors[:scheduled_at].join(" ")
+      minutos = service.duration.to_i
+      if erros.include?("funcionamento")
+        fecha = car_wash.operating_hours.find_by(day_of_week: @appointment.scheduled_at.wday)&.closes_at
+        motivo = fecha ? "termina depois do horário de fechar (#{fecha.strftime('%H:%M')})" : "fica fora do horário de funcionamento"
+        render json: { error: "Não cabe: com #{minutos} min, o serviço #{motivo}." }, status: :unprocessable_entity
+      elsif erros.include?("capacidade")
+        cap = car_wash.capacity_for(@appointment.scheduled_at)
+        render json: {
+          error:   "Capacidade excedida",
+          code:    "capacity",
+          message: "Com #{minutos} min, esse horário passa da capacidade do lava-rápido (#{cap} #{cap == 1 ? 'carro' : 'carros'} ao mesmo tempo). Encaixar mesmo assim?"
+        }, status: :conflict
+      else
+        render json: { error: e.record.errors.full_messages.to_sentence }, status: :unprocessable_entity
+      end
     rescue => e
       render json: { error: e.message }, status: :unprocessable_entity
     end

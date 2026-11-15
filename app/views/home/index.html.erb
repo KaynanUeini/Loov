@@ -1521,13 +1521,19 @@
     document.getElementById('od-edit-overlay').classList.add('open');
   }
 
-  async function updateService(serviceId, row) {
+  async function updateService(serviceId, row, force) {
     if (!editingAppt) return;
     document.querySelectorAll('#od-edit-list .owner-dash-svc-row').forEach(r => r.classList.add('disabled'));
     const { ok, data } = await patchJson(
       `/owner/checkins/${editingAppt.id}/update_service`,
-      { service_id: serviceId }
+      force ? { service_id: serviceId, force: true } : { service_id: serviceId }
     );
+    // Serviço novo mais longo estoura a capacidade: o dono decide encaixar.
+    if (!ok && data.code === 'capacity' && !force) {
+      if (window.confirm(data.message)) return updateService(serviceId, row, true);
+      document.querySelectorAll('#od-edit-list .owner-dash-svc-row').forEach(r => r.classList.remove('disabled'));
+      return;
+    }
     if (!ok) {
       showToast(data.error || 'Não foi possível atualizar o serviço.', 'error');
       document.querySelectorAll('#od-edit-list .owner-dash-svc-row').forEach(r => r.classList.remove('disabled'));
