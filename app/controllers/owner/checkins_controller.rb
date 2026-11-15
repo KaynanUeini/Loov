@@ -53,14 +53,18 @@ module Owner
         .order(:scheduled_at)
         .map { |a| serialize_appointment(a, loyalty, loyalty_counts) }
 
-      total_attended = appointments.count { |a| a[:status] == "attended" }
+      # Atendido é o que terminou. Avulso em andamento nasce "attended", mas
+      # conta em "Em aberto" (pending) junto com quem ainda vai ser atendido,
+      # e só entra no faturado quando acaba — o mesmo que o card mostra.
+      concluidos     = appointments.select { |a| a[:status] == "attended" && !a[:em_andamento] }
+      total_attended = concluidos.size
       total_no_show  = appointments.count { |a| a[:status] == "no_show" }
-      total_pending  = appointments.count { |a| a[:status] == "confirmed" }
+      total_pending  = appointments.count { |a| a[:status] == "confirmed" || a[:em_andamento] }
 
       # Receita do dono: preço cheio - comissão Loov (5% só nos disponíveis).
       # Usa Appointment::COMMISSION_PCT pra blindar contra mudança futura
       # da regra de comissão.
-      revenue_today = appointments.select { |a| a[:status] == "attended" }.sum do |a|
+      revenue_today = concluidos.sum do |a|
         commission = a[:is_disponivel] ? (a[:price].to_f * Appointment::COMMISSION_PCT) : 0
         (a[:price].to_f - commission).round(2)
       end
@@ -476,6 +480,7 @@ module Owner
         # Avulso nasce "attended", então entra pelo walk_in (cancelado não).
         aguardando_ficha: (a.status == "confirmed" || (a.walk_in? && a.status == "attended")) && a.ficha_pendente?,
         servico_desde:    a.servico_desde&.iso8601,
+        em_andamento:     a.em_andamento?,
         show_code:        show_code,
         is_disponivel:    is_disponivel,
         prepayment_amount: prepayment,

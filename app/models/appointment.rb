@@ -171,6 +171,19 @@ class Appointment < ApplicationRecord
     vehicle_check&.recorded_at
   end
 
+  # Avulso ainda sendo feito. Ele nasce "attended" (lançamento direto do
+  # dono), mas o painel mostra "em andamento" até o serviço acabar: a duração
+  # do serviço contada da ficha obrigatória (ou do registro), e sem ficha
+  # obrigatória feita ele nem começou. Os quadros e o "Faturado hoje" seguem
+  # o card — atendido é o que terminou.
+  def em_andamento?
+    return false unless walk_in? && status == "attended"
+    return true if ficha_pendente?
+    minutos = service&.duration.to_i
+    minutos = 30 if minutos <= 0 # mesmo padrão do app
+    (servico_desde || scheduled_at) + minutos.minutes > Time.current
+  end
+
   def disponivel?
     appointment_type == "disponivel"
   end

@@ -75,12 +75,17 @@ class HomeController < ApplicationController
         today_start     = Time.current.beginning_of_day
         today_end       = Time.current.end_of_day
         @today_total    = @car_wash.appointments.where(scheduled_at: today_start..today_end).where.not(status: "cancelled").count
-        @today_attended = @car_wash.appointments.where(scheduled_at: today_start..today_end, status: "attended").count
-        @today_pending  = @car_wash.appointments.where(scheduled_at: today_start..today_end, status: "confirmed").count
-        @today_revenue  = @car_wash.appointments
+        # Mesma regra do painel (Owner::CheckinsController#index): avulso em
+        # andamento fica em "Em aberto" e fora do faturado até terminar.
+        atendidos_hoje  = @car_wash.appointments
                             .where(scheduled_at: today_start..today_end, status: "attended")
-                            .joins(:service)
-                            .sum("COALESCE(appointments.price_override, services.price) - COALESCE(appointments.commission_amount, 0)").to_f
+                            .includes(:service, :vehicle_check, :car_wash)
+                            .to_a
+        andamento       = atendidos_hoje.select(&:em_andamento?)
+        concluidos      = atendidos_hoje - andamento
+        @today_attended = concluidos.size
+        @today_pending  = @car_wash.appointments.where(scheduled_at: today_start..today_end, status: "confirmed").count + andamento.size
+        @today_revenue  = concluidos.sum { |a| a.effective_price - a.commission_amount.to_f }
         @upcoming_count = @car_wash.appointments
                             .where(status: "confirmed")
                             .where(scheduled_at: Time.current..7.days.from_now)

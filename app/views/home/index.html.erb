@@ -105,19 +105,16 @@
     border:1px solid var(--od-stone); border-radius:16px; padding:14px;
     display:flex; flex-direction:column; gap:.25rem;
   }
-  .owner-dash-kpi.accent { background:var(--od-coral-50); border-color:var(--od-coral-100); }
   .owner-dash-kpi-value {
     color:var(--od-ink); font-family:'Space Grotesk',sans-serif;
     font-size:1.4rem; letter-spacing:-.02em; line-height:1;
     font-variant-numeric:tabular-nums;
   }
-  .owner-dash-kpi.accent .owner-dash-kpi-value { color:var(--od-coral-700); }
   .owner-dash-kpi-label {
     font-family:'JetBrains Mono',monospace;
     color:var(--od-ash); font-size:.58rem; letter-spacing:.14em;
     text-transform:uppercase; margin-top:4px;
   }
-  .owner-dash-kpi.accent .owner-dash-kpi-label { color:var(--od-coral-700); }
 
   /* ── Past pending banner ── */
   .owner-dash-past-banner {
@@ -400,6 +397,9 @@
   }
   .owner-dash-btn-primary:hover:not(:disabled) { background:var(--od-coral-700); }
   .owner-dash-btn-primary:disabled { opacity:.5; cursor:wait; }
+  /* Avulso revertido: Finalizado sozinho, 60% e centralizado (igual ao app). */
+  .owner-dash-actions.solo { justify-content:center; }
+  .owner-dash-actions.solo .owner-dash-btn-primary { flex:0 0 60%; }
 
   .owner-dash-secondary {
     display:flex; align-items:center; justify-content:center; gap:8px; margin-top:10px;
@@ -913,13 +913,13 @@
 
     <%# 3 KPI tiles %>
     <div class="owner-dash-kpis">
-      <div class="owner-dash-kpi accent">
+      <div class="owner-dash-kpi">
         <div class="owner-dash-kpi-value" id="od-kpi-attended"><%= @today_attended || 0 %></div>
         <div class="owner-dash-kpi-label">ATENDIDOS</div>
       </div>
       <div class="owner-dash-kpi">
         <div class="owner-dash-kpi-value" id="od-kpi-pending"><%= @today_pending || 0 %></div>
-        <div class="owner-dash-kpi-label">PENDENTES</div>
+        <div class="owner-dash-kpi-label">EM ABERTO</div>
       </div>
       <div class="owner-dash-kpi">
         <div class="owner-dash-kpi-value" id="od-kpi-noshow">0</div>
@@ -1116,7 +1116,9 @@
       phase = live.phase; etaMinutes = live.etaMinutes; progress = live.progress;
     }
 
-    const showPrimaryActions   = (inService && !isWalkIn) || (isPast && isConfirmed);
+    // Avulso nasce atendido e não tem Finalizado; revertido, ele volta a
+    // "confirmed" e precisa do Finalizado pra voltar a ficar verde.
+    const showPrimaryActions   = (inService && (!isWalkIn || isConfirmed)) || (isPast && isConfirmed);
     const showSecondaryActions = inService || isFuture || (isPast && isConfirmed);
 
     const card = document.createElement('div');
@@ -1192,10 +1194,10 @@
     ` : '';
 
     const primaryHtml = showPrimaryActions ? `
-      <div class="owner-dash-actions">
-        <button class="owner-dash-btn-ghost" data-action="noshow">
+      <div class="owner-dash-actions${isWalkIn ? ' solo' : ''}">
+        ${isWalkIn ? '' : `<button class="owner-dash-btn-ghost" data-action="noshow">
           <i class="fas fa-user-xmark"></i> Ausente
-        </button>
+        </button>`}
         <button class="owner-dash-btn-primary" data-action="attend">
           <i class="fas fa-check"></i> ${isPast ? 'Compareceu' : 'Finalizado'}
         </button>
