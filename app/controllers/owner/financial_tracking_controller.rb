@@ -415,15 +415,8 @@ module Owner
     # ainda. Então quando o período atual ainda está rodando, o anterior é
     # truncado no mesmo número de dias — dia 1 a 5 contra dia 1 a 5.
     def build_previous_comparison(car_wash, cost_lookup, current_revenue, current_profit)
-      prev_start, prev_end = previous_range(params[:period], @start_date, @end_date)
+      prev_start, prev_end, parcial = FinancialReport.previous_window(params[:period], @start_date, @end_date)
       return nil if prev_start.nil?
-
-      # Recorte justo: só conta no anterior os mesmos dias já decorridos aqui.
-      parcial = @end_date > Date.current && @start_date <= Date.current
-      if parcial
-        dias_corridos = (Date.current - @start_date).to_i + 1
-        prev_end      = [prev_start + dias_corridos - 1, prev_end].min
-      end
 
       prev_revenue = revenue_sum_in_range(car_wash, prev_start, prev_end)
       prev_costs   = costs_for_range_fast(prev_start, prev_end, cost_lookup)
@@ -447,28 +440,6 @@ module Owner
         revenue_delta:     (current_revenue - prev_revenue).round(2),
         revenue_delta_pct: prev_revenue > 0 ? (((current_revenue - prev_revenue) / prev_revenue) * 100).round(1) : nil
       }
-    end
-
-    # Janela imediatamente anterior. Por tipo de período em vez de subtrair
-    # dias: mês tem 28 a 31 dias, então deslocar por quantidade de dias faria
-    # "julho" comparar com "31 de maio a 30 de junho".
-    def previous_range(period, start_date, end_date)
-      case period
-      when "day"
-        [start_date - 1, end_date - 1]
-      when "week"
-        [start_date - 7, end_date - 7]
-      when "month"
-        anterior = start_date << 1
-        [anterior.beginning_of_month, anterior.end_of_month]
-      when "year"
-        [Date.new(start_date.year - 1, 1, 1), Date.new(start_date.year - 1, 12, 31)]
-      when "all"
-        nil # "desde o começo" não tem anterior
-      else
-        span = (end_date - start_date).to_i
-        [start_date - span - 1, start_date - 1]
-      end
     end
 
     # Carrega TODOS os monthly_costs relevantes (período + 12 meses pra DRE)
