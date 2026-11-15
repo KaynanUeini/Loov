@@ -549,12 +549,30 @@ class Appointment < ApplicationRecord
   # contar overlap direto somaria atendimentos sequenciais que terminam e
   # começam back-to-back, super-estimando o uso real da pista.
   #
-  # Fim efetivo de cada agendamento = COALESCE(attended_at, scheduled_at +
-  # duração). Quando o dono clica "Finalizado" antes da duração planejada
-  # acabar (ex: lavagem rápida), attended_at libera o slot a partir dali.
-  # Walk-ins não têm attended_at e seguem usando a duração planejada.
-  EFFECTIVE_END_SQL = "COALESCE(appointments.attended_at, " \
-                      "appointments.scheduled_at + (services.duration * interval '1 minute'))".freeze
+  # Fim efetivo de cada agendamento, na ordem:
+  # - Finalizado (attended_at): libera dali, mesmo antes da duração.
+  # - Ficha feita: o serviço começou nela, então vai até ficha + duração.
+  # - Ainda não começou (confirmado sem ficha, ou avulso esperando a ficha
+  #   obrigatória): segura a vaga "de agora até agora + duração" — o carro
+  #   atrasado ainda vai ocupar a pista quando entrar. Antes a vaga de um
+  #   13:30 de 5 min ficava livre às 13:35 mesmo sem o carro ter entrado, e o
+  #   Last Minute podia vender o mesmo espaço. Tolerância de 60 min depois da
+  #   hora marcada: card esquecido não trava a agenda o dia inteiro.
+  # - Nunca termina antes da hora marcada + duração.
+  OCCUPANCY_TOLERANCE_MIN = 60
+
+  def self.effective_end_sql(agora = Time.current)
+    dur   = "(services.duration * interval '1 minute')"
+    ficha = "(SELECT MAX(vc.recorded_at) FROM vehicle_checks vc WHERE vc.appointment_id = appointments.id)"
+    obrig = "(SELECT cw.vehicle_check_enabled AND NOT cw.vehicle_check_skippable " \
+            "FROM car_washes cw WHERE cw.id = appointments.car_wash_id)"
+    now   = "CAST(#{connection.quote(agora.utc.strftime('%Y-%m-%d %H:%M:%S'))} AS timestamp)"
+    rola  = "(LEAST(#{now}, appointments.scheduled_at + interval '#{OCCUPANCY_TOLERANCE_MIN} minutes') + #{dur})"
+    "COALESCE(appointments.attended_at, GREATEST(appointments.scheduled_at + #{dur}, CASE " \
+      "WHEN #{ficha} IS NOT NULL THEN #{ficha} + #{dur} " \
+      "WHEN appointments.status = 'confirmed' OR (appointments.walk_in AND COALESCE(#{obrig}, false)) THEN #{rola} " \
+      "ELSE appointments.scheduled_at + #{dur} END))"
+  end
 
   # Ocupação de várias lojas carregada numa consulta só, pra listagens (o
   # Last Minute olha 20+ lojas por carregamento). Dentro do bloco,
@@ -565,8 +583,8 @@ class Appointment < ApplicationRecord
     rows = occupying_capacity
       .joins(:service)
       .where(car_wash_id: car_wash_ids)
-      .where("appointments.scheduled_at < ? AND #{EFFECTIVE_END_SQL} > ?", to, from)
-      .pluck(:car_wash_id, Arel.sql("appointments.scheduled_at"), Arel.sql(EFFECTIVE_END_SQL))
+      .where("appointments.scheduled_at < ? AND #{effective_end_sql} > ?", to, from)
+      .pluck(:car_wash_id, Arel.sql("appointments.scheduled_at"), Arel.sql(effective_end_sql))
     by_cw = Hash.new { |h, k| h[k] = [] }
     rows.each { |cw_id, s, e| by_cw[cw_id] << [s, e] }
 
@@ -588,13 +606,13 @@ class Appointment < ApplicationRecord
           .joins(:service)
           .where(car_wash_id: car_wash.id)
           .where(
-            "appointments.scheduled_at < ? AND #{EFFECTIVE_END_SQL} > ?",
+            "appointments.scheduled_at < ? AND #{effective_end_sql} > ?",
             end_at, start_at
           )
         scope = scope.where.not(id: exclude_id) if exclude_id
         scope.pluck(
           Arel.sql("appointments.scheduled_at"),
-          Arel.sql(EFFECTIVE_END_SQL)
+          Arel.sql(effective_end_sql)
         )
       end
     return 0 if ranges.empty?

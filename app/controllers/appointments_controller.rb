@@ -173,7 +173,8 @@ class AppointmentsController < ApplicationController
         .joins(:service)
         .where(car_wash_id: @car_wash.id)
         .where(
-          "appointments.scheduled_at < ? AND (appointments.scheduled_at + (services.duration * interval '1 minute')) > ?",
+          # Mesmo fim efetivo da agenda: atrasado que não começou segura a vaga.
+          "appointments.scheduled_at < ? AND #{Appointment.effective_end_sql} > ?",
           end_time, start_time
         )
         .count
