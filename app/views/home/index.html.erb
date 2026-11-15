@@ -1226,11 +1226,14 @@
     // vale livre que dá pra aplicar no balcão, ou o aviso de que esta visita
     // completa o cartão (o cliente ganha o vale pra próxima).
     let rewardHtml = '';
+    // Vale de desconto: só o presente ao lado do valor (o valor já sai com
+    // ele). Brinde é pra entregar na mão, então segue escrito.
+    const valeNoValor = appt.reward && appt.reward.type !== 'gift';
     if (appt.reward) {
       const r = appt.reward;
-      rewardHtml = `<div class="owner-dash-reward"><i class="fas fa-gift"></i><span>${r.type === 'gift'
-        ? 'Entregar: ' + escapeHtml(r.description)
-        : 'Vale: ' + escapeHtml(r.short) + (r.discount ? ' · −' + fmtMoney(r.discount, 2) + ' já no valor' : '')}</span></div>`;
+      if (r.type === 'gift') {
+        rewardHtml = `<div class="owner-dash-reward"><i class="fas fa-gift"></i><span>Entregar: ${escapeHtml(r.description)}</span></div>`;
+      }
     } else if (appt.reward_available && !isFinalized) {
       rewardHtml = `<button type="button" class="owner-dash-reward is-offer" data-action="reward"><i class="fas fa-gift"></i><span>Cliente tem vale: ${escapeHtml(appt.reward_available.short)}</span><b>Aplicar</b></button>`;
     } else if (appt.loyalty?.milestone && !isFinalized) {
@@ -1251,7 +1254,7 @@
           </div>
           ${hintHtml}
           <div class="owner-dash-meta">
-            ${escapeHtml(appt.service)} · <span class="owner-dash-meta-price">${fmtMoney(charge, 2)}</span>
+            ${escapeHtml(appt.service)} · <span class="owner-dash-meta-price">${fmtMoney(charge, 2)}</span>${valeNoValor ? ` <i class="fas fa-gift" title="Vale aplicado: ${escapeHtml(appt.reward.short)}" aria-label="Vale aplicado"></i>` : ''}
           </div>
           ${vehicleHtml}
           ${rewardHtml}
