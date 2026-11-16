@@ -10,6 +10,7 @@
   (só as que passam vão pra conferência da IA, que é a parte paga).
   App → window.loovFichaConferir({ id, b64 }) · página → { evento: 'qualidade', id, ok, motivo, medidas }
   motivo: 'escura' | 'estourada' | 'tremida' (ou null quando ok)
+  O site faz a mesma conta em shared/_ficha.html.erb (qualidade()): mudar um, mudar o outro.
 -->
 </head>
 <body>

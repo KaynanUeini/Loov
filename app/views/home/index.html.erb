@@ -178,16 +178,30 @@
     min-width:20px; text-align:center;
   }
   .owner-dash-live-badge.visible { display:inline-block; }
+  /* Abre a folha do avulso: pílula de contorno tinta (coral é de efetivar). */
   .owner-dash-avulso-pill {
-    display:inline-flex; align-items:center; gap:5px;
-    padding:5px 10px; border-radius:100px;
-    border:1px solid var(--od-coral-100); background:var(--od-coral-50);
-    color:var(--od-coral-700); font-family:'JetBrains Mono',monospace;
-    font-size:.62rem; font-weight:600; letter-spacing:.1em;
+    display:inline-flex; align-items:center; gap:6px; flex-shrink:0;
+    height:36px; padding:0 14px; border-radius:999px;
+    border:1.5px solid var(--od-ink); background:transparent;
+    color:var(--od-ink); font-family:'Inter',sans-serif;
+    font-size:13.5px; font-weight:600;
     cursor:pointer; transition:background .15s;
   }
-  .owner-dash-avulso-pill:hover { background:var(--od-coral-100); }
-  .owner-dash-avulso-pill i { font-size:.55rem; }
+  .owner-dash-avulso-pill:hover { background:var(--od-sand); }
+  .owner-dash-avulso-pill i { font-size:12px; }
+  /* Título de seção da Apple; o estado num chip neutro com ponto verde. */
+  .od-sec-title { color:var(--od-ink); font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:600; letter-spacing:-.4px; }
+  .od-live-chip { display:none; align-items:center; gap:6px; padding:4px 10px; border-radius:100px; background:var(--od-sand); color:var(--od-ink); font-size:12px; font-weight:600; white-space:nowrap; }
+  .od-live-chip.visible { display:inline-flex; }
+  .od-live-chip i { width:7px; height:7px; border-radius:50%; background:var(--od-mint-500); }
+  /* Pendências de dias anteriores: faixa igual à das aprovações, com o
+     ponto vermelho piscando (o ponto de pendência do iOS). */
+  .od-past-strip { display:flex; align-items:center; gap:12px; min-height:52px; margin-bottom:18px; padding:12px 16px; border:1px solid var(--od-stone); border-radius:16px; background:var(--od-paper); color:var(--od-ink) !important; text-decoration:none !important; cursor:pointer; transition:border-color .15s; }
+  .od-past-strip:hover { border-color:var(--od-ink); }
+  .od-past-strip.hidden { display:none; }
+  .od-past-strip > span { flex:1; min-width:0; font-size:14px; font-weight:600; }
+  .od-past-strip > i { width:7px; height:7px; border-radius:50%; background:var(--od-rose-500); animation:odPend 1.4s ease-in-out infinite; }
+  .od-past-strip svg { display:block; }
 
   /* ── Pausa (Last Minute + agendamentos) ──
      O estado mora no controle (switch), não na moldura. Pausado, o card
@@ -338,6 +352,54 @@
   }
   .owner-dash-meta-price { color:var(--od-ink); font-weight:600; }
   .owner-dash-card-right { display:flex; flex-direction:column; align-items:flex-end; flex-shrink:0; gap:2px; }
+  .owner-dash-card-right:empty { display:none; }
+  /* Valor em linha própria: dividindo a linha com o serviço, era ele que o
+     corte comia — e é o número que o funcionário lê pra cobrar. */
+  .od-charge { display:flex; align-items:center; gap:6px; margin-top:3px; color:var(--od-ink); font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; font-variant-numeric:tabular-nums; }
+  .od-charge i { font-size:13px; }
+  /* Fase e tempo junto da barra que eles descrevem (na linha do nome,
+     cortavam o nome do cliente). */
+  .od-liverow { display:flex; align-items:center; justify-content:space-between; margin-top:12px; }
+  .od-liverow + .owner-dash-progress { margin-top:8px; }
+  /* ••• do card: círculo areia como o do sino; abre a folha com as opções. */
+  .od-more { flex-shrink:0; width:32px; height:32px; margin-left:-2px; border:0; border-radius:50%; background:var(--od-sand); color:var(--od-graphite); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:background .15s; }
+  .od-more:hover { background:var(--od-stone); }
+  .owner-dash-card.inactive .od-more { background:var(--od-stone); }
+  .od-ficha-badge { flex-shrink:0; width:20px; height:20px; border-radius:50%; border:1px solid var(--od-stone); background:var(--od-sand); color:var(--od-ink); display:inline-flex; align-items:center; justify-content:center; padding:0; cursor:pointer; font-size:10px; }
+  /* Ficha de entrada: contorno tinta — abre a folha, quem efetiva é o salvar lá dentro. */
+  .od-btn-ficha { flex:1.5; display:flex; align-items:center; justify-content:center; gap:7px; border-radius:999px; padding:12px; border:1.5px solid var(--od-ink); background:transparent; color:var(--od-ink); font-size:13.5px; font-weight:600; cursor:pointer; transition:background .15s; }
+  .od-btn-ficha:hover { background:var(--od-sand); }
+  .od-btn-ficha.is-full { width:100%; margin-top:14px; }
+  .owner-dash-actions.solo .od-btn-ficha { flex:0 0 60%; }
+  /* Folha do ••• */
+  .od-menu-title { margin:10px 0 0; color:var(--od-ink); font-family:'Space Grotesk',sans-serif; font-size:22px; letter-spacing:-.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .od-menu-list { margin-top:12px; border:1px solid var(--od-stone); border-radius:18px; overflow:hidden; }
+  .od-menu-row { display:flex; align-items:center; gap:12px; width:100%; min-height:52px; padding:0 16px; border:0; background:var(--od-paper); color:var(--od-ink); font-family:'Inter',sans-serif; font-size:15px; font-weight:600; text-align:left; cursor:pointer; }
+  .od-menu-row + .od-menu-row { border-top:1px solid var(--od-stone); }
+  .od-menu-row:hover { background:var(--od-sand); }
+  .od-menu-row.is-danger { color:var(--od-rose-500); }
+  .od-menu-row i { width:18px; text-align:center; }
+  /* Avulso: a folha do app (lista de serviços, "Agora", preço já preenchido). */
+  .od-wi-title { margin:12px 0 0; color:var(--od-ink); font-family:'Space Grotesk',sans-serif; font-size:30px; line-height:34px; letter-spacing:-1px; }
+  .od-wi-lead { margin-top:6px; color:var(--od-graphite); font-size:15px; line-height:21px; }
+  .od-wi-label { display:block; margin:18px 0 8px; color:var(--od-graphite); font-size:13px; font-weight:600; }
+  .od-wi-list { display:grid; gap:8px; }
+  .od-wi-svc { display:flex; align-items:center; gap:12px; width:100%; min-height:52px; padding:12px 16px; border:1px solid var(--od-stone); border-radius:16px; background:var(--od-paper); color:var(--od-ink); text-align:left; cursor:pointer; font-family:'Inter',sans-serif; }
+  .od-wi-svc.is-on { border:2px solid var(--od-ink); padding:11px 15px; }
+  .od-wi-svc b { flex:1; min-width:0; font-size:15px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .od-wi-svc small { color:var(--od-graphite); font-size:14px; font-weight:500; font-variant-numeric:tabular-nums; }
+  .od-wi-svc em { flex:0 0 22px; height:22px; border-radius:50%; border:1.5px solid var(--od-stone); display:flex; align-items:center; justify-content:center; color:var(--od-cream); font-style:normal; font-size:11px; }
+  .od-wi-svc.is-on em { background:var(--od-ink); border-color:var(--od-ink); }
+  .od-wi-in { display:flex; align-items:center; gap:6px; width:100%; min-height:50px; padding:0 14px; border:0; border-radius:14px; background:var(--od-sand); color:var(--od-ink); font-family:'Inter',sans-serif; font-size:15px; text-align:left; }
+  .od-wi-in input { flex:1; min-width:0; width:100%; height:48px; border:0; background:transparent; color:var(--od-ink); font:inherit; outline:none; }
+  .od-wi-in.is-err { box-shadow:inset 0 0 0 1.5px var(--od-rose-500); }
+  .od-wi-in span { color:var(--od-graphite); }
+  .od-wi-in button { border:0; background:none; color:var(--od-graphite); padding:6px; cursor:pointer; }
+  button.od-wi-in { cursor:pointer; }
+  .od-wi-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; }
+  button.od-wi-in { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .od-wi-cta { width:100%; min-height:52px; margin-top:18px; border:0; border-radius:999px; background:var(--od-coral-500); color:var(--od-cream); font-family:'Inter',sans-serif; font-size:16px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; }
+  .od-wi-cta:disabled { opacity:.4; cursor:default; }
   .owner-dash-phase {
     color:var(--od-graphite);
     font-family:'JetBrains Mono',monospace;
@@ -378,21 +440,21 @@
     transition:width .5s ease;
   }
 
-  .owner-dash-actions { display:flex; gap:8px; margin-top:14px; }
+  .owner-dash-actions { display:flex; gap:10px; margin-top:16px; }
   .owner-dash-btn-ghost {
     flex:1; display:flex; align-items:center; justify-content:center; gap:6px;
-    border-radius:10px; padding:10px;
+    border-radius:999px; padding:12px;
     border:1.5px solid var(--od-stone); background:transparent;
-    color:var(--od-graphite); font-size:.78rem; font-weight:600; cursor:pointer;
+    color:var(--od-graphite); font-size:13.5px; font-weight:600; cursor:pointer;
     transition:all .15s;
   }
   .owner-dash-btn-ghost:hover:not(:disabled) { border-color:var(--od-graphite); }
   .owner-dash-btn-ghost:disabled { opacity:.5; cursor:wait; }
   .owner-dash-btn-primary {
     flex:1.5; display:flex; align-items:center; justify-content:center; gap:6px;
-    border-radius:10px; padding:10px;
+    border-radius:999px; padding:13.5px;
     background:var(--od-coral-500); color:var(--od-cream);
-    font-size:.78rem; font-weight:600; border:none; cursor:pointer;
+    font-size:13.5px; font-weight:600; border:none; cursor:pointer;
     transition:background .15s;
   }
   .owner-dash-btn-primary:hover:not(:disabled) { background:var(--od-coral-700); }
@@ -481,7 +543,7 @@
     background:none; border:none; cursor:pointer; padding:4px;
     color:var(--od-graphite); font-size:1.05rem;
   }
-  .owner-dash-sheet-body { overflow-y:auto; flex:1; }
+  .owner-dash-sheet-body { overflow-y:auto; overflow-x:hidden; flex:1; }
 
   .owner-dash-svc-row {
     display:flex; align-items:center; gap:10px;
@@ -490,12 +552,12 @@
     background:var(--od-cream); cursor:pointer; transition:all .15s;
   }
   .owner-dash-svc-row:hover { border-color:var(--od-graphite); }
-  .owner-dash-svc-row.active { border-color:var(--od-coral-500); background:var(--od-coral-50); }
+  .owner-dash-svc-row.active { border:2px solid var(--od-ink); padding:13px; } /* atual = escolhido: tinta */
   .owner-dash-svc-row.disabled { opacity:.55; cursor:wait; }
   .owner-dash-svc-title { color:var(--od-ink); font-size:.85rem; font-weight:600; flex:1; }
   .owner-dash-svc-hint {
     font-family:'JetBrains Mono',monospace;
-    color:var(--od-coral-700); font-size:.6rem; letter-spacing:.1em; margin-top:2px;
+    color:var(--od-graphite); font-size:.6rem; letter-spacing:.1em; margin-top:2px;
   }
   .owner-dash-svc-price {
     color:var(--od-ink); font-family:'Space Grotesk',sans-serif;
@@ -509,10 +571,10 @@
   .owner-dash-btn-danger {
     width:100%; display:flex; align-items:center; justify-content:center; gap:8px;
     background:var(--od-rose-500); color:var(--od-cream);
-    border:none; border-radius:14px;
-    padding:14px;
-    font-family:'JetBrains Mono',monospace;
-    font-size:.78rem; font-weight:600; letter-spacing:.12em; cursor:pointer;
+    border:none; border-radius:999px;
+    padding:15px;
+    font-family:'Inter',sans-serif;
+    font-size:15px; font-weight:600; cursor:pointer;
     margin-bottom:4px; transition:opacity .15s;
   }
   .owner-dash-btn-danger:disabled { opacity:.6; cursor:wait; }
@@ -691,7 +753,8 @@
   }
   @media(max-width:500px) {
     .owner-content { padding:1rem; }
-    .owner-dash-kpis { grid-template-columns:1fr; }
+    /* Três quadros lado a lado, como no app (empilhados, empurravam a lista pra baixo). */
+    .owner-dash-kpi { padding:12px; }
     .owner-dash-revenue { font-size:2rem; }
   }
 </style>
@@ -700,6 +763,7 @@
 <% if current_user.owner? %><%= render "owner/pending_changes/kit" %><% end %>
 
 <div class="toast-container" id="toast-container"></div>
+<%= render "shared/ficha" %>
 
 <%# ── MODAL CANCELAMENTO INDIVIDUAL ── %>
 <div class="cancel-modal-overlay" id="cancel-appt-overlay">
@@ -743,35 +807,42 @@
     <input class="owner-dash-cancel-input" id="od-cancel-reason" placeholder="Motivo do cancelamento (opcional)" />
     <div class="owner-dash-error" id="od-cancel-error"></div>
     <button class="owner-dash-btn-danger" id="od-cancel-confirm">
-      <i class="fas fa-xmark"></i> CANCELAR ATENDIMENTO
+      <i class="fas fa-xmark"></i> Cancelar atendimento
     </button>
     <button class="owner-dash-btn-link" data-od-close="cancel">Voltar</button>
   </div>
 </div>
 
+<%# ── FOLHA DO ••• DO CARD ── %>
+<div class="owner-dash-modal-overlay" id="od-menu-overlay">
+  <div class="owner-dash-sheet" role="dialog" aria-modal="true" aria-labelledby="od-menu-title">
+    <div class="owner-dash-sheet-handle"></div>
+    <div class="od-menu-title" id="od-menu-title"></div>
+    <div class="od-menu-list" id="od-menu-list"></div>
+  </div>
+</div>
+
 <%# ── MODAL WALK-IN (bottom sheet) ── %>
 <div class="owner-dash-modal-overlay" id="od-walkin-overlay">
-  <div class="owner-dash-sheet" id="od-walkin-sheet">
+  <%# A folha do app: lista de serviços, "Agora", preço já preenchido e um
+      único CTA coral embaixo. Fecha clicando fora, como as outras. %>
+  <div class="owner-dash-sheet" id="od-walkin-sheet" role="dialog" aria-modal="true" aria-labelledby="od-wi-title">
     <div class="owner-dash-sheet-handle"></div>
-    <div class="owner-dash-sheet-header">
-      <div class="owner-dash-sheet-title">Atendimento avulso</div>
-      <button class="owner-dash-sheet-close" data-od-close="walkin"><i class="fas fa-xmark"></i></button>
-    </div>
-    <div class="owner-dash-sheet-sub">Registre um cliente que chegou sem agendar.</div>
+    <h2 class="od-wi-title" id="od-wi-title">Atendimento avulso</h2>
+    <p class="od-wi-lead">O carro que chegou sem agendar.</p>
     <div class="owner-dash-sheet-body">
-      <label class="owner-dash-field-label">Cliente</label>
-      <input id="od-wi-name" class="owner-dash-field-input" placeholder="Nome do cliente">
-      <label class="owner-dash-field-label">Horário</label>
-      <input id="od-wi-time" class="owner-dash-field-input" type="time">
-      <label class="owner-dash-field-label">Serviço</label>
-      <select id="od-wi-service" class="owner-dash-field-input owner-dash-field-select"></select>
-      <label class="owner-dash-field-label">Valor (opcional)</label>
-      <input id="od-wi-price" class="owner-dash-field-input" type="number" step="0.01" min="0" placeholder="Usa o preço do serviço">
+      <span class="od-wi-label">Serviço</span>
+      <div class="od-wi-list" id="od-wi-list" role="radiogroup" aria-label="Serviço"></div>
+      <label class="od-wi-label" for="od-wi-name">Nome do cliente</label>
+      <div class="od-wi-in"><input id="od-wi-name" placeholder="Avulso" autocomplete="off"></div>
+      <div class="od-wi-row">
+        <div><span class="od-wi-label">Horário</span><div id="od-wi-time"></div></div>
+        <div><label class="od-wi-label" for="od-wi-price">Preço</label>
+          <div class="od-wi-in"><span>R$</span><input id="od-wi-price" inputmode="decimal" placeholder="0,00" disabled></div></div>
+      </div>
       <div class="owner-dash-error" id="od-wi-error" style="margin-top:14px;"></div>
-      <button class="owner-dash-btn-coral" id="od-wi-save">
-        <i class="fas fa-check"></i> Registrar atendimento
-      </button>
     </div>
+    <button type="button" class="od-wi-cta" id="od-wi-save" disabled>Escolha o serviço</button>
   </div>
 </div>
 
@@ -805,6 +876,7 @@
       <%= link_to owner_financial_tracking_path, class: "snav-item" do %><i class="fas fa-chart-line"></i> Relatórios<% end %>
       <%= link_to owner_ai_insights_path, class: "snav-item" do %><i class="fas fa-brain"></i> IA Insights<% end %>
       <%= link_to owner_attendant_invitations_path, class: "snav-item" do %><i class="fas fa-users"></i> Equipe<% end %>
+      <%= link_to owner_ficha_path, class: "snav-item" do %><i class="fas fa-clipboard-check"></i> Ficha do carro<% end %>
       <% else %>
         <% _cw = current_car_wash %>
         <% if _cw %>
@@ -899,15 +971,11 @@
     </div>
     <% end %>
 
-    <%# Hero card (faturado + serviços) %>
+    <%# Hero: um número só (wiemer). O total de serviços era a soma dos quadros abaixo. %>
     <div class="owner-dash-hero">
       <div class="owner-dash-hero-left">
         <div class="owner-dash-eyebrow">FATURADO HOJE</div>
         <div class="owner-dash-revenue" id="od-revenue">R$ <%= number_with_precision(@today_revenue || 0, precision: 2, separator: ',', delimiter: '.') %></div>
-      </div>
-      <div class="owner-dash-hero-right">
-        <div class="owner-dash-eyebrow">SERVIÇOS</div>
-        <div class="owner-dash-services-count" id="od-svc-count"><%= @today_total || 0 %></div>
       </div>
     </div>
 
@@ -927,27 +995,19 @@
       </div>
     </div>
 
-    <%# Past pending banner — JS controla visibilidade via .hidden %>
-    <a class="owner-dash-past-banner hidden" id="od-past-banner" onclick="openPastSheet(); return false;">
-      <div class="owner-dash-past-icon-wrap">
-        <div class="owner-dash-past-icon"><i class="fas fa-triangle-exclamation"></i></div>
-      </div>
-      <div class="owner-dash-past-text">
-        <div class="owner-dash-past-title" id="od-past-title">0 pendências de dias anteriores</div>
-        <div class="owner-dash-past-sub">Confirme pra fechar o caixa.</div>
-      </div>
-      <i class="fas fa-chevron-right"></i>
+    <%# Pendências de dias anteriores: faixa discreta; o número fica na folha. %>
+    <a class="od-past-strip hidden" id="od-past-banner" href="#" onclick="openPastSheet(); return false;" role="button">
+      <i></i><span>Pendências de dias anteriores</span><i data-feather="chevron-right" style="width:18px;height:18px"></i>
     </a>
 
-    <%# Section header ATENDIMENTOS %>
+    <%# Seção Atendimentos %>
     <div class="owner-dash-section-head">
-      <div class="owner-dash-section-left">
-        <div class="owner-dash-pulse" id="od-pulse"></div>
-        <div class="owner-dash-section-title">ATENDIMENTOS</div>
-        <span class="owner-dash-live-badge" id="od-live-badge">0</span>
+      <div class="owner-dash-section-left" style="gap:10px">
+        <h2 class="od-sec-title">Atendimentos</h2>
+        <span class="od-live-chip" id="od-live-chip"><i></i><span id="od-live-n"></span></span>
       </div>
       <button class="owner-dash-avulso-pill" id="od-walkin-btn">
-        <i class="fas fa-plus"></i> AVULSO
+        <i class="fas fa-plus"></i> Avulso
       </button>
     </div>
 
@@ -988,6 +1048,9 @@
   let actionLoadingId = null;
   let editingAppt = null;
   let cancelTarget = null;
+  // Ficha do carro (vehicle_check do /owner/checkins/today): ligada,
+  // obrigatória ou não, modo. A folha e as telas vêm de shared/_ficha.
+  let fichaCfg = null;
 
   // ── Helpers ───────────────────────────────────────────────────────────
   function fmtMoney(v, decimals = 2) {
@@ -1101,7 +1164,9 @@
   }
 
   function renderCard(appt, opts = {}) {
+    // Pendências antigas (isPast) não têm •••: lá Editar segue como link.
     const { isPast = false, showDate = false } = opts;
+    const comMenu = !isPast;
     const isWalkIn   = appt.walk_in === true;
     const isAttended = appt.status === 'attended';
     const isNoShow   = appt.status === 'no_show';
@@ -1116,11 +1181,6 @@
       phase = live.phase; etaMinutes = live.etaMinutes; progress = live.progress;
     }
 
-    // Avulso nasce atendido e não tem Finalizado; revertido, ele volta a
-    // "confirmed" e precisa do Finalizado pra voltar a ficar verde.
-    const showPrimaryActions   = (inService && (!isWalkIn || isConfirmed)) || (isPast && isConfirmed);
-    const showSecondaryActions = inService || isFuture || (isPast && isConfirmed);
-
     const card = document.createElement('div');
     // Ficha obrigatória e não feita depois do horário: o serviço não começou
     // (cliente não chegou ou falta a ficha). Sem sinal, parecia em andamento.
@@ -1131,6 +1191,44 @@
 
     const isDisp = appt.is_disponivel && appt.remaining_amount != null;
     const charge = isDisp ? appt.remaining_amount : appt.price;
+
+    // ── Ação do momento (a mesma regra do app) ──────────────────────────
+    // No máximo dois botões. Com a ficha obrigatória, a ficha é o check-in:
+    // sem ela não existe Finalizado, existe Ficha de entrada. Depois da ficha
+    // o carro está no pátio e o Ausente sai. Avulso nunca tem Ausente.
+    const fichaAtiva = !!fichaCfg?.enabled;
+    const fichaObrigatoria = fichaAtiva && !fichaCfg?.skippable;
+    const semFicha = fichaObrigatoria && !appt.vehicle_check;
+    const marcadoMs = new Date(appt.scheduled_at).getTime();
+    const passouDaHora = isConfirmed && (isPast || Date.now() >= marcadoMs);
+    const chegando = isConfirmed && !isPast && Date.now() >= marcadoMs - 30 * 60000;
+    let acoes = null; // 'ficha' | 'ausente+ficha' | 'finalizar' | 'ausente+finalizar'
+    if (!isFinalized) {
+      if (semFicha) {
+        if (isWalkIn) acoes = 'ficha';
+        else if (passouDaHora) acoes = 'ausente+ficha';
+        else if (chegando) acoes = 'ficha';
+      } else {
+        // Avulso nasce atendido e não tem Finalizado; revertido, ele volta a
+        // "confirmed" e precisa do Finalizado pra voltar a ficar verde.
+        const podeFinalizar = (inService && (!isWalkIn || isConfirmed)) || (isPast && isConfirmed);
+        if (podeFinalizar) acoes = (isWalkIn || fichaObrigatoria) ? 'finalizar' : 'ausente+finalizar';
+      }
+    }
+    const comAusente = acoes === 'ausente+ficha' || acoes === 'ausente+finalizar';
+    const solo = acoes === 'ficha' || acoes === 'finalizar';
+
+    // ── ••• ─────────────────────────────────────────────────────────────
+    // Ver ficha, Editar, Reverter e Cancelar saem do corpo do card (eram
+    // links de 11px). Cancelar em vermelho e por último, como na Apple.
+    const temFicha = appt.vehicle_check && appt.vehicle_check.mode !== 'skipped';
+    const menu = [];
+    if (temFicha) menu.push({ label: 'Ver ficha', icon: 'fa-file-lines', act: 'verficha' });
+    if (!isFinalized && (inService || isFuture || (isPast && isConfirmed))) menu.push({ label: 'Editar serviço', icon: 'fa-pen', act: 'edit' });
+    if (isFinalized) menu.push({ label: 'Reverter', icon: 'fa-rotate-left', act: 'revert' });
+    if (!isFinalized && !isPast) menu.push({ label: 'Cancelar atendimento', icon: 'fa-xmark', act: 'cancel', danger: true });
+    const usaMenu = comMenu && menu.length > 0;
+    const showSecondaryActions = !comMenu && (inService || isFuture || (isPast && isConfirmed));
 
     let tagHtml = '';
     if (isWalkIn) {
@@ -1144,6 +1242,10 @@
         tagHtml += `<button type="button" class="owner-dash-code" data-hint="code"
           title="Código de conferência" aria-label="Código de conferência ${escapeHtml(appt.phone_last4)}. Clique para saber mais."><i class="fas fa-shield-halved"></i>${escapeHtml(appt.phone_last4)}</button>`;
       }
+    }
+    // Ficha feita vira um selo ao lado do nome, com o atalho pra abrir.
+    if (temFicha) {
+      tagHtml += `<button type="button" class="od-ficha-badge" data-action="verficha" title="Ficha de entrada" aria-label="Ficha de entrada feita. Clique para abrir."><i class="fas fa-clipboard-check"></i></button>`;
     }
 
     const hint = cardHints[appt.id]?.kind;
@@ -1163,28 +1265,30 @@
       ? `<div class="owner-dash-time-date">${escapeHtml(fmtDateBR(appt.date))}</div>`
       : '';
 
-    let rightHtml = '';
-    if (esperandoFicha) {
-      // Pendência: um ponto vermelho piscando e duas palavras, sem mudar a cor do card.
-      rightHtml = `
-        <span class="owner-dash-pend"><i></i>SEM FICHA</span>
-        <span class="owner-dash-pend-t">há ${atrasoMin} min</span>
-      `;
-    } else if (inService) {
-      rightHtml = `
-        <span class="owner-dash-phase">${escapeHtml(phase)}</span>
-        ${etaMinutes != null ? `<span class="owner-dash-eta">${etaMinutes}m</span>` : ''}
-      `;
-    } else if (isFinalized) {
-      rightHtml = isNoShow
-        ? `<span class="owner-dash-outcome out"><i class="fas fa-user-xmark"></i>FALTOU</span>`
-        : `<span class="owner-dash-outcome ok"><i class="fas fa-check"></i>ATENDIDO</span>`;
-    }
+    // Desfecho em texto + ícone (a cor da barra é só reforço).
+    const rightHtml = isFinalized
+      ? (isNoShow
+          ? `<span class="owner-dash-outcome out"><i class="fas fa-user-xmark"></i>FALTOU</span>`
+          : `<span class="owner-dash-outcome ok"><i class="fas fa-check"></i>ATENDIDO</span>`)
+      : '';
 
-    const revertHtml = isFinalized ? `
+    const moreHtml = usaMenu
+      ? `<button type="button" class="od-more" data-action="menu" aria-label="Mais opções"><i class="fas fa-ellipsis"></i></button>`
+      : '';
+
+    const revertHtml = (isFinalized && !usaMenu) ? `
       <button type="button" class="owner-dash-revert-row" data-action="revert">
         <i class="fas fa-rotate-left"></i> Reverter
       </button>
+    ` : '';
+
+    // Fase e tempo junto da barra que eles descrevem.
+    const liveRowHtml = inService ? `
+      <div class="od-liverow">
+        ${esperandoFicha
+          ? `<span class="owner-dash-pend"><i></i>SEM FICHA</span><span class="owner-dash-pend-t" style="margin:0">há ${atrasoMin} min</span>`
+          : `<span class="owner-dash-phase">${escapeHtml(phase)}</span>${etaMinutes != null ? `<span class="owner-dash-eta">${etaMinutes}m</span>` : ''}`}
+      </div>
     ` : '';
 
     const progressHtml = inService ? `
@@ -1193,14 +1297,19 @@
       </div>
     ` : '';
 
-    const primaryHtml = showPrimaryActions ? `
-      <div class="owner-dash-actions${isWalkIn ? ' solo' : ''}">
-        ${isWalkIn ? '' : `<button class="owner-dash-btn-ghost" data-action="noshow">
+    // Ficha opcional: a ação vive no card enquanto o carro chega e está no pátio.
+    const fichaOpcionalHtml = (!appt.vehicle_check && !fichaObrigatoria && fichaAtiva && (chegando || (isWalkIn && isAttended)))
+      ? `<button type="button" class="od-btn-ficha is-full" data-action="ficha"><i class="fas fa-camera"></i> Ficha de entrada</button>`
+      : '';
+
+    const primaryHtml = acoes ? `
+      <div class="owner-dash-actions${solo ? ' solo' : ''}">
+        ${comAusente ? `<button class="owner-dash-btn-ghost" data-action="noshow">
           <i class="fas fa-user-xmark"></i> Ausente
-        </button>`}
-        <button class="owner-dash-btn-primary" data-action="attend">
-          <i class="fas fa-check"></i> ${isPast ? 'Compareceu' : 'Finalizado'}
-        </button>
+        </button>` : ''}
+        ${(acoes === 'ficha' || acoes === 'ausente+ficha')
+          ? `<button class="od-btn-ficha" data-action="ficha"><i class="fas fa-camera"></i> Ficha de entrada</button>`
+          : `<button class="owner-dash-btn-primary" data-action="attend"><i class="fas fa-check"></i> ${isPast ? 'Compareceu' : 'Finalizado'}</button>`}
       </div>
     ` : '';
 
@@ -1222,12 +1331,10 @@
       ? `<div class="owner-dash-meta">${escapeHtml(appt.vehicle)}</div>`
       : '';
 
-    // Fidelidade: vale aplicado (desconto já no valor, ou brinde a entregar),
-    // vale livre que dá pra aplicar no balcão, ou o aviso de que esta visita
-    // completa o cartão (o cliente ganha o vale pra próxima).
+    // Fidelidade: brinde a entregar, vale livre pra aplicar no balcão, ou o
+    // aviso de que esta visita completa o cartão. Vale de desconto aplicado
+    // é só o presente ao lado do valor.
     let rewardHtml = '';
-    // Vale de desconto: só o presente ao lado do valor (o valor já sai com
-    // ele). Brinde é pra entregar na mão, então segue escrito.
     const valeNoValor = appt.reward && appt.reward.type !== 'gift';
     if (appt.reward) {
       const r = appt.reward;
@@ -1253,16 +1360,18 @@
             ${tagHtml}
           </div>
           ${hintHtml}
-          <div class="owner-dash-meta">
-            ${escapeHtml(appt.service)} · <span class="owner-dash-meta-price">${fmtMoney(charge, 2)}</span>${valeNoValor ? ` <i class="fas fa-gift" title="Vale aplicado: ${escapeHtml(appt.reward.short)}" aria-label="Vale aplicado"></i>` : ''}
-          </div>
+          <div class="owner-dash-meta">${escapeHtml(appt.service)}</div>
+          <div class="od-charge">${fmtMoney(charge, 2)}${valeNoValor ? ` <i class="fas fa-gift" title="Vale aplicado: ${escapeHtml(appt.reward.short)}" aria-label="Vale aplicado"></i>` : ''}</div>
           ${vehicleHtml}
           ${rewardHtml}
         </div>
         <div class="owner-dash-card-right">${rightHtml}</div>
+        ${moreHtml}
       </div>
       ${revertHtml}
+      ${liveRowHtml}
       ${progressHtml}
+      ${fichaOpcionalHtml}
       ${primaryHtml}
       ${secondaryHtml}
     `;
@@ -1278,17 +1387,52 @@
     card.querySelectorAll('[data-action]').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const act = btn.dataset.action;
-        if (act === 'attend')  return doAction(appt, 'attend',  btn);
-        if (act === 'noshow')  return doAction(appt, 'no_show', btn);
-        if (act === 'revert')  return doAction(appt, 'revert',  btn);
-        if (act === 'edit')    return openEditSheet(appt);
-        if (act === 'cancel')  return openCancelSheet(appt);
-        if (act === 'reward')  return doAction(appt, 'apply_reward', btn);
+        acaoDoCard(appt, btn.dataset.action, btn, menu);
       });
     });
 
     return card;
+  }
+
+  // Ficha obrigatória (o dono não deixou pular): o carro só sai como
+  // atendido com a ficha feita. O servidor também recusa; aqui o Finalizado
+  // já leva direto pra ficha em vez de mostrar erro.
+  function fichaPendente(appt) {
+    return !!fichaCfg?.enabled && !fichaCfg?.skippable && !appt.vehicle_check;
+  }
+  function abrirFicha(appt, motivo) {
+    if (!window.LoovFicha) return;
+    closeOverlay('past');
+    LoovFicha.abrir(appt, { motivo, onSalva: () => loadDashboard(true) });
+  }
+  function acaoDoCard(appt, act, btn, menu) {
+    if (act === 'attend') {
+      if (fichaPendente(appt)) return abrirFicha(appt, 'finalizar');
+      return doAction(appt, 'attend', btn);
+    }
+    if (act === 'noshow')   return doAction(appt, 'no_show', btn);
+    if (act === 'revert')   return doAction(appt, 'revert',  btn);
+    if (act === 'edit')     return openEditSheet(appt);
+    if (act === 'cancel')   return openCancelSheet(appt);
+    if (act === 'reward')   return doAction(appt, 'apply_reward', btn);
+    if (act === 'ficha')    return abrirFicha(appt, null);
+    if (act === 'verficha') return window.LoovFicha && LoovFicha.ver(appt.vehicle_check.id);
+    if (act === 'menu')     return openCardMenu(appt, menu, btn);
+  }
+
+  // Folha do •••. Fecha antes de rodar a opção: Editar e Cancelar abrem
+  // outra folha por cima.
+  function openCardMenu(appt, items, origem) {
+    document.getElementById('od-menu-title').textContent = `${appt.client || 'Cliente'} · ${appt.time}`;
+    const list = document.getElementById('od-menu-list');
+    list.innerHTML = items.map((it, i) =>
+      `<button type="button" class="od-menu-row${it.danger ? ' is-danger' : ''}" data-i="${i}"><i class="fas ${it.icon}"></i>${escapeHtml(it.label)}</button>`
+    ).join('');
+    list.querySelectorAll('[data-i]').forEach(b => b.addEventListener('click', () => {
+      closeOverlay('menu');
+      acaoDoCard(appt, items[+b.dataset.i].act, origem, items);
+    }));
+    document.getElementById('od-menu-overlay').classList.add('open');
   }
 
   async function doAction(appt, path, btn) {
@@ -1325,12 +1469,9 @@
 
     const inServiceCount = todayList.filter(isInService).length;
 
-    // Section header
-    const pulse = document.getElementById('od-pulse');
-    const liveBadge = document.getElementById('od-live-badge');
-    pulse.classList.toggle('visible', inServiceCount > 0);
-    liveBadge.classList.toggle('visible', inServiceCount > 0);
-    liveBadge.textContent = inServiceCount;
+    // Chip "N em serviço" ao lado do título da seção
+    document.getElementById('od-live-chip').classList.toggle('visible', inServiceCount > 0);
+    document.getElementById('od-live-n').textContent = `${inServiceCount} em serviço`;
 
     // Lista
     const list = document.getElementById('od-list');
@@ -1342,16 +1483,7 @@
     }
 
     // Past pending banner
-    const banner = document.getElementById('od-past-banner');
-    const title  = document.getElementById('od-past-title');
-    if (unresolvedPast.length > 0) {
-      banner.classList.remove('hidden');
-      title.textContent = unresolvedPast.length === 1
-        ? '1 pendência de dias anteriores'
-        : `${unresolvedPast.length} pendências de dias anteriores`;
-    } else {
-      banner.classList.add('hidden');
-    }
+    document.getElementById('od-past-banner').classList.toggle('hidden', unresolvedPast.length === 0);
 
   }
 
@@ -1471,6 +1603,8 @@
       const data = await ckRes.json();
       const summary = data.summary || {};
 
+      fichaCfg        = data.vehicle_check || null;
+      if (window.LoovFicha) LoovFicha.configurar(fichaCfg);
       allServices     = data.services || [];
       allAppointments = data.appointments || [];
       // Dedupe defensivo por id (race entre cliques rápidos + refetch)
@@ -1482,7 +1616,6 @@
 
       // Hero + KPIs
       document.getElementById('od-revenue').textContent  = fmtMoney(summary.revenue_today || 0, 2);
-      document.getElementById('od-svc-count').textContent= summary.total ?? 0;
       document.getElementById('od-kpi-attended').textContent = summary.attended ?? 0;
       document.getElementById('od-kpi-pending').textContent  = summary.pending ?? 0;
       document.getElementById('od-kpi-noshow').textContent   = summary.no_show ?? 0;
@@ -1564,7 +1697,7 @@
     document.getElementById('od-cancel-error').style.display = 'none';
     const btn = document.getElementById('od-cancel-confirm');
     btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-xmark"></i> CANCELAR ATENDIMENTO';
+    btn.innerHTML = '<i class="fas fa-xmark"></i> Cancelar atendimento';
     document.getElementById('od-cancel-overlay').classList.add('open');
   }
 
@@ -1584,7 +1717,7 @@
       errEl.textContent = data.error || 'Erro ao cancelar.';
       errEl.style.display = 'block';
       btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-xmark"></i> CANCELAR ATENDIMENTO';
+      btn.innerHTML = '<i class="fas fa-xmark"></i> Cancelar atendimento';
       return;
     }
     showToast('Atendimento cancelado.', 'success');
@@ -1594,53 +1727,92 @@
   });
 
   // ── Modal: walk-in ────────────────────────────────────────────────────
-  function openWalkInSheet() {
-    const sel = document.getElementById('od-wi-service');
-    sel.innerHTML = allServices.map(s =>
-      `<option value="${s.id}">${escapeHtml(s.title)} — ${fmtMoney(s.price, 0)}</option>`
-    ).join('');
-    document.getElementById('od-wi-name').value  = '';
-    document.getElementById('od-wi-price').value = '';
-    document.getElementById('od-wi-time').value  = new Date().toTimeString().slice(0,5);
-    const err = document.getElementById('od-wi-error');
-    err.style.display = 'none';
+  // Porte da WalkInModal do app: escolhe o serviço (o preço vem junto),
+  // "Agora" por padrão e um único CTA coral.
+  const wi = { svc: null, agora: true, hora: '' };
+  const precoBR = v => Number(v || 0).toFixed(2).replace('.', ',');
+  // "1.200,50" → 1200.5 (o backend faz to_f, que leria 1,2).
+  const precoNumero = t => { const n = parseFloat(String(t || '').replace(/[^\d,]/g, '').replace(',', '.')); return Number.isFinite(n) ? n : null; };
+  const mascaraHora = t => { const d = String(t || '').replace(/\D/g, '').slice(0, 4); return d.length > 2 ? `${d.slice(0, 2)}:${d.slice(2)}` : d; };
+  const horaValida = h => { const m = /^(\d{2}):(\d{2})$/.exec(h); return !!m && +m[1] < 24 && +m[2] < 60; };
+  const horaAtual = () => new Date().toTimeString().slice(0, 5);
+
+  function wiPronto() {
+    return !!wi.svc && (wi.agora || horaValida(wi.hora)) && precoNumero(document.getElementById('od-wi-price').value) !== null;
+  }
+  function wiAtualizarCta() {
     const btn = document.getElementById('od-wi-save');
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-check"></i> Registrar atendimento';
+    btn.disabled = !wiPronto();
+    btn.textContent = wi.svc ? 'Registrar avulso' : 'Escolha o serviço';
+  }
+  function wiRenderHora() {
+    const box = document.getElementById('od-wi-time');
+    if (wi.agora) {
+      box.innerHTML = `<button type="button" class="od-wi-in" id="od-wi-agora" aria-label="Agora, ${horaAtual()}. Clique pra trocar o horário">Agora <span>· ${horaAtual()}</span></button>`;
+      document.getElementById('od-wi-agora').addEventListener('click', () => { wi.agora = false; wi.hora = horaAtual(); wiRenderHora(); document.getElementById('od-wi-hora').focus(); });
+    } else {
+      const err = wi.hora.length === 5 && !horaValida(wi.hora);
+      box.innerHTML = `<div class="od-wi-in${err ? ' is-err' : ''}"><input id="od-wi-hora" inputmode="numeric" maxlength="5" placeholder="14:30" value="${escapeHtml(wi.hora)}" aria-label="Horário"><button type="button" id="od-wi-reset" aria-label="Voltar pra agora"><i class="fas fa-rotate-left"></i></button></div>`;
+      const inp = document.getElementById('od-wi-hora');
+      inp.addEventListener('input', () => { wi.hora = mascaraHora(inp.value); inp.value = wi.hora; inp.parentElement.classList.toggle('is-err', wi.hora.length === 5 && !horaValida(wi.hora)); wiAtualizarCta(); });
+      document.getElementById('od-wi-reset').addEventListener('click', () => { wi.agora = true; wi.hora = ''; wiRenderHora(); wiAtualizarCta(); });
+    }
+  }
+  function wiRenderServicos() {
+    const list = document.getElementById('od-wi-list');
+    list.innerHTML = allServices.map(s => `
+      <button type="button" class="od-wi-svc${wi.svc && wi.svc.id === s.id ? ' is-on' : ''}" role="radio" aria-checked="${!!(wi.svc && wi.svc.id === s.id)}" data-svc="${s.id}">
+        <b>${escapeHtml(s.title)}</b><small>R$ ${precoBR(s.price)}</small><em>${wi.svc && wi.svc.id === s.id ? '<i class="fas fa-check"></i>' : ''}</em>
+      </button>`).join('');
+    list.querySelectorAll('[data-svc]').forEach(b => b.addEventListener('click', () => {
+      wi.svc = allServices.find(s => String(s.id) === b.dataset.svc);
+      // O preço já vem o do serviço: o dono só mexe se cobrou diferente.
+      const price = document.getElementById('od-wi-price');
+      price.disabled = false; price.value = precoBR(wi.svc.price); price.placeholder = precoBR(wi.svc.price);
+      wiRenderServicos(); wiAtualizarCta();
+    }));
+  }
+  function openWalkInSheet() {
+    wi.svc = null; wi.agora = true; wi.hora = '';
+    document.getElementById('od-wi-name').value = '';
+    const price = document.getElementById('od-wi-price');
+    price.value = ''; price.disabled = true; price.placeholder = '0,00';
+    document.getElementById('od-wi-error').style.display = 'none';
+    wiRenderServicos(); wiRenderHora(); wiAtualizarCta();
     document.getElementById('od-walkin-overlay').classList.add('open');
   }
+  document.getElementById('od-wi-price').addEventListener('input', function () { this.value = this.value.replace(/[^\d,]/g, ''); wiAtualizarCta(); });
 
   document.getElementById('od-wi-save').addEventListener('click', async () => {
-    const name  = document.getElementById('od-wi-name').value.trim();
-    const time  = document.getElementById('od-wi-time').value;
-    const svc   = document.getElementById('od-wi-service').value;
-    const price = document.getElementById('od-wi-price').value.trim();
+    if (!wiPronto()) return;
     const err = document.getElementById('od-wi-error');
     const btn = document.getElementById('od-wi-save');
+    const valor = precoNumero(document.getElementById('od-wi-price').value);
     err.style.display = 'none';
-    if (!name) {
-      err.textContent = 'Informe o nome do cliente.';
-      err.style.display = 'block';
-      return;
-    }
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Registrando...';
+    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
     const { ok, data } = await postJson('/owner/checkins/walk_in', {
-      walk_in_name: name,
-      scheduled_at: time,
-      service_id: svc,
-      price_override: price || null
+      walk_in_name: document.getElementById('od-wi-name').value.trim() || 'Avulso',
+      // Sem horário o servidor usa o de agora (o dele, não o do navegador).
+      scheduled_at: wi.agora ? undefined : wi.hora,
+      service_id: wi.svc.id,
+      // Só manda quando difere do serviço: preço igual mandado viraria "preço ajustado".
+      price_override: Math.abs(valor - Number(wi.svc.price)) > 0.005 ? valor.toFixed(2) : undefined
     });
     if (!ok) {
       err.textContent = data.error || 'Erro ao registrar.';
       err.style.display = 'block';
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fas fa-check"></i> Registrar atendimento';
+      wiAtualizarCta();
       return;
     }
-    showToast('Atendimento registrado.', 'success');
+    showToast('Avulso registrado.', 'success');
     closeOverlay('walkin');
     await loadDashboard(true);
+    // O avulso é lançado com o carro no pátio: é a hora da ficha.
+    if (fichaCfg?.enabled && data.id) {
+      const novo = allAppointments.find(a => a.id === data.id) || data;
+      abrirFicha(novo, null);
+    }
   });
 
   // ── Modal: past pending sheet ─────────────────────────────────────────
@@ -1666,7 +1838,7 @@
 
   // ── Overlay close (genérico) ──────────────────────────────────────────
   function closeOverlay(kind) {
-    const map = { edit:'od-edit-overlay', cancel:'od-cancel-overlay', walkin:'od-walkin-overlay', past:'od-past-overlay' };
+    const map = { edit:'od-edit-overlay', cancel:'od-cancel-overlay', walkin:'od-walkin-overlay', past:'od-past-overlay', menu:'od-menu-overlay' };
     const el = document.getElementById(map[kind]);
     if (el) el.classList.remove('open');
   }
@@ -1674,7 +1846,7 @@
     btn.addEventListener('click', () => closeOverlay(btn.dataset.odClose));
   });
   // Click no backdrop fecha
-  ['od-edit-overlay','od-cancel-overlay','od-walkin-overlay','od-past-overlay'].forEach(id => {
+  ['od-edit-overlay','od-cancel-overlay','od-walkin-overlay','od-past-overlay','od-menu-overlay'].forEach(id => {
     document.getElementById(id)?.addEventListener('click', e => {
       if (e.target.id === id) closeOverlay(id.replace('od-','').replace('-overlay',''));
     });

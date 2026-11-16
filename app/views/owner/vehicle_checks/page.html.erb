@@ -1,0 +1,142 @@
+<%#
+  Ficha do carro — ajuste do dono no site (OwnerFichaConfigScreen no app).
+  Liga a ficha, escolhe como registrar e se o atendente pode pular; abre o
+  histórico de qualquer placa. Mesma API do app (PATCH /owner/vehicle_checks/settings).
+  Em tela grande: ajustes à esquerda, histórico da placa à direita.
+%>
+<script src="/vendor/feather-4.29.2.min.js"></script>
+
+<style>
+  .fc { background: var(--cream); color: var(--ink); min-height: 100vh; padding-top: 60px; }
+  .loov-nav { background: var(--cream) !important; }
+  .fc *, .fc *::before, .fc *::after { box-sizing: border-box; }
+  .fc button { font-family: inherit; line-height: normal; cursor: pointer; }
+  .fc svg.feather { display: block; flex-shrink: 0; }
+  .fc-wrap { width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 20px 64px; }
+  .fc-grid { display: grid; gap: 8px; padding-top: 12px; }
+  .fc-secao { margin: 26px 0 10px; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 18px; }
+  .fc-card { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 10px; padding: 16px; background: var(--paper); border: 1px solid var(--stone); border-radius: 18px; color: var(--ink); text-align: left; box-shadow: 0 1px 2px rgba(40,35,28,.04), 0 6px 18px -12px rgba(40,35,28,.25); }
+  .fc-card.is-radio { transition: border-color .15s; }
+  .fc-card.is-radio:hover { border-color: var(--ink); }
+  .fc-card.is-on { border: 2px solid var(--ink); padding: 15px; }
+  .fc-t { flex: 1; min-width: 0; }
+  .fc-t b { display: block; font-size: 16px; font-weight: 600; }
+  .fc-t small { display: block; margin-top: 3px; font-size: 13px; color: var(--graphite); }
+  .fc-radio { flex: 0 0 22px; height: 22px; border-radius: 50%; border: 2px solid var(--stone); display: flex; align-items: center; justify-content: center; }
+  .fc-card.is-on .fc-radio { border-color: var(--ink); }
+  .fc-card.is-on .fc-radio::after { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--ink); }
+  /* Interruptor ligado = tinta (como no app e na Fidelidade) */
+  .fc-sw { position: relative; flex: 0 0 51px; height: 31px; border: 0; border-radius: 999px; background: var(--stone); transition: background .2s; padding: 0; }
+  .fc-sw::after { content: ''; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: var(--paper); box-shadow: 0 2px 4px rgba(40,35,28,.18); transition: transform .2s; }
+  .fc-sw[aria-checked="true"] { background: var(--ink); }
+  .fc-sw[aria-checked="true"]::after { transform: translateX(20px); }
+  .fc-sw:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .fc-dica { margin: 10px 0 0; font-size: 13px; line-height: 18px; color: var(--graphite); }
+  .fc-busca { display: flex; gap: 10px; }
+  .fc-busca input { flex: 1; min-width: 0; height: 52px; padding: 0 16px; border: 1px solid var(--stone); border-radius: 14px; background: var(--paper); font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 18px; letter-spacing: 1px; color: var(--ink); text-transform: uppercase; outline: none; }
+  .fc-busca input:focus { border-color: var(--ink); }
+  /* Leva pro histórico: navegação, tinta cheia */
+  .fc-busca button { flex: 0 0 52px; height: 52px; border: 0; border-radius: 999px; background: var(--ink); color: var(--cream); display: flex; align-items: center; justify-content: center; transition: opacity .15s; }
+  .fc-busca button[disabled] { opacity: .4; cursor: default; }
+  .fc-off { opacity: .55; pointer-events: none; }
+  @media (min-width: 960px) {
+    .fc-wrap { padding: 0 40px 80px; }
+    .fc-grid { grid-template-columns: minmax(0, 1fr) 360px; gap: 48px; align-items: start; padding-top: 20px; }
+    .fc-side { position: sticky; top: 84px; }
+  }
+</style>
+
+<div class="fc">
+  <div class="fc-wrap">
+    <%= render "shared/page_head", back_href: voltar_do_dono, title: "Ficha do carro",
+               lead: "Registre o estado do carro na entrada. Se alguém disser que o risco foi aqui, a ficha mostra que ele já existia." %>
+
+    <div class="fc-grid">
+      <section aria-label="Ajustes da ficha">
+        <div class="fc-card">
+          <span class="fc-t"><b>Pedir ficha na entrada</b><small>Aparece no card quando o carro chega</small></span>
+          <button type="button" class="fc-sw" id="fc-enabled" role="switch" aria-checked="false" aria-label="Pedir ficha na entrada"></button>
+        </div>
+
+        <div id="fc-resto">
+          <h2 class="fc-secao">Como registrar</h2>
+          <div id="fc-modos" role="radiogroup" aria-label="Como registrar"></div>
+          <p class="fc-dica" id="fc-semfoto" hidden>As fotos ainda não estão ativas na Loov. Até lá, a ficha usa o desenho.</p>
+
+          <div class="fc-card" style="margin-top:18px">
+            <span class="fc-t"><b>Deixar o atendente pular</b><small>As fichas puladas ficam registradas</small></span>
+            <button type="button" class="fc-sw" id="fc-skippable" role="switch" aria-checked="false" aria-label="Deixar o atendente pular a ficha"></button>
+          </div>
+        </div>
+      </section>
+
+      <aside class="fc-side" aria-label="Histórico de uma placa">
+        <h2 class="fc-secao">Histórico de uma placa</h2>
+        <form class="fc-busca" id="fc-busca">
+          <input id="fc-placa" placeholder="ABC1D23" maxlength="8" autocomplete="off" aria-label="Placa">
+          <button type="submit" id="fc-ir" disabled aria-label="Ver histórico"><i data-feather="arrow-right" style="width:20px;height:20px"></i></button>
+        </form>
+        <p class="fc-dica">Mostra as fichas do carro neste lava-rápido e as avarias que já estavam lá.</p>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<%= render "shared/ficha" %>
+
+<script>
+(function () {
+  var CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content;
+  var cfg = <%= raw json_escape(@settings.to_json) %>;
+  var MODOS = [
+    { mode: 'choose', t: 'Atendente escolhe', s: 'Fotos ou desenho, carro a carro' },
+    { mode: 'photos', t: 'Sempre fotos',      s: 'A melhor prova num processo' },
+    { mode: 'sketch', t: 'Sempre desenho',    s: 'Mais rápido, vale menos como prova' }
+  ];
+  function $(id) { return document.getElementById(id); }
+  var toastT;
+  function toast(msg) { var t = $('lf-toast'); t.textContent = msg; t.classList.add('is-on'); clearTimeout(toastT); toastT = setTimeout(function () { t.classList.remove('is-on'); }, 3200); }
+
+  function render() {
+    $('fc-enabled').setAttribute('aria-checked', String(!!cfg.enabled));
+    $('fc-skippable').setAttribute('aria-checked', String(!!cfg.skippable));
+    $('fc-resto').classList.toggle('fc-off', !cfg.enabled);
+    $('fc-semfoto').hidden = !!cfg.photos_available;
+    $('fc-modos').innerHTML = MODOS.map(function (m) {
+      var on = cfg.mode === m.mode;
+      return '<button type="button" class="fc-card is-radio' + (on ? ' is-on' : '') + '" role="radio" aria-checked="' + on + '" data-mode="' + m.mode + '">' +
+        '<span class="fc-radio"></span><span class="fc-t"><b>' + m.t + '</b><small>' + m.s + '</small></span></button>';
+    }).join('');
+    $('fc-modos').querySelectorAll('[data-mode]').forEach(function (b) { b.addEventListener('click', function () { mudar({ mode: b.dataset.mode }); }); });
+  }
+
+  // Otimista: a chave muda na hora e volta se o servidor recusar.
+  function mudar(campos) {
+    var antes = Object.assign({}, cfg);
+    Object.assign(cfg, campos); render();
+    fetch('/owner/vehicle_checks/settings', {
+      method: 'PATCH', credentials: 'same-origin',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF },
+      body: JSON.stringify(campos)
+    }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) {
+      if (!r.ok) throw new Error(d.error || 'Não foi possível salvar.');
+      cfg = d; render();
+    }); }).catch(function (e) { cfg = antes; render(); toast(e.message); });
+  }
+
+  $('fc-enabled').addEventListener('click', function () { mudar({ enabled: !cfg.enabled }); });
+  $('fc-skippable').addEventListener('click', function () { mudar({ skippable: !cfg.skippable }); });
+  $('fc-placa').addEventListener('input', function () {
+    var p = LoovFicha.limparPlaca(this.value); this.value = p;
+    $('fc-ir').disabled = !LoovFicha.placaValida(p);
+  });
+  $('fc-busca').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var p = LoovFicha.limparPlaca($('fc-placa').value);
+    if (LoovFicha.placaValida(p)) LoovFicha.historico(p);
+  });
+
+  render();
+  if (window.feather) feather.replace();
+})();
+</script>

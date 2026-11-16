@@ -33,6 +33,12 @@ class FichaStorage
                             content_type: "image/jpeg", expires_in: UPLOAD_EXPIRA.to_i)
   end
 
+  # Envio pelo servidor, usado pelo site: o navegador não consegue mandar
+  # direto pro R2 sem CORS no bucket, e a foto já chega reduzida (~250 KB).
+  def enviar(chave, bytes)
+    client.put_object(bucket: bucket, key: chave, body: bytes, content_type: "image/jpeg")
+  end
+
   def url_leitura(chave)
     presigner.presigned_url(:get_object, bucket: bucket, key: chave,
                             expires_in: LEITURA_EXPIRA.to_i)

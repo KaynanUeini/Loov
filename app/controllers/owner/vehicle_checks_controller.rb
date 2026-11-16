@@ -1,13 +1,20 @@
 module Owner
   # Ficha do carro (ver VehicleCheck): o atendente registra o estado do veículo
-  # na entrada, por fotos ou pontos no desenho. Só pelo app, por enquanto.
+  # na entrada, por fotos ou pontos no desenho. No app e no site (painel e
+  # página "Ficha do carro", que é este #page).
   class VehicleChecksController < ApplicationController
     skip_before_action :verify_authenticity_token
     before_action :authenticate_user!
     before_action :ensure_owner_or_attendant
     before_action :set_car_wash
-    before_action :ensure_owner, only: [:settings_update]
-    before_action :load_appointment, only: [:uploads, :create, :conferir]
+    before_action :ensure_owner, only: [:settings_update, :page]
+    before_action :load_appointment, only: [:uploads, :create, :conferir, :photo]
+
+    # GET /owner/ficha — a configuração e o histórico de uma placa no site
+    # (OwnerFichaConfigScreen no app). Os dados vêm das mesmas rotas JSON.
+    def page
+      @settings = settings_json
+    end
 
     # GET /owner/vehicle_checks/settings
     def settings
@@ -30,7 +37,7 @@ module Owner
 
     # POST /owner/checkins/:id/vehicle_check/conferir  { label, image }
     # A IA confere uma foto guiada (FichaConferencia). image: JPEG em base64,
-    # já reduzido pelo app. Sem resposta da IA, { ok: true, conferida: false }:
+    # já reduzido pelo app ou pelo site. Sem resposta da IA, { ok: true, conferida: false }:
     # a foto passa, a conferência nunca trava a ficha.
     def conferir
       label = params[:label].to_s
@@ -69,6 +76,29 @@ module Owner
           { label: label, key: chave, url: storage.url_envio(chave) }
         end
       }
+    end
+
+    # POST /owner/checkins/:id/vehicle_check/photo  { label, image }
+    # O site manda cada foto por aqui (base64, já reduzida a 1600 px) e o
+    # servidor guarda no R2. Devolve a chave pra ir no create, como no app.
+    def photo
+      return render json: { error: "Fotos indisponíveis. Use o desenho." }, status: :service_unavailable unless FichaStorage.configurado?
+      return render json: { error: "Este carro já tem ficha." }, status: :conflict if @appointment.vehicle_check
+
+      label = params[:label].to_s
+      return render json: { error: "Foto inválida." }, status: :unprocessable_entity unless (VehicleCheck::PHOTO_LABELS + ["detail"]).include?(label)
+
+      bytes = Base64.decode64(params[:image].to_s)
+      if bytes.bytesize < 1_000 || bytes.bytesize > 1_500_000 || !bytes.start_with?("\xFF\xD8".b)
+        return render json: { error: "Foto inválida ou grande demais." }, status: :unprocessable_entity
+      end
+
+      chave = FichaStorage.nova_chave(@appointment, label)
+      FichaStorage.new.enviar(chave, bytes)
+      render json: { label: label, key: chave }
+    rescue Aws::S3::Errors::ServiceError => e
+      Rails.logger.error("[ficha#photo] #{e.class}: #{e.message}")
+      render json: { error: "A foto não chegou. Tente de novo." }, status: :bad_gateway
     end
 
     # POST /owner/checkins/:id/vehicle_check

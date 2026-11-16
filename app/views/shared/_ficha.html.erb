@@ -1,0 +1,725 @@
+<%#
+  Ficha do carro no site — porte das telas do app (FichaSheet, OwnerFichaScreen,
+  OwnerFichaDetalheScreen, OwnerFichaHistoricoScreen), numa camada por cima da
+  página. Usada pelo painel (home/index) e pela página "Ficha do carro"
+  (owner/vehicle_checks/page).
+
+    LoovFicha.configurar(settings)          settings = vehicle_check do /owner/checkins/today
+    LoovFicha.abrir(appt, { motivo, onSalva })   folha: placa e fotos ou desenho
+    LoovFicha.ver(id)                       ficha salva, só leitura
+    LoovFicha.historico(placa)              fichas da placa e avarias que se repetem
+
+  O que muda do app, por ser navegador:
+    · Fotos pela câmera do celular (input com capture) ou por arquivo no
+      computador, em vez da câmera dentro do app. O contorno do carro vira a
+      ilustração da foto pedida, antes de abrir a câmera.
+    · Cada foto vai pro servidor (POST …/vehicle_check/photo), que guarda no
+      R2: o navegador não manda direto pro R2 sem CORS no bucket.
+    · A conferência é a mesma: qualidade no aparelho (o mesmo cálculo de
+      public/ficha/qualidade.html) e a IA nas 4 guiadas (…/conferir).
+      As duas falham abertas: sem resposta, a foto passa.
+%>
+<style>
+  .lf { position: fixed; inset: 0; z-index: 1500; display: none; font-family: 'Inter', sans-serif; color: var(--ink); }
+  .lf.is-on { display: block; }
+  .lf *, .lf *::before, .lf *::after { box-sizing: border-box; }
+  .lf button { font-family: inherit; line-height: normal; cursor: pointer; }
+  .lf svg.feather { display: block; flex-shrink: 0; }
+  .lf-v { position: absolute; inset: 0; display: none; overflow-y: auto; background: var(--cream); }
+  .lf-v.is-on { display: block; }
+  .lf-wrap { max-width: 560px; margin: 0 auto; padding: 16px 20px 120px; }
+
+  /* Folha (bottom sheet), como as do painel */
+  .lf-v.lf-sheetv { background: rgba(26,22,18,.45); display: none; align-items: flex-end; justify-content: center; }
+  .lf-v.lf-sheetv.is-on { display: flex; }
+  .lf-sheet { width: 100%; max-width: 520px; background: var(--paper); border-radius: 28px 28px 0 0; padding: 12px 20px calc(28px + env(safe-area-inset-bottom, 0px)); animation: lfIn .25s ease-out; }
+  @keyframes lfIn { from { transform: translateY(40px); opacity: 0; } }
+  @media (min-width: 720px) { .lf-v.lf-sheetv { align-items: center; } .lf-sheet { border-radius: 28px; } }
+  .lf-grip { width: 40px; height: 5px; border-radius: 3px; background: var(--stone); margin: 0 auto 6px; }
+
+  .lf-back { width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--sand); color: var(--ink); display: inline-flex; align-items: center; justify-content: center; }
+  .lf-back:hover { background: var(--stone); }
+  .lf-top { display: flex; align-items: center; justify-content: space-between; }
+  .lf-placa-top { font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 14px; color: var(--graphite); }
+  .lf-title { margin: 18px 0 0; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 38px; line-height: 40px; letter-spacing: -1.5px; color: var(--ink); }
+  .lf-sheet .lf-title { margin-top: 12px; font-size: 30px; line-height: 34px; letter-spacing: -1px; }
+  .lf-lead { margin: 10px 0 0 !important; font-size: 15px !important; line-height: 22px !important; color: var(--graphite) !important; }
+  .lf-dica { margin: 10px 0 0; font-size: 13px; line-height: 18px; color: var(--graphite); }
+
+  /* Placa desenhada como a de verdade (faixa azul do Mercosul) */
+  .lf-placa { display: inline-flex; flex-direction: column; width: 108px; border: 1.5px solid var(--ink); border-radius: 6px; overflow: hidden; background: #fff; flex-shrink: 0; }
+  .lf-placa i { display: block; height: 8px; background: #1f4fa0; }
+  .lf-placa b { padding: 4px 0; text-align: center; font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 16px; letter-spacing: 1px; color: var(--ink); }
+  .lf-placa.is-big { width: 156px; border-width: 2px; border-radius: 8px; }
+  .lf-placa.is-big i { height: 12px; }
+  .lf-placa.is-big b { font-size: 24px; padding: 6px 0; }
+  .lf-carro { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+  .lf-carro span { flex: 1; min-width: 0; color: var(--graphite); font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lf-placa-in { width: 130px; height: 44px; border: 1.5px solid var(--ink); border-radius: 8px; background: #fff; text-align: center; font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 18px; letter-spacing: 1px; color: var(--ink); text-transform: uppercase; outline: none; }
+  .lf-placa-in.is-err { border-color: var(--rose-500, #c85050); }
+
+  .lf-motivo { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; padding: 14px; border-radius: 16px; background: var(--coral-50); border: 1px solid var(--coral-100); color: var(--coral-700); }
+  .lf-motivo b { display: block; font-size: 14px; }
+  .lf-motivo small { display: block; margin-top: 2px; font-size: 12.5px; line-height: 17px; color: var(--graphite); }
+
+  .lf-opcoes { display: grid; gap: 10px; margin-top: 18px; }
+  .lf-opcao { display: flex; align-items: center; gap: 14px; width: 100%; padding: 16px; border-radius: 18px; border: 1px solid var(--stone); background: var(--paper); color: var(--ink); text-align: left; transition: border-color .15s; }
+  .lf-opcao:hover:not([disabled]) { border-color: var(--ink); }
+  .lf-opcao.is-dest { border: 2px solid var(--ink); padding: 15px; }
+  .lf-opcao[disabled] { opacity: .45; cursor: not-allowed; }
+  .lf-opcao-ic { flex: 0 0 48px; height: 48px; border-radius: 14px; background: var(--sand); color: var(--ink); display: flex; align-items: center; justify-content: center; }
+  .lf-opcao.is-dest .lf-opcao-ic { background: var(--ink); color: var(--cream); }
+  .lf-opcao-t { flex: 1; min-width: 0; }
+  .lf-opcao-t b { display: block; font-size: 16px; font-weight: 600; }
+  .lf-opcao-t small { display: block; margin-top: 3px; font-size: 13px; color: var(--graphite); }
+  .lf-ultimo { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; color: var(--graphite); }
+
+  /* Botões no padrão: coral efetiva, contorno abre ou é alternativo, tinta navega */
+  .lf-cta { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; height: 52px; border: 0; border-radius: 999px; background: var(--coral-500); color: var(--cream); font-size: 16px; font-weight: 600; transition: opacity .15s; }
+  .lf-cta[disabled] { opacity: .7; cursor: default; }
+  .lf-cta.is-ink { background: var(--ink); }
+  .lf-out { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 48px; margin-top: 14px; border: 1.5px solid var(--ink); border-radius: 999px; background: transparent; color: var(--ink); font-size: 15px; font-weight: 600; transition: background .15s; }
+  .lf-out:hover { background: var(--sand); }
+  .lf-foot { position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 20px calc(16px + env(safe-area-inset-bottom, 0px)); background: linear-gradient(to top, var(--cream) 70%, rgba(250,250,246,0)); }
+  .lf-foot > * { max-width: 520px; margin: 0 auto; }
+  .lf-spin { width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid rgba(250,250,246,.35); border-top-color: var(--cream); animation: lfSpin .8s linear infinite; }
+  .lf-spin.is-dark { border-color: rgba(40,35,28,.2); border-top-color: var(--ink); }
+  @keyframes lfSpin { to { transform: rotate(360deg); } }
+
+  /* Desenho do carro visto de cima */
+  .lf-desenho { position: relative; margin: 0 auto; touch-action: manipulation; }
+  .lf-desenho svg { display: block; width: 100%; height: auto; }
+  .lf-desenho.is-tap { cursor: crosshair; }
+  .lf-ponto { position: absolute; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; border: 3px solid var(--cream); background: var(--coral-600, #c65f3a); color: #fff; font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; padding: 0; }
+  .lf-ponto.is-sel { transform: scale(1.12); box-shadow: 0 0 0 4px rgba(198,95,58,.3); }
+  .lf-painel { margin-top: 18px; padding: 18px 20px; background: var(--paper); border: 1px solid var(--stone); border-radius: 24px; }
+  .lf-painel-t { font-size: 15px; font-weight: 600; }
+  .lf-painel-v { font-size: 14px; color: var(--graphite); }
+  .lf-tipos { display: flex; gap: 8px; margin-top: 12px; }
+  .lf-tipo { flex: 1; height: 44px; border-radius: 14px; border: 1px solid var(--stone); background: var(--paper); color: var(--ink); font-size: 14px; font-weight: 500; }
+  .lf-tipo.is-on { background: var(--ink); border-color: var(--ink); color: var(--cream); font-weight: 600; }
+  .lf-linha { display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--sand); }
+  .lf-linha span { flex: 1; min-width: 0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lf-linha .lf-bol { flex: 0 0 22px; height: 22px; border-radius: 50%; background: var(--coral-600, #c65f3a); color: #fff; font-size: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+  .lf-rm { width: 44px; height: 44px; border: 0; background: none; color: var(--graphite); display: flex; align-items: center; justify-content: center; }
+
+  /* Fotos (fundo escuro: a foto é o foco, como na câmera) */
+  .lf-v.lf-dark { background: #1a1612; color: var(--cream); }
+  .lf-dround { width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(250,250,246,.12); color: var(--cream); display: inline-flex; align-items: center; justify-content: center; }
+  .lf-dark .lf-placa-top { color: var(--stone); }
+  .lf-prog { display: flex; gap: 6px; margin-top: 14px; }
+  .lf-prog i { flex: 1; height: 4px; border-radius: 2px; background: rgba(250,250,246,.25); }
+  .lf-prog i.is-feita { background: var(--cream); }
+  .lf-prog i.is-atual { background: var(--coral-500); }
+  .lf-passo { margin-top: 12px; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px; color: var(--stone); }
+  .lf-dtitle { margin: 2px 0 0; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 28px; letter-spacing: -.5px; color: var(--cream); }
+  .lf-cam { position: relative; margin-top: 14px; aspect-ratio: 4 / 3; border-radius: 20px; background: #3a342c; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+  .lf-cam svg { max-width: 82%; height: auto; }
+  .lf-cam-dica { position: absolute; bottom: 14px; left: 0; right: 0; text-align: center; font-size: 14px; color: var(--cream); }
+  .lf-cam.is-pronto { flex-direction: column; gap: 10px; }
+  .lf-cam.is-pronto b { font-size: 16px; }
+  .lf-cam img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .lf-aviso-d { margin-top: 16px; padding: 14px; border-radius: 16px; background: rgba(250,250,246,.08); border: 1px solid rgba(221,120,82,.45); }
+  .lf-aviso-d b { display: block; font-size: 14px; }
+  .lf-aviso-d small { display: block; margin-top: 2px; font-size: 13px; line-height: 18px; color: var(--stone); }
+  .lf-aviso-bt { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+  .lf-dbtn { height: 40px; padding: 0 18px; border-radius: 999px; border: 0; background: var(--cream); color: var(--ink); font-size: 13.5px; font-weight: 600; }
+  .lf-dghost { height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid rgba(250,250,246,.3); background: transparent; color: var(--cream); font-size: 13.5px; font-weight: 500; }
+  .lf-thumbs { display: flex; gap: 8px; margin-top: 16px; overflow-x: auto; scrollbar-width: none; }
+  .lf-thumbs::-webkit-scrollbar { display: none; }
+  .lf-thumb { flex: 0 0 auto; width: 58px; padding: 0; border: 0; background: none; color: var(--stone); text-align: center; font-size: 10px; }
+  .lf-thumb span { position: relative; display: block; width: 54px; height: 54px; margin: 0 auto 3px; border-radius: 10px; border: 2px solid var(--mint-500, #5dc39f); overflow: hidden; }
+  .lf-thumb span.is-ruim { border-color: var(--coral-500); }
+  .lf-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .lf-thumb em { position: absolute; inset: 0; background: rgba(26,22,18,.45); display: flex; align-items: center; justify-content: center; }
+  .lf-thumb span.is-ruim em { background: rgba(221,120,82,.55); }
+  .lf-cambt { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; }
+  .lf-pill { min-width: 104px; height: 44px; padding: 0 14px; border-radius: 22px; border: 0; background: rgba(250,250,246,.12); color: var(--cream); font-size: 13px; font-weight: 500; }
+  .lf-pill[disabled] { opacity: .4; cursor: default; }
+  .lf-shutter { width: 76px; height: 76px; border-radius: 50%; border: 4px solid var(--cream); background: transparent; display: flex; align-items: center; justify-content: center; padding: 0; }
+  .lf-shutter i { width: 58px; height: 58px; border-radius: 50%; background: var(--cream); display: flex; align-items: center; justify-content: center; color: var(--ink); }
+  .lf-revisar { height: 56px; padding: 0 28px; border-radius: 28px; border: 0; background: var(--cream); color: var(--ink); font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .lf-revisar[disabled] { opacity: .6; }
+  .lf-pergunta { margin-top: 18px; font-size: 16px; font-weight: 600; }
+  .lf-tipos-d { display: flex; gap: 8px; margin-top: 12px; }
+  .lf-tipos-d button { flex: 1; height: 44px; border-radius: 14px; border: 0; background: rgba(250,250,246,.14); color: var(--cream); font-size: 14px; font-weight: 600; }
+  .lf-file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+  /* Revisar e ficha salva */
+  .lf-grade { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 18px; }
+  .lf-gi { position: relative; aspect-ratio: 1; border-radius: 14px; overflow: hidden; background: var(--stone); border: 0; padding: 0; display: block; }
+  .lf-gi img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .lf-gi-tags { position: absolute; left: 6px; top: 6px; right: 6px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+  .lf-selo { padding: 2px 8px; border-radius: 999px; background: var(--coral-600, #c65f3a); color: #fff; font-size: 11px; font-weight: 600; }
+  .lf-selo.is-flag { background: rgba(26,22,18,.7); color: var(--cream); font-size: 10.5px; }
+  .lf-gi-n { position: absolute; left: 6px; bottom: 6px; padding: 2px 6px; border-radius: 6px; background: rgba(26,22,18,.6); color: var(--cream); font-size: 11px; font-weight: 500; }
+  .lf-cardd { display: flex; gap: 16px; align-items: center; margin-top: 18px; padding: 16px; background: var(--paper); border: 1px solid var(--stone); border-radius: 18px; box-shadow: 0 1px 2px rgba(40,35,28,.04), 0 6px 18px -12px rgba(40,35,28,.25); }
+  .lf-cardd ol, .lf-cardd p { flex: 1; margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; font-size: 14px; }
+  .lf-label { display: block; margin-top: 20px; font-size: 14px; font-weight: 600; }
+  .lf-input { width: 100%; min-height: 72px; margin-top: 6px; padding: 12px; border: 1px solid var(--stone); border-radius: 14px; background: var(--paper); color: var(--ink); font: inherit; font-size: 15px; resize: vertical; outline: none; }
+  .lf-input:focus { border-color: var(--ink); }
+  .lf-notas { margin: 6px 0 0 !important; font-size: 15px !important; line-height: 22px !important; color: var(--ink) !important; }
+  .lf-aviso { display: grid; gap: 10px; margin-top: 16px; padding: 14px; border-radius: 14px; background: var(--sand); }
+  .lf-aviso div { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 20px; }
+  .lf-row { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 18px; padding: 16px; border: 1px solid var(--stone); border-radius: 18px; background: var(--paper); color: var(--ink); text-align: left; font-size: 15px; font-weight: 600; transition: border-color .15s; }
+  .lf-row:hover { border-color: var(--ink); }
+  .lf-row span { flex: 1; min-width: 0; }
+  .lf-row small { display: block; margin-top: 3px; font-size: 13px; font-weight: 400; color: var(--graphite); }
+  .lf-row .lf-row-ic { flex: 0 0 44px; height: 44px; border-radius: 12px; background: var(--sand); display: flex; align-items: center; justify-content: center; }
+  .lf-row > svg:last-child { color: var(--graphite); }
+  .lf-num { display: flex; align-items: baseline; gap: 10px; margin-top: 22px; }
+  .lf-num b { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 56px; line-height: 1; letter-spacing: -2px; }
+  .lf-num span { font-size: 15px; color: var(--graphite); }
+  .lf-rec { display: flex; gap: 12px; align-items: flex-start; margin-top: 14px; padding: 14px 16px; border: 1px solid var(--stone); border-radius: 16px; background: var(--paper); }
+  .lf-rec i { flex: 0 0 8px; height: 8px; margin-top: 6px; border-radius: 50%; background: var(--rose-500, #c85050); }
+  .lf-rec b { display: block; font-size: 14.5px; }
+  .lf-rec small { display: block; margin-top: 2px; font-size: 13px; line-height: 18px; color: var(--graphite); }
+  .lf-secao { margin: 28px 0 0; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 18px; }
+  .lf-center { display: flex; align-items: center; justify-content: center; min-height: 60vh; color: var(--graphite); font-size: 15px; text-align: center; padding: 20px; }
+  .lf-lightbox { position: fixed; inset: 0; z-index: 1600; background: rgba(26,22,18,.92); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 20px; cursor: zoom-out; }
+  .lf-lightbox.is-on { display: flex; }
+  .lf-lightbox img { max-width: 100%; max-height: 80vh; border-radius: 12px; }
+  .lf-lightbox span { color: var(--cream); font-size: 14px; }
+  .lf-toast { position: fixed; left: 50%; bottom: 28px; z-index: 1700; transform: translate(-50%, 12px); max-width: calc(100vw - 32px); padding: 13px 18px; border-radius: 14px; background: var(--ink); color: var(--cream); font-size: 13.5px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+  .lf-toast.is-on { opacity: 1; transform: translate(-50%, 0); }
+  @media (prefers-reduced-motion: reduce) { .lf-sheet { animation: none; } }
+</style>
+
+<div class="lf" id="lf" aria-hidden="true">
+  <div class="lf-v lf-sheetv" id="lf-sheet"></div>
+  <div class="lf-v lf-dark" id="lf-fotos"></div>
+  <div class="lf-v" id="lf-desenho"></div>
+  <div class="lf-v" id="lf-revisar"></div>
+  <div class="lf-v" id="lf-detalhe"></div>
+  <div class="lf-v" id="lf-historico"></div>
+  <input type="file" accept="image/*" capture="environment" class="lf-file" id="lf-file" tabindex="-1" aria-hidden="true">
+</div>
+<div class="lf-lightbox" id="lf-lightbox" role="dialog" aria-label="Foto da ficha"></div>
+<div class="lf-toast" id="lf-toast" role="status"></div>
+
+<script>
+(function () {
+  var CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content;
+  var FOTOS = [
+    { label: 'front', nome: 'Frente' }, { label: 'rear', nome: 'Traseira' },
+    { label: 'left', nome: 'Lado esquerdo' }, { label: 'right', nome: 'Lado direito' }
+  ];
+  var MAX_DETALHES = 4;
+  var TIPOS = [
+    { kind: 'risco', nome: 'Risco' }, { kind: 'amassado', nome: 'Amassado' },
+    { kind: 'trincado', nome: 'Trincado' }, { kind: 'outro', nome: 'Outro' }
+  ];
+  var FLAGS = {
+    escura: 'Foto escura', estourada: 'Foto com reflexo', tremida: 'Foto tremida',
+    sem_carro: 'Sem carro na foto', outro_lado: 'Outro lado do carro', sem_nitidez: 'Pouco nítida'
+  };
+  var MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  var ULTIMO = 'ficha_ultimo_modo';
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function ic(n, size, extra) { return window.feather && feather.icons[n] ? feather.icons[n].toSvg(Object.assign({ width: size || 18, height: size || 18 }, extra || {})) : ''; }
+  function nomeAvaria(k) { var t = TIPOS.filter(function (x) { return x.kind === k; })[0]; return t ? t.nome : 'Avaria'; }
+  function nomeFoto(l) { if (l === 'detail') return 'Detalhe'; var f = FOTOS.filter(function (x) { return x.label === l; })[0]; return f ? f.nome : l; }
+  function nomeFlag(f) { return FLAGS[f] || 'Fora do padrão'; }
+  function limparPlaca(p) { return String(p || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 7); }
+  function placaValida(p) { return /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/.test(limparPlaca(p)); }
+  function fmtPlaca(p) { p = String(p || '').toUpperCase().trim(); return /^[A-Z]{3}[0-9]{4}$/.test(p) ? p.slice(0, 3) + '-' + p.slice(3) : p; }
+  function placaHtml(p, big) { return '<span class="lf-placa' + (big ? ' is-big' : '') + '" aria-label="Placa ' + esc(fmtPlaca(p) || 'não informada') + '"><i></i><b>' + esc(fmtPlaca(p) || '———') + '</b></span>'; }
+  function fmtQuando(iso) {
+    var d = new Date(iso), z = function (n) { return String(n).padStart(2, '0'); };
+    return z(d.getDate()) + '/' + z(d.getMonth() + 1) + '/' + d.getFullYear() + ' às ' + z(d.getHours()) + ':' + z(d.getMinutes());
+  }
+  function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  var toastT;
+  function toast(msg) { var t = $('lf-toast'); t.textContent = msg; t.classList.add('is-on'); clearTimeout(toastT); toastT = setTimeout(function () { t.classList.remove('is-on'); }, 3200); }
+
+  // Onde fica um ponto no desenho (x, y de 0 a 1), frente em cima, lado
+  // esquerdo do desenho = lado do motorista. Espelho de VehicleCheck.area_para.
+  function areaPara(x, y) {
+    var porta = x < 0.5 ? 'esquerda' : 'direita', lado = x < 0.5 ? 'esquerdo' : 'direito', borda = x < 0.27 || x > 0.73;
+    if (y < 0.09) return 'para-choque dianteiro';
+    if (y < 0.29) return borda ? 'para-lama dianteiro ' + lado : 'capô';
+    if (y < 0.40) return borda ? 'porta dianteira ' + porta : 'para-brisa';
+    if (y < 0.55) return borda ? 'porta dianteira ' + porta : 'teto';
+    if (y < 0.69) return borda ? 'porta traseira ' + porta : 'teto';
+    if (y < 0.79) return borda ? 'para-lama traseiro ' + lado : 'vidro traseiro';
+    if (y < 0.91) return borda ? 'para-lama traseiro ' + lado : 'porta-malas';
+    return 'para-choque traseiro';
+  }
+
+  function mensagem(motivo, label, visto) {
+    var VISTO = { front: 'a frente', rear: 'a traseira', side: 'a lateral' };
+    var PEDIDO = { front: 'a frente', rear: 'a traseira', left: 'o lado esquerdo', right: 'o lado direito' };
+    switch (motivo) {
+      case 'escura':      return 'A foto ficou escura. Acenda uma luz e tire de novo.';
+      case 'estourada':   return 'A foto ficou clara demais, com reflexo. Mude um pouco o ângulo e tire de novo.';
+      case 'tremida':     return 'A foto ficou tremida. Segure firme e tire de novo.';
+      case 'sem_carro':   return 'Não encontramos o carro nesta foto. Enquadre o carro inteiro e tire de novo.';
+      case 'outro_lado':  return 'Esta foto parece mostrar ' + (VISTO[visto] || 'outra parte do carro') + ', e o pedido era ' + (PEDIDO[label] || 'outra') + '.';
+      case 'sem_nitidez': return 'Não dá pra ver bem a lataria nesta foto. Chegue um pouco mais perto e tire de novo.';
+      default:            return 'Esta foto não passou na conferência. Tire de novo.';
+    }
+  }
+
+  function api(method, url, body) {
+    return fetch(url, {
+      method: method, credentials: 'same-origin',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF },
+      body: body ? JSON.stringify(body) : undefined
+    }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) {
+      if (!r.ok) { var e = new Error(d.error || 'Falha de conexão.'); e.status = r.status; throw e; }
+      return d;
+    }); });
+  }
+
+  // ── Camadas ─────────────────────────────────────────────────────────────
+  var pilha = [];
+  function mostrar(id) {
+    $('lf').classList.add('is-on'); $('lf').setAttribute('aria-hidden', 'false');
+    document.documentElement.style.overflow = 'hidden';
+    ['lf-sheet', 'lf-fotos', 'lf-desenho', 'lf-revisar', 'lf-detalhe', 'lf-historico'].forEach(function (v) { $(v).classList.toggle('is-on', v === id); });
+    $(id).scrollTop = 0;
+  }
+  function fechar() {
+    $('lf').classList.remove('is-on'); $('lf').setAttribute('aria-hidden', 'true');
+    document.documentElement.style.overflow = '';
+    pilha = []; st = null;
+  }
+  // Voltar dentro da ficha salva / histórico: uma camada de cada vez.
+  function empilhar(fn) { pilha.push(fn); fn(); }
+  function voltar() { pilha.pop(); if (pilha.length) pilha[pilha.length - 1](); else fechar(); }
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape' || !$('lf').classList.contains('is-on')) return;
+    if ($('lf-lightbox').classList.contains('is-on')) { $('lf-lightbox').classList.remove('is-on'); return; }
+    if (st && st.salvando) return;
+    if ($('lf-sheet').classList.contains('is-on')) fechar();
+  });
+
+  // ── Desenho do carro (viewBox 170×330, as faixas de areaPara medidas nele) ─
+  var CARRO = '<svg viewBox="0 0 170 330" aria-hidden="true">' +
+    '<rect x="14" y="40" width="10" height="40" rx="4" fill="#28231c"/><rect x="146" y="40" width="10" height="40" rx="4" fill="#28231c"/>' +
+    '<rect x="14" y="238" width="10" height="40" rx="4" fill="#28231c"/><rect x="146" y="238" width="10" height="40" rx="4" fill="#28231c"/>' +
+    '<path d="M45 8 Q85 0 125 8 Q148 14 150 40 L150 290 Q148 318 125 322 Q85 328 45 322 Q22 318 20 290 L20 40 Q22 14 45 8 Z" fill="#fefefd" stroke="#28231c" stroke-width="2"/>' +
+    '<path d="M38 92 Q85 74 132 92 L124 132 Q85 122 46 132 Z" fill="#f1eee6" stroke="#28231c" stroke-width="2"/>' +
+    '<path d="M46 132 Q85 122 124 132 L124 222 Q85 230 46 222 Z" fill="none" stroke="#28231c" stroke-width="2"/>' +
+    '<path d="M46 222 Q85 230 124 222 L130 252 Q85 266 40 252 Z" fill="#f1eee6" stroke="#28231c" stroke-width="2"/>' +
+    '<path d="M20 176 L46 176 M124 176 L150 176" stroke="#28231c" stroke-width="2"/>' +
+    '<path d="M12 104 L20 100 L20 114 Z" fill="#28231c"/><path d="M158 104 L150 100 L150 114 Z" fill="#28231c"/></svg>';
+  function desenhoHtml(largura, marks, sel, tap) {
+    return '<div class="lf-desenho' + (tap ? ' is-tap' : '') + '" style="width:' + largura + 'px"' + (tap ? ' id="lf-tap" role="button" aria-label="Desenho do carro visto de cima. Clique onde tem avaria."' : ' role="img" aria-label="Desenho do carro com as avarias marcadas"') + '>' + CARRO +
+      marks.map(function (m, i) {
+        return '<button type="button" class="lf-ponto' + (i === sel ? ' is-sel' : '') + '" data-ponto="' + i + '" style="left:' + (m.x * 100) + '%;top:' + (m.y * 100) + '%"' + (tap ? '' : ' tabindex="-1" disabled') + ' aria-label="Ponto ' + (i + 1) + '">' + (m.n || i + 1) + '</button>';
+      }).join('') + '</div>';
+  }
+
+  // Contornos das fotos guiadas (os do app, que lá vão por cima da câmera).
+  var DASH = 'fill="none" stroke="#fafaf6" stroke-opacity=".85" stroke-width="2.5" stroke-dasharray="8 7" stroke-linecap="round" stroke-linejoin="round"';
+  function contorno(label) {
+    if (label === 'left' || label === 'right') {
+      return '<svg width="300" height="155" viewBox="0 0 330 170"' + (label === 'right' ? ' style="transform:scaleX(-1)"' : '') + ' aria-hidden="true"><path ' + DASH + ' d="M20 118 L20 96 Q22 84 40 80 L92 72 L128 40 Q136 34 150 34 L228 34 Q242 34 252 44 L282 74 L304 80 Q314 84 314 96 L314 118 M20 118 L52 118 M118 118 L222 118 M288 118 L314 118 M104 72 L134 44 L186 44 L186 72 Z M196 44 L234 44 L264 72 L196 72 Z"/><circle cx="85" cy="118" r="26" ' + DASH + '/><circle cx="255" cy="118" r="26" ' + DASH + '/></svg>';
+    }
+    return '<svg width="250" height="185" viewBox="0 0 260 190" aria-hidden="true"><path ' + DASH + ' d="M30 150 L30 98 Q32 82 50 78 L72 40 Q78 30 92 30 L168 30 Q182 30 188 40 L210 78 Q228 82 230 98 L230 150 Z M80 76 L94 44 L166 44 L180 76 Z M44 116 L76 116 M184 116 L216 116 M96 132 L164 132 M34 150 L34 172 L64 172 L64 150 M196 150 L196 172 L226 172 L226 150"/></svg>';
+  }
+
+  // ── Imagem: reduzir, medir e base64 ─────────────────────────────────────
+  // Lida como data: (a CSP do site libera data: e https: em img-src, não blob:).
+  function carregar(file) {
+    return new Promise(function (ok, falha) {
+      var leitor = new FileReader(), erro = function () { falha(new Error('Não deu pra abrir a foto.')); };
+      leitor.onerror = erro;
+      leitor.onload = function () { var img = new Image(); img.onload = function () { ok(img); }; img.onerror = erro; img.src = leitor.result; };
+      leitor.readAsDataURL(file);
+    });
+  }
+  function reduzir(img, largura, q) {
+    var k = Math.min(1, largura / img.naturalWidth), c = document.createElement('canvas');
+    c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', q);
+  }
+  function b64(dataUrl) { return dataUrl.slice(dataUrl.indexOf(',') + 1); }
+  // 1ª camada, no aparelho e de graça: o mesmo cálculo e os mesmos limites de
+  // public/ficha/qualidade.html (a janela escondida do app). Mudar lá, mudar aqui.
+  function qualidade(img) {
+    try {
+      var LADO = 256, k = LADO / img.naturalWidth, w = LADO, h = Math.max(1, Math.round(img.naturalHeight * k));
+      var c = document.createElement('canvas'); c.width = w; c.height = h;
+      var x = c.getContext('2d'); x.drawImage(img, 0, 0, w, h);
+      var d = x.getImageData(0, 0, w, h).data, n = w * h, g = new Float32Array(n), soma = 0, claros = 0;
+      for (var i = 0; i < n; i++) { var v = 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2]; g[i] = v; soma += v; if (v > 245) claros++; }
+      var m = 0, m2 = 0, cont = 0;
+      for (var yy = 1; yy < h - 1; yy++) for (var xx = 1; xx < w - 1; xx++) {
+        var p = yy * w + xx, l = 4 * g[p] - g[p - 1] - g[p + 1] - g[p - w] - g[p + w]; m += l; m2 += l * l; cont++;
+      }
+      m /= cont;
+      var brilho = soma / n, nitidez = m2 / cont - m * m;
+      if (brilho < 28) return { ok: false, motivo: 'escura' };
+      if (claros / n > 0.35) return { ok: false, motivo: 'estourada' };
+      if (nitidez < 250) return { ok: false, motivo: 'tremida' };
+      return { ok: true };
+    } catch (e) { return { ok: true }; }
+  }
+  // 2ª camada: a IA, só nas 4 guiadas. Sem resposta em 15 s, a foto passa.
+  function conferirIA(apptId, label, img) {
+    var ctl = window.AbortController ? new AbortController() : null;
+    var relogio = setTimeout(function () { ctl && ctl.abort(); }, 15000);
+    return fetch('/owner/checkins/' + apptId + '/vehicle_check/conferir', {
+      method: 'POST', credentials: 'same-origin', signal: ctl ? ctl.signal : undefined,
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF },
+      body: JSON.stringify({ label: label, image: b64(reduzir(img, 512, 0.6)) })
+    }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) {
+      if (!r.ok) return { ok: true };
+      return { ok: d.ok !== false, motivo: d.motivo || null, visto: d.visto || null };
+    }); }).catch(function () { return { ok: true }; }).finally(function () { clearTimeout(relogio); });
+  }
+
+  // ── Estado da ficha em andamento ────────────────────────────────────────
+  var settings = null, st = null;
+
+  function modosDisponiveis() {
+    if (!settings) return [];
+    if (!settings.photos_available) return ['sketch'];
+    if (settings.mode === 'photos') return ['photos'];
+    if (settings.mode === 'sketch') return ['sketch'];
+    return ['photos', 'sketch'];
+  }
+
+  // ── Folha: placa e modo ─────────────────────────────────────────────────
+  function abrir(appt, opts) {
+    opts = opts || {};
+    st = { appt: appt, motivo: opts.motivo || null, onSalva: opts.onSalva, placa: limparPlaca(appt.plate),
+           fotos: [], marks: [], sel: null, notas: '', tentativas: {}, refazer: null, detalhe: false, pendente: null, aviso: null, salvando: null };
+    renderSheet();
+    mostrar('lf-sheet');
+    var inp = $('lf-placa-in'); if (inp) setTimeout(function () { inp.focus(); }, 50);
+  }
+  function renderSheet() {
+    var a = st.appt, modos = modosDisponiveis(), temPlaca = placaValida(st.placa), ultimo = lsGet(ULTIMO) || 'photos';
+    var OP = {
+      photos: { icon: 'camera', t: 'Tirar 4 fotos', s: 'Cerca de 1 minuto. Vale mais como prova.' },
+      sketch: { icon: 'edit-3', t: 'Marcar no desenho', s: 'Clique onde tem risco ou amassado.' }
+    };
+    var carro = [a.vehicle_model, a.client].filter(Boolean).join(' · ');
+    $('lf-sheet').innerHTML = '<div class="lf-sheet" role="dialog" aria-modal="true" aria-labelledby="lf-sheet-t"><div class="lf-grip"></div>' +
+      '<h2 class="lf-title" id="lf-sheet-t">Ficha de entrada</h2>' +
+      (st.motivo === 'finalizar' ? '<div class="lf-motivo">' + ic('lock', 15) + '<div><b>Ficha obrigatória para finalizar</b><small>Este lava-rápido pede ficha em todo carro. Faça a ficha e depois clique em Finalizado.</small></div></div>' : '') +
+      '<div class="lf-carro">' + (a.plate ? placaHtml(st.placa) : '<input id="lf-placa-in" class="lf-placa-in' + (st.placa && !temPlaca ? ' is-err' : '') + '" value="' + esc(st.placa) + '" placeholder="Placa" maxlength="8" autocomplete="off" aria-label="Placa do carro">') +
+        '<span>' + esc(carro) + '</span></div>' +
+      (!a.plate && !temPlaca ? '<p class="lf-dica">Digite a placa pra abrir a ficha. Ela guarda o histórico do carro.</p>' : '') +
+      '<div class="lf-opcoes">' + modos.map(function (m) {
+        var o = OP[m], dest = modos.length === 1 || m === ultimo;
+        return '<button type="button" class="lf-opcao' + (dest ? ' is-dest' : '') + '" data-modo="' + m + '"' + (temPlaca ? '' : ' disabled') + '>' +
+          '<span class="lf-opcao-ic">' + ic(o.icon, 22) + '</span><span class="lf-opcao-t"><b>' + o.t + '</b><small>' + o.s + '</small></span>' +
+          (dest && modos.length > 1 ? '<span class="lf-ultimo">ÚLTIMO</span>' : '') + '</button>';
+      }).join('') + '</div>' +
+      (settings && !settings.photos_available && settings.mode !== 'sketch' ? '<p class="lf-dica">As fotos ainda não estão ativas na Loov. Por enquanto, use o desenho.</p>' : '') +
+      // Pular é o caminho alternativo explícito: contorno, não link.
+      (settings && settings.skippable ? '<button type="button" class="lf-out" id="lf-pular">Pular a ficha deste carro</button>' : '') +
+    '</div>';
+    var inp = $('lf-placa-in');
+    if (inp) inp.addEventListener('input', function () {
+      var pos = inp.selectionStart; st.placa = limparPlaca(inp.value); renderSheet();
+      var n = $('lf-placa-in'); n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {}
+    });
+    $('lf-sheet').querySelectorAll('[data-modo]').forEach(function (b) { b.addEventListener('click', function () { escolher(b.dataset.modo); }); });
+    if ($('lf-pular')) $('lf-pular').addEventListener('click', pular);
+  }
+  $('lf-sheet').addEventListener('click', function (e) { if (e.target === $('lf-sheet')) fechar(); });
+
+  function escolher(modo) {
+    if (!placaValida(st.placa)) return;
+    lsSet(ULTIMO, modo);
+    st.modo = modo;
+    if (modo === 'photos') { renderFotos(); mostrar('lf-fotos'); } else { renderDesenho(); mostrar('lf-desenho'); }
+  }
+  function pular() {
+    var a = st.appt, cb = st.onSalva;
+    fechar();
+    api('POST', '/owner/checkins/' + a.id + '/vehicle_check', { mode: 'skipped' })
+      .then(function () { toast('Ficha pulada.'); cb && cb(null); })
+      .catch(function (e) { toast(e.message); });
+  }
+
+  // ── Fotos ───────────────────────────────────────────────────────────────
+  function proxima() {
+    if (st.refazer) return FOTOS.filter(function (g) { return g.label === st.refazer; })[0];
+    var tem = function (l) { return st.fotos.some(function (f) { return f.label === l; }); };
+    return FOTOS.filter(function (g) { return !tem(g.label); })[0] ||
+      FOTOS.filter(function (g) { return st.fotos.some(function (f) { return f.label === g.label && f.conf === 'ruim'; }); })[0];
+  }
+  function renderFotos() {
+    var alvo = st.detalhe ? null : proxima(), ok = !proxima(), detalhes = st.fotos.filter(function (f) { return f.label === 'detail'; });
+    var conferindo = st.fotos.some(function (f) { return f.conf === 'conferindo'; });
+    var titulo = st.detalhe ? 'Detalhe da avaria' : ok ? 'Fotos prontas' : alvo.nome;
+    var passo = st.detalhe ? 'FOTO DE PERTO' : ok ? st.fotos.length + ' FOTOS' : 'FOTO ' + (FOTOS.indexOf(alvo) + 1) + ' DE 4';
+    var cam;
+    if (st.pendente) cam = '<div class="lf-cam"><img src="' + st.pendente.url + '" alt=""></div>';
+    else if (ok && !st.detalhe) cam = '<div class="lf-cam is-pronto">' + ic('check-circle', 40, { color: '#5dc39f' }) + '<b>As 4 fotos estão feitas.</b></div>';
+    else if (st.detalhe) cam = '<div class="lf-cam">' + ic('zoom-in', 40, { color: '#fafaf6', opacity: .85 }) + '<span class="lf-cam-dica">Chegue perto do risco ou amassado</span></div>';
+    else cam = '<div class="lf-cam">' + contorno(alvo.label) + '<span class="lf-cam-dica">Enquadre o carro como no contorno</span></div>';
+
+    var foot;
+    if (st.pendente) {
+      foot = '<div class="lf-pergunta">O que tem aqui?</div><div class="lf-tipos-d">' +
+        TIPOS.map(function (t) { return '<button type="button" data-tipo="' + t.kind + '">' + t.nome + '</button>'; }).join('') + '</div>';
+    } else {
+      var av = st.aviso;
+      foot = (av ? '<div class="lf-aviso-d"><div style="display:flex;gap:10px;align-items:flex-start">' + ic('alert-circle', 18, { color: '#dd7852' }) +
+          '<div><b>' + esc(nomeFoto(av.label)) + '</b><small>' + esc(mensagem(av.motivo, av.label, av.visto)) + '</small></div></div>' +
+          '<div class="lf-aviso-bt">' + ((st.tentativas[av.label] || 0) >= 2 ? '<button type="button" class="lf-dghost" id="lf-mesmo">Usar mesmo assim</button>' : '') +
+          '<button type="button" class="lf-dbtn" id="lf-denovo">Tirar de novo</button></div></div>' : '') +
+        (st.fotos.length ? '<div class="lf-thumbs">' + st.fotos.map(function (f, i) {
+          var ruim = st.refazer === f.label || f.conf === 'ruim';
+          return '<button type="button" class="lf-thumb" data-thumb="' + i + '" aria-label="' + (f.label === 'detail' ? 'Remover detalhe' : 'Refazer foto ' + esc(nomeFoto(f.label))) + '">' +
+            '<span class="' + (ruim ? 'is-ruim' : '') + '"><img src="' + f.url + '" alt="">' +
+            (f.conf === 'conferindo' ? '<em><i class="lf-spin"></i></em>' : f.conf === 'ruim' ? '<em>' + ic('alert-circle', 18, { color: '#fafaf6' }) + '</em>' : '') +
+            '</span>' + esc(f.label === 'detail' ? nomeAvaria(f.kind) : nomeFoto(f.label)) + '</button>';
+        }).join('') + '</div>' : '') +
+        '<div class="lf-cambt">' +
+          '<button type="button" class="lf-pill" id="lf-det"' + (detalhes.length >= MAX_DETALHES ? ' disabled' : '') + '>' + (st.detalhe ? 'Cancelar' : '+ Detalhe') + '</button>' +
+          (ok && !st.detalhe
+            ? '<button type="button" class="lf-revisar" id="lf-rev"' + (conferindo ? ' disabled' : '') + '>' + (conferindo ? '<i class="lf-spin is-dark"></i>Conferindo' : 'Revisar') + '</button>'
+            : '<button type="button" class="lf-shutter" id="lf-shot" aria-label="Tirar foto"><i>' + ic('camera', 24) + '</i></button>') +
+          '<span style="min-width:104px"></span>' +
+        '</div>';
+    }
+
+    $('lf-fotos').innerHTML = '<div class="lf-wrap" style="padding-bottom:32px">' +
+      '<div class="lf-top"><button type="button" class="lf-dround" id="lf-fx" aria-label="Fechar">' + ic('x', 20) + '</button><span class="lf-placa-top">' + esc(fmtPlaca(st.placa)) + '</span><span style="width:44px"></span></div>' +
+      '<div class="lf-prog">' + FOTOS.map(function (g) {
+        var feita = st.fotos.some(function (f) { return f.label === g.label; }), atual = alvo && alvo.label === g.label;
+        return '<i class="' + (feita ? 'is-feita' : '') + (atual ? ' is-atual' : '') + '"></i>';
+      }).join('') + '</div>' +
+      '<div class="lf-passo">' + passo + '</div><h2 class="lf-dtitle">' + esc(titulo) + '</h2>' + cam + foot + '</div>';
+
+    $('lf-fx').addEventListener('click', fechar);
+    $('lf-fotos').querySelectorAll('[data-tipo]').forEach(function (b) { b.addEventListener('click', function () {
+      st.fotos.push({ label: 'detail', url: st.pendente.url, img: st.pendente.img, kind: b.dataset.tipo, flag: st.pendente.flag || null, conf: 'ok' });
+      st.pendente = null; st.detalhe = false; renderFotos();
+    }); });
+    $('lf-fotos').querySelectorAll('[data-thumb]').forEach(function (b) { b.addEventListener('click', function () {
+      var i = +b.dataset.thumb, f = st.fotos[i];
+      if (f.label === 'detail') st.fotos.splice(i, 1); else { st.detalhe = false; st.refazer = f.label; }
+      renderFotos();
+    }); });
+    if ($('lf-det')) $('lf-det').addEventListener('click', function () { st.refazer = null; st.detalhe = !st.detalhe; st.aviso = null; renderFotos(); });
+    if ($('lf-shot')) $('lf-shot').addEventListener('click', function () { $('lf-file').value = ''; $('lf-file').click(); });
+    if ($('lf-rev')) $('lf-rev').addEventListener('click', function () { renderRevisar(); mostrar('lf-revisar'); });
+    if ($('lf-denovo')) $('lf-denovo').addEventListener('click', function () {
+      var a = st.aviso; st.aviso = null;
+      if (a && a.origem === 'ia' && a.label !== 'detail') { st.detalhe = false; st.refazer = a.label; }
+      renderFotos(); $('lf-file').value = ''; $('lf-file').click();
+    });
+    if ($('lf-mesmo')) $('lf-mesmo').addEventListener('click', usarMesmoAssim);
+  }
+
+  function falhou(label) { st.tentativas[label] = (st.tentativas[label] || 0) + 1; }
+
+  $('lf-file').addEventListener('change', function () {
+    var file = this.files && this.files[0];
+    if (!file || !st) return;
+    var label = st.detalhe ? 'detail' : (proxima() || {}).label;
+    if (!label) return;
+    carregar(file).then(function (img) {
+      var url = reduzir(img, 1600, 0.6);
+      var q = qualidade(img);
+      if (!q.ok) { falhou(label); st.aviso = { label: label, motivo: q.motivo, url: url, img: img, origem: 'local' }; renderFotos(); return; }
+      st.aviso = null;
+      if (label === 'detail') { st.pendente = { url: url, img: img }; renderFotos(); return; }
+      aceitar(label, url, img, null, true);
+    }).catch(function (e) { toast(e.message); });
+  });
+
+  // Guarda a guiada; a IA confere em segundo plano enquanto a próxima é tirada.
+  function aceitar(label, url, img, flag, ia) {
+    st.fotos = st.fotos.filter(function (f) { return f.label !== label; });
+    st.fotos.push({ label: label, url: url, img: img, flag: flag || null, conf: ia ? 'conferindo' : 'ok' });
+    st.fotos.sort(function (a, b) { var o = function (f) { var i = FOTOS.map(function (g) { return g.label; }).indexOf(f.label); return i < 0 ? 9 : i; }; return o(a) - o(b); });
+    st.refazer = null;
+    renderFotos();
+    if (!ia) return;
+    var alvoSt = st;
+    conferirIA(st.appt.id, label, img).then(function (r) {
+      if (st !== alvoSt) return;
+      st.fotos.forEach(function (f) { if (f.label === label && f.url === url) { f.conf = r.ok ? 'ok' : 'ruim'; f.motivo = r.motivo; f.visto = r.visto; } });
+      if (!r.ok) { falhou(label); st.aviso = { label: label, motivo: r.motivo, visto: r.visto, url: url, origem: 'ia' }; }
+      if ($('lf-fotos').classList.contains('is-on')) renderFotos();
+    });
+  }
+  function usarMesmoAssim() {
+    var a = st.aviso; st.aviso = null;
+    if (!a) return;
+    if (a.label === 'detail') { st.pendente = { url: a.url, img: a.img, flag: a.motivo }; renderFotos(); return; }
+    if (a.origem === 'local') { aceitar(a.label, a.url, a.img, a.motivo, false); return; }
+    st.fotos.forEach(function (f) { if (f.label === a.label && f.url === a.url) { f.conf = 'ok'; f.flag = a.motivo; } });
+    renderFotos();
+  }
+
+  // ── Desenho ─────────────────────────────────────────────────────────────
+  function renderDesenho() {
+    var atual = st.sel != null ? st.marks[st.sel] : null;
+    $('lf-desenho').innerHTML = '<div class="lf-wrap">' +
+      '<div class="lf-top"><button type="button" class="lf-back" id="lf-dv" aria-label="Voltar">' + ic('chevron-left', 18) + '</button><span class="lf-placa-top">' + esc(fmtPlaca(st.placa)) + '</span><span style="width:40px"></span></div>' +
+      '<h2 class="lf-title">Onde tem avaria?</h2><p class="lf-lead">Clique no ponto do carro. A frente fica em cima.</p>' +
+      '<div style="margin-top:20px">' + desenhoHtml(Math.min(220, window.innerWidth - 80), st.marks, st.sel, true) + '</div>' +
+      '<div class="lf-painel">' +
+        (atual
+          ? '<div class="lf-painel-t">Ponto ' + (st.sel + 1) + ' · ' + esc(areaPara(atual.x, atual.y)) + '</div><div class="lf-tipos">' +
+            TIPOS.map(function (t) { return '<button type="button" class="lf-tipo' + (atual.kind === t.kind ? ' is-on' : '') + '" data-tipo="' + t.kind + '" aria-pressed="' + (atual.kind === t.kind) + '">' + t.nome + '</button>'; }).join('') + '</div>'
+          : '<div class="lf-painel-v">' + (st.marks.length ? 'Clique num ponto pra mudar o tipo.' : 'Nenhuma avaria marcada ainda.') + '</div>') +
+        (st.marks.length ? '<div style="margin-top:12px">' + st.marks.map(function (m, i) {
+          return '<div class="lf-linha"><span class="lf-bol">' + (i + 1) + '</span><span>' + esc(nomeAvaria(m.kind)) + ' · ' + esc(areaPara(m.x, m.y)) + '</span><button type="button" class="lf-rm" data-rm="' + i + '" aria-label="Remover ponto ' + (i + 1) + '">' + ic('x', 18) + '</button></div>';
+        }).join('') + '</div>' : '') +
+      '</div></div>' +
+      '<div class="lf-foot"><button type="button" class="lf-cta" id="lf-dok">' + (st.marks.length ? 'Continuar · ' + st.marks.length + (st.marks.length === 1 ? ' ponto' : ' pontos') : 'Carro sem avarias') + '</button></div>';
+    $('lf-dv').addEventListener('click', function () { renderSheet(); mostrar('lf-sheet'); });
+    $('lf-tap').addEventListener('click', function (e) {
+      var p = e.target.closest('[data-ponto]');
+      if (p) { st.sel = +p.dataset.ponto; renderDesenho(); return; }
+      var r = this.getBoundingClientRect();
+      st.marks.push({ x: Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1), y: Math.min(Math.max((e.clientY - r.top) / r.height, 0), 1), kind: 'risco' });
+      st.sel = st.marks.length - 1; renderDesenho();
+    });
+    $('lf-desenho').querySelectorAll('[data-tipo]').forEach(function (b) { b.addEventListener('click', function () { st.marks[st.sel].kind = b.dataset.tipo; renderDesenho(); }); });
+    $('lf-desenho').querySelectorAll('[data-rm]').forEach(function (b) { b.addEventListener('click', function () { st.marks.splice(+b.dataset.rm, 1); st.sel = null; renderDesenho(); }); });
+    $('lf-dok').addEventListener('click', function () { renderRevisar(); mostrar('lf-revisar'); });
+  }
+
+  // ── Conferir e salvar ───────────────────────────────────────────────────
+  function renderRevisar() {
+    var a = st.appt, carro = [a.vehicle_model, a.client].filter(Boolean).join(' · ');
+    var corpo = st.modo === 'photos'
+      ? '<div class="lf-grade">' + st.fotos.map(function (f) {
+          return '<div class="lf-gi"><img src="' + f.url + '" alt=""><span class="lf-gi-tags">' +
+            (f.kind ? '<span class="lf-selo">' + esc(nomeAvaria(f.kind)) + '</span>' : '') +
+            (f.flag ? '<span class="lf-selo is-flag">' + esc(nomeFlag(f.flag)) + '</span>' : '') +
+            '</span><span class="lf-gi-n">' + esc(nomeFoto(f.label)) + '</span></div>';
+        }).join('') + '</div>'
+      : '<div class="lf-cardd">' + desenhoHtml(110, st.marks, null, false) +
+          (st.marks.length ? '<ol>' + st.marks.map(function (m, i) { return '<li>' + (i + 1) + '. ' + esc(nomeAvaria(m.kind)) + ' · ' + esc(areaPara(m.x, m.y)) + '</li>'; }).join('') + '</ol>' : '<p>Sem avarias.</p>') + '</div>';
+    $('lf-revisar').innerHTML = '<div class="lf-wrap">' +
+      '<button type="button" class="lf-back" id="lf-rv" aria-label="Voltar"' + (st.salvando ? ' disabled' : '') + '>' + ic('chevron-left', 18) + '</button>' +
+      '<h2 class="lf-title">Confira a ficha</h2>' +
+      '<div class="lf-carro">' + placaHtml(st.placa) + '<span>' + esc(carro) + '</span></div>' + corpo +
+      '<label class="lf-label" for="lf-notas">Observação (opcional)</label>' +
+      '<textarea id="lf-notas" class="lf-input" maxlength="500" placeholder="Ex.: cliente avisou do risco na porta"' + (st.salvando ? ' disabled' : '') + '>' + esc(st.notas) + '</textarea>' +
+      '<div class="lf-aviso"><div>' + ic('clock', 16) + '<span>A data e a hora são registradas pela Loov ao salvar.</span></div>' +
+        '<div>' + ic('lock', 16) + '<span>Depois de salva, ninguém altera nem apaga. Fica guardada por 5 anos.</span></div></div>' +
+    '</div>' +
+    '<div class="lf-foot"><button type="button" class="lf-cta" id="lf-salvar"' + (st.salvando ? ' disabled' : '') + '>' +
+      (st.salvando ? '<i class="lf-spin"></i>' + esc(st.salvando) : 'Salvar ficha') + '</button></div>';
+    $('lf-notas').addEventListener('input', function () { st.notas = this.value; });
+    $('lf-rv').addEventListener('click', function () { if (st.modo === 'photos') { renderFotos(); mostrar('lf-fotos'); } else { renderDesenho(); mostrar('lf-desenho'); } });
+    $('lf-salvar').addEventListener('click', salvar);
+  }
+
+  function progresso(txt) { st.salvando = txt; var b = $('lf-salvar'); if (b) { b.disabled = true; b.innerHTML = '<i class="lf-spin"></i>' + esc(txt); } }
+
+  function salvar() {
+    if (st.salvando) return;
+    var a = st.appt, cb = st.onSalva, photos = [], cadeia = Promise.resolve();
+    if (st.modo === 'photos') {
+      st.fotos.forEach(function (f, i) {
+        cadeia = cadeia.then(function () {
+          progresso('Enviando foto ' + (i + 1) + ' de ' + st.fotos.length + '…');
+          return api('POST', '/owner/checkins/' + a.id + '/vehicle_check/photo', { label: f.label, image: b64(f.url) })
+            .then(function (r) { photos.push({ label: r.label, key: r.key, kind: f.kind || null, flag: f.flag || null }); });
+        });
+      });
+    }
+    cadeia.then(function () {
+      progresso('Salvando a ficha…');
+      return api('POST', '/owner/checkins/' + a.id + '/vehicle_check', { mode: st.modo, plate: st.placa, notes: st.notas, photos: photos, marks: st.modo === 'sketch' ? st.marks : [] });
+    }).then(function (d) {
+      st = null; pilha = [];
+      cb && cb(d.vehicle_check);
+      empilhar(function () { renderDetalhe(d.vehicle_check, true); });
+    }).catch(function (e) {
+      st.salvando = null; renderRevisar(); toast('Ficha não salva. ' + (e.message || 'Falha de conexão.'));
+    });
+  }
+
+  // ── Ficha salva (só leitura) ────────────────────────────────────────────
+  function ver(id) { pilha = []; empilhar(function () { carregarDetalhe(id); }); }
+  function carregarDetalhe(id) {
+    $('lf-detalhe').innerHTML = '<div class="lf-center"><i class="lf-spin is-dark"></i></div>'; mostrar('lf-detalhe');
+    api('GET', '/owner/vehicle_checks/' + id)
+      .then(function (d) { renderDetalhe(d.vehicle_check, false); })
+      .catch(function (e) { $('lf-detalhe').innerHTML = '<div class="lf-wrap"><button type="button" class="lf-back" data-voltar aria-label="Voltar">' + ic('chevron-left', 18) + '</button><div class="lf-center">' + esc(e.message || 'Não foi possível abrir a ficha.') + '</div></div>'; ligarVoltar('lf-detalhe'); });
+  }
+  function ligarVoltar(v) { $(v).querySelectorAll('[data-voltar]').forEach(function (b) { b.addEventListener('click', voltar); }); }
+  function renderDetalhe(f, recem) {
+    var corpo = f.mode === 'photos'
+      ? '<div class="lf-grade">' + f.photos.map(function (p, i) {
+          return '<button type="button" class="lf-gi" data-foto="' + i + '" aria-label="Abrir foto ' + esc(nomeFoto(p.label)) + '">' + (p.url ? '<img src="' + esc(p.url) + '" alt="">' : '') + '<span class="lf-gi-tags">' +
+            (p.kind ? '<span class="lf-selo">' + esc(nomeAvaria(p.kind)) + '</span>' : '') +
+            (p.flag ? '<span class="lf-selo is-flag">' + esc(nomeFlag(p.flag)) + '</span>' : '') +
+            '</span><span class="lf-gi-n">' + esc(nomeFoto(p.label)) + '</span></button>';
+        }).join('') + '</div>'
+      : '<div class="lf-cardd">' + desenhoHtml(110, f.marks || [], null, false) +
+          ((f.marks || []).length ? '<ol>' + f.marks.map(function (m) { return '<li>' + m.n + '. ' + esc(nomeAvaria(m.kind)) + ' · ' + esc(m.area) + '</li>'; }).join('') + '</ol>' : '<p>Sem avarias.</p>') + '</div>';
+    $('lf-detalhe').innerHTML = '<div class="lf-wrap">' +
+      '<button type="button" class="lf-back" data-voltar aria-label="' + (recem ? 'Fechar' : 'Voltar') + '">' + ic(recem ? 'x' : 'chevron-left', 18) + '</button>' +
+      '<h2 class="lf-title">' + (recem ? 'Ficha salva' : 'Ficha de entrada') + '</h2>' +
+      '<p class="lf-lead">' + esc(fmtQuando(f.recorded_at)) + (f.recorded_by ? ' · por ' + esc(f.recorded_by) : '') + '</p>' +
+      '<div class="lf-carro">' + placaHtml(f.plate) + (f.vehicle_model ? '<span>' + esc(f.vehicle_model) + '</span>' : '') + '</div>' + corpo +
+      (f.notes ? '<span class="lf-label">Observação</span><p class="lf-notas">' + esc(f.notes) + '</p>' : '') +
+      '<div class="lf-aviso"><div>' + ic('lock', 16) + '<span>Ninguém altera nem apaga esta ficha. Fica guardada até ' + esc(fmtQuando(f.expires_at).split(' às ')[0]) + '.</span></div></div>' +
+      (f.plate ? '<button type="button" class="lf-row" id="lf-hist"><span class="lf-row-ic">' + ic('clock', 18) + '</span><span>Histórico desta placa</span>' + ic('chevron-right', 18) + '</button>' : '') +
+    '</div>' +
+    (recem ? '<div class="lf-foot"><button type="button" class="lf-cta is-ink" data-voltar>Voltar ao painel</button></div>' : '');
+    mostrar('lf-detalhe');
+    ligarVoltar('lf-detalhe');
+    if ($('lf-hist')) $('lf-hist').addEventListener('click', function () { empilhar(function () { carregarHistorico(f.plate); }); });
+    $('lf-detalhe').querySelectorAll('[data-foto]').forEach(function (b) { b.addEventListener('click', function () {
+      var p = f.photos[+b.dataset.foto]; if (!p.url) return;
+      $('lf-lightbox').innerHTML = '<img src="' + esc(p.url) + '" alt=""><span>' + esc(nomeFoto(p.label)) + (p.kind ? ' · ' + esc(nomeAvaria(p.kind)) : '') + '</span>';
+      $('lf-lightbox').classList.add('is-on');
+    }); });
+  }
+  $('lf-lightbox').addEventListener('click', function () { this.classList.remove('is-on'); });
+
+  // ── Histórico da placa ──────────────────────────────────────────────────
+  function historico(placa) { pilha = []; empilhar(function () { carregarHistorico(placa); }); }
+  function cap(s) { return s ? s[0].toUpperCase() + s.slice(1) : s; }
+  function carregarHistorico(placa) {
+    $('lf-historico').innerHTML = '<div class="lf-center"><i class="lf-spin is-dark"></i></div>'; mostrar('lf-historico');
+    api('GET', '/owner/vehicle_checks?plate=' + encodeURIComponent(placa)).then(function (d) {
+      var desde = d.since ? new Date(d.since) : null;
+      $('lf-historico').innerHTML = '<div class="lf-wrap">' +
+        '<button type="button" class="lf-back" data-voltar aria-label="Voltar">' + ic('chevron-left', 18) + '</button>' +
+        '<div style="margin-top:18px">' + placaHtml(d.plate, true) + '</div>' +
+        (d.vehicle_model ? '<p class="lf-lead">' + esc(d.vehicle_model) + '</p>' : '') +
+        // Número grande em destaque, como a wiemer: "quanto eu sei desse carro?"
+        '<div class="lf-num"><b>' + d.count + '</b><span>' + (d.count === 1 ? 'ficha' : 'fichas') + (desde ? ' desde ' + MESES[desde.getMonth()] + '/' + desde.getFullYear() : '') + '</span></div>' +
+        (d.recurring || []).map(function (r) {
+          return '<div class="lf-rec"><i></i><div><b>' + esc(nomeAvaria(r.kind)) + ' ' + (String(r.area).indexOf('porta ') === 0 ? 'na' : 'no') + ' ' + esc(r.area) + '</b>' +
+            '<small>Já estava lá em ' + r.count + ' fichas, a primeira em ' + esc(fmtQuando(r.first_at).split(' às ')[0]) + '.</small></div></div>';
+        }).join('') +
+        '<h3 class="lf-secao">Fichas</h3>' +
+        (d.checks.length ? d.checks.map(function (c) {
+          return '<button type="button" class="lf-row" data-ficha="' + c.id + '" style="margin-top:10px"><span class="lf-row-ic">' + ic(c.mode === 'photos' ? 'camera' : 'edit-3', 20) + '</span>' +
+            '<span>' + esc(fmtQuando(c.recorded_at)) + '<small>' + esc(cap([
+              c.mode === 'photos' ? c.photos_count + ' fotos' : 'desenho',
+              c.damage_count ? c.damage_count + (c.damage_count === 1 ? ' avaria' : ' avarias') : 'sem avarias',
+              c.recorded_by
+            ].filter(Boolean).join(' · '))) + '</small></span>' + ic('chevron-right', 18) + '</button>';
+        }).join('') : '<p class="lf-lead">Nenhuma ficha deste carro ainda.</p>') +
+      '</div>';
+      ligarVoltar('lf-historico');
+      $('lf-historico').querySelectorAll('[data-ficha]').forEach(function (b) { b.addEventListener('click', function () { var id = b.dataset.ficha; empilhar(function () { carregarDetalhe(id); }); }); });
+    }).catch(function (e) {
+      $('lf-historico').innerHTML = '<div class="lf-wrap"><button type="button" class="lf-back" data-voltar aria-label="Voltar">' + ic('chevron-left', 18) + '</button><div class="lf-center">' + esc(e.message || 'Não foi possível abrir o histórico.') + '</div></div>';
+      ligarVoltar('lf-historico');
+    });
+  }
+
+  window.LoovFicha = {
+    configurar: function (s) { settings = s || null; },
+    abrir: abrir, ver: ver, historico: historico,
+    placaValida: placaValida, limparPlaca: limparPlaca
+  };
+})();
+</script>

@@ -113,7 +113,7 @@ module Owner
     def attend
       if @appointment.ficha_pendente?
         return render json: {
-          error: "Este lava-rápido exige a ficha de entrada. Faça a ficha pelo app antes de finalizar.",
+          error: "Este lava-rápido exige a ficha de entrada. Faça a ficha antes de finalizar.",
           code:  "ficha_required"
         }, status: :unprocessable_entity
       end

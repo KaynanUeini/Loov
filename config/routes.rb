@@ -132,7 +132,9 @@ Rails.application.routes.draw do
     patch 'vehicle_checks/settings',              to: 'vehicle_checks#settings_update'
     get   'vehicle_checks',                       to: 'vehicle_checks#index'
     get   'vehicle_checks/:id',                   to: 'vehicle_checks#show', as: :vehicle_check
+    get   'ficha',                                to: 'vehicle_checks#page', as: :ficha
     post  'checkins/:id/vehicle_check/uploads',   to: 'vehicle_checks#uploads'
+    post  'checkins/:id/vehicle_check/photo',     to: 'vehicle_checks#photo'
     post  'checkins/:id/vehicle_check/conferir',  to: 'vehicle_checks#conferir'
     post  'checkins/:id/vehicle_check',           to: 'vehicle_checks#create'
 
