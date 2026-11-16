@@ -971,8 +971,6 @@
       '<h1 class="ok-title">Agendado<em>Seu carro te agradece</em></h1>' +
       '<div class="ok-card">' +
         '<div class="ok-lab">QUANDO</div><div class="ok-when">' + dayLabel(d) + ', ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' · ' + esc(bk.time) + '</div>' +
-        // Era um ícone de calendário com cara de botão que não fazia nada.
-        (res && res.agenda_url ? '<a class="ok-pill" href="' + esc(res.agenda_url) + '">' + icon('calendar', 15) + 'Adicionar à agenda</a>' : '') +
         '<div class="ok-div"></div>' +
         '<div class="ok-shop"><div class="ok-logo">' + LoovLogos.logoOf(CW) + '</div>' +
           '<div class="ok-shop-t"><b>' + esc(CW.name) + '</b><small>' + esc(s.title) + ' · ' + (s.duration || 30) + ' min</small></div></div>' +
