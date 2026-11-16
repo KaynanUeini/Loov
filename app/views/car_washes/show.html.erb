@@ -279,12 +279,20 @@
   .ok-check { width: 120px; height: 120px; margin: 0 auto 28px; border-radius: 50%; background: var(--coral-500); color: var(--cream); display: flex; align-items: center; justify-content: center; animation: okpop .5s cubic-bezier(.2,1.4,.4,1) both; }
   @keyframes okpop { from { transform: scale(.4); opacity: 0; } }
   .ok-title { margin: 0 !important; text-align: center; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 40px; line-height: 42px; letter-spacing: -1.2px; color: var(--ink) !important; }
-  .ok-title em { display: block; font-style: normal; color: var(--coral-500); }
+  /* Um acento só por tela: o coral fica no check; a frase de apoio é graphite. */
+  .ok-title em { display: block; margin-top: 6px; font-style: normal; font-size: 28px; line-height: 32px; letter-spacing: -0.6px; color: var(--graphite); }
   .ok-card { margin-top: 28px; padding: 20px; background: var(--paper); border: 1px solid var(--stone); border-radius: 20px; }
-  .ok-top { display: flex; align-items: center; }
   .ok-lab { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; color: var(--ash); }
   .ok-when { margin-top: 4px; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 24px; letter-spacing: -0.5px; }
-  .ok-cal { margin-left: auto; flex: 0 0 44px; height: 44px; border-radius: 12px; background: var(--sand); display: flex; align-items: center; justify-content: center; }
+  /* Ação de apoio dentro do cartão: pílula de contorno tinta (padrão Loov). */
+  .ok-pill { display: inline-flex; align-items: center; gap: 8px; height: 40px; margin-top: 14px; padding: 0 16px; border-radius: 999px; border: 1.5px solid var(--ink); color: var(--ink) !important; font-size: 14px; font-weight: 600; transition: background .15s; }
+  .ok-pill:hover { background: var(--sand); }
+  .ok-addr { margin-top: 12px; font-size: 13px; line-height: 1.45; color: var(--graphite); }
+  .ok-pay { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 14px; color: var(--graphite); }
+  .ok-pay + .ok-pay { margin-top: 8px; }
+  .ok-pay b { display: inline-flex; align-items: center; gap: 6px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 24px; letter-spacing: -0.5px; color: var(--ink); white-space: nowrap; }
+  .ok-pay.is-sub b { font-size: 15px; font-weight: 600; letter-spacing: 0; }
+  .ok-vale { margin: 6px 0 0; font-size: 12.5px; color: var(--graphite); }
   .ok-div { height: 1px; background: var(--stone); margin: 16px 0; }
   .ok-shop { display: flex; align-items: center; gap: 10px; }
   .ok-logo { flex: 0 0 56px; height: 56px; }
@@ -292,10 +300,12 @@
   .ok-shop-t { flex: 1; min-width: 0; }
   .ok-shop-t b { display: block; font-size: 14px; font-weight: 600; }
   .ok-shop-t small { display: block; margin-top: 2px; font-size: 12px; color: var(--graphite); }
-  .ok-price { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -0.4px; }
   .ok-actions { display: grid; gap: 10px; margin-top: 32px; }
-  .ok-primary { display: block; padding: 16px; border-radius: 28px; background: var(--coral-500); color: var(--cream) !important; text-align: center; font-size: 16px; font-weight: 600; }
-  .ok-ghost { display: block; padding: 16px; border-radius: 28px; text-align: center; color: var(--ink) !important; font-size: 16px; font-weight: 500; }
+  /* Nada a efetivar aqui, só caminhos: o principal em tinta cheia (o preto da
+     Nike), o outro em contorno. Coral fica pra quem confirma. */
+  .ok-primary { display: block; padding: 16px; border-radius: 28px; background: var(--ink); color: var(--cream) !important; text-align: center; font-size: 16px; font-weight: 600; transition: transform .15s; }
+  .ok-primary:hover { transform: translateY(-1px); }
+  .ok-ghost { display: block; padding: 14.5px; border-radius: 28px; border: 1.5px solid var(--ink); text-align: center; color: var(--ink) !important; font-size: 16px; font-weight: 600; transition: background .15s; }
   .ok-ghost:hover { background: var(--sand); }
 
   /* Visitante: folha "Entre para agendar" */
@@ -920,12 +930,12 @@
         if (res.data.requires_action) {
           return confirmarSinal(res.data).then(function (ok) {
             bk.submitting = false;
-            if (ok) { renderDone(ok.deposit); return; }
+            if (ok) { renderDone(ok); return; }
             renderBooking();
           });
         }
         bk.submitting = false;
-        if (res.ok) { renderDone(res.data.deposit); return; }
+        if (res.ok) { renderDone(res.data); return; }
         bk.error = res.data.error || 'Não foi possível agendar.';
         renderBooking();
       })
@@ -947,20 +957,30 @@
     }).catch(function () { bk.error = 'A confirmação do banco foi interrompida. Nada foi cobrado.'; return null; });
   }
 
-  function renderDone(deposit) {
-    var s = bk.service, d = dates[bk.dateIdx];
+  function renderDone(res) {
+    var s = bk.service, d = dates[bk.dateIdx], deposit = res && res.deposit, total = totalDe(s);
+    var endereco = CW.route_address || (CW.logradouro ? CW.logradouro + (CW.numero ? ', ' + CW.numero : '') + (CW.bairro ? ' · ' + CW.bairro : '') : CW.address);
+    var presente = usaVale() ? icon('gift', 16) : '';
+    // Como pagar fica sempre dito: sem isso o cliente fica com o "já paguei?".
+    var pagamento = deposit
+      ? '<div class="ok-pay is-sub"><span>Sinal pago no cartão</span><b>R$ ' + money(deposit, 2) + '</b></div>' +
+        '<div class="ok-pay"><span>Você paga no lava-rápido</span><b>' + presente + 'R$ ' + money(Math.max(0, total - deposit), 2) + '</b></div>'
+      : '<div class="ok-pay"><span>' + (total > 0 ? 'Você paga no lava-rápido' : 'Pago com o vale') + '</span><b>' + presente + 'R$ ' + money(total, 2) + '</b></div>';
     $('cw-done').innerHTML = '<div class="ok">' +
       '<div class="ok-check">' + icon('check', 52, { 'stroke-width': 3 }) + '</div>' +
-      '<h1 class="ok-title">Agendado.<em>Seu carro te agradece.</em></h1>' +
-      '<div class="ok-card"><div class="ok-top"><div><div class="ok-lab">QUANDO</div><div class="ok-when">' + dayLabel(d) + ', ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' · ' + esc(bk.time) + '</div></div>' +
-        '<span class="ok-cal">' + icon('calendar', 22) + '</span></div>' +
+      '<h1 class="ok-title">Agendado<em>Seu carro te agradece</em></h1>' +
+      '<div class="ok-card">' +
+        '<div class="ok-lab">QUANDO</div><div class="ok-when">' + dayLabel(d) + ', ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' · ' + esc(bk.time) + '</div>' +
+        // Era um ícone de calendário com cara de botão que não fazia nada.
+        (res && res.agenda_url ? '<a class="ok-pill" href="' + esc(res.agenda_url) + '">' + icon('calendar', 15) + 'Adicionar à agenda</a>' : '') +
         '<div class="ok-div"></div>' +
         '<div class="ok-shop"><div class="ok-logo">' + LoovLogos.logoOf(CW) + '</div>' +
-          '<div class="ok-shop-t"><b>' + esc(CW.name) + '</b><small>' + esc(s.title) + ' · ' + (s.duration || 30) + 'min</small></div>' +
-          '<div class="ok-price">R$' + money(totalDe(s)) + '</div></div>' +
-        (usaVale() ? '<div class="ok-div"></div><p class="ok-deposit">Vale de fidelidade aplicado: ' + esc(VALE.short) + '.</p>' : '') +
-        (deposit ? '<div class="ok-div"></div><p class="ok-deposit">Sinal de R$ ' + money(deposit, 2) + ' pago no cartão. O restante, R$ ' +
-          money(Math.max(0, totalDe(s) - deposit), 2) + ', você paga no lava-rápido.</p>' : '') +
+          '<div class="ok-shop-t"><b>' + esc(CW.name) + '</b><small>' + esc(s.title) + ' · ' + (s.duration || 30) + ' min</small></div></div>' +
+        // O próximo passo do cliente é ir até lá.
+        (endereco ? '<div class="ok-addr">' + esc(endereco) + '</div>' : '') +
+        '<a class="ok-pill" target="_blank" rel="noopener" href="' + mapsUrl() + '">' + icon('navigation', 15) + 'Ver rota</a>' +
+        '<div class="ok-div"></div>' + pagamento +
+        (usaVale() ? '<p class="ok-vale">Vale aplicado: ' + esc(VALE.short) + '</p>' : '') +
       '</div>' +
       '<div class="ok-actions"><a class="ok-primary" href="/appointments">Ver meus agendamentos</a><a class="ok-ghost" href="/' + COORDS_QS + '">Voltar pra home</a></div>' +
     '</div>';

@@ -4,6 +4,8 @@ Rails.application.routes.draw do
   # Qual commit está em produção. Público e sem auth de propósito: o objetivo é
   # confirmar deploy sem depender de login.
   get 'version', to: 'version#show'
+  # "Adicionar à agenda" da confirmação: .ics do agendamento por link assinado.
+  get 'agenda/:token', to: 'agenda#show', as: :agenda, defaults: { format: :ics }
   # Lembrete da véspera — disparado pelo GitHub Actions (ver Internal::RemindersController).
   post 'internal/reminders', to: 'internal/reminders#create'
 

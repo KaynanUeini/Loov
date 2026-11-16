@@ -252,7 +252,8 @@ class AppointmentsController < ApplicationController
       format.json { render json: { message: "Agendamento confirmado!", appointment_id: @appointment.id,
                                    deposit: @appointment.stripe_payment_intent_id.present? ? @appointment.prepayment_amount.to_f : nil,
                                    total: @appointment.effective_price,
-                                   reward: vale_do(@appointment) },
+                                   reward: vale_do(@appointment),
+                                   agenda_url: agenda_link(@appointment) },
                            status: :created }
     end
   end
@@ -261,7 +262,7 @@ class AppointmentsController < ApplicationController
   # servidor confere com o Stripe; o que o aparelho diz não é confiado.
   def authorized
     a = @appointment
-    return render(json: { ok: true, appointment_id: a.id, deposit: a.prepayment_amount.to_f }) if a.status == "confirmed"
+    return render(json: { ok: true, appointment_id: a.id, deposit: a.prepayment_amount.to_f, agenda_url: agenda_link(a) }) if a.status == "confirmed"
     unless a.status == "awaiting_payment" && a.stripe_payment_intent_id.present?
       return render json: { error: "O tempo para confirmar no banco acabou e o horário foi liberado.", code: "expired" },
                     status: :unprocessable_entity
@@ -275,7 +276,7 @@ class AppointmentsController < ApplicationController
 
     a.with_lock { a.confirmar_sinal! if a.status == "awaiting_payment" }
     enviar_confirmacao(a.reload)
-    render json: { ok: true, appointment_id: a.id, deposit: a.prepayment_amount.to_f }
+    render json: { ok: true, appointment_id: a.id, deposit: a.prepayment_amount.to_f, agenda_url: agenda_link(a) }
   rescue Stripe::StripeError => e
     Rails.logger.error("[Appointments#authorized] #{e.class}: #{e.message}")
     render json: { error: "Não conseguimos confirmar com o banco agora. Tente de novo em instantes." }, status: :bad_gateway
@@ -398,6 +399,12 @@ class AppointmentsController < ApplicationController
   end
 
   private
+
+  # Link do .ics pro "Adicionar à agenda" da confirmação (AgendaController).
+  # Vale até 60 dias, mais que a antecedência máxima de um agendamento.
+  def agenda_link(a)
+    agenda_url(a.signed_id(purpose: :agenda, expires_in: 60.days))
+  end
 
   def usar_vale?
     params[:use_reward].to_s != "false"
