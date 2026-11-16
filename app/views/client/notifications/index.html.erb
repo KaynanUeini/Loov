@@ -7,7 +7,7 @@
       e a frase diz quantas chegaram; na próxima já vêm lidas.
     · Cartão: ícone e etiqueta pelo tipo (CONFIRMADA, RECUSADA, CANCELADA,
       AVALIAR, MENSAGEM), tempo relativo, ponto coral se não lida; texto
-      longo abre em "VER DETALHES".
+      longo abre em "Ver detalhes".
     · Tocar leva pra Agenda; "Avalie seu atendimento" já abre a tela de
       avaliação daquele atendimento (/appointments#avaliar-ID).
 %>
@@ -38,8 +38,8 @@
   .nt-desc { font-size: 12px; line-height: 17px; color: var(--graphite); }
   .nt-card:not(.is-open) .nt-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .nt-card:not(.is-open) .nt-desc { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .nt-more { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin-top: 10px; padding: 9px 0 0; border: 0; border-top: 1px solid var(--stone); background: transparent; color: var(--coral-700); font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.2px; }
-  .nt-more:hover { color: var(--coral-500); }
+  .nt-more { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin-top: 10px; padding: 9px 0 0; border: 0; border-top: 1px solid var(--stone); background: transparent; color: var(--ink); font-size: 13px; font-weight: 600; } /* botão em frase: sem caixa alta e sem coral */
+  .nt-more:hover { color: var(--graphite); }
 
   .nt-empty { display: flex; flex-direction: column; align-items: center; padding: 32px 20px 60px; text-align: center; }
   /* A ilustração do passarinho, como os vazios de Agendamentos e Fidelidade. */
@@ -106,7 +106,7 @@
           '<span class="nt-title" style="display:block">' + esc(n.title) + '</span>' +
           '<span class="nt-desc">' + esc(desc) + '</span></span>' +
       '</button>' +
-      (long ? '<button type="button" class="nt-more" data-more="' + esc(n.id) + '" aria-expanded="' + isOpen + '">' + (isOpen ? 'OCULTAR DETALHES' : 'VER DETALHES') + icon(isOpen ? 'chevron-up' : 'chevron-down', 14) + '</button>' : '') +
+      (long ? '<button type="button" class="nt-more" data-more="' + esc(n.id) + '" aria-expanded="' + isOpen + '">' + (isOpen ? 'Ocultar detalhes' : 'Ver detalhes') + icon(isOpen ? 'chevron-up' : 'chevron-down', 14) + '</button>' : '') +
     '</article>';
   }
 

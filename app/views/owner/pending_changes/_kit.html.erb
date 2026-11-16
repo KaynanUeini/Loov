@@ -25,7 +25,7 @@
   .apv-badge { flex-shrink: 0; padding: 3px 8px; border-radius: 8px; background: var(--sand); color: var(--graphite); font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 1px; }
   .apv-title { margin-top: 12px; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; letter-spacing: -0.2px; }
   .apv-desc { margin: 4px 0 0; font-size: 13px; line-height: 19px; color: var(--graphite); }
-  .apv-more { display: inline-flex; align-items: center; gap: 4px; margin-top: 10px; padding: 0; border: 0; background: none; color: var(--ink); font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.1px; text-decoration: underline; text-underline-offset: 3px; }
+  .apv-more { display: inline-flex; align-items: center; gap: 4px; margin-top: 10px; padding: 0; border: 0; background: none; color: var(--ink); font-size: 13px; font-weight: 600; }
   .apv-diff { margin-top: 10px; border-radius: 12px; background: var(--cream); border: 1px solid var(--stone); overflow: hidden; }
   .apv-diff[hidden] { display: none; }
   .apv-sec { padding: 8px 12px 2px; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 1px; color: var(--ash); text-transform: uppercase; }
@@ -121,7 +121,7 @@
         '<span class="apv-badge">' + esc(m.badge) + '</span></div>' +
       '<div class="apv-title">' + esc(m.title) + '</div>' +
       (pc.description ? '<p class="apv-desc">' + esc(pc.description) + '</p>' : '') +
-      '<button type="button" class="apv-more" data-apv="more" aria-expanded="false">VER O QUE MUDA' + fi('chevron-down', 13) + '</button>' +
+      '<button type="button" class="apv-more" data-apv="more" aria-expanded="false">Ver o que muda' + fi('chevron-down', 14) + '</button>' +
       '<div class="apv-diff" hidden>' + diff(pc) + '</div>' +
       '<div class="apv-acts">' +
         '<button type="button" class="apv-no" data-apv="ask-reject">' + fi('x', 14) + 'Recusar</button>' +
@@ -151,7 +151,7 @@
       if (act === 'more') {
         var d = c.querySelector('.apv-diff'), open = d.hidden;
         d.hidden = !open; b.setAttribute('aria-expanded', open);
-        b.innerHTML = (open ? 'OCULTAR O QUE MUDA' : 'VER O QUE MUDA') + fi(open ? 'chevron-up' : 'chevron-down', 13);
+        b.innerHTML = (open ? 'Ocultar o que muda' : 'Ver o que muda') + fi(open ? 'chevron-up' : 'chevron-down', 14);
       } else if (act === 'ask-approve' || act === 'ask-reject') {
         var ok = act === 'ask-approve', who = (pc && pc.attendant) || 'o atendente';
         c.dataset.ask = ok ? 'approve' : 'reject';

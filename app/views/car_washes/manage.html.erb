@@ -282,12 +282,13 @@
 
   .gm-add {
     width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
-    border: 1.5px dashed rgba(220,120,82,.28); border-radius: 14px; padding: 13px;
-    background: rgba(220,120,82,.03); color: var(--coral-500);
-    font-size: 12.5px; font-weight: 600; cursor: pointer; margin-top: 6px;
-    transition: background .15s, border-color .15s;
+    /* Só abre o formulário da linha nova: contorno tinta. Quem efetiva é o Salvar. */
+    border: 1.5px solid var(--ink); border-radius: 999px; min-height: 44px; padding: 11px;
+    background: transparent; color: var(--ink);
+    font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 6px;
+    transition: background .15s;
   }
-  .gm-add:hover { background: var(--coral-50); border-color: var(--coral-300); }
+  .gm-add:hover { background: var(--sand); }
 
   /* ── Formulário inline ── */
   .gm-form {
@@ -314,8 +315,8 @@
     background: var(--cream); color: var(--ash); cursor: pointer;
     font-size: 11px; font-weight: 600; letter-spacing: .4px; transition: all .15s;
   }
-  .gm-day:hover:not(:disabled) { border-color: var(--coral-300); color: var(--coral-700); }
-  .gm-day.on { border-color: var(--coral-500); background: var(--coral-50); color: var(--coral-500); }
+  .gm-day:hover:not(:disabled) { border-color: var(--ink); color: var(--ink); }
+  .gm-day.on { border-color: var(--ink); background: var(--ink); color: var(--cream); } /* escolhido = tinta */
   .gm-day:disabled { opacity: .35; cursor: not-allowed; }
 
   /* ── Fechamentos ── */
@@ -439,8 +440,10 @@
   }
   .gm-cf-ok svg { color: var(--coral-500); }
   .gm-cf-discard {
-    display: block; width: 100%; margin-top: 6px; padding: 12px; background: none; border: none;
-    color: var(--graphite); font-size: 12.5px; font-weight: 600; text-decoration: underline; cursor: pointer;
+    /* Caminho alternativo explícito: pílula de contorno, não link sublinhado. */
+    display: block; width: 100%; margin-top: 10px; padding: 12px; min-height: 48px; background: none;
+    border: 1.5px solid var(--ink); border-radius: 999px;
+    color: var(--ink); font-size: 14px; font-weight: 600; cursor: pointer;
   }
 
   /* ── Desktop: índice + painel ── */

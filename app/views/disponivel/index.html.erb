@@ -106,8 +106,8 @@
   .dp-state h2 { margin: 14px 0 6px !important; color: var(--cream) !important; font-family: 'Inter', sans-serif !important; font-size: 16px; font-weight: 700; letter-spacing: 0; }
   .dp-state p { margin: 0; max-width: 420px; color: #b5ae9f; font-size: 13px; line-height: 19px; }
   .dp-state .dp-btn { margin-top: 18px; }
-  .dp-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 22px; border: 0; border-radius: 100px; background: var(--coral-500); color: var(--cream) !important; font-size: 13.5px; font-weight: 600; text-decoration: none; transition: background .15s, transform .15s; }
-  .dp-btn:hover { background: var(--coral-700); }
+  .dp-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 22px; border: 0; border-radius: 100px; background: var(--ink); color: var(--cream) !important; font-size: 13.5px; font-weight: 600; text-decoration: none; transition: background .15s, transform .15s; }
+  .dp-btn:hover { background: #3a342b; }
   .dp-spin { width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid rgba(221,120,82,.25); border-top-color: var(--coral-500); animation: dp-rot .8s linear infinite; }
   @keyframes dp-rot { to { transform: rotate(360deg); } }
 
@@ -162,8 +162,9 @@
   .dp-pay-row.now b { color: var(--coral-500); font-size: 18px; }
   .dp-pay-card { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-top: 1px solid var(--stone); background: var(--paper); font-size: 13px; color: var(--ink); }
   .dp-pay-card svg { color: var(--graphite); flex-shrink: 0; }
-  .dp-pay-card a { margin-left: auto; color: var(--coral-500); font-weight: 600; font-size: 12.5px; text-decoration: none; }
-  .dp-pay-card a:hover { text-decoration: underline; }
+  /* Ação dentro de card é botão: pílula de contorno tinta. */
+  .dp-pay-card a { margin-left: auto; display: inline-flex; align-items: center; height: 34px; padding: 0 14px; border: 1.5px solid var(--ink); border-radius: 999px; color: var(--ink) !important; font-weight: 600; font-size: 13px; text-decoration: none; transition: background .15s; }
+  .dp-pay-card a:hover { background: var(--sand); }
   .dp-pay-card.missing { background: var(--coral-50); color: var(--coral-700); line-height: 1.4; }
   .dp-pay-card.missing svg { color: var(--coral-500); }
   .dp-hint { margin: 16px 0 12px; text-align: center; font-size: 11px; line-height: 15px; color: var(--ash); }
@@ -230,8 +231,8 @@
   .dw-result img { width: 86%; max-width: 340px; height: auto; margin-bottom: 20px; }
   .dw-result h2 { margin: 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 30px; letter-spacing: -0.7px; color: var(--ink) !important; }
   .dw-result p { margin: 0; max-width: 320px; font-size: 14.5px; line-height: 21px; color: var(--graphite); }
-  .dw-cta { margin-top: 30px; display: inline-flex; align-items: center; gap: 8px; padding: 14px 26px; border: 0; border-radius: 9999px; background: var(--coral-500); color: var(--cream); font-size: 14.5px; font-weight: 600; }
-  .dw-cta:hover { background: var(--coral-700); }
+  .dw-cta { margin-top: 30px; display: inline-flex; align-items: center; gap: 8px; padding: 14px 26px; border: 0; border-radius: 9999px; background: var(--ink); color: var(--cream); font-size: 14.5px; font-weight: 600; }
+  .dw-cta:hover { background: #3a342b; }
 
   .dp-toast { position: fixed; left: 50%; bottom: 28px; z-index: 300; transform: translate(-50%, 20px); opacity: 0; display: inline-flex; align-items: center; gap: 8px; max-width: calc(100% - 32px); padding: 12px 16px; border-radius: 14px; background: var(--paper); border: 1px solid var(--stone); box-shadow: 0 12px 30px rgba(0,0,0,.25); color: var(--coral-500); font-size: 13px; font-weight: 600; transition: opacity .2s, transform .2s; }
   .dp-toast.is-on { opacity: 1; transform: translate(-50%, 0); }

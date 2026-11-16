@@ -124,8 +124,12 @@
   .ob-hour label { display: grid; gap: 4px; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1.2px; color: var(--ash); }
   .ob-hour select { height: 42px; border-radius: 12px !important; font-size: 15px; font-weight: 600; }
   .ob-empty { display: flex; align-items: center; gap: 8px; padding: 16px; border-radius: 16px; border: 1px dashed var(--stone); color: var(--ash); font-size: 14px; }
-  .ob-copy { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 10px 4px; border: 0; background: transparent; color: var(--coral-700); font-size: 13px; font-weight: 600; }
-  .ob-copy:hover { color: var(--coral-500); }
+  /* Ação de apoio: pílula de contorno tinta, não texto coral solto. */
+  .ob-copy { display: inline-flex; align-items: center; gap: 8px; margin-top: 10px; height: 40px; padding: 0 16px; border: 1.5px solid var(--ink); border-radius: 999px; background: transparent; color: var(--ink); font-size: 13.5px; font-weight: 600; transition: background .15s; }
+  .ob-copy:hover { background: var(--sand); }
+  /* Último passo só leva ao painel: tinta cheia. */
+  .ob-cta.is-nav { background: var(--ink); box-shadow: none; }
+  .ob-cta.is-nav:hover:not([disabled]) { box-shadow: none; }
 
   /* Passo 4: serviços */
   .ob-svc { padding: 18px; border-radius: 20px; background: var(--paper); border: 1px solid var(--stone); margin-bottom: 12px; }
@@ -315,6 +319,7 @@
   function setCta() {
     var b = $('ob-cta');
     b.disabled = st.saving;
+    b.classList.toggle('is-nav', st.step === 5);
     b.innerHTML = st.saving ? '<span class="ob-spin"></span>Salvando…' : CTA[st.step] + ' ' + icon(st.step === 4 ? 'check' : 'arrow-right', 17);
   }
   function err(m) { $('ob-err').textContent = m || ''; }

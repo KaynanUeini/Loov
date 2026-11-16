@@ -185,9 +185,11 @@
   .bk-rule { display: flex; gap: 12px; padding: 16px; background: var(--coral-50); border: 1px solid var(--coral-100); border-radius: 16px; color: var(--coral-700); }
   .bk-rule b { display: block; color: var(--ink); font-size: 14px; margin-bottom: 4px; }
   .bk-rule p { margin: 0; color: var(--graphite); font-size: 13px; line-height: 1.4; }
-  .bk-rule a { display: inline-block; margin-top: 10px; color: var(--coral-700); font-size: 13px; font-weight: 600; }
+  /* Ação dentro de card é botão: pílula de contorno tinta. */
+  .bk-rule a, .bk-brow a { display: inline-flex; align-items: center; height: 36px; padding: 0 14px; border: 1.5px solid var(--ink); border-radius: 999px; color: var(--ink) !important; font-size: 13px; font-weight: 600; transition: background .15s; }
+  .bk-rule a { margin-top: 10px; }
+  .bk-rule a:hover, .bk-brow a:hover { background: var(--sand); }
   .bk-rulenote { margin: 12px 0 0; color: var(--graphite); font-size: 12px; line-height: 1.45; }
-  .bk-brow a { color: var(--coral-700); font-weight: 600; }
   .ok-deposit { margin: 0; color: var(--graphite); font-size: 13px; line-height: 1.45; }
   .bk-sum-logo svg { width: 100%; height: 100%; display: block; }
   .bk-sum-txt { flex: 1; min-width: 0; }
@@ -208,7 +210,8 @@
   .bk-times { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0 20px; }
   .bk-time { position: relative; height: 48px; border-radius: 14px; border: 1px solid var(--stone); background: var(--paper); color: var(--ink) !important; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 16px; display: flex; align-items: center; justify-content: center; transition: background .15s, border-color .15s; }
   .bk-time:hover { border-color: var(--ink); }
-  .bk-time.is-on { background: var(--coral-500); border-color: var(--coral-500); color: var(--cream) !important; }
+  /* Escolhido = tinta, como o dia; coral é de efetivar. */
+  .bk-time.is-on { background: var(--ink); border-color: var(--ink); color: var(--cream) !important; }
   .bk-time.is-lm { background: var(--coral-50); border: 1px dashed var(--coral-500); color: var(--coral-700) !important; }
   .bk-time.is-off { background: var(--sand); color: var(--ash) !important; text-decoration: line-through; cursor: not-allowed; }
   .bk-time.is-off:hover { border-color: var(--stone); }
