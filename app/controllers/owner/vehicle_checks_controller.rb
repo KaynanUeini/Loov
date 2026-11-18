@@ -16,6 +16,17 @@ module Owner
       @settings = settings_json
     end
 
+    # GET /owner/ficha/:id — a ficha salva numa página própria, com endereço.
+    # O conteúdo vem do GET /owner/vehicle_checks/:id, que já confere o dono.
+    def ficha_page
+      @id = params[:id].to_i
+    end
+
+    # GET /owner/ficha/placa/:placa — histórico da placa (GET /owner/vehicle_checks?plate=)
+    def placa_page
+      @placa = params[:placa].to_s.upcase.gsub(/[^A-Z0-9]/, "")[0, 7]
+    end
+
     # GET /owner/vehicle_checks/settings
     def settings
       render json: settings_json

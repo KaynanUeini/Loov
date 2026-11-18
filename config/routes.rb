@@ -133,6 +133,8 @@ Rails.application.routes.draw do
     get   'vehicle_checks',                       to: 'vehicle_checks#index'
     get   'vehicle_checks/:id',                   to: 'vehicle_checks#show', as: :vehicle_check
     get   'ficha',                                to: 'vehicle_checks#page', as: :ficha
+    get   'ficha/placa/:placa',                   to: 'vehicle_checks#placa_page', as: :ficha_placa
+    get   'ficha/:id',                            to: 'vehicle_checks#ficha_page', as: :ficha_ver, constraints: { id: /\d+/ }
     post  'checkins/:id/vehicle_check/uploads',   to: 'vehicle_checks#uploads'
     post  'checkins/:id/vehicle_check/photo',     to: 'vehicle_checks#photo'
     post  'checkins/:id/vehicle_check/conferir',  to: 'vehicle_checks#conferir'

@@ -6,8 +6,13 @@
 
     LoovFicha.configurar(settings)          settings = vehicle_check do /owner/checkins/today
     LoovFicha.abrir(appt, { motivo, onSalva })   folha: placa e fotos ou desenho
-    LoovFicha.ver(id)                       ficha salva, só leitura
-    LoovFicha.historico(placa)              fichas da placa e avarias que se repetem
+    LoovFicha.ver(id)                       vai pra /owner/ficha/:id (ficha salva, só leitura)
+    LoovFicha.historico(placa)              vai pra /owner/ficha/placa/:placa
+    LoovFicha.paginaDetalhe / paginaHistorico   o corpo dessas duas páginas
+
+  Fazer a ficha é uma camada por cima da página (é um passo do atendimento);
+  ver a ficha e o histórico são páginas com endereço, alinhadas à esquerda como
+  as outras da conta.
 
   O que muda do app, por ser navegador:
     · A câmera abre ao vivo dentro do quadro (getUserMedia), com o contorno
@@ -29,6 +34,20 @@
   .lf-v { position: absolute; inset: 0; display: none; overflow-y: auto; background: var(--cream); }
   .lf-v.is-on { display: block; }
   .lf-wrap { max-width: 560px; margin: 0 auto; padding: 16px 20px 120px; }
+  /* Páginas da ficha salva e do histórico: o molde da Ficha do carro e da Gerenciar. */
+  .lf-pg { background: var(--cream); color: var(--ink); min-height: 100vh; padding-top: 60px; font-family: 'Inter', sans-serif; }
+  .loov-nav { background: var(--cream) !important; }
+  .lf-pg *, .lf-pg *::before, .lf-pg *::after { box-sizing: border-box; }
+  .lf-pg button { font-family: inherit; line-height: normal; cursor: pointer; }
+  .lf-pg svg.feather { display: block; flex-shrink: 0; }
+  .lf-pg-wrap { width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 20px 64px; }
+  .lf-pg-corpo { max-width: 720px; padding-top: 4px; }
+  .lf-pg .lf-center { justify-content: flex-start; min-height: 30vh; padding: 20px 0; }
+  a.lf-row { text-decoration: none; color: var(--ink); }
+  @media (min-width: 960px) {
+    .lf-pg-wrap { padding: 0 40px 80px; }
+    .lf-pg .lf-grade { grid-template-columns: repeat(4, 1fr); }
+  }
 
   /* Folha (bottom sheet), como as do painel */
   .lf-v.lf-sheetv { background: rgba(26,22,18,.45); display: none; align-items: flex-end; justify-content: center; }
@@ -204,7 +223,6 @@
   <div class="lf-v" id="lf-desenho"></div>
   <div class="lf-v" id="lf-revisar"></div>
   <div class="lf-v" id="lf-detalhe"></div>
-  <div class="lf-v" id="lf-historico"></div>
   <input type="file" accept="image/*" capture="environment" class="lf-file" id="lf-file" tabindex="-1" aria-hidden="true">
 </div>
 <div class="lf-lightbox" id="lf-lightbox" role="dialog" aria-label="Foto da ficha"></div>
@@ -292,7 +310,7 @@
   function mostrar(id) {
     $('lf').classList.add('is-on'); $('lf').setAttribute('aria-hidden', 'false');
     document.documentElement.style.overflow = 'hidden';
-    ['lf-sheet', 'lf-fotos', 'lf-desenho', 'lf-revisar', 'lf-detalhe', 'lf-historico'].forEach(function (v) { $(v).classList.toggle('is-on', v === id); });
+    ['lf-sheet', 'lf-fotos', 'lf-desenho', 'lf-revisar', 'lf-detalhe'].forEach(function (v) { $(v).classList.toggle('is-on', v === id); });
     $(id).scrollTop = 0;
     if (id === 'lf-fotos') ligarCamera(); else pararCamera();
   }
@@ -714,22 +732,20 @@
     }).then(function (d) {
       st = null; pilha = [];
       cb && cb(d.vehicle_check);
-      empilhar(function () { renderDetalhe(d.vehicle_check, true); });
+      empilhar(function () { renderDetalhe(d.vehicle_check); });
     }).catch(function (e) {
       st.salvando = null; renderRevisar(); toast('Ficha não salva. ' + (e.message || 'Falha de conexão.'));
     });
   }
 
   // ── Ficha salva (só leitura) ────────────────────────────────────────────
-  function ver(id) { pilha = []; empilhar(function () { carregarDetalhe(id); }); }
-  function carregarDetalhe(id) {
-    $('lf-detalhe').innerHTML = '<div class="lf-center"><i class="lf-spin is-dark"></i></div>'; mostrar('lf-detalhe');
-    api('GET', '/owner/vehicle_checks/' + id)
-      .then(function (d) { renderDetalhe(d.vehicle_check, false); })
-      .catch(function (e) { $('lf-detalhe').innerHTML = '<div class="lf-wrap"><button type="button" class="lf-back" data-voltar aria-label="Voltar">' + ic('chevron-left', 18) + '</button><div class="lf-center">' + esc(e.message || 'Não foi possível abrir a ficha.') + '</div></div>'; ligarVoltar('lf-detalhe'); });
-  }
+  function urlFicha(id) { return '/owner/ficha/' + encodeURIComponent(id); }
+  function urlPlaca(p) { return '/owner/ficha/placa/' + encodeURIComponent(limparPlaca(p)); }
+  function ver(id) { location.href = urlFicha(id); }
   function ligarVoltar(v) { $(v).querySelectorAll('[data-voltar]').forEach(function (b) { b.addEventListener('click', voltar); }); }
-  function renderDetalhe(f, recem) {
+  function quemQuando(f) { return fmtQuando(f.recorded_at) + (f.recorded_by ? ' · por ' + f.recorded_by : ''); }
+  // Corpo da ficha: o mesmo na página e na "Ficha salva" logo depois de salvar.
+  function detalheHtml(f) {
     var corpo = f.mode === 'photos'
       ? '<div class="lf-grade">' + f.photos.map(function (p, i) {
           return '<button type="button" class="lf-gi" data-foto="' + i + '" aria-label="Abrir foto ' + esc(nomeFoto(p.label)) + '">' + (p.url ? '<img src="' + esc(p.url) + '" alt="">' : '') + '<span class="lf-gi-tags">' +
@@ -739,38 +755,48 @@
         }).join('') + '</div>'
       : '<div class="lf-cardd">' + desenhoHtml(110, f.marks || [], null, false) +
           ((f.marks || []).length ? '<ol>' + f.marks.map(function (m) { return '<li>' + m.n + '. ' + esc(nomeAvaria(m.kind)) + ' · ' + esc(m.area) + '</li>'; }).join('') + '</ol>' : '<p>Sem avarias.</p>') + '</div>';
-    $('lf-detalhe').innerHTML = '<div class="lf-wrap">' +
-      '<button type="button" class="lf-back" data-voltar aria-label="' + (recem ? 'Fechar' : 'Voltar') + '">' + ic(recem ? 'x' : 'chevron-left', 18) + '</button>' +
-      '<h2 class="lf-title">' + (recem ? 'Ficha salva' : 'Ficha de entrada') + '</h2>' +
-      '<p class="lf-lead">' + esc(fmtQuando(f.recorded_at)) + (f.recorded_by ? ' · por ' + esc(f.recorded_by) : '') + '</p>' +
-      '<div class="lf-carro">' + placaHtml(f.plate) + (f.vehicle_model ? '<span>' + esc(f.vehicle_model) + '</span>' : '') + '</div>' + corpo +
+    return '<div class="lf-carro">' + placaHtml(f.plate) + (f.vehicle_model ? '<span>' + esc(f.vehicle_model) + '</span>' : '') + '</div>' + corpo +
       (f.notes ? '<span class="lf-label">Observação</span><p class="lf-notas">' + esc(f.notes) + '</p>' : '') +
       '<div class="lf-aviso"><div>' + ic('lock', 16) + '<span>Ninguém altera nem apaga esta ficha. Fica guardada até ' + esc(fmtQuando(f.expires_at).split(' às ')[0]) + '.</span></div></div>' +
-      (f.plate ? '<button type="button" class="lf-row" id="lf-hist"><span class="lf-row-ic">' + ic('clock', 18) + '</span><span>Histórico desta placa</span>' + ic('chevron-right', 18) + '</button>' : '') +
-    '</div>' +
-    (recem ? '<div class="lf-foot"><button type="button" class="lf-cta is-ink" data-voltar>Voltar ao painel</button></div>' : '');
-    mostrar('lf-detalhe');
-    ligarVoltar('lf-detalhe');
-    if ($('lf-hist')) $('lf-hist').addEventListener('click', function () { empilhar(function () { carregarHistorico(f.plate); }); });
-    $('lf-detalhe').querySelectorAll('[data-foto]').forEach(function (b) { b.addEventListener('click', function () {
+      (f.plate ? '<a class="lf-row" href="' + urlPlaca(f.plate) + '"><span class="lf-row-ic">' + ic('clock', 18) + '</span><span>Histórico desta placa</span>' + ic('chevron-right', 18) + '</a>' : '');
+  }
+  function ligarFotos(raiz, f) {
+    raiz.querySelectorAll('[data-foto]').forEach(function (b) { b.addEventListener('click', function () {
       var p = f.photos[+b.dataset.foto]; if (!p.url) return;
       $('lf-lightbox').innerHTML = '<img src="' + esc(p.url) + '" alt=""><span>' + esc(nomeFoto(p.label)) + (p.kind ? ' · ' + esc(nomeAvaria(p.kind)) : '') + '</span>';
       $('lf-lightbox').classList.add('is-on');
     }); });
   }
+  // Logo depois de salvar: continua na camada, com "Voltar ao painel".
+  function renderDetalhe(f) {
+    $('lf-detalhe').innerHTML = '<div class="lf-wrap">' +
+      '<button type="button" class="lf-back" data-voltar aria-label="Fechar">' + ic('x', 18) + '</button>' +
+      '<h2 class="lf-title">Ficha salva</h2><p class="lf-lead">' + esc(quemQuando(f)) + '</p>' + detalheHtml(f) +
+    '</div><div class="lf-foot"><button type="button" class="lf-cta is-ink" data-voltar>Voltar ao painel</button></div>';
+    mostrar('lf-detalhe');
+    ligarVoltar('lf-detalhe');
+    ligarFotos($('lf-detalhe'), f);
+  }
+  function erroPagina(el, msg) { el.innerHTML = '<div class="lf-center">' + esc(msg) + '</div>'; }
+  function paginaDetalhe(id, el, lead) {
+    api('GET', '/owner/vehicle_checks/' + id).then(function (d) {
+      var f = d.vehicle_check;
+      lead.textContent = quemQuando(f);
+      el.innerHTML = detalheHtml(f);
+      ligarFotos(el, f);
+    }).catch(function (e) { erroPagina(el, e.message || 'Não foi possível abrir a ficha.'); });
+  }
   $('lf-lightbox').addEventListener('click', function () { this.classList.remove('is-on'); });
 
   // ── Histórico da placa ──────────────────────────────────────────────────
-  function historico(placa) { pilha = []; empilhar(function () { carregarHistorico(placa); }); }
+  function historico(placa) { location.href = urlPlaca(placa); }
   function cap(s) { return s ? s[0].toUpperCase() + s.slice(1) : s; }
-  function carregarHistorico(placa) {
-    $('lf-historico').innerHTML = '<div class="lf-center"><i class="lf-spin is-dark"></i></div>'; mostrar('lf-historico');
+  function paginaHistorico(placa, el, lead) {
+    if (!placaValida(placa)) return erroPagina(el, 'Placa inválida.');
     api('GET', '/owner/vehicle_checks?plate=' + encodeURIComponent(placa)).then(function (d) {
       var desde = d.since ? new Date(d.since) : null;
-      $('lf-historico').innerHTML = '<div class="lf-wrap">' +
-        '<button type="button" class="lf-back" data-voltar aria-label="Voltar">' + ic('chevron-left', 18) + '</button>' +
-        '<div style="margin-top:18px">' + placaHtml(d.plate, true) + '</div>' +
-        (d.vehicle_model ? '<p class="lf-lead">' + esc(d.vehicle_model) + '</p>' : '') +
+      lead.textContent = d.vehicle_model || '';
+      el.innerHTML = '<div>' + placaHtml(d.plate, true) + '</div>' +
         // Número grande em destaque, como a wiemer: "quanto eu sei desse carro?"
         '<div class="lf-num"><b>' + d.count + '</b><span>' + (d.count === 1 ? 'ficha' : 'fichas') + (desde ? ' desde ' + MESES[desde.getMonth()] + '/' + desde.getFullYear() : '') + '</span></div>' +
         (d.recurring || []).map(function (r) {
@@ -779,25 +805,27 @@
         }).join('') +
         '<h3 class="lf-secao">Fichas</h3>' +
         (d.checks.length ? d.checks.map(function (c) {
-          return '<button type="button" class="lf-row" data-ficha="' + c.id + '" style="margin-top:10px"><span class="lf-row-ic">' + ic(c.mode === 'photos' ? 'camera' : 'edit-3', 20) + '</span>' +
+          return '<a class="lf-row" href="' + urlFicha(c.id) + '" style="margin-top:10px"><span class="lf-row-ic">' + ic(c.mode === 'photos' ? 'camera' : 'edit-3', 20) + '</span>' +
             '<span>' + esc(fmtQuando(c.recorded_at)) + '<small>' + esc(cap([
               c.mode === 'photos' ? c.photos_count + ' fotos' : 'desenho',
               c.damage_count ? c.damage_count + (c.damage_count === 1 ? ' avaria' : ' avarias') : 'sem avarias',
               c.recorded_by
-            ].filter(Boolean).join(' · '))) + '</small></span>' + ic('chevron-right', 18) + '</button>';
-        }).join('') : '<p class="lf-lead">Nenhuma ficha deste carro ainda.</p>') +
-      '</div>';
-      ligarVoltar('lf-historico');
-      $('lf-historico').querySelectorAll('[data-ficha]').forEach(function (b) { b.addEventListener('click', function () { var id = b.dataset.ficha; empilhar(function () { carregarDetalhe(id); }); }); });
-    }).catch(function (e) {
-      $('lf-historico').innerHTML = '<div class="lf-wrap"><button type="button" class="lf-back" data-voltar aria-label="Voltar">' + ic('chevron-left', 18) + '</button><div class="lf-center">' + esc(e.message || 'Não foi possível abrir o histórico.') + '</div></div>';
-      ligarVoltar('lf-historico');
-    });
+            ].filter(Boolean).join(' · '))) + '</small></span>' + ic('chevron-right', 18) + '</a>';
+        }).join('') : '<p class="lf-lead">Nenhuma ficha deste carro ainda.</p>');
+    }).catch(function (e) { erroPagina(el, e.message || 'Não foi possível abrir o histórico.'); });
   }
+  // Voltar das páginas: se veio de outra página do site, volta pra ela (o
+  // painel, o histórico); aberta direto pelo link, vai pro back_href.
+  var pgVoltar = $('lf-pg-voltar');
+  if (pgVoltar) pgVoltar.addEventListener('click', function (e) {
+    var mesmoSite = document.referrer && document.referrer.indexOf(location.origin + '/') === 0;
+    if (mesmoSite && history.length > 1) { e.preventDefault(); history.back(); }
+  });
 
   window.LoovFicha = {
     configurar: function (s) { settings = s || null; },
     abrir: abrir, ver: ver, historico: historico,
+    paginaDetalhe: paginaDetalhe, paginaHistorico: paginaHistorico,
     placaValida: placaValida, limparPlaca: limparPlaca
   };
 })();

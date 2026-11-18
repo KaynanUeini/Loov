@@ -1,0 +1,16 @@
+<%#
+  Ficha salva, só leitura (OwnerFichaDetalheScreen no app). Mesmo cabeçalho e
+  alinhamento das outras páginas da conta; o corpo é o do LoovFicha.
+%>
+<script src="/vendor/feather-4.29.2.min.js"></script>
+<div class="lf-pg">
+  <div class="lf-pg-wrap">
+    <%= render "shared/page_head", back_href: root_path, back_id: "lf-pg-voltar", title: "Ficha de entrada", lead_id: "lf-pg-lead" %>
+    <div class="lf-pg-corpo" id="lf-pg-corpo"><div class="lf-center"><i class="lf-spin is-dark"></i></div></div>
+  </div>
+</div>
+<%= render "shared/ficha" %>
+<script>
+  LoovFicha.paginaDetalhe(<%= @id %>, document.getElementById('lf-pg-corpo'), document.getElementById('lf-pg-lead'));
+  if (window.feather) feather.replace();
+</script>

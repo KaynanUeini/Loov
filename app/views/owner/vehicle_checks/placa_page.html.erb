@@ -1,0 +1,16 @@
+<%#
+  Histórico de uma placa (OwnerFichaHistoricoScreen no app): fichas do carro
+  neste lava-rápido e as avarias que se repetem. Página própria, com endereço.
+%>
+<script src="/vendor/feather-4.29.2.min.js"></script>
+<div class="lf-pg">
+  <div class="lf-pg-wrap">
+    <%= render "shared/page_head", back_href: (current_user.owner? ? owner_ficha_path : root_path), back_id: "lf-pg-voltar", title: "Histórico da placa", lead_id: "lf-pg-lead" %>
+    <div class="lf-pg-corpo" id="lf-pg-corpo"><div class="lf-center"><i class="lf-spin is-dark"></i></div></div>
+  </div>
+</div>
+<%= render "shared/ficha" %>
+<script>
+  LoovFicha.paginaHistorico(<%= raw json_escape(@placa.to_json) %>, document.getElementById('lf-pg-corpo'), document.getElementById('lf-pg-lead'));
+  if (window.feather) feather.replace();
+</script>
