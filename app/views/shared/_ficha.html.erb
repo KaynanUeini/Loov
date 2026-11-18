@@ -10,9 +10,10 @@
     LoovFicha.historico(placa)              fichas da placa e avarias que se repetem
 
   O que muda do app, por ser navegador:
-    · Fotos pela câmera do celular (input com capture) ou por arquivo no
-      computador, em vez da câmera dentro do app. O contorno do carro vira a
-      ilustração da foto pedida, antes de abrir a câmera.
+    · A câmera abre ao vivo dentro do quadro (getUserMedia), com o contorno
+      por cima, como no app. Sem câmera ou sem permissão, o obturador cai no
+      input com capture (câmera do celular ou arquivo no computador).
+      A luz só aparece onde o navegador expõe a lanterna (Chrome no Android).
     · Cada foto vai pro servidor (POST …/vehicle_check/photo), que guarda no
       R2: o navegador não manda direto pro R2 sem CORS no bucket.
     · A conferência é a mesma: qualidade no aparelho (o mesmo cálculo de
@@ -114,8 +115,18 @@
   .lf-passo { margin-top: 12px; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px; color: var(--stone); }
   .lf-dtitle { margin: 2px 0 0; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 28px; letter-spacing: -.5px; color: var(--cream); }
   .lf-cam { position: relative; margin-top: 14px; aspect-ratio: 4 / 3; border-radius: 20px; background: #3a342c; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-  .lf-cam svg { max-width: 82%; height: auto; }
-  .lf-cam-dica { position: absolute; bottom: 14px; left: 0; right: 0; text-align: center; font-size: 14px; color: var(--cream); }
+  .lf-cam svg { position: relative; z-index: 1; max-width: 82%; height: auto; }
+  /* No celular o quadro ocupa a altura que sobra, como o camBox (flex: 1) do app. */
+  @media (max-width: 600px) {
+    #lf-fotos .lf-wrap { display: flex; flex-direction: column; height: 100%; }
+    #lf-fotos .lf-cam { aspect-ratio: auto; flex: 1 1 0; min-height: 240px; }
+  }
+  /* O convite dos alertas do Last Minute fica no rodapé, por cima do obturador. */
+  html:has(#lf.is-on) .lma-enable { display: none !important; }
+  .lf-cam video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .lf-cam-dica { position: absolute; z-index: 1; bottom: 14px; left: 0; right: 0; text-align: center; font-size: 14px; color: var(--cream); text-shadow: 0 1px 4px rgba(0,0,0,.5); }
+  .lf-cam.is-flash::after { content: ''; position: absolute; inset: 0; z-index: 2; background: #fff; animation: lf-flash .25s ease-out forwards; }
+  @keyframes lf-flash { from { opacity: .8; } to { opacity: 0; } }
   .lf-cam.is-pronto { flex-direction: column; gap: 10px; }
   .lf-cam.is-pronto b { font-size: 16px; }
   .lf-cam img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
@@ -136,6 +147,8 @@
   .lf-cambt { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; }
   .lf-pill { min-width: 104px; height: 44px; padding: 0 14px; border-radius: 22px; border: 0; background: rgba(250,250,246,.12); color: var(--cream); font-size: 13px; font-weight: 500; }
   .lf-pill[disabled] { opacity: .4; cursor: default; }
+  .lf-pill.is-on { background: var(--cream); color: var(--ink); }
+  .lf-pill svg.feather { display: inline-block; vertical-align: -2px; margin-right: 4px; }
   .lf-shutter { width: 76px; height: 76px; border-radius: 50%; border: 4px solid var(--cream); background: transparent; display: flex; align-items: center; justify-content: center; padding: 0; }
   .lf-shutter i { width: 58px; height: 58px; border-radius: 50%; background: var(--cream); display: flex; align-items: center; justify-content: center; color: var(--ink); }
   .lf-revisar { height: 56px; padding: 0 28px; border-radius: 28px; border: 0; background: var(--cream); color: var(--ink); font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
@@ -281,8 +294,10 @@
     document.documentElement.style.overflow = 'hidden';
     ['lf-sheet', 'lf-fotos', 'lf-desenho', 'lf-revisar', 'lf-detalhe', 'lf-historico'].forEach(function (v) { $(v).classList.toggle('is-on', v === id); });
     $(id).scrollTop = 0;
+    if (id === 'lf-fotos') ligarCamera(); else pararCamera();
   }
   function fechar() {
+    pararCamera();
     $('lf').classList.remove('is-on'); $('lf').setAttribute('aria-hidden', 'true');
     document.documentElement.style.overflow = '';
     pilha = []; st = null;
@@ -321,6 +336,58 @@
       return '<svg width="300" height="155" viewBox="0 0 330 170"' + (label === 'right' ? ' style="transform:scaleX(-1)"' : '') + ' aria-hidden="true"><path ' + DASH + ' d="M20 118 L20 96 Q22 84 40 80 L92 72 L128 40 Q136 34 150 34 L228 34 Q242 34 252 44 L282 74 L304 80 Q314 84 314 96 L314 118 M20 118 L52 118 M118 118 L222 118 M288 118 L314 118 M104 72 L134 44 L186 44 L186 72 Z M196 44 L234 44 L264 72 L196 72 Z"/><circle cx="85" cy="118" r="26" ' + DASH + '/><circle cx="255" cy="118" r="26" ' + DASH + '/></svg>';
     }
     return '<svg width="250" height="185" viewBox="0 0 260 190" aria-hidden="true"><path ' + DASH + ' d="M30 150 L30 98 Q32 82 50 78 L72 40 Q78 30 92 30 L168 30 Q182 30 188 40 L210 78 Q228 82 230 98 L230 150 Z M80 76 L94 44 L166 44 L180 76 Z M44 116 L76 116 M184 116 L216 116 M96 132 L164 132 M34 150 L34 172 L64 172 L64 150 M196 150 L196 172 L226 172 L226 150"/></svg>';
+  }
+
+  // ── Câmera ao vivo ──────────────────────────────────────────────────────
+  // Fica ligada só enquanto a tela das fotos está aberta. renderFotos troca o
+  // HTML, então o <video> é recriado e recebe o mesmo stream de novo.
+  var cam = { stream: null, pedindo: false, negada: false, luz: false, temLuz: false };
+  function ligarCamera() {
+    if (cam.stream || cam.pedindo || cam.negada) return;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { cam.negada = true; return; }
+    cam.pedindo = true;
+    navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1440 } } })
+      .then(function (s) {
+        cam.pedindo = false;
+        if (!$('lf-fotos').classList.contains('is-on')) { s.getTracks().forEach(function (t) { t.stop(); }); return; }
+        cam.stream = s;
+        var tr = s.getVideoTracks()[0], caps = tr && tr.getCapabilities ? tr.getCapabilities() : {};
+        cam.temLuz = !!caps.torch; cam.luz = false;
+        if (st) renderFotos();
+      })
+      .catch(function () {
+        cam.pedindo = false; cam.negada = true;
+        if (st && $('lf-fotos').classList.contains('is-on')) { renderFotos(); toast('Sem acesso à câmera. O botão abre a câmera do celular ou um arquivo.'); }
+      });
+  }
+  function pararCamera() {
+    if (cam.stream) cam.stream.getTracks().forEach(function (t) { t.stop(); });
+    cam.stream = null; cam.luz = false; cam.temLuz = false;
+  }
+  function trocarLuz() {
+    var tr = cam.stream && cam.stream.getVideoTracks()[0];
+    if (!tr) return;
+    var on = !cam.luz;
+    tr.applyConstraints({ advanced: [{ torch: on }] }).then(function () { cam.luz = on; renderFotos(); }).catch(function () { toast('Não deu pra ligar a luz.'); });
+  }
+  // Quadro do vídeo inteiro, na resolução da câmera, como o takePicture do app.
+  function capturar() {
+    var v = $('lf-video');
+    if (!v || !v.videoWidth) return Promise.reject(new Error('A câmera ainda está abrindo.'));
+    var c = document.createElement('canvas');
+    c.width = v.videoWidth; c.height = v.videoHeight;
+    c.getContext('2d').drawImage(v, 0, 0);
+    var box = v.parentNode; box.classList.remove('is-flash'); void box.offsetWidth; box.classList.add('is-flash');
+    return new Promise(function (ok, falha) {
+      var img = new Image(); img.onload = function () { ok(img); }; img.onerror = function () { falha(new Error('Foto não tirada. Tente de novo.')); };
+      img.src = c.toDataURL('image/jpeg', 0.92);
+    });
+  }
+  function disparar() {
+    if (!cam.stream) { $('lf-file').value = ''; $('lf-file').click(); return; }
+    if (st.tirando) return;
+    st.tirando = true;
+    capturar().then(processar).catch(function (e) { toast(e.message); }).finally(function () { if (st) st.tirando = false; });
   }
 
   // ── Imagem: reduzir, medir e base64 ─────────────────────────────────────
@@ -389,6 +456,7 @@
   // ── Folha: placa e modo ─────────────────────────────────────────────────
   function abrir(appt, opts) {
     opts = opts || {};
+    cam.negada = false;
     st = { appt: appt, motivo: opts.motivo || null, onSalva: opts.onSalva, placa: limparPlaca(appt.plate),
            fotos: [], marks: [], sel: null, notas: '', tentativas: {}, refazer: null, detalhe: false, pendente: null, aviso: null, salvando: null };
     renderSheet();
@@ -454,11 +522,11 @@
     var conferindo = st.fotos.some(function (f) { return f.conf === 'conferindo'; });
     var titulo = st.detalhe ? 'Detalhe da avaria' : ok ? 'Fotos prontas' : alvo.nome;
     var passo = st.detalhe ? 'FOTO DE PERTO' : ok ? st.fotos.length + ' FOTOS' : 'FOTO ' + (FOTOS.indexOf(alvo) + 1) + ' DE 4';
-    var cam;
-    if (st.pendente) cam = '<div class="lf-cam"><img src="' + st.pendente.url + '" alt=""></div>';
-    else if (ok && !st.detalhe) cam = '<div class="lf-cam is-pronto">' + ic('check-circle', 40, { color: '#5dc39f' }) + '<b>As 4 fotos estão feitas.</b></div>';
-    else if (st.detalhe) cam = '<div class="lf-cam">' + ic('zoom-in', 40, { color: '#fafaf6', opacity: .85 }) + '<span class="lf-cam-dica">Chegue perto do risco ou amassado</span></div>';
-    else cam = '<div class="lf-cam">' + contorno(alvo.label) + '<span class="lf-cam-dica">Enquadre o carro como no contorno</span></div>';
+    var quadro, aoVivo = !!cam.stream, video = aoVivo ? '<video id="lf-video" autoplay muted playsinline></video>' : '';
+    if (st.pendente) quadro = '<div class="lf-cam"><img src="' + st.pendente.url + '" alt=""></div>';
+    else if (ok && !st.detalhe) quadro = '<div class="lf-cam is-pronto">' + ic('check-circle', 40, { color: '#5dc39f' }) + '<b>As 4 fotos estão feitas.</b></div>';
+    else if (st.detalhe) quadro = '<div class="lf-cam">' + video + (aoVivo ? '' : ic('zoom-in', 40, { color: '#fafaf6', opacity: .85 })) + '<span class="lf-cam-dica">Chegue perto do risco ou amassado</span></div>';
+    else quadro = '<div class="lf-cam">' + video + contorno(alvo.label) + '<span class="lf-cam-dica">' + (aoVivo ? 'Encaixe o carro no contorno' : 'Enquadre o carro como no contorno') + '</span></div>';
 
     var foot;
     if (st.pendente) {
@@ -482,7 +550,7 @@
           (ok && !st.detalhe
             ? '<button type="button" class="lf-revisar" id="lf-rev"' + (conferindo ? ' disabled' : '') + '>' + (conferindo ? '<i class="lf-spin is-dark"></i>Conferindo' : 'Revisar') + '</button>'
             : '<button type="button" class="lf-shutter" id="lf-shot" aria-label="Tirar foto"><i>' + ic('camera', 24) + '</i></button>') +
-          '<span style="min-width:104px"></span>' +
+          (cam.temLuz ? '<button type="button" class="lf-pill' + (cam.luz ? ' is-on' : '') + '" id="lf-luz" aria-pressed="' + cam.luz + '">' + ic('zap', 15) + 'Luz</button>' : '<span style="min-width:104px"></span>') +
         '</div>';
     }
 
@@ -492,7 +560,8 @@
         var feita = st.fotos.some(function (f) { return f.label === g.label; }), atual = alvo && alvo.label === g.label;
         return '<i class="' + (feita ? 'is-feita' : '') + (atual ? ' is-atual' : '') + '"></i>';
       }).join('') + '</div>' +
-      '<div class="lf-passo">' + passo + '</div><h2 class="lf-dtitle">' + esc(titulo) + '</h2>' + cam + foot + '</div>';
+      '<div class="lf-passo">' + passo + '</div><h2 class="lf-dtitle">' + esc(titulo) + '</h2>' + quadro + foot + '</div>';
+    if ($('lf-video')) { $('lf-video').srcObject = cam.stream; var pl = $('lf-video').play(); if (pl && pl.catch) pl.catch(function () {}); }
 
     $('lf-fx').addEventListener('click', fechar);
     $('lf-fotos').querySelectorAll('[data-tipo]').forEach(function (b) { b.addEventListener('click', function () {
@@ -505,31 +574,41 @@
       renderFotos();
     }); });
     if ($('lf-det')) $('lf-det').addEventListener('click', function () { st.refazer = null; st.detalhe = !st.detalhe; st.aviso = null; renderFotos(); });
-    if ($('lf-shot')) $('lf-shot').addEventListener('click', function () { $('lf-file').value = ''; $('lf-file').click(); });
+    if ($('lf-shot')) $('lf-shot').addEventListener('click', disparar);
+    if ($('lf-luz')) $('lf-luz').addEventListener('click', trocarLuz);
     if ($('lf-rev')) $('lf-rev').addEventListener('click', function () { renderRevisar(); mostrar('lf-revisar'); });
     if ($('lf-denovo')) $('lf-denovo').addEventListener('click', function () {
       var a = st.aviso; st.aviso = null;
       if (a && a.origem === 'ia' && a.label !== 'detail') { st.detalhe = false; st.refazer = a.label; }
-      renderFotos(); $('lf-file').value = ''; $('lf-file').click();
+      renderFotos();
+      if (!cam.stream) { $('lf-file').value = ''; $('lf-file').click(); }
     });
     if ($('lf-mesmo')) $('lf-mesmo').addEventListener('click', usarMesmoAssim);
   }
 
   function falhou(label) { st.tentativas[label] = (st.tentativas[label] || 0) + 1; }
 
+  // Mesmo caminho pra foto da câmera ao vivo e pra do input.
+  function processar(img) {
+    if (!st) return;
+    var label = st.detalhe ? 'detail' : (proxima() || {}).label;
+    if (!label) return;
+    var url = reduzir(img, 1600, 0.6);
+    var q = qualidade(img);
+    if (!q.ok) { falhou(label); st.aviso = { label: label, motivo: q.motivo, url: url, img: img, origem: 'local' }; renderFotos(); return; }
+    st.aviso = null;
+    if (label === 'detail') { st.pendente = { url: url, img: img }; renderFotos(); return; }
+    aceitar(label, url, img, null, true);
+  }
   $('lf-file').addEventListener('change', function () {
     var file = this.files && this.files[0];
     if (!file || !st) return;
-    var label = st.detalhe ? 'detail' : (proxima() || {}).label;
-    if (!label) return;
-    carregar(file).then(function (img) {
-      var url = reduzir(img, 1600, 0.6);
-      var q = qualidade(img);
-      if (!q.ok) { falhou(label); st.aviso = { label: label, motivo: q.motivo, url: url, img: img, origem: 'local' }; renderFotos(); return; }
-      st.aviso = null;
-      if (label === 'detail') { st.pendente = { url: url, img: img }; renderFotos(); return; }
-      aceitar(label, url, img, null, true);
-    }).catch(function (e) { toast(e.message); });
+    carregar(file).then(processar).catch(function (e) { toast(e.message); });
+  });
+  // Celular bloqueado ou outra aba: solta a câmera e pede de novo na volta.
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) { if (cam.stream) { pararCamera(); if (st) renderFotos(); } }
+    else if (st && $('lf-fotos').classList.contains('is-on')) ligarCamera();
   });
 
   // Guarda a guiada; a IA confere em segundo plano enquanto a próxima é tirada.

@@ -15,9 +15,10 @@ Rails.application.config.action_dispatch.default_headers = {
   "Referrer-Policy"        => "strict-origin-when-cross-origin",
 
   # Permissions-Policy — libera geolocation no próprio domínio (clientes
-  # precisam pra encontrar lava-rápidos perto). Os outros sensores ficam
+  # precisam pra encontrar lava-rápidos perto) e camera (a ficha do carro
+  # abre a câmera ao vivo no site). Os outros sensores ficam
   # bloqueados por default.
-  "Permissions-Policy"     => "geolocation=(self), camera=(), microphone=(), gyroscope=(), payment=()",
+  "Permissions-Policy"     => "geolocation=(self), camera=(self), microphone=(), gyroscope=(), payment=()",
 
   # Remove header que revela que usamos Ruby on Rails
   "X-Powered-By"           => nil,
