@@ -379,6 +379,9 @@ module Owner
           client:     a.display_client,
           service:    a.service&.title,
           gross:      bruto.round(2),
+          # Quanto o vale de fidelidade abateu: o preço já vem com o desconto
+          # (serviço grátis entra como R$ 0,00), isto só explica a conta.
+          reward:     a.reward_discount.to_f.round(2),
           commission: comissao.round(2),
           value:      (bruto - comissao).round(2),
           tags:       tags

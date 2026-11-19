@@ -532,6 +532,15 @@
       .catch(function (s) { why.cache[b.key] = { erro: s === 403 ? 'dono' : true }; })
       .then(function () { if (my === why.seq) renderWhy(); });
   }
+  // A conta por trás do valor: preço cheio menos o vale e/ou a comissão.
+  function contaHtml(a) {
+    var vale = Number(a.reward) || 0, com = Number(a.commission) || 0;
+    if (!vale && !com) return '';
+    var partes = [money(Number(a.gross) + vale)];
+    if (vale) partes.push(money(vale) + ' vale');
+    if (com) partes.push(money(com) + ' Loov');
+    return '<small>' + partes.join(' − ') + '</small>';
+  }
   function tagHtml(t) { return '<span class="fn-tag' + (t === 'Last Minute' || t === 'Hora Off' ? ' is-coral' : '') + '">' + esc(t) + '</span>'; }
   function renderWhy() {
     var box = $('fn-why'); if (!box || !st.data) return;
@@ -556,7 +565,7 @@
       fat += (mes ? '<div class="fn-why-sub">ATENDIMENTOS</div>' : '') + mostra.map(function (a) {
         return '<div class="fn-why-row"><span class="fn-why-time">' + esc(a.when) + '</span>' +
           '<span class="fn-why-main"><b>' + esc(a.client) + '</b><small>' + esc(a.service || '') + '</small>' + ((a.tags || []).length ? '<span class="fn-tags">' + a.tags.map(tagHtml).join('') + '</span>' : '') + '</span>' +
-          '<em>' + money(a.value) + (Number(a.commission) > 0 ? '<small>' + money(a.gross) + ' − ' + money(a.commission) + ' Loov</small>' : '') + '</em></div>';
+          '<em>' + money(a.value) + contaHtml(a) + '</em></div>';
       }).join('');
       if (mes && ap.length > 6) fat += '<button type="button" class="fn-why-more" data-why-all>' + (why.todos ? 'Mostrar menos' : 'Ver os ' + ap.length + ' atendimentos') + '</button>';
     } else {
