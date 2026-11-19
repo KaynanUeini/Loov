@@ -474,36 +474,82 @@
   .lh-scr + .lh-scr { opacity: 0; transform: translateX(14%); }
   .lh-scr.is-past { opacity: 0; transform: translateX(-14%); }
   .lh-scr.is-on { opacity: 1; transform: none; }
-  .lh-scr-k { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.4px; color: var(--ash); text-transform: uppercase; }
-  .lh-scr-t { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 23px; letter-spacing: -0.03em; margin: 4px 0 14px; }
-  .lh-svc { display: flex; justify-content: space-between; align-items: center; padding: 13px 14px; border-radius: 14px; border: 1px solid var(--stone); background: var(--paper); margin-bottom: 8px; font-size: 13.5px; font-weight: 600; transition: border-color .4s ease, background .4s ease; }
-  .lh-svc small { display: block; font-weight: 400; font-size: 11.5px; color: var(--graphite); margin-top: 2px; }
-  .lh-svc span { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px; }
-  .lh-scr.is-on .lh-svc.is-pick { border-color: var(--coral-500); background: var(--coral-50); transition-delay: .45s; }
-  .lh-days { display: flex; gap: 6px; margin-bottom: 14px; }
-  .lh-days span { flex: 1; text-align: center; padding: 8px 0; border-radius: 12px; border: 1px solid var(--stone); font-size: 11px; color: var(--graphite); background: var(--paper); }
-  .lh-days span b { display: block; font-family: 'Space Grotesk', sans-serif; font-size: 17px; color: var(--ink); }
-  .lh-days span.is-on { background: var(--ink); border-color: var(--ink); color: #cfc8bb; }
-  .lh-days span.is-on b { color: var(--cream); }
-  .lh-times { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
-  .lh-times span { text-align: center; padding: 10px 0; border-radius: 11px; border: 1px solid var(--stone); background: var(--paper); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; transition: background .35s ease, color .35s ease, border-color .35s ease, transform .35s ease; }
-  .lh-times span.is-off { color: var(--ash); text-decoration: line-through; background: transparent; }
-  .lh-scr.is-on .lh-times span.is-pick { background: var(--coral-500); border-color: var(--coral-500); color: #fff; transform: scale(1.06); transition-delay: .45s; }
-  .lh-scr-cta { margin-top: auto; height: 48px; border-radius: 99px; background: var(--ink); color: var(--cream); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; }
-  .lh-done { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
-  .lh-done-check { width: 92px; height: 92px; border-radius: 50%; background: #2fa36b; display: flex; align-items: center; justify-content: center; transform: scale(.4); opacity: 0; transition: transform .6s cubic-bezier(.3,1.6,.5,1) .25s, opacity .3s ease .25s; }
-  .lh-scr.is-on .lh-done-check { transform: none; opacity: 1; }
-  .lh-done b { font-family: 'Space Grotesk', sans-serif; font-size: 26px; letter-spacing: -0.03em; margin-top: 20px; }
-  .lh-done span { font-size: 13px; color: var(--graphite); margin-top: 4px; }
-  .lh-done-rows { width: 100%; margin-top: 26px; display: grid; gap: 8px; text-align: left; }
-  .lh-done-rows div { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; background: var(--paper); border: 1px solid var(--stone); font-size: 12.5px; color: var(--graphite); opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .5s ease; }
-  .lh-done-rows div b { color: var(--ink); font-weight: 600; }
-  .lh-scr.is-on .lh-done-rows div { opacity: 1; transform: none; }
-  .lh-scr.is-on .lh-done-rows div:nth-child(1) { transition-delay: .6s; }
-  .lh-scr.is-on .lh-done-rows div:nth-child(2) { transition-delay: .75s; }
-  .lh-stars { color: var(--coral-500); letter-spacing: 2px; margin-left: auto; }
 
   .lh-how-box .lh-phone { width: 320px; height: 650px; }
+  /* Telas do app do cliente (CarWashDetail, Booking, confirmação) */
+  .lh-scr { padding: 0; }
+  .c-hero { height: 140px; background: linear-gradient(160deg, #3a342c, #1a1612); display: flex; align-items: center; justify-content: center; }
+  .c-logo { width: 54px; height: 54px; border-radius: 16px; background: var(--coral-500); color: #fff; display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 18px; letter-spacing: -0.03em; }
+  .c-logo.is-sm { width: 38px; height: 38px; border-radius: 11px; font-size: 13px; flex-shrink: 0; }
+  .c-stats { margin: -28px 12px 0; padding: 14px; border-radius: 18px; background: var(--paper); border: 1px solid var(--stone); box-shadow: 0 4px 14px -8px rgba(25,20,15,.25); }
+  .c-stats-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .c-stats-top b { display: block; font-family: 'Space Grotesk', sans-serif; font-size: 17px; letter-spacing: -0.03em; }
+  .c-stats-top small { display: block; font-size: 10.5px; color: var(--graphite); margin-top: 2px; }
+  .c-stats-top em { font-style: normal; font-size: 9.5px; font-weight: 600; color: #23744a; background: #d1ebd6; padding: 3px 8px; border-radius: 99px; }
+  .c-stats-row { display: flex; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--stone); }
+  .c-stats-row > span { flex: 1; text-align: center; }
+  .c-stats-row > span + span { border-left: 1px solid var(--stone); }
+  .c-stats-row i { font-style: normal; display: inline-flex; align-items: center; gap: 3px; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 12px; }
+  .c-stats-row small { display: block; font-family: 'JetBrains Mono', monospace; font-size: 7.5px; letter-spacing: .4px; color: var(--ash); margin-top: 2px; }
+  .c-seg { display: flex; gap: 3px; margin: 12px 12px 0; padding: 3px; border-radius: 99px; background: var(--sand); }
+  .c-seg span { flex: 1; height: 28px; border-radius: 99px; display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 600; color: var(--graphite); }
+  .c-seg span.is-on { background: var(--paper); color: var(--ink); box-shadow: 0 1px 3px rgba(25,20,15,.08); }
+  .c-hint { margin: 10px 14px 6px; font-size: 10px; color: var(--ash); }
+  .c-svc { display: flex; align-items: center; gap: 10px; margin: 0 12px 7px; padding: 11px; border-radius: 14px; background: var(--paper); border: 1px solid var(--stone); transition: border-color .4s ease, box-shadow .4s ease; }
+  .lh-scr.is-on .c-svc.is-pick { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); transition-delay: .45s; }
+  .c-svc-ic { flex: 0 0 36px; height: 36px; border-radius: 11px; background: var(--sand); border: 1px solid var(--stone); display: flex; align-items: center; justify-content: center; }
+  .c-svc-t { flex: 1; min-width: 0; }
+  .c-svc-t b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 12.5px; }
+  .c-svc-t small { display: block; font-size: 9.5px; color: var(--graphite); margin-top: 1px; }
+  .c-svc-t em { display: block; font-style: normal; font-family: 'JetBrains Mono', monospace; font-size: 8.5px; color: var(--ash); margin-top: 3px; }
+  .c-svc-p { text-align: right; }
+  .c-svc-p b { display: block; font-family: 'Space Grotesk', sans-serif; font-size: 15px; letter-spacing: -0.03em; }
+  .c-svc-p i { font-style: normal; display: inline-flex; align-items: center; font-size: 9px; font-weight: 600; color: var(--coral-500); }
+  .c-head { display: flex; align-items: center; gap: 8px; padding: 48px 14px 0; }
+  .c-head i { flex: 0 0 30px; height: 30px; border-radius: 50%; background: var(--sand); display: flex; align-items: center; justify-content: center; }
+  .c-head b { flex: 1; text-align: center; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px; }
+  .c-head span { width: 30px; }
+  .c-prog { display: flex; gap: 6px; margin: 12px 14px; }
+  .c-prog i { flex: 1; height: 3px; border-radius: 2px; background: var(--sand); }
+  .c-prog i.on { background: var(--coral-500); }
+  .c-sum { display: flex; align-items: center; gap: 9px; margin: 0 14px 14px; padding: 10px; border-radius: 12px; background: var(--sand); }
+  .c-sum > span:not(.c-logo) { flex: 1; min-width: 0; }
+  .c-sum b { display: block; font-size: 11.5px; }
+  .c-sum small { display: block; font-size: 9.5px; color: var(--graphite); margin-top: 1px; }
+  .c-sum em { font-style: normal; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 14px; }
+  .c-lbl { margin: 0 14px 8px; font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 1px; color: var(--ash); }
+  .c-days { display: flex; gap: 7px; margin: 0 14px 16px; }
+  .c-days span { flex: 0 0 52px; height: 62px; border-radius: 14px; background: var(--paper); border: 1px solid var(--stone); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .c-days small { font-family: 'JetBrains Mono', monospace; font-size: 7.5px; color: var(--graphite); opacity: .7; }
+  .c-days b { font-family: 'Space Grotesk', sans-serif; font-size: 18px; line-height: 1.1; }
+  .c-days span.is-on { background: var(--ink); border-color: var(--ink); }
+  .c-days span.is-on small, .c-days span.is-on b { color: var(--cream); opacity: 1; }
+  .c-times { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin: 0 14px; }
+  .c-times span { height: 38px; border-radius: 11px; background: var(--paper); border: 1px solid var(--stone); display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 13px; transition: background .35s ease, color .35s ease, border-color .35s ease; }
+  .c-times span.is-off { background: var(--sand); color: var(--ash); text-decoration: line-through; }
+  .lh-scr.is-on .c-times span.is-pick { background: var(--ink); border-color: var(--ink); color: var(--cream); transition-delay: .45s; }
+  .c-bar { position: absolute; left: 10px; right: 10px; bottom: 14px; display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 26px; background: var(--paper); box-shadow: 0 10px 24px -12px rgba(25,20,15,.4); }
+  .c-bar > span { flex: 1; padding-left: 10px; }
+  .c-bar small { display: block; font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 1px; color: var(--ash); }
+  .c-bar b { font-family: 'Space Grotesk', sans-serif; font-size: 16px; }
+  .c-bar em { font-style: normal; display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 16px; border-radius: 20px; background: var(--coral-500); color: var(--cream); font-size: 12px; font-weight: 600; }
+  .lh-scr[data-scr="2"] { padding: 46px 16px 16px; }
+  .c-check { width: 64px; height: 64px; border-radius: 50%; background: var(--coral-500); margin: 0 auto; display: flex; align-items: center; justify-content: center; transform: scale(.4); opacity: 0; transition: transform .6s cubic-bezier(.3,1.6,.5,1) .25s, opacity .3s ease .25s; }
+  .lh-scr.is-on .c-check { transform: none; opacity: 1; }
+  .c-ok { margin-top: 12px; text-align: center; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 26px; letter-spacing: -0.04em; }
+  .c-ok-s { text-align: center; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 16px; letter-spacing: -0.03em; color: var(--graphite); }
+  .c-card { margin-top: 14px; padding: 13px; border-radius: 16px; background: var(--paper); border: 1px solid var(--stone); }
+  .c-lbl2 { display: block; font-family: 'JetBrains Mono', monospace; font-size: 8px; letter-spacing: 1px; color: var(--ash); }
+  .c-when { display: block; margin-top: 2px; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 16px; }
+  .c-pill { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; margin-top: 8px; border-radius: 99px; border: 1.5px solid var(--ink); font-size: 10.5px; font-weight: 600; }
+  .c-div { display: block; height: 1px; background: var(--stone); margin: 10px 0; }
+  .c-shop { display: flex; align-items: center; gap: 8px; }
+  .c-shop b { display: block; font-size: 11.5px; }
+  .c-shop small { display: block; font-size: 9.5px; color: var(--graphite); }
+  .c-addr { display: block; margin-top: 8px; font-size: 9.5px; color: var(--graphite); }
+  .c-pay { display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; color: var(--graphite); }
+  .c-pay b { font-family: 'Space Grotesk', sans-serif; font-size: 16px; color: var(--ink); }
+  .c-cta { margin-top: 12px; height: 42px; border-radius: 22px; background: var(--ink); color: var(--cream); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; }
   /* Com movimento (JS): a seção presa ocupa a tela, centrada. */
   .lh-motion .lh-how { padding: 0; }
   .lh-motion .lh-how-pinned { min-height: 100vh; display: flex; align-items: center; padding: 84px 0 24px; }
@@ -574,7 +620,7 @@
     .lh-hero::before, .lh-dot-live { animation: none; }
     .lh-toast { animation: none; transform: none; }
     .lh-ds, .lh-feat-s { transition: none; }
-    .lh-scr, .lh-done-check, .lh-done-rows div { transition: none; }
+    .lh-scr, .c-check, .c-svc, .c-times span { transition: none; }
   }
 </style>
 
@@ -693,38 +739,50 @@
             <div class="lh-phone">
               <div class="lh-screen" style="padding:0">
                 <div class="lh-notch" style="z-index:2"></div>
+                <%# As três telas do app do cliente, desenhadas como são
+                    (CarWashDetailScreen, BookingScreen e a confirmação). %>
                 <div class="lh-scr is-on" data-scr="0">
-                  <div class="lh-scr-k">Lavagem completa · aberto</div>
-                  <div class="lh-scr-t">Serviços</div>
-                  <div class="lh-svc"><div>Lavagem simples<small>Por fora, 30 min</small></div><span>R$ 40</span></div>
-                  <div class="lh-svc is-pick"><div>Lavagem completa<small>Dentro e fora, 1 h</small></div><span>R$ 70</span></div>
-                  <div class="lh-svc"><div>Higienização<small>Bancos e carpete, 3 h</small></div><span>R$ 220</span></div>
-                  <div class="lh-svc"><div>Polimento<small>Brilho e proteção, 4 h</small></div><span>R$ 280</span></div>
-                  <div class="lh-scr-cta">Escolher horário</div>
-                </div>
-                <div class="lh-scr" data-scr="1">
-                  <div class="lh-scr-k">Lavagem completa · R$ 70</div>
-                  <div class="lh-scr-t">Quando?</div>
-                  <div class="lh-days">
-                    <span class="is-on">HOJE<b>21</b></span><span>QUI<b>22</b></span><span>SEX<b>23</b></span><span>SÁB<b>24</b></span>
-                  </div>
-                  <div class="lh-times">
-                    <span class="is-off">09:00</span><span>10:30</span><span class="is-off">11:00</span>
-                    <span>13:00</span><span class="is-pick">14:30</span><span>15:00</span>
-                    <span>16:30</span><span class="is-off">17:00</span><span>18:00</span>
-                  </div>
-                  <div class="lh-scr-cta">Confirmar agendamento</div>
-                </div>
-                <div class="lh-scr" data-scr="2">
-                  <div class="lh-done">
-                    <div class="lh-done-check"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-                    <b>Agendado!</b>
-                    <span>Lavagem completa · hoje às 14:30</span>
-                    <div class="lh-done-rows">
-                      <div>🔔 <span><b>Lembrete</b> na véspera</span></div>
-                      <div>⭐ <span><b>Avalie</b> depois de lavar</span><span class="lh-stars">★★★★★</span></div>
+                  <div class="c-hero"><span class="c-logo">ZÉ</span></div>
+                  <div class="c-stats">
+                    <div class="c-stats-top"><span><b>Lava Rápido do Zé</b><small>Vila Mariana</small></span><em>Aberto</em></div>
+                    <div class="c-stats-row">
+                      <span><i><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#dd7852" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>4,8</i><small>32 AVALIAÇÕES</small></span>
+                      <span><i><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#575148" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>08–18h</i><small>HOJE</small></span>
+                      <span><i><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4b8ec0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>R$40</i><small>A PARTIR</small></span>
                     </div>
                   </div>
+                  <div class="c-seg"><span class="is-on">Serviços</span><span>Reviews</span><span>Sobre</span></div>
+                  <div class="c-hint">Toque num serviço para agendar</div>
+                  <div class="c-svc"><span class="c-svc-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#28231c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17h14M6 17l1.5-5h9L18 17M7 13l1-3h8l1 3"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/></svg></span><span class="c-svc-t"><b>Lavagem simples</b><small>Por fora, com secagem</small><em>30 min</em></span><span class="c-svc-p"><b>R$40</b><i>Agendar <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></i></span></div>
+                  <div class="c-svc is-pick"><span class="c-svc-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#28231c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/></svg></span><span class="c-svc-t"><b>Lavagem completa</b><small>Dentro e fora, aspiração</small><em>60 min</em></span><span class="c-svc-p"><b>R$70</b><i>Agendar <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></i></span></div>
+                  <div class="c-svc"><span class="c-svc-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#28231c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg></span><span class="c-svc-t"><b>Higienização</b><small>Bancos e carpete</small><em>180 min</em></span><span class="c-svc-p"><b>R$220</b><i>Agendar <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></i></span></div>
+                </div>
+                <div class="lh-scr" data-scr="1">
+                  <div class="c-head"><i><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#28231c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></i><b>Escolha um horário</b><span></span></div>
+                  <div class="c-prog"><i class="on"></i><i></i></div>
+                  <div class="c-sum"><span class="c-logo is-sm">ZÉ</span><span><b>Lava Rápido do Zé</b><small>Lavagem completa · 60min</small></span><em>R$70</em></div>
+                  <div class="c-lbl">DIA</div>
+                  <div class="c-days"><span class="is-on"><small>NOV</small><b>21</b><small>hoje</small></span><span><small>NOV</small><b>22</b><small>sex</small></span><span><small>NOV</small><b>23</b><small>sáb</small></span><span><small>NOV</small><b>24</b><small>dom</small></span></div>
+                  <div class="c-lbl">HORÁRIO</div>
+                  <div class="c-times"><span class="is-off">09:00</span><span>10:30</span><span class="is-off">11:00</span><span>13:00</span><span class="is-pick">14:30</span><span>15:00</span><span>16:30</span><span class="is-off">17:00</span><span>18:00</span></div>
+                  <div class="c-bar"><span><small>TOTAL</small><b>R$70</b></span><em>Continuar <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fafaf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></em></div>
+                </div>
+                <div class="lh-scr" data-scr="2">
+                  <div class="c-check"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fafaf6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+                  <div class="c-ok">Agendado</div>
+                  <div class="c-ok-s">Seu carro te agradece</div>
+                  <div class="c-card">
+                    <small class="c-lbl2">QUANDO</small>
+                    <b class="c-when">Hoje, 14:30</b>
+                    <span class="c-pill"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#28231c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Adicionar à agenda</span>
+                    <i class="c-div"></i>
+                    <div class="c-shop"><span class="c-logo is-sm">ZÉ</span><span><b>Lava Rápido do Zé</b><small>Lavagem completa · 60 min</small></span></div>
+                    <small class="c-addr">Rua Domingos de Morais, 1200 · Vila Mariana</small>
+                    <span class="c-pill"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#28231c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>Ver rota</span>
+                    <i class="c-div"></i>
+                    <div class="c-pay"><span>Você paga no lava-rápido</span><b>R$ 70,00</b></div>
+                  </div>
+                  <div class="c-cta">Ver meus agendamentos</div>
                 </div>
               </div>
             </div>
