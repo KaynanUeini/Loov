@@ -66,10 +66,23 @@
   .lh-btn:hover svg { transform: translateX(3px); }
   .lh-btn--primary { background: var(--coral-500); color: #fff !important; box-shadow: 0 12px 28px -12px rgba(221,120,82,.8); }
   .lh-btn--primary:hover { background: var(--coral-700); transform: translateY(-2px); }
-  .lh-btn--ghost { color: var(--ink) !important; border: 1px solid var(--stone); background: var(--paper); }
-  .lh-btn--ghost:hover { border-color: var(--ink); transform: translateY(-2px); }
+  .lh-btn--ghost { color: var(--ink) !important; border: 1.5px solid var(--ink); background: transparent; }
+  .lh-btn--ghost:hover { background: var(--sand); transform: translateY(-2px); }
   .lh-btn--light { background: var(--cream); color: var(--ink) !important; }
   .lh-btn--light:hover { transform: translateY(-2px); background: #fff; }
+
+  /* Abertura (~1 s, uma vez por dia): o logo entra e a cortina sobe; o
+     hero começa depois dela. Sem movimento, não aparece. */
+  .lh-intro { display: none; position: fixed; inset: 0; z-index: 200; background: var(--obsidian); align-items: center; justify-content: center; pointer-events: none; animation: lh-intro-sai .6s cubic-bezier(.7,0,.2,1) .55s forwards; }
+  html.lh-abrindo .lh-intro { display: flex; }
+  .lh-intro .loov-brand { box-shadow: inset 0 0 0 1px rgba(250,250,246,.22); animation: lh-intro-logo .45s cubic-bezier(.3,1.6,.5,1) both; }
+  @keyframes lh-intro-logo { from { transform: scale(1.2); opacity: 0; } to { transform: scale(2); opacity: 1; } }
+  @keyframes lh-intro-sai { from { clip-path: inset(0 0 0 0); } to { clip-path: inset(0 0 100% 0); visibility: hidden; } }
+  html.lh-abrindo .lh-kinetic span:nth-child(1) { animation-delay: .8s; }
+  html.lh-abrindo .lh-kinetic span:nth-child(2) { animation-delay: 1.2s; }
+  html.lh-abrindo .lh-kinetic span:nth-child(3) { animation-delay: 1.6s; }
+  html.lh-abrindo .lh-hero-after { animation-delay: 2.1s; }
+  html.lh-abrindo .lh-phone-stage { animation-delay: 1.3s; }
 
   /* Destaque: uma fonte só pras palavras que pedem atenção, sempre coral
      (como a Brier em lime no site do Lando). */
@@ -139,7 +152,7 @@
   /* Logo da loja (shared/_loov_logos): o mesmo emblema da home do cliente,
      do app e do Disponível. O SVG tem forma própria, então o slot é neutro. */
   .lh-app-av { flex: 0 0 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
-  .lh-app-av svg, .lh-item-av svg { width: 100%; height: 100%; display: block; }
+  .lh-app-av svg { width: 100%; height: 100%; display: block; }
   .lh-app-name { font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .lh-app-sub { font-size: 11.5px; color: var(--graphite); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .lh-status { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 1px; padding: 4px 7px; border-radius: 6px; flex-shrink: 0; }
@@ -188,26 +201,75 @@
   .lh-slot-foot div { font-size: 14px; color: #cfc8bb; }
   .lh-slot-foot b { display: block; color: var(--cream); font-size: 16px; }
 
-  /* ── 5. Perto de você ────────────────────────────────────────────── */
-  .lh-near-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; }
-  .lh-list { margin-top: 48px; border-top: 1px solid var(--ink); }
-  .lh-item { display: grid; grid-template-columns: 56px 52px minmax(0, 1fr) auto auto; align-items: center; gap: 18px; padding: 20px 8px; border-bottom: 1px solid var(--stone); text-decoration: none; color: var(--ink) !important; border-radius: 0; transition: background .2s ease, padding .2s ease; }
-  .lh-item:hover { background: var(--paper); padding-left: 16px; padding-right: 16px; }
-  .lh-item-n { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--ash); }
-  .lh-item-av { width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; }
+  /* ── 5. Perto de você: cards lado a lado ─────────────────────────── */
+  .lh-near { padding: 140px 0; }
+  .lh-near-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
+  .lh-near-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 20px; }
   /* Localização sob demanda: o pedido só aparece quando a pessoa quer ver
      os mais perto (pedir ao abrir a página queimaria a permissão — um "não"
      aqui vale pro site inteiro, inclusive a home depois do cadastro). */
-  .lh-near-btn { display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 20px; border-radius: 999px; border: 1px solid var(--ink); background: transparent; color: var(--ink); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; transition: background .2s ease, color .2s ease; }
+  .lh-near-btn { display: inline-flex; align-items: center; gap: 8px; height: 46px; padding: 0 20px; border-radius: 999px; border: 1.5px solid var(--ink); background: transparent; color: var(--ink); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; transition: background .2s ease, color .2s ease; }
   .lh-near-btn:hover { background: var(--ink); color: var(--cream); }
   .lh-near-btn[disabled] { opacity: .6; cursor: progress; }
   .lh-near-btn[hidden] { display: none; }
   .lh-near-note { font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: .5px; color: var(--graphite); }
   .lh-near-note[hidden] { display: none; }
-  .lh-item-name { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 21px; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .lh-item-addr { font-size: 14.5px; color: var(--graphite); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .lh-item-go { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--stone); display: flex; align-items: center; justify-content: center; transition: background .2s ease, border-color .2s ease, color .2s ease; }
-  .lh-item:hover .lh-item-go { background: var(--ink); border-color: var(--ink); color: var(--cream); }
+  .lh-near-prog { display: inline-flex; align-items: center; gap: 12px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--graphite); font-variant-numeric: tabular-nums; }
+  .lh-near-bar { width: 120px; height: 3px; border-radius: 2px; background: var(--stone); overflow: hidden; }
+  .lh-near-bar i { display: block; height: 100%; width: 100%; background: var(--ink); transform-origin: left; transform: scaleX(.17); }
+  .lh-rail { margin-top: 44px; display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin-inline: -32px; padding: 4px 32px 10px; }
+  .lh-rail::-webkit-scrollbar { display: none; }
+  .lh-rail.is-pinned { overflow: visible; scroll-snap-type: none; }
+  .lh-card { position: relative; flex: 0 0 340px; max-width: 78vw; aspect-ratio: 4 / 5; scroll-snap-align: start; border-radius: 28px; border: 1px solid var(--stone); background: var(--paper); color: var(--ink); overflow: hidden; text-align: left; padding: 0; font: inherit; cursor: pointer; isolation: isolate; box-shadow: 0 1px 2px rgba(40,35,28,.04), 0 18px 40px -28px rgba(40,35,28,.5); }
+  .lh-card:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+  .lh-card-f, .lh-card-b { position: absolute; inset: 0; padding: 22px; display: flex; flex-direction: column; justify-content: space-between; }
+  .lh-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .lh-card-av { width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; }
+  .lh-card-av svg { width: 100%; height: 100%; display: block; }
+  .lh-card-n { position: absolute; right: 18px; bottom: 54px; z-index: -1; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 150px; line-height: .8; letter-spacing: -0.08em; color: var(--sand); }
+  .lh-card-name { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 26px; line-height: 1.05; letter-spacing: -0.03em; }
+  .lh-card-addr { display: block; margin-top: 6px; color: var(--graphite); font-size: 14px; line-height: 1.4; }
+  .lh-card-hint { display: none; margin-top: 14px; font-size: 14px; font-weight: 600; }
+  /* Verso: nasce num círculo a partir do cursor (a troca no hover da Lando) */
+  .lh-card-b { background: var(--obsidian); color: var(--cream); clip-path: circle(0px at var(--x, 50%) var(--y, 50%)); transition: clip-path .6s cubic-bezier(.7,0,.2,1); }
+  .lh-card-b small { display: block; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--ash); }
+  .lh-card-big { display: block; margin-top: 8px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 60px; line-height: .9; letter-spacing: -0.05em; font-variant-numeric: tabular-nums; }
+  .lh-card-row { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; }
+  .lh-card-pill { display: inline-flex; align-items: center; height: 40px; padding: 0 16px; border-radius: 999px; border: 1.5px solid var(--cream); font-size: 14px; font-weight: 600; white-space: nowrap; }
+  @media (hover: hover) and (pointer: fine) { .lh-card:hover .lh-card-b, .lh-card:focus-visible .lh-card-b { clip-path: circle(150% at var(--x, 50%) var(--y, 50%)); } }
+  @media (hover: none) { .lh-card-hint { display: block; } .lh-card-b { display: none; } }
+
+  @media (min-width: 768px) {
+    .lh-motion .lh-near { padding: 0; }
+    .lh-motion .lh-near-pin { min-height: 100svh; display: flex; align-items: center; padding: 84px 0 40px; }
+    .lh-motion .lh-near-pin > .lh-wrap { width: 100%; }
+  }
+
+  /* Detalhe que cresce do card */
+  .lh-pop { position: fixed; inset: 0; z-index: 140; pointer-events: none; }
+  .lh-pop.is-on { pointer-events: auto; }
+  .lh-pop-bg { position: absolute; inset: 0; background: rgba(26,22,18,.45); backdrop-filter: blur(4px); opacity: 0; transition: opacity .35s; }
+  .lh-pop.is-on .lh-pop-bg { opacity: 1; }
+  .lh-pop-card { position: absolute; left: 0; right: 0; bottom: 0; max-height: 88svh; overflow: auto; background: var(--paper); color: var(--ink); border-radius: 28px 28px 0 0; padding: 22px 20px calc(24px + env(safe-area-inset-bottom, 0px)); visibility: hidden; transform-origin: 0 0; }
+  @media (min-width: 768px) { .lh-pop-card { left: 50%; right: auto; bottom: auto; top: 50%; width: 560px; border-radius: 28px; transform: translate(-50%, -50%); padding: 28px; } }
+  .lh-pop-in > * { opacity: 0; transform: translateY(14px); transition: opacity .4s, transform .5s cubic-bezier(.7,0,.2,1); }
+  .lh-pop.is-ready .lh-pop-in > * { opacity: 1; transform: none; }
+  .lh-pop.is-ready .lh-pop-in > *:nth-child(2) { transition-delay: .05s; }
+  .lh-pop.is-ready .lh-pop-in > *:nth-child(3) { transition-delay: .1s; }
+  .lh-pop.is-ready .lh-pop-in > *:nth-child(4) { transition-delay: .15s; }
+  .lh-pop-top { display: flex; align-items: center; gap: 14px; }
+  .lh-pop-top .lh-card-av { width: 52px; height: 52px; flex-shrink: 0; }
+  .lh-pop-top b { display: block; font-family: 'Space Grotesk', sans-serif; font-size: 24px; line-height: 1.1; letter-spacing: -0.03em; }
+  .lh-pop-top span.s { display: block; margin-top: 2px; color: var(--graphite); font-size: 14px; }
+  .lh-pop-x { margin-left: auto; flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--sand); color: var(--ink); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .lh-pop-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .lh-pop-lbl { margin: 22px 0 10px; font-size: 14px; font-weight: 600; }
+  .lh-svcs { border: 1px solid var(--stone); border-radius: 18px; overflow: hidden; }
+  .lh-svcs div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 14px 16px; font-size: 15px; }
+  .lh-svcs div + div { border-top: 1px solid var(--stone); }
+  .lh-svcs small { display: block; color: var(--graphite); font-size: 12.5px; margin-top: 1px; }
+  .lh-svcs b { font-family: 'Space Grotesk', sans-serif; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .lh-pop .lh-btn { width: 100%; justify-content: center; margin-top: 22px; }
 
   /* ── 6. Para lava-rápidos ────────────────────────────────────────── */
   .lh-owner { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 64px; align-items: center; }
@@ -340,9 +402,9 @@
     .lh-stat b { font-size: 40px; }
     .lh-stat > span { font-size: 13px; }
     .lh-dark { margin: 0 8px; border-radius: 32px; }
-    .lh-item { grid-template-columns: 52px minmax(0, 1fr) auto; gap: 14px; }
-    .lh-item-n, .lh-item-go { display: none; }
+    .lh-near { padding: 96px 0; }
     .lh-near-head { flex-direction: column; align-items: flex-start; }
+    .lh-rail { margin-inline: -22px; padding-inline: 22px; }
     .lh-foot a { margin: 0 18px 0 0; }
   }
 
@@ -356,6 +418,21 @@
   }
 </style>
 
+<div class="lh-intro" aria-hidden="true">
+  <span class="loov-brand"><span class="glyph"><span class="ring-cream"></span><span class="ring-coral"></span><span class="ring-coral-dot"></span></span><span class="word">loov</span></span>
+</div>
+<script>
+  // Decide antes do hero pintar: abertura só na primeira visita do dia.
+  (function () {
+    try {
+      var hoje = new Date().toISOString().slice(0, 10);
+      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && localStorage.getItem('loov_abertura') !== hoje) {
+        document.documentElement.classList.add('lh-abrindo');
+        localStorage.setItem('loov_abertura', hoje);
+      }
+    } catch (e) {}
+  })();
+</script>
 <canvas class="lh-campo-cv" id="lh-campo" aria-hidden="true" hidden></canvas>
 <div class="lh">
 
@@ -547,43 +624,55 @@
   </section>
 
   <%# ── 5. Perto de você ─────────────────────────────────────────────── %>
+  <%# Cards lado a lado (o modelo da prévia): no computador e no iPad a seção
+      fica presa e a rolagem passa os cards pro lado; no celular a fileira
+      desliza com o dedo. Com mouse, o card vira o verso escuro (preço e
+      horário de hoje) a partir do ponto do cursor; o toque abre o detalhe,
+      que cresce do próprio card, com os serviços e o link pra agendar.
+      Os dados são os mesmos do /car_washes.json, que também refaz a fileira
+      quando a pessoa pede os mais perto. %>
   <% if shops.any? %>
-    <section class="lh-section">
-      <div class="lh-wrap">
-        <div class="lh-near-head">
-          <div>
-            <div class="lh-eyebrow lh-reveal">Na Loov agora</div>
-            <h2 class="lh-h2 lh-reveal" data-delay="1" id="lh-near-title">Lava-rápidos na <span class="lh-dest">Loov.</span></h2>
+    <%
+      hoje = Time.current.in_time_zone("America/Sao_Paulo").wday
+      shops_json = shops.map do |cw|
+        rua  = [cw.try(:logradouro), cw.try(:numero)].compact_blank.join(", ")
+        addr = [rua.presence, cw.try(:bairro).presence].compact.join(" · ").presence || cw.address.to_s
+        {
+          id: cw.id, name: cw.name, addr: addr,
+          open_now: !!@open_car_wash_ids&.include?(cw.id),
+          rating_avg: cw.reviews.average(:rating)&.to_f&.round(1), reviews_count: cw.reviews.count,
+          operating_hours: cw.operating_hours.map { |oh| { day_of_week: oh.day_of_week.to_i, closes_at: oh.closes_at&.strftime("%H:%M") } },
+          services: cw.services.map { |sv| { title: sv.title, price: sv.price.to_f, duration: sv.duration } }
+        }
+      end
+    %>
+    <section class="lh-near" id="lh-perto">
+      <div class="lh-near-pin" id="lh-near-pin">
+        <div class="lh-wrap">
+          <div class="lh-near-head">
+            <div>
+              <div class="lh-eyebrow lh-reveal">Na Loov agora</div>
+              <h2 class="lh-h2 lh-reveal" data-delay="1" id="lh-near-title">Lava-rápidos na <span class="lh-dest">Loov.</span></h2>
+            </div>
+            <div class="lh-near-tools lh-reveal" data-delay="1">
+              <button type="button" class="lh-near-btn" id="lh-near-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span>Ver os mais perto de mim</span>
+              </button>
+              <span class="lh-near-note" id="lh-near-note" hidden>ORDENADO PELA SUA LOCALIZAÇÃO</span>
+              <span class="lh-near-prog" aria-hidden="true"><span id="lh-near-n">01 / <%= format("%02d", shops.size) %></span><span class="lh-near-bar"><i id="lh-near-i"></i></span></span>
+            </div>
           </div>
-          <div class="lh-reveal" data-delay="1">
-            <button type="button" class="lh-near-btn" id="lh-near-btn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-              <span>Ver os mais perto de mim</span>
-            </button>
-            <span class="lh-near-note" id="lh-near-note" hidden>ORDENADO PELA SUA LOCALIZAÇÃO</span>
-          </div>
-        </div>
-        <div class="lh-list lh-reveal" data-delay="2" id="lh-near-list">
-          <% shops.each_with_index do |cw, i| %>
-            <%
-              open = @open_car_wash_ids&.include?(cw.id)
-              rua  = [cw.try(:logradouro), cw.try(:numero)].compact_blank.join(", ")
-              addr = [rua.presence, cw.try(:bairro).presence].compact.join(" · ").presence || cw.address.to_s
-            %>
-            <a href="<%= car_wash_path(cw) %>" class="lh-item">
-              <span class="lh-item-n"><%= format("%02d", i + 1) %></span>
-              <span class="lh-item-av" data-logo="<%= cw.name %>"></span>
-              <span style="min-width:0;">
-                <span class="lh-item-name" style="display:block;"><%= cw.name %></span>
-                <span class="lh-item-addr" style="display:block;"><%= addr %></span>
-              </span>
-              <span class="lh-status <%= open ? 'is-open' : 'is-closed' %>"><%= open ? "ABERTO" : "FECHADO" %></span>
-              <span class="lh-item-go" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
-            </a>
-          <% end %>
+          <div class="lh-rail lh-reveal" data-delay="2" id="lh-near-list" role="list"></div>
         </div>
       </div>
+      <script type="application/json" id="lh-near-data"><%= raw json_escape(shops_json.to_json) %></script>
     </section>
+
+    <div class="lh-pop" id="lh-pop" aria-hidden="true">
+      <div class="lh-pop-bg" id="lh-pop-bg"></div>
+      <div class="lh-pop-card" id="lh-pop-card" role="dialog" aria-modal="true" aria-labelledby="lh-pop-nome"><div class="lh-pop-in" id="lh-pop-in"></div></div>
+    </div>
   <% end %>
 
   <%# ── 6. Para lava-rápidos ─────────────────────────────────────────── %>
@@ -652,16 +741,101 @@
     }
     pintarLogos();
 
-    // ── Perto de você sob demanda ────────────────────────────────────────
-    // Sem localização a lista não tem ordem de distância, então o título não
-    // promete "perto de você". O pedido de permissão só sai no botão. Quem
-    // já deu permissão (ou já tem posição guardada pela home) vê ordenado
-    // direto, sem pedir de novo.
+    // ── Perto de você: cards, verso no hover e detalhe ───────────────────
+    // A fileira sai dos mesmos dados do /car_washes.json (embutidos na página
+    // pra primeira pintura). Sem localização a lista não tem ordem de
+    // distância, então o título não promete "perto de você". O pedido de
+    // permissão só sai no botão; quem já deu permissão (ou já tem posição
+    // guardada pela home) vê ordenado direto, sem pedir de novo.
     var nearBtn = document.getElementById('lh-near-btn');
     var nearList = document.getElementById('lh-near-list');
     var COORDS_KEY = 'loov_last_coords';
+    var lojas = [];
+    try { lojas = JSON.parse((document.getElementById('lh-near-data') || {}).textContent || '[]'); } catch (e) { lojas = []; }
     function escH(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
     function fmtKm(km) { var n = parseFloat(km); if (isNaN(n)) return null; return n < 1 ? Math.round(n * 1000) + ' m' : n.toFixed(1).replace('.', ',') + ' km'; }
+    function fmtPreco(v) { v = Number(v) || 0; return 'R$ ' + (v % 1 ? v.toFixed(2).replace('.', ',') : String(v)); }
+    function fmtDur(min) { min = parseInt(min, 10); if (!min) return ''; if (min < 60) return min + ' min'; var h = Math.floor(min / 60), r = min % 60; return h + ' h' + (r ? ' ' + r : ''); }
+    function fechaHoje(l) {
+      var d = new Date().getDay(), oh = (l.operating_hours || []).filter(function (o) { return Number(o.day_of_week) === d; })[0];
+      return oh && oh.closes_at ? oh.closes_at : null;
+    }
+    function porPreco(l) { return (l.services || []).slice().sort(function (a, b) { return (a.price || 0) - (b.price || 0); }); }
+    function cardHtml(l, i) {
+      var svcs = porPreco(l), menor = svcs[0], fecha = fechaHoje(l);
+      var addr = l.dist ? l.dist + ' · ' + l.addr : l.addr;
+      return '<button type="button" class="lh-card" role="listitem" data-i="' + i + '" aria-label="' + escH(l.name) + ', ' + (l.open_now ? 'aberto' : 'fechado') + '. Ver serviços">' +
+        '<span class="lh-card-n" aria-hidden="true">' + String(i + 1).padStart(2, '0') + '</span>' +
+        '<span class="lh-card-f"><span class="lh-card-top"><span class="lh-card-av" data-logo="' + escH(l.name) + '"></span>' +
+          '<span class="lh-status ' + (l.open_now ? 'is-open' : 'is-closed') + '">' + (l.open_now ? 'ABERTO' : 'FECHADO') + '</span></span>' +
+          '<span><span class="lh-card-name">' + escH(l.name) + '</span><span class="lh-card-addr">' + escH(addr) + '</span><span class="lh-card-hint">Ver serviços →</span></span></span>' +
+        '<span class="lh-card-b" aria-hidden="true"><span><small>' + (l.open_now ? 'Aberto agora' + (fecha ? ' · fecha às ' + escH(fecha) : '') : 'Fechado agora') + '</small>' +
+          (menor ? '<span class="lh-card-big">' + escH(fmtPreco(menor.price)) + '</span><small style="margin-top:8px">a partir de · ' + svcs.length + (svcs.length === 1 ? ' serviço' : ' serviços') + '</small>' : '<span class="lh-card-big">' + escH(l.name.split(' ')[0]) + '</span>') + '</span>' +
+          '<span class="lh-card-row"><small>' + escH(l.addr) + '</small><span class="lh-card-pill">Ver serviços</span></span></span>' +
+      '</button>';
+    }
+    function marcar(p) {
+      var n = Math.min(lojas.length, Math.max(1, Math.round(p * (lojas.length - 1)) + 1));
+      var el = document.getElementById('lh-near-n'), bar = document.getElementById('lh-near-i');
+      if (el) el.textContent = String(n).padStart(2, '0') + ' / ' + String(lojas.length).padStart(2, '0');
+      if (bar) bar.style.transform = 'scaleX(' + (n / Math.max(1, lojas.length)).toFixed(3) + ')';
+    }
+    function pintarCards() {
+      if (!nearList) return;
+      nearList.innerHTML = lojas.map(cardHtml).join('');
+      pintarLogos(nearList);
+      nearList.querySelectorAll('.lh-card').forEach(function (c) {
+        var ponto = function (e) { var r = c.getBoundingClientRect(); c.style.setProperty('--x', (e.clientX - r.left) + 'px'); c.style.setProperty('--y', (e.clientY - r.top) + 'px'); };
+        c.addEventListener('pointerenter', ponto); c.addEventListener('pointerleave', ponto);
+        c.addEventListener('click', function () { abrirPop(c, lojas[+c.dataset.i]); });
+      });
+      marcar(0);
+      if (window.ScrollTrigger && root.classList.contains('lh-motion')) ScrollTrigger.refresh();
+    }
+    if (nearList) nearList.addEventListener('scroll', function () { marcar(this.scrollLeft / Math.max(1, this.scrollWidth - this.clientWidth)); }, { passive: true });
+
+    // Detalhe: cresce do card (FLIP) e encolhe de volta pra ele ao fechar.
+    var pop = document.getElementById('lh-pop'), popCard = document.getElementById('lh-pop-card'), popIn = document.getElementById('lh-pop-in'), origem = null;
+    function abrirPop(el, l) {
+      if (!pop) return;
+      origem = el;
+      var svcs = porPreco(l), mostra = svcs.slice(0, 6), fecha = fechaHoje(l);
+      var nota = l.reviews_count > 0 && l.rating_avg ? '<span class="lh-status is-closed">★ ' + String(l.rating_avg).replace('.', ',') + ' · ' + l.reviews_count + (l.reviews_count === 1 ? ' avaliação' : ' avaliações') + '</span>' : '';
+      popIn.innerHTML =
+        '<div class="lh-pop-top"><span class="lh-card-av" data-logo="' + escH(l.name) + '"></span><span style="min-width:0"><b id="lh-pop-nome">' + escH(l.name) + '</b><span class="s">' + escH(l.dist ? l.dist + ' · ' + l.addr : l.addr) + '</span></span>' +
+          '<button type="button" class="lh-pop-x" id="lh-pop-x" aria-label="Fechar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button></div>' +
+        '<div class="lh-pop-meta"><span class="lh-status ' + (l.open_now ? 'is-open' : 'is-closed') + '">' + (l.open_now ? 'ABERTO' + (fecha ? ' · ATÉ ' + escH(fecha) : '') : 'FECHADO AGORA') + '</span>' + nota + '</div>' +
+        (mostra.length ? '<div><div class="lh-pop-lbl">Serviços</div><div class="lh-svcs">' + mostra.map(function (sv) {
+          return '<div><span>' + escH(sv.title) + (sv.duration ? '<small>' + escH(fmtDur(sv.duration)) + '</small>' : '') + '</span><b>' + escH(fmtPreco(sv.price)) + '</b></div>';
+        }).join('') + '</div>' + (svcs.length > mostra.length ? '<div class="lh-near-note" style="margin-top:10px">+ ' + (svcs.length - mostra.length) + ' SERVIÇOS NA PÁGINA DO LAVA-RÁPIDO</div>' : '') + '</div>' : '<div></div>') +
+        '<a class="lh-btn lh-btn--primary" href="/car_washes/' + encodeURIComponent(l.id) + '">Ver horários e agendar</a>';
+      pintarLogos(popIn);
+      if (typeof vivos === 'function') vivos(popIn);
+      document.getElementById('lh-pop-x').addEventListener('click', fecharPop);
+      pop.classList.add('is-on'); pop.setAttribute('aria-hidden', 'false');
+      document.documentElement.style.overflow = 'hidden'; if (lenis) lenis.stop();
+      popCard.style.visibility = 'visible';
+      var pronto = function () { pop.classList.add('is-ready'); document.getElementById('lh-pop-x').focus(); };
+      if (!root.classList.contains('lh-motion')) return pronto();
+      var de = el.getBoundingClientRect();
+      gsap.set(popCard, { clearProps: 'x,y,scaleX,scaleY' });
+      var para = popCard.getBoundingClientRect();
+      gsap.fromTo(popCard, { x: de.left - para.left, y: de.top - para.top, scaleX: de.width / para.width, scaleY: de.height / para.height },
+        { x: 0, y: 0, scaleX: 1, scaleY: 1, duration: .7, ease: 'expo.inOut', onComplete: function () { gsap.set(popCard, { clearProps: 'x,y,scaleX,scaleY' }); pronto(); } });
+    }
+    function fecharPop() {
+      if (!pop || !pop.classList.contains('is-on')) return;
+      pop.classList.remove('is-ready');
+      var fim = function () { popCard.style.visibility = 'hidden'; pop.classList.remove('is-on'); pop.setAttribute('aria-hidden', 'true'); document.documentElement.style.overflow = ''; if (lenis) lenis.start(); if (window.gsap) gsap.set(popCard, { clearProps: 'x,y,scaleX,scaleY' }); if (origem) origem.focus(); };
+      if (!root.classList.contains('lh-motion') || !origem) return fim();
+      var para = popCard.getBoundingClientRect(), de = origem.getBoundingClientRect();
+      gsap.to(popCard, { x: '+=' + (de.left - para.left), y: '+=' + (de.top - para.top), scaleX: de.width / para.width, scaleY: de.height / para.height, duration: .55, ease: 'expo.inOut', onComplete: fim });
+    }
+    if (pop) {
+      document.getElementById('lh-pop-bg').addEventListener('click', fecharPop);
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') fecharPop(); });
+    }
+
     function ordenarPerto(c) {
       return fetch('/car_washes.json?latitude=' + c.latitude + '&longitude=' + c.longitude, { headers: { Accept: 'application/json' } })
         .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
@@ -669,21 +843,12 @@
           if (!Array.isArray(list) || !list.length) throw new Error();
           var top = list.filter(function (cw) { return cw.distance_km != null; }).slice(0, 6);
           if (!top.length) throw new Error();
-          var go = nearList.querySelector('.lh-item-go');
-          go = go ? go.outerHTML : '';
-          nearList.innerHTML = top.map(function (cw, i) {
+          lojas = top.map(function (cw) {
             var rua = [cw.logradouro, cw.numero].filter(Boolean).join(', ');
-            var addr = [rua, cw.bairro].filter(Boolean).join(' · ') || cw.address || '';
-            var dist = fmtKm(cw.distance_km);
-            return '<a href="/car_washes/' + encodeURIComponent(cw.id) + '" class="lh-item">' +
-              '<span class="lh-item-n">' + String(i + 1).padStart(2, '0') + '</span>' +
-              '<span class="lh-item-av" data-logo="' + escH(cw.name) + '"></span>' +
-              '<span style="min-width:0;"><span class="lh-item-name" style="display:block;">' + escH(cw.name) + '</span>' +
-              '<span class="lh-item-addr" style="display:block;">' + escH(dist ? dist + ' · ' + addr : addr) + '</span></span>' +
-              '<span class="lh-status ' + (cw.open_now ? 'is-open' : 'is-closed') + '">' + (cw.open_now ? 'ABERTO' : 'FECHADO') + '</span>' +
-              go + '</a>';
-          }).join('');
-          pintarLogos(nearList);
+            return { id: cw.id, name: cw.name, addr: [rua, cw.bairro].filter(Boolean).join(' · ') || cw.address || '', dist: fmtKm(cw.distance_km),
+              open_now: !!cw.open_now, rating_avg: cw.rating_avg, reviews_count: cw.reviews_count || 0, operating_hours: cw.operating_hours || [], services: cw.services || [] };
+          });
+          pintarCards();
           document.getElementById('lh-near-title').innerHTML = 'Perto de <span class="lh-dest">você.</span>';
           nearBtn.hidden = true;
           document.getElementById('lh-near-note').hidden = false;
@@ -723,6 +888,7 @@
     // Sem GSAP/Lenis (falhou o carregamento) ou com prefers-reduced-motion:
     // tudo à vista, sem animação.
     var root = document.querySelector('.lh');
+    pintarCards();
     var motion = !reduce && window.gsap && window.ScrollTrigger && window.Lenis;
     var els = document.querySelectorAll('.lh-reveal, #lh-dash');
     function contar(el) {
@@ -741,6 +907,7 @@
 
       // Rolagem suave (só roda/trackpad; no toque o celular já é suave).
       var lenis = new Lenis({ lerp: 0.1, wheelMultiplier: 1 });
+      window.loovLenis = lenis; // o menu do visitante (layouts/_navbar) rola por ele
       lenis.on('scroll', ScrollTrigger.update);
       gsap.ticker.add(function (t) { lenis.raf(t * 1000); });
       gsap.ticker.lagSmoothing(0);
@@ -824,6 +991,20 @@
       dark.style.margin = '0';
       dark.style.borderRadius = '0';
 
+      // 5. Perto de você: no iPad e no computador a seção fica presa e a
+      // rolagem passa os cards pro lado (no celular, o dedo).
+      gsap.matchMedia().add('(min-width: 768px)', function () {
+        var rail = document.getElementById('lh-near-list');
+        if (!rail) return;
+        rail.classList.add('is-pinned');
+        var dist = function () { return Math.max(0, rail.scrollWidth - rail.parentElement.clientWidth); };
+        gsap.to(rail, { x: function () { return -dist(); }, ease: 'none', scrollTrigger: {
+          trigger: '#lh-near-pin', start: 'top top', end: function () { return '+=' + Math.max(1, dist()); }, pin: true, scrub: .6, invalidateOnRefresh: true,
+          onUpdate: function (st) { marcar(st.progress); }
+        } });
+        return function () { rail.classList.remove('is-pinned'); gsap.set(rail, { x: 0 }); };
+      });
+
       // 6. Painel do dono: inclina de leve e se endireita ao entrar.
       gsap.fromTo('#lh-dash', { rotateX: 14, transformPerspective: 1200, y: 40 }, {
         rotateX: 0, y: 0, ease: 'none', scrollTrigger: { trigger: '#lh-dash', start: 'top bottom', end: 'center 60%', scrub: true }
@@ -903,10 +1084,10 @@
         '#else',
         ' float aa=uN/uR.y*1.6;',
         '#endif',
-        ' float w=(.5+lens*1.7)*aa;',
+        ' float w=(.15+lens*.9)*aa;',
         ' float lin=1.-smoothstep(w,w+aa,f);',
         ' vec3 lc=mix(LN,CORAL,smoothstep(.2,.75,lens));',
-        ' float a=mix(.13,.8,lens)*mix(1.,.75,dk);',
+        ' float a=mix(.085,.6,lens)*mix(1.,.8,dk);',
         ' gl_FragColor=vec4(mix(BG,lc,lin*a),1.);}'
       ].join('\n');
       var prog, U = {};
@@ -978,18 +1159,36 @@
       raf = requestAnimationFrame(quadro);
     })();
 
-    // Botões: o texto rola letra a letra no hover (só com mouse e movimento).
-    if (!reduce && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
-      document.querySelectorAll('.lh .lh-btn').forEach(function (b) {
-        var no = Array.prototype.find.call(b.childNodes, function (n) { return n.nodeType === 3 && n.textContent.trim(); });
-        if (!no) return;
-        var txt = no.textContent.trim(), roll = document.createElement('span');
-        roll.className = 'lh-roll'; roll.setAttribute('aria-hidden', 'true');
-        txt.split('').forEach(function (c, i) { var e = document.createElement('i'); e.style.setProperty('--i', i); e.textContent = c; roll.appendChild(e); });
-        if (!b.getAttribute('aria-label') && b.tagName === 'A') b.setAttribute('aria-label', txt);
-        b.replaceChild(roll, no);
+    // Botões: o texto rola letra a letra no hover e o botão puxa de leve
+    // pro cursor (só mouse); no toque, ele afunda e volta com mola.
+    var mouse = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    function vivos(raiz) {
+      if (reduce) return;
+      raiz.querySelectorAll('.lh-btn').forEach(function (b) {
+        if (b.dataset.vivo) return;
+        b.dataset.vivo = '1';
+        if (mouse) {
+          var no = Array.prototype.find.call(b.childNodes, function (n) { return n.nodeType === 3 && n.textContent.trim(); });
+          if (no) {
+            var txt = no.textContent.trim(), roll = document.createElement('span');
+            roll.className = 'lh-roll'; roll.setAttribute('aria-hidden', 'true');
+            txt.split('').forEach(function (c, i) { var e = document.createElement('i'); e.style.setProperty('--i', i); e.textContent = c; roll.appendChild(e); });
+            if (!b.getAttribute('aria-label') && b.tagName === 'A') b.setAttribute('aria-label', txt);
+            b.replaceChild(roll, no);
+          }
+        }
+        if (!window.gsap) return;
+        if (mouse && b.tagName === 'A') {
+          var qx = gsap.quickTo(b, 'x', { duration: .5, ease: 'power3' }), qy = gsap.quickTo(b, 'y', { duration: .5, ease: 'power3' });
+          b.addEventListener('pointermove', function (e) { var r = b.getBoundingClientRect(); qx((e.clientX - r.left - r.width / 2) * .22); qy((e.clientY - r.top - r.height / 2) * .3); });
+          b.addEventListener('pointerleave', function () { qx(0); qy(0); });
+        } else if (!mouse) {
+          b.addEventListener('pointerdown', function () { gsap.to(b, { scale: .96, duration: .12 }); });
+          ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) { b.addEventListener(ev, function () { gsap.to(b, { scale: 1, duration: .4, ease: 'back.out(3)' }); }); });
+        }
       });
     }
+    vivos(document);
 
     // Cronômetro do Disponível: 30 min correndo, recomeça ao zerar.
     var clock = document.getElementById('lh-countdown');

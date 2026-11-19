@@ -263,8 +263,56 @@
   .loov-drawer a.drawer-active { color:var(--coral-700); background:var(--coral-50); }
   .loov-drawer a.drawer-active i { color:var(--coral-500); }
 
+  /* ─────────────  VISITANTE: Entrar + Menu que desce de cima  ─────────────
+     Botão "Menu" tinta (navegação) abre um painel obsidiana que desce do
+     topo com os links grandes entrando em sequência (o menu da Sweet Tape);
+     no computador, um cartão ao lado antecipa cada link (o menu do Lando). */
+  .loov-nav-links.is-visitante { gap: 8px; }
+  .nav-v-pill { display:inline-flex !important; align-items:center; gap:8px; height:40px; padding:0 16px !important; border-radius:999px !important; border:1.5px solid var(--ink) !important; background:transparent; color:var(--ink) !important; font:inherit; font-size:14px !important; font-weight:600 !important; text-decoration:none; cursor:pointer; }
+  .nav-v-pill:hover { background:var(--sand) !important; }
+  .nav-v-pill.is-cheia { background:var(--ink); color:var(--cream) !important; }
+  .nav-v-pill.is-cheia:hover { background:var(--ink) !important; opacity:.92; }
+  .nav-v-burger { display:inline-flex; flex-direction:column; gap:4px; }
+  .nav-v-burger em { display:block; width:14px; height:1.8px; background:currentColor; border-radius:2px; }
+  .nav-roll { display:inline-flex; overflow:hidden; height:1.25em; line-height:1.25em; white-space:pre; }
+  .nav-roll i { font-style:normal; display:inline-block; text-shadow:0 1.25em currentColor; transition:transform .45s cubic-bezier(.7,0,.2,1); transition-delay:calc(var(--i) * 14ms); }
+  @media (hover: hover) { .nav-v-pill:hover .nav-roll i, .vm-close:hover .nav-roll i { transform:translateY(-1.25em); } }
+
+  .vm { position:fixed; inset:0; z-index:150; pointer-events:none; }
+  .vm.is-on { pointer-events:auto; }
+  .vm-bg { position:absolute; inset:0; background:rgba(26,22,18,.35); opacity:0; transition:opacity .4s; }
+  .vm.is-on .vm-bg { opacity:1; }
+  .vm-panel { position:absolute; inset:0 0 auto 0; min-height:min(100svh, 760px); background:var(--obsidian); color:var(--cream); border-radius:0 0 32px 32px; transform:translateY(-101%); transition:transform .7s cubic-bezier(.7,0,.2,1); padding-top:env(safe-area-inset-top, 0px); display:flex; flex-direction:column; }
+  .vm.is-on .vm-panel { transform:none; }
+  .vm-in { width:100%; max-width:1240px; margin:0 auto; padding:0 1.5rem; }
+  .vm-top { display:flex; justify-content:space-between; align-items:center; height:60px; }
+  .vm-top .loov-brand { box-shadow: inset 0 0 0 1px rgba(250,250,246,.22); }
+  .vm-close { display:inline-flex; align-items:center; height:40px; padding:0 16px; border-radius:999px; border:1.5px solid var(--cream); background:transparent; color:var(--cream); font:inherit; font-size:14px; font-weight:600; cursor:pointer; }
+  .vm-body { flex:1; display:grid; gap:32px; align-content:center; padding-top:24px; padding-bottom:40px; }
+  @media (min-width: 900px) { .vm-body { grid-template-columns:1fr 340px; align-items:center; } }
+  .vm-links { list-style:none; margin:0; padding:0; display:grid; gap:4px; }
+  .vm-links li { overflow:hidden; }
+  .vm-links a { display:inline-flex; align-items:baseline; gap:14px; text-decoration:none; font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:clamp(36px, 7vw, 76px); line-height:1.04; letter-spacing:-0.04em; color:var(--cream) !important; transform:translateY(110%); transition:transform .7s cubic-bezier(.7,0,.2,1), color .2s; }
+  .vm.is-on .vm-links a { transform:none; }
+  .vm-links li:nth-child(2) a { transition-delay:.06s; }
+  .vm-links li:nth-child(3) a { transition-delay:.12s; }
+  .vm-links li:nth-child(4) a { transition-delay:.18s; }
+  .vm-links a:hover, .vm-links a:focus-visible { color:var(--coral-500) !important; }
+  .vm-links small { font-family:'JetBrains Mono', monospace; font-size:11px; letter-spacing:1px; color:var(--ash); font-weight:500; }
+  .vm-prev { display:none; }
+  @media (min-width: 900px) { .vm-prev { display:block; } }
+  .vm-card { position:relative; aspect-ratio:4 / 5; border-radius:28px; background:var(--cream); color:var(--ink); padding:22px; display:flex; flex-direction:column; justify-content:flex-end; gap:6px; overflow:hidden; transition:transform .5s cubic-bezier(.2,.8,.2,1); }
+  .vm-card b { font-family:'Space Grotesk', sans-serif; font-size:28px; line-height:1.05; letter-spacing:-0.03em; }
+  .vm-card span { color:var(--graphite); font-size:14px; }
+  .vm-card .big { position:absolute; top:18px; left:22px; font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:120px; line-height:1; letter-spacing:-0.06em; color:var(--sand); }
+  .vm-foot { display:flex; flex-wrap:wrap; gap:8px 20px; padding-bottom:26px; color:var(--ash); font-size:13px; }
+  .vm-foot a { color:var(--ash) !important; text-decoration:none; }
+  @media (prefers-reduced-motion: reduce) { .vm-panel, .vm-links a, .nav-roll i { transition:none !important; } }
+
   @media (max-width: 860px) {
     .loov-nav-links { display:none; }
+    .loov-nav-links.is-visitante { display:flex; }
+    .loov-nav { padding: 0 1rem; }
     .loov-hamburger { display:flex; }
     .loov-drawer-overlay { display:block; }
   }
@@ -357,7 +405,7 @@
     </span>
   </a>
 
-  <ul class="loov-nav-links">
+  <ul class="loov-nav-links<%= " is-visitante" unless user_signed_in? %>">
     <% if user_signed_in? %>
       <% if current_user.client? %>
         <%# Home e Agenda com os mesmos ícones da barra de abas do app (Feather
@@ -483,15 +531,43 @@
         <li><%= link_to "Sair", destroy_user_session_path, method: :delete, class: "nav-exit" %></li>
       <% end %>
     <% else %>
-      <li><%= link_to "Entrar", new_user_session_path %></li>
-      <li><%= link_to "Criar Conta", new_user_registration_path, style: "color:var(--coral-700);font-weight:600;" %></li>
+      <li><%= link_to new_user_session_path, class: "nav-v-pill" do %><span class="nav-roll" data-nav-roll>Entrar</span><% end %></li>
+      <li><button type="button" class="nav-v-pill is-cheia" id="vm-abrir" aria-expanded="false" aria-controls="vm"><span class="nav-v-burger" aria-hidden="true"><em></em><em></em></span><span class="nav-roll" data-nav-roll>Menu</span></button></li>
     <% end %>
   </ul>
 
+  <% if user_signed_in? %>
   <button class="loov-hamburger" id="loov-hamburger" aria-label="Menu">
     <span></span><span></span><span></span>
   </button>
+  <% end %>
 </nav>
+
+<% unless user_signed_in? %>
+<div class="vm" id="vm" aria-hidden="true">
+  <div class="vm-bg" data-vm-fechar></div>
+  <div class="vm-panel" role="dialog" aria-modal="true" aria-label="Menu">
+    <div class="vm-in vm-top">
+      <a href="/" class="loov-nav-logo" aria-label="Loov">
+        <span class="loov-brand"><span class="glyph"><span class="ring-cream"></span><span class="ring-coral"></span><span class="ring-coral-dot"></span></span><span class="word">loov</span></span>
+      </a>
+      <button type="button" class="vm-close" id="vm-fechar"><span class="nav-roll" data-nav-roll>Fechar</span></button>
+    </div>
+    <div class="vm-in vm-body">
+      <ul class="vm-links">
+        <li><a href="/#lh-perto" data-vm="0"><small>01</small>Encontrar lava-rápido</a></li>
+        <li><a href="/#lh-how" data-vm="1"><small>02</small>Como funciona</a></li>
+        <li><a href="/#para-lava-rapidos" data-vm="2"><small>03</small>Para lava-rápidos</a></li>
+        <li><a href="<%= new_user_registration_path %>" data-vm="3"><small>04</small>Criar conta</a></li>
+      </ul>
+      <div class="vm-prev" aria-hidden="true">
+        <div class="vm-card" id="vm-card"><span class="big" id="vm-card-n">01</span><b id="vm-card-t">Perto de você, aberto agora</b><span id="vm-card-s">Escolha o horário e pronto.</span></div>
+      </div>
+    </div>
+    <div class="vm-in vm-foot"><span>suporte@loov.app</span><a href="<%= new_user_session_path %>">Já tenho conta · Entrar</a></div>
+  </div>
+</div>
+<% end %>
 
 <script nonce="<%= csp_nonce %>">
 (function() {
@@ -505,9 +581,52 @@
   function openDrawer()  { hamburger.classList.add('open'); drawer.classList.add('open'); overlay.classList.add('open'); document.body.style.overflow='hidden'; }
   function closeDrawer() { hamburger.classList.remove('open'); drawer.classList.remove('open'); overlay.classList.remove('open'); document.body.style.overflow=''; }
 
-  hamburger.addEventListener('click', () => drawer.classList.contains('open') ? closeDrawer() : openDrawer());
-  overlay.addEventListener('click', closeDrawer);
-  drawer.querySelectorAll('a').forEach(a => a.addEventListener('click', closeDrawer));
+  if (hamburger) {
+    hamburger.addEventListener('click', () => drawer.classList.contains('open') ? closeDrawer() : openDrawer());
+    overlay.addEventListener('click', closeDrawer);
+    drawer.querySelectorAll('a').forEach(a => a.addEventListener('click', closeDrawer));
+  }
+
+  // ── MENU DO VISITANTE (desce de cima) ────────────────────────────────
+  document.querySelectorAll('[data-nav-roll]').forEach(el => {
+    const t = el.textContent.trim(); el.textContent = ''; el.setAttribute('aria-label', t);
+    t.split('').forEach((c, i) => { const s = document.createElement('i'); s.setAttribute('aria-hidden', 'true'); s.style.setProperty('--i', i); s.textContent = c; el.appendChild(s); });
+  });
+  const vm = document.getElementById('vm'), vmAbrir = document.getElementById('vm-abrir');
+  if (vm && vmAbrir) {
+    const PREV = [
+      ['01', 'Perto de você, aberto agora', 'Escolha o horário e pronto.'],
+      ['02', 'Três toques. Carro limpo.', 'Escolha, agende e vá.'],
+      ['03', 'Agenda cheia. Contas em dia.', 'Grátis na fase de testes.'],
+      ['04', 'Sua conta na Loov', 'Agendamentos, vales e favoritos num lugar só.']
+    ];
+    const menu = (on) => {
+      vm.classList.toggle('is-on', on); vm.setAttribute('aria-hidden', String(!on)); vmAbrir.setAttribute('aria-expanded', String(on));
+      document.documentElement.style.overflow = on ? 'hidden' : '';
+      if (window.loovLenis) on ? window.loovLenis.stop() : window.loovLenis.start();
+      if (on) setTimeout(() => document.getElementById('vm-fechar').focus(), 300); else vmAbrir.focus();
+    };
+    vmAbrir.addEventListener('click', () => menu(true));
+    document.getElementById('vm-fechar').addEventListener('click', () => menu(false));
+    vm.querySelector('[data-vm-fechar]').addEventListener('click', () => menu(false));
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && vm.classList.contains('is-on')) menu(false); });
+    vm.querySelectorAll('[data-vm]').forEach(a => {
+      a.addEventListener('mouseenter', () => {
+        const p = PREV[+a.dataset.vm];
+        document.getElementById('vm-card-n').textContent = p[0]; document.getElementById('vm-card-t').textContent = p[1]; document.getElementById('vm-card-s').textContent = p[2];
+        const c = document.getElementById('vm-card'); c.style.transform = 'scale(.96)'; requestAnimationFrame(() => requestAnimationFrame(() => { c.style.transform = ''; }));
+      });
+      // Âncora da própria home: fecha e rola até a seção (com a rolagem suave, se houver)
+      a.addEventListener('click', e => {
+        const hash = a.getAttribute('href').split('#')[1];
+        const alvo = hash && location.pathname === '/' ? document.getElementById(hash) : null;
+        menu(false);
+        if (!alvo) return;
+        e.preventDefault();
+        setTimeout(() => { if (window.loovLenis) window.loovLenis.scrollTo(alvo, { offset: -60, duration: 1.4 }); else alvo.scrollIntoView({ behavior: 'smooth' }); }, 350);
+      });
+    });
+  }
 
   // ── SINO CLIENTE ─────────────────────────────────────────────────────
   const bellBtn   = document.getElementById('nav-bell-btn');
