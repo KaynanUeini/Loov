@@ -12,7 +12,13 @@
   (contraste escuro, um acento só), Fitts (alvos de 52px+), Nielsen H1
   (estado de carregamento no botão), WCAG (foco visível, prefers-reduced-
   motion respeitado, labels reais nos campos).
+
+  Mesmo visual da home (2026-11-18): curvas de nível atrás das duas metades
+  (shared/_curvas: escuras na marca, claras no formulário) e o "Vazou." na
+  fonte de destaque, Fraunces itálica coral.
 %>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@1,9..144,500..700,0..100,0..1&display=swap">
+<%= render "shared/curvas" %>
 <style>
   .lx-login {
     min-height: 100vh;
@@ -71,8 +77,11 @@
     animation: lx-word .9s cubic-bezier(.2,.8,.2,1) forwards;
   }
   .lx-kinetic span:nth-child(1) { animation-delay: .15s; }
-  .lx-kinetic span:nth-child(2) { animation-delay: .55s; color: var(--coral-500); }
-  .lx-kinetic span:nth-child(3) { animation-delay: .95s; }
+  .lx-kinetic span:nth-child(2) { animation-delay: .55s; }
+  .lx-kinetic span:nth-child(3) { animation-delay: .95s; padding-right: .08em; font-family: 'Fraunces', Georgia, serif; font-style: italic; font-weight: 600; font-variation-settings: 'SOFT' 100, 'WONK' 1, 'opsz' 144; letter-spacing: -0.03em; color: var(--coral-500); }
+  /* Com as curvas desenhando o fundo, o brilho coral sai. */
+  .lx-stage:has(canvas.curvas:not([hidden]))::before { display: none; }
+  .lx-panel { position: relative; isolation: isolate; }
   @keyframes lx-word {
     to { opacity: 1; transform: none; filter: none; }
   }
@@ -195,7 +204,7 @@
       font-family: 'Space Grotesk', sans-serif !important;
       font-size: 34px; line-height: 1.1; letter-spacing: -0.03em; font-weight: 700;
     }
-    .lx-mobile-head em { font-style: normal; color: var(--coral-500); }
+    .lx-mobile-head em { font-family: 'Fraunces', Georgia, serif; font-style: italic; font-weight: 600; font-variation-settings: 'SOFT' 100, 'WONK' 1, 'opsz' 144; color: var(--coral-500); }
     .lx-title { font-size: 26px; text-align: center; }
     .lx-sub { text-align: center; margin-bottom: 24px; }
   }
@@ -209,6 +218,7 @@
 <div class="lx-login">
 
   <section class="lx-stage" aria-hidden="true">
+    <canvas class="curvas" data-curvas="escuro"></canvas>
     <div class="lx-stage-top">Lava-rápido sem fila</div>
     <h1 class="lx-kinetic">
       <span>Chegou.</span>
@@ -221,6 +231,7 @@
   </section>
 
   <section class="lx-panel">
+    <canvas class="curvas" data-curvas="claro"></canvas>
     <div class="lx-form-wrap">
 
       <div class="lx-mobile-head">

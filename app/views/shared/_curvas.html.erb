@@ -1,0 +1,102 @@
+<%#
+  Curvas de nível (o fundo da home) dentro de um bloco qualquer: um
+  <canvas class="curvas" data-curvas="claro|escuro"> com position absolute
+  enche o pai (que precisa de position relative e isolation: isolate). O
+  relevo sobe onde o cursor passa; no toque, passeia sozinho. Para fora da
+  tela e com a aba escondida. Sem WebGL o canvas some e o pai fica com a cor
+  dele; com prefers-reduced-motion, o relevo fica parado.
+
+  A home tem a versão de página inteira (home/_landing), que além disso
+  desenha as regiões escura e areia das seções.
+%>
+<style>
+  canvas.curvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+  canvas.curvas[hidden] { display: none; }
+</style>
+<script>
+(function () {
+  if (window.LoovCurvas) return;
+  var reduz = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var mouse = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  var FS = function (der) { return [
+    der ? '#extension GL_OES_standard_derivatives : enable\n#define DER' : '',
+    'precision highp float;',
+    'uniform vec2 uR;uniform float uT;uniform vec2 uM;uniform float uL;uniform float uN;uniform vec3 uBG;uniform vec3 uLN;uniform float uA;',
+    'const vec3 CORAL=vec3(.867,.471,.322);',
+    'float h(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}',
+    'float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}',
+    'float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<3;i++){v+=a*n(p);p=p*2.03+vec2(1.7,9.2);a*=.5;}return v;}',
+    'void main(){',
+    ' vec2 p=gl_FragCoord.xy/uR.y;vec2 mm=uM*vec2(uR.x/uR.y,1.);',
+    ' vec2 dv=p-mm;float lens=exp(-dot(dv,dv)/.045)*uL;',
+    ' float v=(fbm(p*1.25+vec2(uT*.025,0.))+lens*.32)*uN*.45;',
+    ' float f=abs(fract(v)-.5);',
+    '#ifdef DER',
+    ' float aa=fwidth(v);',
+    '#else',
+    ' float aa=uN/uR.y*1.6;',
+    '#endif',
+    ' float lin=1.-smoothstep(lens*.6*aa,lens*.6*aa+aa*.85,f);',
+    ' vec3 lc=mix(uLN,CORAL,smoothstep(.2,.75,lens));',
+    ' gl_FragColor=vec4(mix(uBG,lc,lin*mix(uA,.5,lens)),1.);}'
+  ].join('\n'); };
+  var PALETA = {
+    claro:  { bg: [.980, .980, .965], ln: [.157, .137, .110], a: .07 },
+    escuro: { bg: [.102, .086, .071], ln: [.980, .980, .965], a: .06 }
+  };
+  function ligar(cv) {
+    var gl = null;
+    try { gl = cv.getContext('webgl', { antialias: false, alpha: false }); } catch (e) { gl = null; }
+    if (!gl) { cv.hidden = true; return; }
+    var der = !!gl.getExtension('OES_standard_derivatives'), prog, U = {};
+    try {
+      var sh = function (t, src) { var o = gl.createShader(t); gl.shaderSource(o, src); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
+      prog = gl.createProgram();
+      gl.attachShader(prog, sh(gl.VERTEX_SHADER, 'attribute vec2 a;void main(){gl_Position=vec4(a,0.,1.);}'));
+      gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS(der)));
+      gl.bindAttribLocation(prog, 0, 'a'); gl.linkProgram(prog);
+      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+      gl.useProgram(prog);
+      ['uR', 'uT', 'uM', 'uL', 'uN', 'uBG', 'uLN', 'uA'].forEach(function (k) { U[k] = gl.getUniformLocation(prog, k); });
+      var buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+      gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+    } catch (e) { cv.hidden = true; return; }
+    var pal = PALETA[cv.dataset.curvas] || PALETA.claro;
+    gl.uniform3fv(U.uBG, pal.bg); gl.uniform3fv(U.uLN, pal.ln); gl.uniform1f(U.uA, pal.a);
+    var k = 1, raf = 0, vivo = true, t0 = performance.now(), m = { x: .65, y: .45, tx: .65, ty: .45, ultimo: -1e9 };
+    function tam() {
+      var r = cv.getBoundingClientRect(); k = Math.min(1.5, window.devicePixelRatio || 1);
+      cv.width = Math.max(1, Math.round(r.width * k)); cv.height = Math.max(1, Math.round(r.height * k));
+      gl.viewport(0, 0, cv.width, cv.height);
+      if (reduz) desenhar(0);
+    }
+    function desenhar(t) {
+      gl.uniform2f(U.uR, cv.width, cv.height); gl.uniform1f(U.uT, t);
+      gl.uniform2f(U.uM, m.x, 1 - m.y); gl.uniform1f(U.uL, reduz ? 0 : 1); gl.uniform1f(U.uN, cv.width / k < 768 ? 46 : 64);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    }
+    function quadro(now) {
+      raf = 0;
+      if (!vivo || document.hidden) return;
+      var t = (now - t0) / 1000;
+      if (!mouse || now - m.ultimo > 2500) { m.tx = .6 + Math.sin(t * .3) * .22; m.ty = .45 + Math.cos(t * .23) * .22; }
+      m.x += (m.tx - m.x) * .08; m.y += (m.ty - m.y) * .08;
+      desenhar(t);
+      raf = requestAnimationFrame(quadro);
+    }
+    var laco = function () { if (!raf && vivo && !reduz && !document.hidden) raf = requestAnimationFrame(quadro); };
+    if ('ResizeObserver' in window) new ResizeObserver(tam).observe(cv); else window.addEventListener('resize', tam);
+    if ('IntersectionObserver' in window) new IntersectionObserver(function (es) { vivo = es[0].isIntersecting; laco(); }).observe(cv);
+    document.addEventListener('visibilitychange', laco);
+    if (mouse) window.addEventListener('pointermove', function (e) {
+      var r = cv.getBoundingClientRect();
+      m.tx = (e.clientX - r.left) / r.width; m.ty = (e.clientY - r.top) / r.height; m.ultimo = performance.now();
+    }, { passive: true });
+    tam(); laco();
+  }
+  window.LoovCurvas = { ligar: ligar };
+  function todas() { document.querySelectorAll('canvas.curvas').forEach(ligar); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', todas); else todas();
+})();
+</script>

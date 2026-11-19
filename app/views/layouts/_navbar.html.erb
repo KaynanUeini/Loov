@@ -1,3 +1,15 @@
+<script nonce="<%= csp_nonce %>">
+  // Transição entre páginas (a cortina): quem veio de um link do visitante
+  // chega com a cortina fechada, e ela sobe assim que a página aparece.
+  (function () {
+    try {
+      if (sessionStorage.getItem('loov_cortina') === '1') {
+        sessionStorage.removeItem('loov_cortina');
+        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) document.documentElement.classList.add('cortina-chegando');
+      }
+    } catch (e) {}
+  })();
+</script>
 <style>
   :root {
     --cream:    #fafaf6;
@@ -309,6 +321,14 @@
   .vm-foot a { color:var(--ash) !important; text-decoration:none; }
   @media (prefers-reduced-motion: reduce) { .vm-panel, .vm-links a, .nav-roll i { transition:none !important; } }
 
+  /* Cortina entre páginas: cobre de baixo pra cima ao sair, sobe ao chegar. */
+  .loov-cortina { position:fixed; inset:0; z-index:400; background:var(--obsidian); display:flex; align-items:center; justify-content:center; clip-path:inset(100% 0 0 0); pointer-events:none; }
+  .loov-cortina .loov-brand { transform:scale(2); box-shadow: inset 0 0 0 1px rgba(250,250,246,.22); }
+  .loov-cortina.is-cobrindo { animation: loov-cortina-entra .5s cubic-bezier(.7,0,.2,1) forwards; }
+  html.cortina-chegando .loov-cortina { clip-path:inset(0 0 0 0); animation: loov-cortina-sai .65s cubic-bezier(.7,0,.2,1) .12s forwards; }
+  @keyframes loov-cortina-entra { from { clip-path:inset(100% 0 0 0); } to { clip-path:inset(0 0 0 0); } }
+  @keyframes loov-cortina-sai { from { clip-path:inset(0 0 0 0); } to { clip-path:inset(0 0 100% 0); } }
+
   @media (max-width: 860px) {
     .loov-nav-links { display:none; }
     .loov-nav-links.is-visitante { display:flex; }
@@ -543,6 +563,10 @@
   <% end %>
 </nav>
 
+<div class="loov-cortina" id="loov-cortina" aria-hidden="true">
+  <span class="loov-brand"><span class="glyph"><span class="ring-cream"></span><span class="ring-coral"></span><span class="ring-coral-dot"></span></span><span class="word">loov</span></span>
+</div>
+
 <% unless user_signed_in? %>
 <div class="vm" id="vm" aria-hidden="true">
   <div class="vm-bg" data-vm-fechar></div>
@@ -586,6 +610,31 @@
     overlay.addEventListener('click', closeDrawer);
     drawer.querySelectorAll('a').forEach(a => a.addEventListener('click', closeDrawer));
   }
+
+  // ── CORTINA ENTRE PÁGINAS (visitante) ─────────────────────────────────
+  // Links internos do visitante saem com a cortina; a próxima página a tira
+  // (script no topo deste arquivo). Âncora na própria página, nova aba,
+  // download, link com método (Sair) e quem não quer movimento ficam de fora.
+  const cortina = document.getElementById('loov-cortina');
+  const semMov = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  <% unless user_signed_in? %>
+  if (cortina && !semMov) {
+    document.addEventListener('click', e => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const a = e.target.closest && e.target.closest('a[href]');
+      if (!a || a.target === '_blank' || a.hasAttribute('download') || a.dataset.method || a.dataset.semCortina !== undefined) return;
+      const url = new URL(a.href, location.href);
+      if (url.origin !== location.origin) return;
+      if (url.pathname === location.pathname && url.search === location.search) return; // âncora ou a mesma página
+      e.preventDefault();
+      try { sessionStorage.setItem('loov_cortina', '1'); } catch (_) {}
+      cortina.classList.add('is-cobrindo');
+      setTimeout(() => { location.href = url.href; }, 480);
+    });
+    // Voltar pelo navegador traz a página do cache com a cortina fechada.
+    window.addEventListener('pageshow', ev => { if (ev.persisted) cortina.classList.remove('is-cobrindo'); });
+  }
+  <% end %>
 
   // ── MENU DO VISITANTE (desce de cima) ────────────────────────────────
   document.querySelectorAll('[data-nav-roll]').forEach(el => {
