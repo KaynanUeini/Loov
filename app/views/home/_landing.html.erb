@@ -133,6 +133,8 @@
 
   /* Celular com o app */
   .lh-phone-stage { display: flex; justify-content: center; perspective: 1400px; opacity: 0; animation: lh-fade 1.1s ease .7s forwards; }
+  /* Em notebook a tela é baixa: o celular encolhe (zoom vem do JS, --hz) pra caber inteiro. */
+  @media (min-width: 961px) { .lh-hero .lh-phone-stage { zoom: var(--hz, 1); align-self: start; } }
   .lh-phone {
     position: relative; width: 320px; height: 650px; border-radius: 52px; padding: 12px;
     background: var(--obsidian);
@@ -554,6 +556,9 @@
   .lh-motion .lh-how { padding: 0; }
   .lh-motion .lh-how-pinned { min-height: 100vh; display: flex; align-items: center; padding: 84px 0 24px; }
   .lh-motion .lh-how-pinned > .lh-wrap { width: 100%; }
+  /* O texto é mais alto que a tela; centralizado com ele, o celular descia
+     e cortava embaixo. Preso no topo da coluna, cabe inteiro. */
+  .lh-motion .lh-how-phone { align-self: start; }
   /* Com movimento (JS): os passos acendem um por vez. */
   .lh-motion .lh-how-step { opacity: .5; transition: opacity .4s ease; }
   .lh-motion .lh-how-step.is-on { opacity: 1; }
@@ -1377,6 +1382,27 @@
       el.textContent = '0';
       ScrollTrigger.create({ trigger: el, start: 'top 88%', once: true, onEnter: function () { contar(el); } });
     });
+
+    // Celular do topo: no computador encolhe conforme a altura da janela,
+    // descontando a barra do site (60px) e o respiro do hero, pra caber inteiro.
+    var stage = document.querySelector('.lh-hero .lh-phone-stage');
+    if (stage) {
+      var grade = stage.parentNode;
+      var zoomHero = function () {
+        if (window.innerWidth < 961) { stage.style.removeProperty('--hz'); stage.style.marginTop = ''; return; }
+        var z = Math.max(0.6, Math.min(1, (window.innerHeight - 180) / 650));
+        stage.style.setProperty('--hz', z.toFixed(3));
+        // O texto do hero costuma ser mais alto que a tela; centralizado com
+        // ele, o celular descia e cortava. Ele fica no meio da área visível
+        // (abaixo da barra), sem passar do topo da grade.
+        var alturaCel = 650 * z;
+        var topoGrade = grade.getBoundingClientRect().top + window.scrollY;
+        var alvo = 60 + (window.innerHeight - 60 - alturaCel) / 2;
+        stage.style.marginTop = (Math.max(0, alvo - topoGrade) / z).toFixed(1) + 'px';
+      };
+      zoomHero();
+      window.addEventListener('resize', zoomHero);
+    }
 
     // Celular acompanha o mouse de leve (só desktop, só com movimento).
     var phone = document.getElementById('lh-phone');
