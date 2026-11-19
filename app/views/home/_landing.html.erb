@@ -4,21 +4,21 @@
   Roteiro da página — uma ideia por dobra (Apple), tipo grande e um acento
   só (Spotify), muito respiro (Wiemer):
     1. Hero: "Chegou. Lavou. Vazou." entrando palavra a palavra (tipografia
-       cinética — a abertura do app) + o app "vivo" num celular ao lado.
-    2. Faixa de serviços correndo (marquee).
-    3. Como funciona em 3 passos numerados (01 02 03, como o ranking do PDF).
-    4. Disponível: vaga em 30 min, em fundo obsidian, com cronômetro rodando.
-    5. Perto de você agora — lava-rápidos reais, em lista estilo Spotify.
-    6. Para lava-rápidos — o lado do dono.
-    7. Fecho com o "Vazou." gigante.
+       cinética — a abertura do app) + o app "vivo" num celular ao lado
+       (só do iPad pra cima; no celular o hero é só o texto).
+    2. Como funciona em 3 passos, com o celular preso trocando de tela.
+    3. Last Minute: a vaga da próxima meia hora nos lava-rápidos até 5 km,
+       em fundo obsidiana, com a próxima marca de meia hora de verdade.
+    4. Números (regras do produto, contam ao aparecer).
+    5. Perto de você: cards lado a lado, presos à rolagem em qualquer tela,
+       com verso no hover e detalhe que cresce do card.
+    6. Para lava-rápidos: abas com as funções e a tela do app de cada uma.
+    7. Fecho: "Lava-rápido sem fila." enchendo de coral.
 
   Movimento (inspiração: viture.com — a rolagem conta a história): rolagem
   suave (Lenis) e animação presa à rolagem (GSAP ScrollTrigger), as duas em
-  public/vendor. O hero sobe em camadas; a faixa de serviços acelera com a
-  rolagem; "Três toques" prende o celular na tela e troca a tela a cada
-  passo; o Disponível cresce até ocupar a tela; os números contam; o
-  "Vazou." do fecho se enche de baixo pra cima. Sem as bibliotecas ou com
-  prefers-reduced-motion, a página fica estática e completa.
+  public/vendor. Sem as bibliotecas ou com prefers-reduced-motion, a página
+  fica estática e completa.
 
   Fundo e destaque (2026-11-18, escolhidos na prévia): curvas de nível em
   WebGL atrás da página inteira, num canvas fixo, como o fundo do site do
@@ -37,8 +37,6 @@
 <%
   shops = (@nearby_car_washes || []).first(6)
   phone_shops = shops.first(3)
-  services_ticker = ["Lavagem", "Polimento", "Higienização", "Cristalização", "Vitrificação",
-                     "Enceramento", "Hidratação de couro", "Limpeza de motor", "Faróis", "Impermeabilização"]
 %>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@1,9..144,500..700,0..100,0..1&display=swap">
 <style>
@@ -100,7 +98,7 @@
   .lh.lh-campo { background: transparent; }
   .lh.lh-campo .lh-hero::before { display: none; }
   .lh.lh-campo .lh-dark { background: transparent; }
-  .lh.lh-campo #para-lava-rapidos { background: transparent !important; }
+  .lh.lh-campo #para-lava-rapidos { background: transparent; }
 
   /* Revelar ao rolar */
   .lh-reveal { opacity: 0; transform: translateY(28px); transition: opacity .8s ease, transform .8s cubic-bezier(.2,.8,.2,1); }
@@ -170,15 +168,6 @@
   .lh-toast span { font-size: 12px; color: #cfc8bb; }
   @keyframes lh-toast { 0% { transform: translateY(140%); } 10%, 72% { transform: none; } 82%, 100% { transform: translateY(140%); } }
 
-  /* ── 2. Marquee ──────────────────────────────────────────────────── */
-  .lh-marquee { border-top: 1px solid var(--stone); border-bottom: 1px solid var(--stone); padding: 22px 0; overflow: hidden; background: var(--paper); }
-  .lh-marquee-track { display: flex; width: max-content; animation: lh-marquee 40s linear infinite; }
-  .lh-marquee:hover .lh-marquee-track { animation-play-state: paused; }
-  .lh-marquee-item { display: inline-flex; align-items: center; gap: 28px; padding-right: 28px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: clamp(28px, 3.4vw, 44px); letter-spacing: -0.03em; white-space: nowrap; }
-  .lh-marquee-item:nth-child(even) { color: transparent; -webkit-text-stroke: 1.4px var(--ink); }
-  .lh-marquee-item::after { content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--coral-500); }
-  @keyframes lh-marquee { to { transform: translateX(-50%); } }
-
   /* ── 3. Como funciona ────────────────────────────────────────────── */
   .lh-section { padding: 140px 0; }
   .lh-h2 { font-size: clamp(40px, 5.2vw, 76px) !important; line-height: 1; letter-spacing: -0.045em; max-width: 14ch; margin-top: 18px !important; }
@@ -190,6 +179,11 @@
   .lh-dark-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 56px; align-items: center; }
   .lh-dark p.lh-dark-lead { margin-top: 28px; font-size: 20px; line-height: 1.55; color: #cfc8bb; max-width: 38ch; }
   .lh-dark p.lh-dark-lead strong { color: var(--cream); font-weight: 600; }
+  .lh-lm-steps { list-style: none; margin: 30px 0 0; padding: 0; display: grid; gap: 0; counter-reset: lm; max-width: 440px; }
+  .lh-lm-steps li { display: grid; grid-template-columns: 34px 1fr; gap: 2px 14px; padding: 14px 0; border-top: 1px solid rgba(250,250,246,.14); counter-increment: lm; }
+  .lh-lm-steps li::before { content: counter(lm); grid-row: span 2; width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--coral-300); color: var(--coral-300); font-family: 'JetBrains Mono', monospace; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+  .lh-lm-steps b { font-size: 16px; font-weight: 600; color: var(--cream); }
+  .lh-lm-steps span { font-size: 14.5px; line-height: 1.45; color: #cfc8bb; }
   .lh-slot { border-radius: 32px; padding: 36px; background: rgba(250,250,246,.06); border: 1px solid rgba(250,250,246,.12); backdrop-filter: blur(10px); }
   .lh-slot-top { display: flex; justify-content: space-between; align-items: center; }
   .lh-slot-tag { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--coral-300); display: inline-flex; align-items: center; gap: 8px; }
@@ -220,29 +214,31 @@
   .lh-rail { margin-top: 44px; display: flex; gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin-inline: -32px; padding: 4px 32px 10px; }
   .lh-rail::-webkit-scrollbar { display: none; }
   .lh-rail.is-pinned { overflow: visible; scroll-snap-type: none; }
-  .lh-card { position: relative; flex: 0 0 340px; max-width: 78vw; aspect-ratio: 4 / 5; scroll-snap-align: start; border-radius: 28px; border: 1px solid var(--stone); background: var(--paper); color: var(--ink); overflow: hidden; text-align: left; padding: 0; font: inherit; cursor: pointer; isolation: isolate; box-shadow: 0 1px 2px rgba(40,35,28,.04), 0 18px 40px -28px rgba(40,35,28,.5); }
+  .lh-card { position: relative; flex: 0 0 clamp(232px, 64vw, 280px); aspect-ratio: 5 / 6; scroll-snap-align: start; border-radius: 28px; border: 1px solid var(--stone); background: var(--paper); color: var(--ink); overflow: hidden; text-align: left; padding: 0; font: inherit; cursor: pointer; isolation: isolate; box-shadow: 0 1px 2px rgba(40,35,28,.04), 0 18px 40px -28px rgba(40,35,28,.5); }
   .lh-card:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
   .lh-card-f, .lh-card-b { position: absolute; inset: 0; padding: 22px; display: flex; flex-direction: column; justify-content: space-between; }
   .lh-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-  .lh-card-av { width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; }
+  .lh-card-av { width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; }
   .lh-card-av svg { width: 100%; height: 100%; display: block; }
-  .lh-card-n { position: absolute; right: 18px; bottom: 54px; z-index: -1; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 150px; line-height: .8; letter-spacing: -0.08em; color: var(--sand); }
-  .lh-card-name { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 26px; line-height: 1.05; letter-spacing: -0.03em; }
+  .lh-card-name { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px; line-height: 1.05; letter-spacing: -0.03em; }
   .lh-card-addr { display: block; margin-top: 6px; color: var(--graphite); font-size: 14px; line-height: 1.4; }
   .lh-card-hint { display: none; margin-top: 14px; font-size: 14px; font-weight: 600; }
   /* Verso: nasce num círculo a partir do cursor (a troca no hover da Lando) */
   .lh-card-b { background: var(--obsidian); color: var(--cream); clip-path: circle(0px at var(--x, 50%) var(--y, 50%)); transition: clip-path .6s cubic-bezier(.7,0,.2,1); }
   .lh-card-b small { display: block; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--ash); }
-  .lh-card-big { display: block; margin-top: 8px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 60px; line-height: .9; letter-spacing: -0.05em; font-variant-numeric: tabular-nums; }
+  .lh-card-big { display: block; margin-top: 8px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 50px; line-height: .9; letter-spacing: -0.05em; font-variant-numeric: tabular-nums; }
   .lh-card-row { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; }
   .lh-card-pill { display: inline-flex; align-items: center; height: 40px; padding: 0 16px; border-radius: 999px; border: 1.5px solid var(--cream); font-size: 14px; font-weight: 600; white-space: nowrap; }
   @media (hover: hover) and (pointer: fine) { .lh-card:hover .lh-card-b, .lh-card:focus-visible .lh-card-b { clip-path: circle(150% at var(--x, 50%) var(--y, 50%)); } }
   @media (hover: none) { .lh-card-hint { display: block; } .lh-card-b { display: none; } }
 
-  @media (min-width: 768px) {
-    .lh-motion .lh-near { padding: 0; }
-    .lh-motion .lh-near-pin { min-height: 100svh; display: flex; align-items: center; padding: 84px 0 40px; }
-    .lh-motion .lh-near-pin > .lh-wrap { width: 100%; }
+  .lh-motion .lh-near { padding: 0; }
+  .lh-motion .lh-near-pin { min-height: 100svh; display: flex; align-items: center; padding: 84px 0 40px; }
+  .lh-motion .lh-near-pin > .lh-wrap { width: 100%; }
+  @media (max-width: 767px) {
+    .lh-motion .lh-near-pin { padding: 72px 0 24px; }
+    .lh-motion .lh-near .lh-h2 { font-size: 36px !important; }
+    .lh-motion .lh-rail { margin-top: 24px; }
   }
 
   /* Detalhe que cresce do card */
@@ -271,29 +267,104 @@
   .lh-svcs b { font-family: 'Space Grotesk', sans-serif; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .lh-pop .lh-btn { width: 100%; justify-content: center; margin-top: 22px; }
 
-  /* ── 6. Para lava-rápidos ────────────────────────────────────────── */
-  .lh-owner { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 64px; align-items: center; }
-  .lh-badge { display: inline-flex; align-items: center; gap: 8px; margin-top: 26px; padding: 8px 14px; border-radius: 99px; background: #dcefe3; color: #23744a; font-size: 14px; font-weight: 600; }
-  .lh-checks { list-style: none; margin: 32px 0 36px; padding: 0; display: grid; gap: 16px; }
-  .lh-checks li { display: grid; grid-template-columns: 28px 1fr; gap: 12px; font-size: 17px; line-height: 1.45; color: var(--graphite); }
-  .lh-checks b { color: var(--ink); font-weight: 600; }
-  .lh-checks i { width: 28px; height: 28px; border-radius: 50%; background: var(--coral-50); color: var(--coral-700); display: flex; align-items: center; justify-content: center; font-style: normal; font-size: 14px; font-weight: 700; }
-  .lh-dash { border-radius: 32px; background: var(--paper); border: 1px solid var(--stone); padding: 32px; box-shadow: 0 50px 90px -50px rgba(40,35,28,.4); }
-  .lh-dash-label { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--graphite); }
-  .lh-dash-big { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 52px; letter-spacing: -0.04em; margin-top: 6px; }
-  .lh-dash-pill { display: inline-block; margin-top: 6px; padding: 4px 10px; border-radius: 99px; background: var(--coral-50); color: var(--coral-700); font-size: 13px; font-weight: 600; }
-  .lh-bars { display: flex; align-items: flex-end; gap: 10px; height: 150px; margin-top: 30px; padding-bottom: 6px; border-bottom: 1px solid var(--stone); }
-  .lh-bars span { flex: 1; border-radius: 8px 8px 3px 3px; background: var(--coral-500); transform-origin: bottom; transform: scaleY(0); transition: transform .9s cubic-bezier(.2,.8,.2,1); }
-  .lh-bars span.is-cost { background: var(--stone); }
-  .lh-dash.is-in .lh-bars span { transform: scaleY(1); }
-  .lh-dash-legend { display: flex; gap: 18px; margin-top: 14px; font-size: 13px; color: var(--graphite); }
-  .lh-dash-legend b { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
-  .lh-dash-note { margin-top: 18px; font-size: 12px; color: var(--ash); }
+  /* ── 6. Para lava-rápidos: abas + tela do app ────────────────────── */
+  .lh-dono-head { max-width: 760px; }
+  .lh-dono-lead { margin-top: 22px !important; max-width: 52ch; font-size: 18px; line-height: 1.55; color: var(--graphite); }
+  .lh-dono-lead strong { color: var(--ink); font-weight: 600; }
+  .lh-dono-grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 64px; align-items: center; margin-top: 48px; }
+  .lh-feats { display: grid; gap: 0; border-top: 1px solid var(--stone); }
+  .lh-feat { position: relative; display: block; width: 100%; text-align: left; padding: 22px 0 20px; border: 0; border-bottom: 1px solid var(--stone); background: transparent; color: var(--ink); font: inherit; cursor: pointer; }
+  .lh-feat-t { display: flex; align-items: center; gap: 10px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 26px; letter-spacing: -0.03em; color: var(--ash); transition: color .3s; }
+  .lh-feat.is-on .lh-feat-t, .lh-feat:hover .lh-feat-t { color: var(--ink); }
+  .lh-feat-s { display: block; max-height: 0; opacity: 0; overflow: hidden; margin-top: 0; max-width: 46ch; font-size: 16px; line-height: 1.55; color: var(--graphite); transition: max-height .5s cubic-bezier(.2,.8,.2,1), opacity .35s, margin .45s; }
+  .lh-feat.is-on .lh-feat-s { max-height: 140px; opacity: 1; margin-top: 8px; }
+  .lh-feat-bar { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; overflow: hidden; }
+  .lh-feat-bar b { display: block; height: 100%; background: var(--ink); transform-origin: left; transform: scaleX(0); }
+  .lh-novo { font-style: normal; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--coral-700); border: 1px solid var(--coral-300); border-radius: 99px; padding: 3px 8px; }
+  .lh-dono-phone { display: flex; justify-content: center; }
+  .lh-phone--dono { transform: rotateY(-6deg) rotateX(3deg); }
+  .lh-dono-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 24px; margin-top: 56px; padding-top: 28px; border-top: 1px solid var(--stone); }
+  .lh-dono-mais { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+  .lh-dono-mais li { padding: 8px 14px; border-radius: 99px; border: 1px solid var(--stone); background: var(--paper); font-size: 14px; color: var(--graphite); }
+
+  /* Telas do app do dono (dentro do .lh-phone) */
+  .lh-ds { position: absolute; inset: 0; padding: 50px 16px 16px; display: flex; flex-direction: column; opacity: 0; transform: translateY(10px); transition: opacity .45s ease, transform .55s cubic-bezier(.2,.8,.2,1); background: var(--cream); }
+  .lh-ds.is-on { opacity: 1; transform: none; }
+  .lh-ds.is-dark { background: #1a1612; color: var(--cream); }
+  .ds-k { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 1.3px; color: var(--ash); }
+  .ds-k.is-coral { color: var(--coral-700); }
+  .ds-t { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 21px; letter-spacing: -0.03em; margin: 2px 0 12px; }
+  .is-dark .ds-t { color: var(--cream); }
+  .ds-hero { border-radius: 18px; background: var(--ink); color: var(--cream); padding: 14px 16px; }
+  .ds-hero small { display: block; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1.3px; color: var(--ash); }
+  .ds-hero b { display: block; margin-top: 4px; font-family: 'Space Grotesk', sans-serif; font-size: 30px; letter-spacing: -0.04em; }
+  .ds-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+  .ds-kpis span { border-radius: 12px; background: var(--paper); border: 1px solid var(--stone); padding: 8px 9px; font-size: 10px; color: var(--graphite); }
+  .ds-kpis b { display: block; font-family: 'Space Grotesk', sans-serif; font-size: 18px; color: var(--ink); }
+  .ds-sec { display: flex; align-items: center; gap: 8px; margin: 14px 0 8px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px; }
+  .ds-sec em { display: inline-flex; align-items: center; gap: 5px; font-style: normal; font-family: 'Inter', sans-serif; font-weight: 600; font-size: 10px; padding: 3px 8px; border-radius: 99px; border: 1px solid var(--stone); color: var(--graphite); }
+  .ds-sec em i { width: 6px; height: 6px; border-radius: 50%; background: #5dc39f; }
+  .ds-card { display: flex; gap: 10px; padding: 11px; border-radius: 14px; background: var(--paper); border: 1px solid var(--stone); margin-bottom: 7px; }
+  .ds-card.is-live { border: 2px solid var(--ink); padding: 10px; }
+  .ds-time { flex: 0 0 44px; height: 38px; border-radius: 10px; background: var(--sand); display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 13px; }
+  .ds-body { flex: 1; min-width: 0; }
+  .ds-body b { display: block; font-size: 13px; }
+  .ds-body small { display: block; font-size: 10.5px; color: var(--graphite); margin-top: 1px; }
+  .ds-prog { display: block; height: 4px; border-radius: 4px; background: var(--sand); margin-top: 7px; overflow: hidden; }
+  .ds-prog b { display: block; height: 100%; width: 62%; background: #5dc39f; border-radius: 4px; }
+  .ds-fase { margin-top: 4px !important; }
+  .ds-acts { display: flex; gap: 6px; margin-top: 8px; }
+  .ds-out, .ds-coral { flex: 1; height: 28px; border-radius: 99px; display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 600; white-space: nowrap; }
+  .ds-out { border: 1.5px solid var(--ink); color: var(--ink); }
+  .ds-coral { background: var(--coral-500); color: #fff; flex: 1.5; }
+  .ds-dim { position: absolute; inset: 0; background: rgba(26,22,18,.42); }
+  .ds-sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--paper); border-radius: 24px 24px 0 0; padding: 10px 16px 18px; }
+  .ds-grip { width: 34px; height: 4px; border-radius: 3px; background: var(--stone); margin: 0 auto 12px; }
+  .ds-big { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 44px; letter-spacing: -0.05em; line-height: 1; margin-top: 6px; }
+  .ds-sub { display: block; font-size: 11.5px; color: var(--graphite); margin: 4px 0 10px; }
+  .ds-row { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0; border-top: 1px solid var(--stone); font-size: 11.5px; color: var(--graphite); }
+  .ds-row b { color: var(--ink); font-family: 'Space Grotesk', sans-serif; }
+  .ds-timer { display: flex; align-items: center; gap: 8px; margin: 8px 0 4px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--coral-700); }
+  .ds-timer i { flex: 1; height: 4px; border-radius: 4px; background: var(--sand); overflow: hidden; }
+  .ds-timer i b { display: block; height: 100%; width: 70%; background: var(--coral-500); }
+  .ds-grade { display: grid; grid-template-columns: 40px repeat(6, 1fr); gap: 4px; align-items: center; font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--ash); text-align: center; }
+  .ds-grade .ds-f { text-align: left; font-family: 'Inter', sans-serif; font-size: 9.5px; color: var(--graphite); }
+  .ds-grade i { height: 30px; border-radius: 7px; background: var(--paper); border: 1px solid var(--stone); font-style: normal; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 9px; display: flex; align-items: center; justify-content: center; color: var(--ink); }
+  .ds-grade i.off { background: var(--coral-50); border-color: var(--coral-300); color: var(--coral-700); }
+  .ds-grade i.pico { background: var(--ink); border-color: var(--ink); color: var(--cream); }
+  .ds-leg { display: flex; gap: 12px; margin-top: 10px; font-size: 10px; color: var(--graphite); }
+  .ds-leg b { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; background: var(--paper); border: 1px solid var(--stone); }
+  .ds-leg b.off { background: var(--coral-50); border-color: var(--coral-300); }
+  .ds-leg b.pico { background: var(--ink); border-color: var(--ink); }
+  .ds-leg b.fat { background: var(--coral-500); border-color: var(--coral-500); }
+  .ds-box { margin-top: auto; border-radius: 16px; background: var(--paper); border: 1px solid var(--stone); padding: 13px 14px; }
+  .ds-box b { display: block; font-family: 'Space Grotesk', sans-serif; font-size: 16px; }
+  .ds-box small { display: block; margin-top: 3px; font-size: 10.5px; line-height: 1.4; color: var(--graphite); }
+  .ds-segs { display: flex; gap: 5px; margin-bottom: 10px; }
+  .ds-segs i { flex: 1; height: 3px; border-radius: 2px; background: rgba(250,250,246,.25); }
+  .ds-segs i.is-ok { background: var(--cream); }
+  .ds-segs i.is-now { background: var(--coral-500); }
+  .is-dark .ds-k { color: var(--stone); }
+  .ds-cam { position: relative; flex: 1; border-radius: 18px; background: #3a342c; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .ds-cam span { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 11px; color: var(--cream); }
+  .ds-thumbs { display: flex; align-items: center; gap: 7px; margin-top: 12px; }
+  .ds-thumbs i { width: 42px; height: 42px; border-radius: 9px; border: 2px solid #5dc39f; background: linear-gradient(135deg, #575148, #28231c); position: relative; }
+  .ds-thumbs em { position: absolute; left: 0; right: 0; bottom: -15px; font-style: normal; font-size: 8.5px; text-align: center; color: var(--stone); }
+  .ds-ia { margin-left: auto; font-size: 10.5px; color: #5dc39f; font-weight: 600; }
+  .ds-shutter { align-self: center; margin-top: 22px; width: 58px; height: 58px; border-radius: 50%; border: 3px solid var(--cream); display: flex; align-items: center; justify-content: center; }
+  .ds-shutter i { width: 44px; height: 44px; border-radius: 50%; background: var(--cream); }
+  .ds-lucro { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 40px; letter-spacing: -0.05em; line-height: 1; }
+  .ds-pill { align-self: flex-start; margin-top: 8px; padding: 4px 10px; border-radius: 99px; background: var(--coral-50); color: var(--coral-700); font-size: 11px; font-weight: 600; }
+  .ds-bars { display: flex; align-items: flex-end; gap: 5px; height: 150px; margin-top: 18px; padding-bottom: 4px; border-bottom: 1px solid var(--stone); }
+  .ds-bars span { flex: 1; border-radius: 5px 5px 2px 2px; background: var(--coral-500); }
+  .ds-bars span.is-cost { background: var(--stone); }
+  .lh-ds[data-ds="4"] .ds-row { margin-top: auto; }
 
   /* ── 7. Fecho ────────────────────────────────────────────────────── */
   .lh-end { text-align: center; padding: 120px 0 80px; }
-  .lh-end-word { font-family: 'Fraunces', Georgia, serif; font-style: italic; font-weight: 600; font-variation-settings: 'SOFT' 100, 'WONK' 1, 'opsz' 144; font-size: clamp(110px, 22vw, 340px); line-height: .9; letter-spacing: -0.05em; color: var(--coral-500); }
+  .lh-end-word { font-family: 'Fraunces', Georgia, serif; font-style: italic; font-weight: 600; font-variation-settings: 'SOFT' 100, 'WONK' 1, 'opsz' 144; font-size: clamp(84px, 17vw, 260px); line-height: .95; letter-spacing: -0.05em; color: var(--coral-500); }
   .lh-end-word .w { padding: 0 .04em; }
+  .lh-end-a { display: block; font-family: 'Space Grotesk', sans-serif; font-style: normal; font-weight: 700; font-variation-settings: normal; font-size: .36em; letter-spacing: -0.04em; line-height: 1; color: var(--ink); margin-bottom: .06em; }
   .lh-end-word em { font-style: normal; color: var(--coral-500); }
   .lh-end p .lh-dest { white-space: nowrap; font-size: 1.12em; }
   .lh-end p { margin: 28px auto 36px !important; max-width: 30ch; font-size: 20px; line-height: 1.5; color: var(--graphite); }
@@ -379,8 +450,14 @@
   @media (max-width: 960px) {
     .lh-wrap { padding: 0 22px; }
     .lh-hero { padding: 40px 0 64px; min-height: auto; }
-    .lh-hero-grid, .lh-dark-grid, .lh-owner { grid-template-columns: 1fr; gap: 56px; }
+    .lh-hero-grid, .lh-dark-grid { grid-template-columns: 1fr; gap: 56px; }
+    .lh-dono-grid { grid-template-columns: 1fr; gap: 28px; margin-top: 32px; }
+    .lh-dono-phone { order: -1; }
+    .lh-dono-phone .lh-phone--dono { transform: scale(.74); transform-origin: top center; margin-bottom: -153px; }
+    .lh-feat-t { font-size: 21px; }
+    .lh-feat { padding: 16px 0 14px; }
     .lh-phone { transform: none; width: 290px; height: 590px; }
+    .lh-hero .lh-phone-stage { display: none; }
     .lh-section { padding: 96px 0; }
     .lh-how-grid { grid-template-columns: 1fr; gap: 28px; }
     .lh-how-steps { margin-top: 28px; }
@@ -392,7 +469,8 @@
     .lh-motion .lh-how-pinned { display: flex; flex-direction: column; justify-content: center; min-height: 100svh; padding: 76px 0 24px; }
     .lh-motion .lh-how-pinned .lh-how-grid { gap: 18px; }
     .lh-motion .lh-how-pinned .lh-how-phone { order: -1; }
-    .lh-motion .lh-how-pinned .lh-h2, .lh-motion .lh-how-pinned .lh-eyebrow { display: none; }
+    .lh-motion .lh-how-pinned .lh-eyebrow { margin-bottom: 0; }
+    .lh-motion .lh-how-pinned .lh-h2 { font-size: 30px !important; margin-top: 8px !important; max-width: none; }
     .lh-motion .lh-how-pinned .lh-how-steps { margin-top: 0; }
     .lh-motion .lh-how-pinned .lh-how-step { display: none; border-top: 0; }
     .lh-motion .lh-how-pinned .lh-how-step.is-on { display: grid; }
@@ -411,9 +489,9 @@
   @media (prefers-reduced-motion: reduce) {
     .lh-kinetic span, .lh-hero-after, .lh-phone-stage { animation: none; opacity: 1; transform: none; filter: none; }
     .lh-reveal { opacity: 1; transform: none; transition: none; }
-    .lh-marquee-track, .lh-hero::before, .lh-dot-live { animation: none; }
+    .lh-hero::before, .lh-dot-live { animation: none; }
     .lh-toast { animation: none; transform: none; }
-    .lh-bars span { transform: none; transition: none; }
+    .lh-ds, .lh-feat-s { transition: none; }
     .lh-scr, .lh-done-check, .lh-done-rows div { transition: none; }
   }
 </style>
@@ -501,15 +579,6 @@
     </div>
   </section>
 
-  <%# ── 2. Marquee ────────────────────────────────────────────────────── %>
-  <div class="lh-marquee" aria-hidden="true">
-    <div class="lh-marquee-track">
-      <% 2.times do %>
-        <% services_ticker.each do |s| %><span class="lh-marquee-item"><%= s %></span><% end %>
-      <% end %>
-    </div>
-  </div>
-
   <%# ── 3. Como funciona ─────────────────────────────────────────────── %>
   <%# Com movimento, a seção fica presa na tela e a rolagem passa os três
       passos: o celular troca de tela (escolher o serviço, o horário,
@@ -583,27 +652,36 @@
     </div>
   </section>
 
-  <%# ── 4. Disponível ────────────────────────────────────────────────── %>
+  <%# ── 4. Last Minute ───────────────────────────────────────────────── %>
+  <%# Fatos do produto (CarWash::JANELA_LAST_MINUTE, RelevanciaLastMinute::RAIO_KM,
+      Appointment::PREPAYMENT_PCT e ACCEPTANCE_TTL): a vaga é a da próxima
+      meia hora, nos lava-rápidos até 5 km; 35% no app; o dono aceita em até
+      3 min. O cartão mostra a próxima marca de meia hora de verdade. %>
   <section class="lh-dark" id="lh-dark">
     <div class="lh-wrap"><div class="lh-section lh-dark-grid">
       <div>
-        <div class="lh-eyebrow lh-reveal">Disponível</div>
-        <h2 class="lh-h2 lh-reveal" data-delay="1">Vaga em 30 minutos. <span class="lh-dest">Perto de você.</span></h2>
+        <div class="lh-eyebrow lh-reveal">Last Minute</div>
+        <h2 class="lh-h2 lh-reveal" data-delay="1">Bateu a vontade? <span class="lh-dest">Lava agora.</span></h2>
         <p class="lh-dark-lead lh-reveal" data-delay="2">
-          Lava-rápidos publicam os horários que sobraram no dia. Você garante a vaga
-          <strong>pagando 35% pelo app</strong> e acerta o resto lá. Bateu a vontade, resolveu.
+          A cada meia hora, o Last Minute mostra a próxima vaga livre nos lava-rápidos
+          <strong>até 5 km de você</strong>. Sem agendar com antecedência, sem ligar pra perguntar.
         </p>
+        <ol class="lh-lm-steps lh-reveal" data-delay="3">
+          <li><b>Escolha a vaga</b><span>A das 14:00, a das 14:30… a mais perto ou a mais barata.</span></li>
+          <li><b>Pague 35% no app</b><span>Garante o seu lugar. O resto você acerta lá.</span></li>
+          <li><b>O lava-rápido confirma</b><span>Em até 3 minutos. Só vira cobrança se ele aceitar.</span></li>
+        </ol>
       </div>
       <div class="lh-slot lh-reveal" data-delay="2" aria-hidden="true">
         <div class="lh-slot-top">
-          <span class="lh-slot-tag"><span class="lh-dot-live"></span>Vaga livre agora</span>
-          <span class="lh-status is-open">ABERTO</span>
+          <span class="lh-slot-tag"><span class="lh-dot-live"></span>Próxima vaga</span>
+          <span class="lh-status is-open">A 1,2 KM</span>
         </div>
-        <div class="lh-slot-time" id="lh-countdown">29:59</div>
-        <div class="lh-slot-cap">para a vaga começar</div>
+        <div class="lh-slot-time" id="lh-lm-hora">14:30</div>
+        <div class="lh-slot-cap" id="lh-lm-falta">começa em 12 min</div>
         <div class="lh-slot-bar"><i id="lh-countdown-bar"></i></div>
         <div class="lh-slot-foot">
-          <div><b>Lavagem completa</b>a 1,2 km de você</div>
+          <div><b>Lavagem completa</b>35% agora · o resto lá</div>
           <span class="lh-btn lh-btn--light" style="height:48px;padding:0 22px;font-size:15px;white-space:nowrap;">Garantir vaga</span>
         </div>
       </div>
@@ -616,9 +694,9 @@
       <div class="lh-stats">
         <%# Só regras do produto. Sem contagem de lava-rápidos: os cadastrados
             hoje são de teste — o número volta quando houver lojas reais. %>
-        <div class="lh-stat lh-reveal"><b><span data-count="30">30</span><small>min</small></b><span>pra vaga do Disponível começar</span></div>
+        <div class="lh-stat lh-reveal"><b><span data-count="30">30</span><small>min</small></b><span>entre uma vaga e outra do Last Minute</span></div>
         <div class="lh-stat lh-reveal" data-delay="1"><b><span data-count="35">35</span><small>%</small></b><span>pagos no app garantem a vaga; o resto, lá</span></div>
-        <div class="lh-stat lh-reveal" data-delay="2"><b data-count="3">3</b><span>toques do app ao carro limpo</span></div>
+        <div class="lh-stat lh-reveal" data-delay="2"><b><span data-count="5">5</span><small>km</small></b><span>de raio pra achar a vaga mais perto</span></div>
       </div>
     </div>
   </section>
@@ -676,43 +754,144 @@
   <% end %>
 
   <%# ── 6. Para lava-rápidos ─────────────────────────────────────────── %>
-  <section class="lh-section" id="para-lava-rapidos" style="background:var(--sand);">
-    <div class="lh-wrap lh-owner">
-      <div>
+  <%# Uma função por aba, com a tela do app do dono ao lado (desenhada em
+      HTML, nas cores e no layout das telas reais: painel, pedido do Last
+      Minute, Hora Off, ficha do carro, financeiro). As abas andam sozinhas
+      até a pessoa tocar numa; a barra mostra quanto falta pra próxima.
+      Fatos: aceite em 3 min, 35% pago no app, Hora Off nunca abaixo do custo
+      por lavagem, ficha com 4 fotos guiadas conferidas pela IA ou desenho. %>
+  <section class="lh-section lh-dono" id="para-lava-rapidos" style="background:var(--sand);">
+    <div class="lh-wrap">
+      <div class="lh-dono-head">
         <div class="lh-eyebrow lh-reveal">Para lava-rápidos</div>
         <h2 class="lh-h2 lh-reveal" data-delay="1">Agenda cheia. <span class="lh-dest">Contas em dia.</span></h2>
-        <div class="lh-badge lh-reveal" data-delay="1">✓ Grátis na fase de testes</div>
-        <ul class="lh-checks lh-reveal" data-delay="2">
-          <li><i>✓</i><span><b>Agenda e check-in</b> em tempo real, do celular ou do computador.</span></li>
-          <li><i>✓</i><span><b>Horário vago vira cliente</b> com as vagas de última hora do Disponível.</span></li>
-          <li><i>✓</i><span><b>Financeiro de verdade:</b> faturamento por serviço, custos e relatório em PDF e Excel.</span></li>
-          <li><i>✓</i><span><b>Equipe e fidelidade:</b> atendentes com acesso limitado e cartão fidelidade para o cliente voltar.</span></li>
+        <p class="lh-dono-lead lh-reveal" data-delay="2">O dia inteiro do seu lava-rápido num app só, no celular ou no computador: quem chega, o que entra no caixa e os horários que ficariam vazios. <strong>Grátis na fase de testes.</strong></p>
+      </div>
+      <div class="lh-dono-grid">
+        <div class="lh-feats lh-reveal" data-delay="1" role="tablist" aria-label="Funções do app do dono">
+          <button type="button" class="lh-feat is-on" role="tab" aria-selected="true" data-f="0">
+            <span class="lh-feat-t">Painel do dia</span>
+            <span class="lh-feat-s">Quem chega, quem está no pátio e quanto você já faturou, ao vivo. Cliente sem agendamento entra como avulso em dois toques.</span>
+            <i class="lh-feat-bar"><b></b></i>
+          </button>
+          <button type="button" class="lh-feat" role="tab" aria-selected="false" data-f="1">
+            <span class="lh-feat-t">Last Minute</span>
+            <span class="lh-feat-s">Clientes por perto pedem a vaga da próxima meia hora com 35% já pagos no app. Você tem 3 minutos pra aceitar e pausa quando o pátio lotar.</span>
+            <i class="lh-feat-bar"><b></b></i>
+          </button>
+          <button type="button" class="lh-feat" role="tab" aria-selected="false" data-f="2">
+            <span class="lh-feat-t">Hora Off <em class="lh-novo">Novo</em></span>
+            <span class="lh-feat-s">Desconto automático nos horários fracos e acréscimo nos mais cheios, numa grade que você marca. O preço nunca fica abaixo do seu custo por lavagem.</span>
+            <i class="lh-feat-bar"><b></b></i>
+          </button>
+          <button type="button" class="lh-feat" role="tab" aria-selected="false" data-f="3">
+            <span class="lh-feat-t">Ficha do carro</span>
+            <span class="lh-feat-s">Quatro fotos guiadas na entrada, conferidas pela IA, ou um desenho rápido. Se o cliente disser que o risco foi aí, a ficha mostra que já estava.</span>
+            <i class="lh-feat-bar"><b></b></i>
+          </button>
+          <button type="button" class="lh-feat" role="tab" aria-selected="false" data-f="4">
+            <span class="lh-feat-t">Financeiro</span>
+            <span class="lh-feat-s">Faturamento por serviço, custos do mês e o lucro de verdade. Relatório em PDF e Excel pro contador.</span>
+            <i class="lh-feat-bar"><b></b></i>
+          </button>
+        </div>
+
+        <div class="lh-dono-phone" aria-hidden="true">
+          <div class="lh-phone lh-phone--dono">
+            <div class="lh-screen" style="padding:0">
+              <div class="lh-notch" style="z-index:3"></div>
+
+              <div class="lh-ds is-on" data-ds="0">
+                <div class="ds-k">QUINTA · 21 NOV</div>
+                <div class="ds-t">Lava Rápido do Zé</div>
+                <div class="ds-hero"><small>FATURADO HOJE</small><b>R$ 1.240</b></div>
+                <div class="ds-kpis"><span><b>9</b>Atendidos</span><span><b>4</b>Em aberto</span><span><b>1</b>Não veio</span></div>
+                <div class="ds-sec">Atendimentos <em><i></i>2 em serviço</em></div>
+                <div class="ds-card is-live"><span class="ds-time">14:00</span><span class="ds-body"><b>Marina</b><small>Lavagem completa · R$ 70</small><i class="ds-prog"><b></b></i><small class="ds-fase">em andamento · faltam 23 min</small></span></div>
+                <div class="ds-card"><span class="ds-time">14:30</span><span class="ds-body"><b>Ramiro</b><small>Higienização · R$ 220</small><span class="ds-acts"><span class="ds-out">Ausente</span><span class="ds-out">Ficha de entrada</span></span></span></div>
+              </div>
+
+              <div class="lh-ds" data-ds="1">
+                <div class="ds-k">QUINTA · 21 NOV</div>
+                <div class="ds-t">Lava Rápido do Zé</div>
+                <div class="ds-hero"><small>FATURADO HOJE</small><b>R$ 1.240</b></div>
+                <div class="ds-dim"></div>
+                <div class="ds-sheet">
+                  <div class="ds-grip"></div>
+                  <div class="ds-k is-coral">NOVO PEDIDO · LAST MINUTE</div>
+                  <div class="ds-big">14:30</div>
+                  <small class="ds-sub">Lavagem simples · Carlos · a 1,4 km</small>
+                  <div class="ds-row"><span>Já pago no app (35%)</span><b>R$ 14</b></div>
+                  <div class="ds-row"><span>A receber no balcão</span><b>R$ 26</b></div>
+                  <div class="ds-timer"><i><b></b></i><span>2:06 pra aceitar</span></div>
+                  <div class="ds-acts"><span class="ds-out">Recusar</span><span class="ds-coral">Aceitar</span></div>
+                </div>
+              </div>
+
+              <div class="lh-ds" data-ds="2">
+                <div class="ds-k">GERENCIAR</div>
+                <div class="ds-t">Hora Off e Hora Pico</div>
+                <div class="ds-grade">
+                  <span></span><span>SEG</span><span>TER</span><span>QUA</span><span>QUI</span><span>SEX</span><span>SÁB</span>
+                  <span class="ds-f">Manhã</span><i class="off">−15%</i><i class="off">−15%</i><i class="off">−10%</i><i></i><i></i><i class="pico">Pico</i>
+                  <span class="ds-f">Almoço</span><i></i><i></i><i></i><i></i><i></i><i class="pico">Pico</i>
+                  <span class="ds-f">Tarde</span><i class="off">−10%</i><i></i><i class="off">−10%</i><i></i><i class="pico">Pico</i><i class="pico">Pico</i>
+                  <span class="ds-f">Noite</span><i class="off">−20%</i><i class="off">−20%</i><i class="off">−15%</i><i class="off">−15%</i><i></i><i></i>
+                </div>
+                <div class="ds-leg"><span><b class="off"></b>Hora Off</span><span><b></b>Normal</span><span><b class="pico"></b>Hora Pico</span></div>
+                <div class="ds-box"><b>Nunca abaixo de R$ 32</b><small>O seu custo por lavagem mais a margem. A Loov calcula pra você.</small></div>
+              </div>
+
+              <div class="lh-ds is-dark" data-ds="3">
+                <div class="ds-segs"><i class="is-ok"></i><i class="is-ok"></i><i class="is-now"></i><i></i></div>
+                <div class="ds-k">FOTO 3 DE 4</div>
+                <div class="ds-t">Traseira</div>
+                <div class="ds-cam">
+                  <svg viewBox="0 0 260 190" width="210" height="154"><path fill="none" stroke="#fafaf6" stroke-opacity=".85" stroke-width="2.5" stroke-dasharray="8 7" stroke-linecap="round" stroke-linejoin="round" d="M30 150 L30 98 Q32 82 50 78 L72 40 Q78 30 92 30 L168 30 Q182 30 188 40 L210 78 Q228 82 230 98 L230 150 Z M80 76 L94 44 L166 44 L180 76 Z M44 116 L76 116 M184 116 L216 116 M96 132 L164 132 M34 150 L34 172 L64 172 L64 150 M196 150 L196 172 L226 172 L226 150"/></svg>
+                  <span>Encaixe o carro no contorno</span>
+                </div>
+                <div class="ds-thumbs"><i><em>Frente</em></i><i><em>Lateral</em></i><span class="ds-ia">✓ A IA conferiu</span></div>
+                <div class="ds-shutter"><i></i></div>
+              </div>
+
+              <div class="lh-ds" data-ds="4">
+                <div class="ds-k">FINANCEIRO · NOVEMBRO</div>
+                <div class="ds-t">Lucro do mês</div>
+                <div class="ds-lucro">R$ 8.420</div>
+                <span class="ds-pill">Margem 32%</span>
+                <div class="ds-bars">
+                  <% [[62, 38], [70, 40], [58, 36], [82, 42], [90, 44], [76, 40]].each do |(rev, cost)| %>
+                    <span style="height:<%= rev %>%"></span><span class="is-cost" style="height:<%= cost %>%"></span>
+                  <% end %>
+                </div>
+                <div class="ds-leg"><span><b class="fat"></b>Faturamento</span><span><b></b>Custos</span></div>
+                <div class="ds-row"><span>Relatório do mês</span><b>PDF · Excel</b></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lh-dono-foot lh-reveal">
+        <ul class="lh-dono-mais">
+          <li>Equipe com acesso limitado</li>
+          <li>Cartão fidelidade</li>
+          <li>Avaliação só de quem foi atendido</li>
+          <li>Agenda também pelo computador</li>
         </ul>
-        <a href="<%= new_user_registration_path(role: "owner") %>" class="lh-btn lh-btn--primary lh-reveal" data-delay="3">
+        <a href="<%= new_user_registration_path(role: "owner") %>" class="lh-btn lh-btn--primary">
           Cadastrar meu lava-rápido
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </a>
-      </div>
-      <div class="lh-dash lh-reveal" data-delay="2" id="lh-dash" aria-hidden="true">
-        <div class="lh-dash-label">Lucro do mês</div>
-        <div class="lh-dash-big">R$ <span data-count="8420" data-thousands>8.420</span></div>
-        <span class="lh-dash-pill">Margem 32%</span>
-        <div class="lh-bars">
-          <% [[62, 38], [70, 40], [58, 36], [82, 42], [90, 44], [76, 40]].each_with_index do |(rev, cost), i| %>
-            <span style="height:<%= rev %>%;transition-delay:<%= i * 0.06 %>s"></span>
-            <span class="is-cost" style="height:<%= cost %>%;transition-delay:<%= i * 0.06 + 0.03 %>s"></span>
-          <% end %>
-        </div>
-        <div class="lh-dash-legend"><span><b style="background:var(--coral-500)"></b>Faturamento</span><span><b style="background:var(--stone)"></b>Custos</span></div>
-        <div class="lh-dash-note">Ilustração do painel do dono.</div>
       </div>
     </div>
   </section>
 
   <%# ── 7. Fecho ─────────────────────────────────────────────────────── %>
+  <%# "sem fila." se enche de coral de baixo pra cima; ao encher, o ponto cai. %>
   <section class="lh-end">
     <div class="lh-wrap">
-      <div class="lh-end-word" id="lh-end-word"><span class="w">Vazou</span><em>.</em></div>
+      <div class="lh-end-word" id="lh-end-word"><span class="lh-end-a">Lava-rápido</span><span class="w">sem fila</span><em>.</em></div>
       <p class="lh-reveal" data-delay="1">Seu próximo carro limpo está a <span class="lh-dest">três toques.</span></p>
       <a href="<%= new_user_registration_path %>" class="lh-btn lh-btn--primary lh-reveal" data-delay="2">
         Criar conta grátis
@@ -765,7 +944,6 @@
       var svcs = porPreco(l), menor = svcs[0], fecha = fechaHoje(l);
       var addr = l.dist ? l.dist + ' · ' + l.addr : l.addr;
       return '<button type="button" class="lh-card" role="listitem" data-i="' + i + '" aria-label="' + escH(l.name) + ', ' + (l.open_now ? 'aberto' : 'fechado') + '. Ver serviços">' +
-        '<span class="lh-card-n" aria-hidden="true">' + String(i + 1).padStart(2, '0') + '</span>' +
         '<span class="lh-card-f"><span class="lh-card-top"><span class="lh-card-av" data-logo="' + escH(l.name) + '"></span>' +
           '<span class="lh-status ' + (l.open_now ? 'is-open' : 'is-closed') + '">' + (l.open_now ? 'ABERTO' : 'FECHADO') + '</span></span>' +
           '<span><span class="lh-card-name">' + escH(l.name) + '</span><span class="lh-card-addr">' + escH(addr) + '</span><span class="lh-card-hint">Ver serviços →</span></span></span>' +
@@ -933,23 +1111,6 @@
         gsap.to('#lh-phone-float', { y: -140, rotate: -4, scale: 0.94, ease: 'none', scrollTrigger: { trigger: hero, start: 'top top', end: 'bottom top', scrub: true } });
       });
 
-      // 2. Faixa de serviços: acelera e inclina com a velocidade da rolagem,
-      // e inverte o sentido quando a pessoa sobe.
-      var track = document.querySelector('.lh-marquee-track');
-      if (track) {
-        track.style.animation = 'none';
-        var loop = gsap.to(track, { xPercent: -50, duration: 40, ease: 'none', repeat: -1 });
-        var skew = gsap.quickTo(track, 'skewX', { duration: 0.4, ease: 'power3' });
-        ScrollTrigger.create({
-          onUpdate: function (st) {
-            var v = st.getVelocity();
-            loop.timeScale(gsap.utils.clamp(-6, 6, (st.direction || 1) * (1 + Math.abs(v) / 400)));
-            skew(gsap.utils.clamp(-8, 8, -v / 250));
-          }
-        });
-        ScrollTrigger.addEventListener('scrollEnd', function () { gsap.to(loop, { timeScale: 1, duration: 0.6 }); skew(0); });
-      }
-
       // 3. Três toques: a seção fica presa enquanto a rolagem passa os
       // passos. No celular (tela pequena) o aparelho encolhe pra caber.
       var how = document.getElementById('lh-how');
@@ -959,7 +1120,7 @@
       var bars = how.querySelectorAll('.lh-how-bar b');
       function escala() {
         var pequeno = window.innerWidth < 961;
-        var s = pequeno ? Math.min(0.66, (window.innerHeight - 290) / 650) : Math.min(1, (window.innerHeight - 140) / 650);
+        var s = pequeno ? Math.min(0.62, (window.innerHeight - 390) / 650) : Math.min(1, (window.innerHeight - 140) / 650);
         box.style.setProperty('--s', Math.max(0.42, s).toFixed(3));
       }
       escala();
@@ -991,9 +1152,9 @@
       dark.style.margin = '0';
       dark.style.borderRadius = '0';
 
-      // 5. Perto de você: no iPad e no computador a seção fica presa e a
-      // rolagem passa os cards pro lado (no celular, o dedo).
-      gsap.matchMedia().add('(min-width: 768px)', function () {
+      // 5. Perto de você: a seção fica presa e a rolagem passa os cards pro
+      // lado, em qualquer tela.
+      gsap.matchMedia().add('all', function () {
         var rail = document.getElementById('lh-near-list');
         if (!rail) return;
         rail.classList.add('is-pinned');
@@ -1003,11 +1164,6 @@
           onUpdate: function (st) { marcar(st.progress); }
         } });
         return function () { rail.classList.remove('is-pinned'); gsap.set(rail, { x: 0 }); };
-      });
-
-      // 6. Painel do dono: inclina de leve e se endireita ao entrar.
-      gsap.fromTo('#lh-dash', { rotateX: 14, transformPerspective: 1200, y: 40 }, {
-        rotateX: 0, y: 0, ease: 'none', scrollTrigger: { trigger: '#lh-dash', start: 'top bottom', end: 'center 60%', scrub: true }
       });
 
       // 7. Fecho: "Vazou" se enche de baixo pra cima; ao encher, o ponto cai.
@@ -1084,10 +1240,10 @@
         '#else',
         ' float aa=uN/uR.y*1.6;',
         '#endif',
-        ' float w=(.15+lens*.9)*aa;',
-        ' float lin=1.-smoothstep(w,w+aa,f);',
+        ' float w=lens*.6*aa;',
+        ' float lin=1.-smoothstep(w,w+aa*.85,f);',
         ' vec3 lc=mix(LN,CORAL,smoothstep(.2,.75,lens));',
-        ' float a=mix(.085,.6,lens)*mix(1.,.8,dk);',
+        ' float a=mix(.07,.5,lens)*mix(1.,.8,dk);',
         ' gl_FragColor=vec4(mix(BG,lc,lin*a),1.);}'
       ].join('\n');
       var prog, U = {};
@@ -1190,17 +1346,48 @@
     }
     vivos(document);
 
-    // Cronômetro do Disponível: 30 min correndo, recomeça ao zerar.
-    var clock = document.getElementById('lh-countdown');
+    // Dono: abas que andam sozinhas (6 s cada, a barra mostra o tempo) até a
+    // pessoa escolher uma; só rodam com a seção na tela.
+    (function () {
+      var feats = document.querySelectorAll('.lh-feat'), telas = document.querySelectorAll('.lh-ds');
+      if (!feats.length) return;
+      var atual = 0, auto = !reduce, t0 = 0, raf = 0, visivel = false, DUR = 6000;
+      function ir(i) {
+        atual = i;
+        feats.forEach(function (f, k) { f.classList.toggle('is-on', k === i); f.setAttribute('aria-selected', String(k === i)); f.querySelector('.lh-feat-bar b').style.transform = 'scaleX(0)'; });
+        telas.forEach(function (t, k) { t.classList.toggle('is-on', k === i); });
+        t0 = performance.now();
+      }
+      function passo(now) {
+        raf = 0;
+        if (!auto || !visivel) return;
+        var p = Math.min(1, (now - t0) / DUR);
+        feats[atual].querySelector('.lh-feat-bar b').style.transform = 'scaleX(' + p.toFixed(3) + ')';
+        if (p >= 1) ir((atual + 1) % feats.length);
+        raf = requestAnimationFrame(passo);
+      }
+      feats.forEach(function (f, k) {
+        f.addEventListener('click', function () { auto = false; ir(k); });
+      });
+      if ('IntersectionObserver' in window) new IntersectionObserver(function (es) {
+        visivel = es[0].isIntersecting;
+        if (visivel && auto && !raf) { t0 = performance.now() - 0; raf = requestAnimationFrame(passo); }
+      }, { threshold: .35 }).observe(document.querySelector('.lh-dono-grid'));
+      ir(0);
+    })();
+
+    // Last Minute: a próxima marca de meia hora de verdade e quanto falta.
+    var lmHora = document.getElementById('lh-lm-hora'), lmFalta = document.getElementById('lh-lm-falta');
     var bar = document.getElementById('lh-countdown-bar');
-    if (clock && !reduce) {
-      var total = 30 * 60, left = total - 1;
-      setInterval(function () {
-        left = left <= 0 ? total - 1 : left - 1;
-        var m = Math.floor(left / 60), s = left % 60;
-        clock.textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
-        if (bar) bar.style.transform = 'scaleX(' + (left / total).toFixed(4) + ')';
-      }, 1000);
+    function lmTique() {
+      var agora = new Date(), prox = new Date(agora);
+      prox.setSeconds(0, 0); prox.setMinutes(agora.getMinutes() < 30 ? 30 : 60);
+      var falta = Math.max(0, Math.round((prox - agora) / 1000)), min = Math.ceil(falta / 60);
+      if (lmHora) lmHora.textContent = String(prox.getHours()).padStart(2, '0') + ':' + String(prox.getMinutes()).padStart(2, '0');
+      if (lmFalta) lmFalta.textContent = min <= 1 ? 'começa em menos de 1 min' : 'começa em ' + min + ' min';
+      if (bar) bar.style.transform = 'scaleX(' + (falta / 1800).toFixed(4) + ')';
     }
+    lmTique();
+    if (!reduce) setInterval(lmTique, 1000);
   })();
 </script>
