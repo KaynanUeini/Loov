@@ -20,6 +20,15 @@
   "Vazou." do fecho se enche de baixo pra cima. Sem as bibliotecas ou com
   prefers-reduced-motion, a página fica estática e completa.
 
+  Fundo e destaque (2026-11-18, escolhidos na prévia): curvas de nível em
+  WebGL atrás da página inteira, num canvas fixo, como o fundo do site do
+  Lando Norris. O relevo sobe onde o cursor passa (no toque, passeia
+  sozinho), corre mais devagar que a página e muda de cor com a seção: areia
+  na seção do dono e creme sobre obsidiana no Disponível, acompanhando o
+  cartão que cresce. A palavra de destaque de cada título vai em Fraunces
+  itálica coral (.lh-dest); o resto segue Space Grotesk e Inter. Sem WebGL ou
+  com prefers-reduced-motion, as seções voltam às cores chapadas de antes.
+
   Toda frase aqui é fato do produto (conferido no código): Disponível = 30
   min e 35% pago no app; lembrete na véspera; avaliação só de quem foi
   atendido; dono grátis na fase de testes. Movimento respeita
@@ -31,6 +40,7 @@
   services_ticker = ["Lavagem", "Polimento", "Higienização", "Cristalização", "Vitrificação",
                      "Enceramento", "Hidratação de couro", "Limpeza de motor", "Faróis", "Impermeabilização"]
 %>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@1,9..144,500..700,0..100,0..1&display=swap">
 <style>
   .lh { background: var(--cream); color: var(--ink); overflow-x: clip; }
   .lh *, .lh *::before, .lh *::after { box-sizing: border-box; }
@@ -61,6 +71,24 @@
   .lh-btn--light { background: var(--cream); color: var(--ink) !important; }
   .lh-btn--light:hover { transform: translateY(-2px); background: #fff; }
 
+  /* Destaque: uma fonte só pras palavras que pedem atenção, sempre coral
+     (como a Brier em lime no site do Lando). */
+  .lh .lh-dest { font-family: 'Fraunces', Georgia, serif; font-style: italic; font-weight: 600; font-variation-settings: 'SOFT' 100, 'WONK' 1, 'opsz' 144; letter-spacing: -0.03em; color: var(--coral-500); }
+
+  /* Botões: o texto rola letra a letra no hover (só com mouse) */
+  .lh-roll { display: inline-flex; overflow: hidden; height: 1.25em; line-height: 1.25em; white-space: pre; }
+  .lh-roll i { font-style: normal; display: inline-block; text-shadow: 0 1.25em currentColor; transition: transform .45s cubic-bezier(.7,0,.2,1); transition-delay: calc(var(--i) * 14ms); }
+  @media (hover: hover) { .lh-btn:hover .lh-roll i, .lh-near-btn:hover .lh-roll i { transform: translateY(-1.25em); } }
+
+  /* Curvas de nível atrás da página: as seções deixam o fundo pro canvas */
+  .lh-campo-cv { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+  .lh-campo-cv[hidden] { display: none; }
+  .lh { position: relative; z-index: 1; }
+  .lh.lh-campo { background: transparent; }
+  .lh.lh-campo .lh-hero::before { display: none; }
+  .lh.lh-campo .lh-dark { background: transparent; }
+  .lh.lh-campo #para-lava-rapidos { background: transparent !important; }
+
   /* Revelar ao rolar */
   .lh-reveal { opacity: 0; transform: translateY(28px); transition: opacity .8s ease, transform .8s cubic-bezier(.2,.8,.2,1); }
   .lh-reveal.is-in { opacity: 1; transform: none; }
@@ -81,8 +109,8 @@
   .lh-kinetic { font-size: clamp(72px, 10.5vw, 168px) !important; line-height: .9; letter-spacing: -0.05em; margin-top: 22px !important; }
   .lh-kinetic span { display: block; opacity: 0; transform: translateY(38%); filter: blur(14px); animation: lh-word 1s cubic-bezier(.2,.8,.2,1) forwards; }
   .lh-kinetic span:nth-child(1) { animation-delay: .1s; }
-  .lh-kinetic span:nth-child(2) { animation-delay: .5s; color: var(--coral-500); }
-  .lh-kinetic span:nth-child(3) { animation-delay: .9s; }
+  .lh-kinetic span:nth-child(2) { animation-delay: .5s; }
+  .lh-kinetic span:nth-child(3) { animation-delay: .9s; padding-right: .08em; }
   @keyframes lh-word { to { opacity: 1; transform: none; filter: none; } }
   .lh-hero-after { opacity: 0; animation: lh-fade .9s ease 1.45s forwards; }
   @keyframes lh-fade { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
@@ -202,8 +230,10 @@
 
   /* ── 7. Fecho ────────────────────────────────────────────────────── */
   .lh-end { text-align: center; padding: 120px 0 80px; }
-  .lh-end-word { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: clamp(110px, 22vw, 340px); line-height: .85; letter-spacing: -0.06em; color: var(--ink); }
+  .lh-end-word { font-family: 'Fraunces', Georgia, serif; font-style: italic; font-weight: 600; font-variation-settings: 'SOFT' 100, 'WONK' 1, 'opsz' 144; font-size: clamp(110px, 22vw, 340px); line-height: .9; letter-spacing: -0.05em; color: var(--coral-500); }
+  .lh-end-word .w { padding: 0 .04em; }
   .lh-end-word em { font-style: normal; color: var(--coral-500); }
+  .lh-end p .lh-dest { white-space: nowrap; font-size: 1.12em; }
   .lh-end p { margin: 28px auto 36px !important; max-width: 30ch; font-size: 20px; line-height: 1.5; color: var(--graphite); }
   .lh-foot { border-top: 1px solid var(--stone); padding: 28px 0 40px; }
   .lh-foot-in { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; font-size: 14px; color: var(--graphite); }
@@ -275,10 +305,10 @@
   .lh-stat b small { font-size: .42em; letter-spacing: -0.02em; margin-left: 4px; }
   .lh-stat > span { display: block; margin-top: 14px; max-width: 22ch; font-size: 15.5px; line-height: 1.45; color: var(--graphite); }
 
-  /* Fecho: o "Vazou." se enche de baixo pra cima (contorno → tinta). */
+  /* Fecho: o "Vazou." se enche de baixo pra cima (contorno → coral). */
   .lh-motion .lh-end-word .w {
-    color: transparent; -webkit-text-stroke: 2px var(--ink);
-    background: linear-gradient(to top, var(--ink) var(--fill, 0%), transparent var(--fill, 0%));
+    color: transparent; -webkit-text-stroke: 2px var(--coral-500);
+    background: linear-gradient(to top, var(--coral-500) var(--fill, 0%), transparent var(--fill, 0%));
     -webkit-background-clip: text; background-clip: text;
   }
   .lh-end-word em { display: inline-block; }
@@ -326,6 +356,7 @@
   }
 </style>
 
+<canvas class="lh-campo-cv" id="lh-campo" aria-hidden="true" hidden></canvas>
 <div class="lh">
 
   <%# ── 1. Hero ───────────────────────────────────────────────────────── %>
@@ -336,7 +367,7 @@
         <h1 class="lh-kinetic" aria-label="Chegou. Lavou. Vazou.">
           <span aria-hidden="true">Chegou.</span>
           <span aria-hidden="true">Lavou.</span>
-          <span aria-hidden="true">Vazou.</span>
+          <span aria-hidden="true" class="lh-dest">Vazou.</span>
         </h1>
         <div class="lh-hero-after">
           <p class="lh-lead">Encontre o lava-rápido mais perto, escolha o horário e pronto. <strong>Sem ligar, sem fila, sem esperar na porta.</strong></p>
@@ -411,7 +442,7 @@
       <div class="lh-wrap lh-how-grid">
         <div>
           <div class="lh-eyebrow lh-reveal">Como funciona</div>
-          <h2 class="lh-h2 lh-reveal" data-delay="1">Três toques. Carro limpo.</h2>
+          <h2 class="lh-h2 lh-reveal" data-delay="1">Três toques. <span class="lh-dest">Carro limpo.</span></h2>
           <ol class="lh-how-steps">
             <li class="lh-how-step is-on" data-step="0">
               <span class="n">01</span><h3>Escolha</h3>
@@ -480,7 +511,7 @@
     <div class="lh-wrap"><div class="lh-section lh-dark-grid">
       <div>
         <div class="lh-eyebrow lh-reveal">Disponível</div>
-        <h2 class="lh-h2 lh-reveal" data-delay="1">Vaga em 30 minutos. Perto de você.</h2>
+        <h2 class="lh-h2 lh-reveal" data-delay="1">Vaga em 30 minutos. <span class="lh-dest">Perto de você.</span></h2>
         <p class="lh-dark-lead lh-reveal" data-delay="2">
           Lava-rápidos publicam os horários que sobraram no dia. Você garante a vaga
           <strong>pagando 35% pelo app</strong> e acerta o resto lá. Bateu a vontade, resolveu.
@@ -522,7 +553,7 @@
         <div class="lh-near-head">
           <div>
             <div class="lh-eyebrow lh-reveal">Na Loov agora</div>
-            <h2 class="lh-h2 lh-reveal" data-delay="1" id="lh-near-title">Lava-rápidos na Loov.</h2>
+            <h2 class="lh-h2 lh-reveal" data-delay="1" id="lh-near-title">Lava-rápidos na <span class="lh-dest">Loov.</span></h2>
           </div>
           <div class="lh-reveal" data-delay="1">
             <button type="button" class="lh-near-btn" id="lh-near-btn">
@@ -560,7 +591,7 @@
     <div class="lh-wrap lh-owner">
       <div>
         <div class="lh-eyebrow lh-reveal">Para lava-rápidos</div>
-        <h2 class="lh-h2 lh-reveal" data-delay="1">Agenda cheia. Contas em dia.</h2>
+        <h2 class="lh-h2 lh-reveal" data-delay="1">Agenda cheia. <span class="lh-dest">Contas em dia.</span></h2>
         <div class="lh-badge lh-reveal" data-delay="1">✓ Grátis na fase de testes</div>
         <ul class="lh-checks lh-reveal" data-delay="2">
           <li><i>✓</i><span><b>Agenda e check-in</b> em tempo real, do celular ou do computador.</span></li>
@@ -593,7 +624,7 @@
   <section class="lh-end">
     <div class="lh-wrap">
       <div class="lh-end-word" id="lh-end-word"><span class="w">Vazou</span><em>.</em></div>
-      <p class="lh-reveal" data-delay="1">Seu próximo carro limpo está a três toques.</p>
+      <p class="lh-reveal" data-delay="1">Seu próximo carro limpo está a <span class="lh-dest">três toques.</span></p>
       <a href="<%= new_user_registration_path %>" class="lh-btn lh-btn--primary lh-reveal" data-delay="2">
         Criar conta grátis
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
@@ -653,7 +684,7 @@
               go + '</a>';
           }).join('');
           pintarLogos(nearList);
-          document.getElementById('lh-near-title').textContent = 'Perto de você.';
+          document.getElementById('lh-near-title').innerHTML = 'Perto de <span class="lh-dest">você.</span>';
           nearBtn.hidden = true;
           document.getElementById('lh-near-note').hidden = false;
         });
@@ -828,6 +859,136 @@
         var y = (ev.clientY / window.innerHeight - 0.5);
         phone.style.transform = 'rotateY(' + (-8 + x * 10).toFixed(2) + 'deg) rotateX(' + (4 - y * 8).toFixed(2) + 'deg)';
       }, { passive: true });
+    }
+
+    // ── Curvas de nível atrás da página (WebGL) ─────────────────────────
+    // Um canvas fixo e um shader: o relevo é ruído que corre devagar, o
+    // cursor levanta um morro coral, a rolagem rápida inclina o relevo. As
+    // regiões do Disponível (obsidiana, com o recorte que cresce) e do dono
+    // (areia) são desenhadas pelo shader, então as linhas passam por elas.
+    // Aba escondida: para. Abaixo de 45 qps: metade da resolução.
+    (function () {
+      var cv = document.getElementById('lh-campo');
+      var lh = document.querySelector('.lh');
+      var dark = document.getElementById('lh-dark');
+      var dono = document.getElementById('para-lava-rapidos');
+      if (!cv || !lh) return;
+      var gl = null;
+      try { gl = cv.getContext('webgl', { antialias: false, alpha: false, powerPreference: 'high-performance' }); } catch (e) { gl = null; }
+      if (!gl) return;
+      var der = !!gl.getExtension('OES_standard_derivatives');
+      var FS = [
+        der ? '#extension GL_OES_standard_derivatives : enable\n#define DER' : '',
+        'precision highp float;',
+        'uniform vec2 uR;uniform float uT;uniform vec2 uM;uniform float uL;uniform float uVs;uniform float uS;uniform float uN;',
+        'uniform vec4 uDk;uniform float uDr;uniform vec4 uSd;',
+        'const vec3 CREAM=vec3(.980,.980,.965);const vec3 SAND=vec3(.945,.933,.902);const vec3 INK=vec3(.157,.137,.110);',
+        'const vec3 OBS=vec3(.102,.086,.071);const vec3 CORAL=vec3(.867,.471,.322);',
+        'float h(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}',
+        'float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}',
+        'float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<3;i++){v+=a*n(p);p=p*2.03+vec2(1.7,9.2);a*=.5;}return v;}',
+        'float caixa(vec2 p,vec4 r,float rad){vec2 c=(r.xy+r.zw)*.5;vec2 e=(r.zw-r.xy)*.5;vec2 q=abs(p-c)-e+rad;return length(max(q,0.))+min(max(q.x,q.y),0.)-rad;}',
+        'void main(){',
+        ' vec2 fc=gl_FragCoord.xy;vec2 p=fc/uR.y;float asp=uR.x/uR.y;vec2 mm=uM*vec2(asp,1.);',
+        ' float dk=1.-smoothstep(-.75,.75,caixa(fc,uDk,uDr));',
+        ' float sd=1.-step(0.,caixa(fc,uSd,0.));',
+        ' vec3 BG=mix(mix(CREAM,SAND,sd),OBS,dk);vec3 LN=mix(INK,CREAM,dk);',
+        ' float sc=uS/uR.y*.35;',
+        ' vec2 dv=p-mm;float lens=exp(-dot(dv,dv)/.045)*uL;',
+        ' float rel=fbm(vec2(p.x*1.25,(p.y+sc)*1.25)+vec2(uT*.025,0.))+lens*.32+uVs*.04*p.x;',
+        ' float v=rel*uN*.45;',
+        ' float f=abs(fract(v)-.5);',
+        '#ifdef DER',
+        ' float aa=fwidth(v);',
+        '#else',
+        ' float aa=uN/uR.y*1.6;',
+        '#endif',
+        ' float w=(.5+lens*1.7)*aa;',
+        ' float lin=1.-smoothstep(w,w+aa,f);',
+        ' vec3 lc=mix(LN,CORAL,smoothstep(.2,.75,lens));',
+        ' float a=mix(.13,.8,lens)*mix(1.,.75,dk);',
+        ' gl_FragColor=vec4(mix(BG,lc,lin*a),1.);}'
+      ].join('\n');
+      var prog, U = {};
+      try {
+        var sh = function (t, src) { var o = gl.createShader(t); gl.shaderSource(o, src); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
+        prog = gl.createProgram();
+        gl.attachShader(prog, sh(gl.VERTEX_SHADER, 'attribute vec2 a;void main(){gl_Position=vec4(a,0.,1.);}'));
+        gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS));
+        gl.bindAttribLocation(prog, 0, 'a'); gl.linkProgram(prog);
+        if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+        gl.useProgram(prog);
+        ['uR', 'uT', 'uM', 'uL', 'uVs', 'uS', 'uN', 'uDk', 'uDr', 'uSd'].forEach(function (k) { U[k] = gl.getUniformLocation(prog, k); });
+        var buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+        gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+      } catch (e) { return; }
+
+      cv.hidden = false;
+      lh.classList.add('lh-campo');
+      var fino = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+      var escalaRes = 1, k = 1, raf = 0, t0 = performance.now(), antes = t0;
+      var m = { x: .7, y: .4, tx: .7, ty: .4, ultimo: -1e9 }, rol = { ant: window.scrollY, v: 0 };
+      var sonda = { de: t0 + 800, n: 0 };
+      function tam() {
+        k = Math.min(1.5, window.devicePixelRatio || 1) * escalaRes;
+        cv.width = Math.round(innerWidth * k); cv.height = Math.round(innerHeight * k);
+        gl.viewport(0, 0, cv.width, cv.height);
+        if (reduce) desenhar(0, 0);
+      }
+      // Retângulo da região em pixels do canvas (origem embaixo)
+      function caixa(el) {
+        if (!el) return [0, 0, 0, 0, 0];
+        var r = el.getBoundingClientRect(), x0 = r.left, x1 = r.right, y0 = r.top, y1 = r.bottom, rad = parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0;
+        var c = /inset\(([\d.]+)%\s+([\d.]+)%\s+([\d.]+)%\s+([\d.]+)%(?:\s+round\s+([\d.]+)px)?\)/.exec(el.style.clipPath || '');
+        if (c) { y0 += r.height * c[1] / 100; x1 -= r.width * c[2] / 100; y1 -= r.height * c[3] / 100; x0 += r.width * c[4] / 100; rad = c[5] ? parseFloat(c[5]) : 0; }
+        return [x0 * k, (innerHeight - y1) * k, x1 * k, (innerHeight - y0) * k, rad * k];
+      }
+      function desenhar(t, dt) {
+        var vs = (window.scrollY - rol.ant) / Math.max(.008, dt || .016); rol.ant = window.scrollY;
+        rol.v += (Math.max(-3, Math.min(3, vs / 900)) - rol.v) * .12;
+        var d = caixa(dark), s = caixa(dono);
+        gl.uniform2f(U.uR, cv.width, cv.height); gl.uniform1f(U.uT, t);
+        gl.uniform2f(U.uM, m.x, 1 - m.y); gl.uniform1f(U.uL, reduce ? 0 : 1); gl.uniform1f(U.uVs, reduce ? 0 : rol.v);
+        gl.uniform1f(U.uS, window.scrollY * k); gl.uniform1f(U.uN, innerWidth < 768 ? 46 : 64);
+        gl.uniform4f(U.uDk, d[0], d[1], d[2], d[3]); gl.uniform1f(U.uDr, d[4]);
+        gl.uniform4f(U.uSd, s[0], s[1], s[2], s[3]);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+      }
+      function quadro(now) {
+        raf = 0;
+        if (document.hidden) return;
+        var t = (now - t0) / 1000, dt = Math.min(.05, (now - antes) / 1000); antes = now;
+        if (!fino || now - m.ultimo > 2500) { m.tx = (innerWidth < 768 ? .5 : .72) + Math.sin(t * .3) * .2; m.ty = .45 + Math.cos(t * .23) * .2; }
+        m.x += (m.tx - m.x) * .08; m.y += (m.ty - m.y) * .08;
+        desenhar(t, dt);
+        if (sonda && now > sonda.de) { sonda.n++; if (now > sonda.de + 1200) { var qps = sonda.n / 1.2; sonda = null; if (qps < 45) { escalaRes = .5; tam(); } } }
+        raf = requestAnimationFrame(quadro);
+      }
+      window.addEventListener('resize', tam);
+      tam();
+      if (reduce) {
+        // Sem movimento: o relevo fica parado e só acompanha a rolagem.
+        window.addEventListener('scroll', function () { if (!raf) raf = requestAnimationFrame(function () { raf = 0; desenhar(0, 0); }); }, { passive: true });
+        desenhar(0, 0);
+        return;
+      }
+      if (fino) window.addEventListener('pointermove', function (e) { m.tx = e.clientX / innerWidth; m.ty = e.clientY / innerHeight; m.ultimo = performance.now(); }, { passive: true });
+      document.addEventListener('visibilitychange', function () { if (!document.hidden && !raf) { antes = performance.now(); raf = requestAnimationFrame(quadro); } });
+      raf = requestAnimationFrame(quadro);
+    })();
+
+    // Botões: o texto rola letra a letra no hover (só com mouse e movimento).
+    if (!reduce && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      document.querySelectorAll('.lh .lh-btn').forEach(function (b) {
+        var no = Array.prototype.find.call(b.childNodes, function (n) { return n.nodeType === 3 && n.textContent.trim(); });
+        if (!no) return;
+        var txt = no.textContent.trim(), roll = document.createElement('span');
+        roll.className = 'lh-roll'; roll.setAttribute('aria-hidden', 'true');
+        txt.split('').forEach(function (c, i) { var e = document.createElement('i'); e.style.setProperty('--i', i); e.textContent = c; roll.appendChild(e); });
+        if (!b.getAttribute('aria-label') && b.tagName === 'A') b.setAttribute('aria-label', txt);
+        b.replaceChild(roll, no);
+      });
     }
 
     // Cronômetro do Disponível: 30 min correndo, recomeça ao zerar.
