@@ -158,8 +158,11 @@ class Appointment < ApplicationRecord
   # ficha é feita no pátio — antes o avulso escapava da regra e o tempo
   # corria sem ficha. Uma ficha pulada vale: com a ficha obrigatória
   # ninguém pula, então pulada só existe de quando ela era opcional.
+  # Pendência de dia anterior não pede ficha: o carro já foi embora, não
+  # tem o que registrar; o dono só diz se o cliente veio ou não.
   def ficha_pendente?
     return false unless car_wash.ficha_obrigatoria?
+    return false if scheduled_at < Time.zone.now.beginning_of_day
     vehicle_check.nil?
   end
 

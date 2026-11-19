@@ -444,11 +444,12 @@
   .owner-dash-btn-ghost {
     flex:1; display:flex; align-items:center; justify-content:center; gap:6px;
     border-radius:999px; padding:12px;
-    border:1.5px solid var(--od-stone); background:transparent;
-    color:var(--od-graphite); font-size:13.5px; font-weight:600; cursor:pointer;
+    border:1.5px solid var(--od-ink); background:transparent;
+    color:var(--od-ink); font-size:13.5px; font-weight:600; cursor:pointer;
     transition:all .15s;
   }
-  .owner-dash-btn-ghost:hover:not(:disabled) { border-color:var(--od-graphite); }
+  /* Ausente: ação de apoio, contorno tinta como a Ficha de entrada. */
+  .owner-dash-btn-ghost:hover:not(:disabled) { background:var(--od-sand); }
   .owner-dash-btn-ghost:disabled { opacity:.5; cursor:wait; }
   .owner-dash-btn-primary {
     flex:1.5; display:flex; align-items:center; justify-content:center; gap:6px;
@@ -506,6 +507,13 @@
     font-size:.55rem; font-weight:600; letter-spacing:.12em; flex-shrink:0;
   }
 
+  /* Confirmação da pendência de dia anterior, no lugar dos botões. */
+  .od-confirm { margin-top:14px; padding-top:14px; border-top:1px solid var(--od-sand); }
+  .od-confirm b { display:block; font-size:15px; font-weight:600; color:var(--od-ink); }
+  .od-confirm small { display:block; margin-top:2px; font-size:13px; color:var(--od-graphite); }
+  .od-confirm .owner-dash-actions { margin-top:12px; }
+  .owner-dash-card.is-saindo { height:0 !important; margin:0 !important; padding-top:0 !important; padding-bottom:0 !important; border-width:0 !important; opacity:0; overflow:hidden; transition:height .25s ease, opacity .2s ease, padding .25s ease, margin .25s ease; }
+
   /* ── Modais (bottom sheet) ── */
   .owner-dash-modal-overlay {
     position:fixed; inset:0; z-index:200;
@@ -513,6 +521,10 @@
     display:none; align-items:flex-end; justify-content:center;
   }
   .owner-dash-modal-overlay.open { display:flex; }
+  /* O ••• e o Editar abrem por cima da folha de pendências. */
+  #od-menu-overlay, #od-edit-overlay { z-index:210; }
+  /* O convite dos alertas do Last Minute fica no rodapé, por cima das folhas. */
+  html:has(.owner-dash-modal-overlay.open) .lma-enable { display:none !important; }
   .owner-dash-sheet {
     background:var(--od-paper);
     border-top-left-radius:28px; border-top-right-radius:28px;
@@ -1164,9 +1176,9 @@
   }
 
   function renderCard(appt, opts = {}) {
-    // Pendências antigas (isPast) não têm •••: lá Editar segue como link.
+    // Pendências antigas (isPast) também usam o •••: Editar era um link de
+    // 11px no card. O menu abre por cima da folha de pendências.
     const { isPast = false, showDate = false } = opts;
-    const comMenu = !isPast;
     const isWalkIn   = appt.walk_in === true;
     const isAttended = appt.status === 'attended';
     const isNoShow   = appt.status === 'no_show';
@@ -1188,6 +1200,7 @@
     const atrasoMin = esperandoFicha ? Math.max(0, Math.floor((Date.now() - new Date(appt.scheduled_at).getTime()) / 60000)) : 0;
     card.className = `owner-dash-card${isFinalized ? ' inactive' : ''}`;
     card.dataset.id = appt.id;
+    if (isPast) card.dataset.past = '1';
 
     const isDisp = appt.is_disponivel && appt.remaining_amount != null;
     const charge = isDisp ? appt.remaining_amount : appt.price;
@@ -1198,7 +1211,8 @@
     // o carro está no pátio e o Ausente sai. Avulso nunca tem Ausente.
     const fichaAtiva = !!fichaCfg?.enabled;
     const fichaObrigatoria = fichaAtiva && !fichaCfg?.skippable;
-    const semFicha = fichaObrigatoria && !appt.vehicle_check;
+    // Pendência de dia anterior não pede ficha: o carro já foi embora.
+    const semFicha = fichaObrigatoria && !isPast && !appt.vehicle_check;
     const marcadoMs = new Date(appt.scheduled_at).getTime();
     const passouDaHora = isConfirmed && (isPast || Date.now() >= marcadoMs);
     const chegando = isConfirmed && !isPast && Date.now() >= marcadoMs - 30 * 60000;
@@ -1212,7 +1226,7 @@
         // Avulso nasce atendido e não tem Finalizado; revertido, ele volta a
         // "confirmed" e precisa do Finalizado pra voltar a ficar verde.
         const podeFinalizar = (inService && (!isWalkIn || isConfirmed)) || (isPast && isConfirmed);
-        if (podeFinalizar) acoes = (isWalkIn || fichaObrigatoria) ? 'finalizar' : 'ausente+finalizar';
+        if (podeFinalizar) acoes = (isWalkIn || (fichaObrigatoria && !isPast)) ? 'finalizar' : 'ausente+finalizar';
       }
     }
     const comAusente = acoes === 'ausente+ficha' || acoes === 'ausente+finalizar';
@@ -1227,8 +1241,7 @@
     if (!isFinalized && (inService || isFuture || (isPast && isConfirmed))) menu.push({ label: 'Editar serviço', icon: 'fa-pen', act: 'edit' });
     if (isFinalized) menu.push({ label: 'Reverter', icon: 'fa-rotate-left', act: 'revert' });
     if (!isFinalized && !isPast) menu.push({ label: 'Cancelar atendimento', icon: 'fa-xmark', act: 'cancel', danger: true });
-    const usaMenu = comMenu && menu.length > 0;
-    const showSecondaryActions = !comMenu && (inService || isFuture || (isPast && isConfirmed));
+    const usaMenu = menu.length > 0;
 
     let tagHtml = '';
     if (isWalkIn) {
@@ -1313,20 +1326,6 @@
       </div>
     ` : '';
 
-    const secondaryHtml = showSecondaryActions ? `
-      <div class="owner-dash-secondary">
-        <button class="owner-dash-link" data-action="edit">
-          <i class="fas fa-pen"></i> Editar serviço
-        </button>
-        ${!isPast ? `
-          <div class="owner-dash-link-sep"></div>
-          <button class="owner-dash-link danger" data-action="cancel">
-            <i class="fas fa-xmark"></i> Cancelar
-          </button>
-        ` : ''}
-      </div>
-    ` : '';
-
     const vehicleHtml = appt.vehicle
       ? `<div class="owner-dash-meta">${escapeHtml(appt.vehicle)}</div>`
       : '';
@@ -1373,7 +1372,6 @@
       ${progressHtml}
       ${fichaOpcionalHtml}
       ${primaryHtml}
-      ${secondaryHtml}
     `;
 
     card.querySelectorAll('[data-hint]').forEach(btn => {
@@ -1398,7 +1396,11 @@
   // atendido com a ficha feita. O servidor também recusa; aqui o Finalizado
   // já leva direto pra ficha em vez de mostrar erro.
   function fichaPendente(appt) {
-    return !!fichaCfg?.enabled && !fichaCfg?.skippable && !appt.vehicle_check;
+    return !!fichaCfg?.enabled && !fichaCfg?.skippable && !appt.vehicle_check && !deDiaAnterior(appt);
+  }
+  function deDiaAnterior(appt) {
+    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+    return new Date(appt.scheduled_at) < hoje;
   }
   function abrirFicha(appt, motivo) {
     if (!window.LoovFicha) return;
@@ -1406,6 +1408,8 @@
     LoovFicha.abrir(appt, { motivo, onSalva: () => loadDashboard(true) });
   }
   function acaoDoCard(appt, act, btn, menu) {
+    const card = btn && btn.closest && btn.closest('.owner-dash-card');
+    if (card && card.dataset.past && (act === 'attend' || act === 'noshow')) return pedirConfirmacao(appt, act, card);
     if (act === 'attend') {
       if (fichaPendente(appt)) return abrirFicha(appt, 'finalizar');
       return doAction(appt, 'attend', btn);
@@ -1433,6 +1437,52 @@
       acaoDoCard(appt, items[+b.dataset.i].act, origem, items);
     }));
     document.getElementById('od-menu-overlay').classList.add('open');
+  }
+
+  // ── Pendência de dia anterior: confirma no próprio card ───────────────
+  // Não tem Reverter, então Ausente/Compareceu viram uma pergunta na hora, e
+  // só o Confirmar vai pro servidor. Com a resposta o card sai e o painel
+  // recarrega por trás: esperar o recarregar deixava o card parado e o dono
+  // tocava de novo, às vezes no card de baixo, que subia pro lugar dele.
+  function pedirConfirmacao(appt, act, card) {
+    const acts = card.querySelector('.owner-dash-actions');
+    if (!acts || card.querySelector('.od-confirm')) return;
+    const nome = (appt.client || '').split(' ')[0] || 'o cliente';
+    const box = document.createElement('div');
+    box.className = 'od-confirm';
+    box.innerHTML = `<b>Marcar ${escapeHtml(nome)} como ${act === 'attend' ? 'compareceu' : 'ausente'}?</b>
+      <small>Não dá pra desfazer depois.</small>
+      <div class="owner-dash-actions">
+        <button type="button" class="owner-dash-btn-ghost" data-c="voltar">Voltar</button>
+        <button type="button" class="owner-dash-btn-primary" data-c="ok"><i class="fas fa-check"></i> Confirmar</button>
+      </div>`;
+    acts.style.display = 'none';
+    acts.after(box);
+    const voltar = () => { box.remove(); acts.style.display = ''; };
+    box.querySelector('[data-c="voltar"]').addEventListener('click', e => { e.stopPropagation(); voltar(); });
+    box.querySelector('[data-c="ok"]').addEventListener('click', async e => {
+      e.stopPropagation();
+      if (actionLoadingId) return;
+      const ok = e.currentTarget, path = act === 'attend' ? 'attend' : 'no_show';
+      actionLoadingId = appt.id;
+      box.querySelectorAll('button').forEach(b => { b.disabled = true; });
+      ok.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Salvando…';
+      const r = await patchJson(`/owner/checkins/${appt.id}/${path}`);
+      actionLoadingId = null;
+      if (!r.ok) { voltar(); showToast(r.data.error || 'Ação falhou.', 'error'); return; }
+      showToast(path === 'attend' ? 'Marcado como compareceu.' : 'Marcado como ausente.', path === 'attend' ? 'success' : 'info');
+      unresolvedPast = unresolvedPast.filter(a => a.id !== appt.id);
+      // Fecha a altura antes de tirar, pros de baixo subirem devagar.
+      card.style.height = card.offsetHeight + 'px';
+      requestAnimationFrame(() => card.classList.add('is-saindo'));
+      setTimeout(() => { card.remove(); atualizarPendencias(); }, 280);
+      loadDashboard(true);
+    });
+  }
+  function atualizarPendencias() {
+    document.getElementById('od-past-sub').textContent = `${unresolvedPast.length} aguardando sua confirmação`;
+    document.getElementById('od-past-banner').classList.toggle('hidden', unresolvedPast.length === 0);
+    autoClosePastIfEmpty();
   }
 
   async function doAction(appt, path, btn) {
@@ -1679,6 +1729,8 @@
     closeOverlay('edit');
     editingAppt = null;
     await loadDashboard(true);
+    // Editada pela folha de pendências: a lista mostra o serviço novo.
+    if (document.getElementById('od-past-overlay').classList.contains('open')) openPastSheet();
   }
 
   // ── Modal: cancel ─────────────────────────────────────────────────────
