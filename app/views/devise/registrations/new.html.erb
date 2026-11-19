@@ -23,13 +23,19 @@
   min_pass     = resource.class.password_length.min
   err          = ->(attr) { resource.errors.full_messages_for(attr).first }
 %>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@1,9..144,500..700,0..100,0..1&display=swap">
+<%= render "shared/curvas" %>
 <style>
+  /* Mesmo visual da home e do Entrar: curvas de nível nas duas metades
+     (shared/_curvas) e a palavra do meio na fonte de destaque. */
+  .sx-stage:has(canvas.curvas:not([hidden]))::before { display: none; }
+  .sx-panel { position: relative; isolation: isolate; }
   .sx { min-height: 100vh; padding-top: 60px; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); background: var(--cream); }
   .sx *, .sx *::before, .sx *::after { box-sizing: border-box; }
   .sx button { font-family: inherit; cursor: pointer; }
 
   /* ── Metade de marca ─────────────────────────────────────────────── */
-  .sx-stage { align-self: start; position: sticky; top: 60px; height: calc(100vh - 60px); min-height: 560px; overflow: hidden; isolation: isolate; background: var(--obsidian); color: var(--cream); display: flex; flex-direction: column; justify-content: space-between; padding: 56px 64px 0; }
+  .sx-stage { align-self: start; position: sticky; top: 60px; height: calc(100vh - 60px); min-height: 560px; overflow: hidden; isolation: isolate; background: var(--obsidian); color: var(--cream); display: flex; flex-direction: column; justify-content: space-between; padding: 56px 64px 48px; }
   .sx-stage::before { content: ""; position: absolute; width: 760px; height: 760px; right: -280px; bottom: -320px; z-index: -1; background: radial-gradient(closest-side, var(--sx-glow, rgba(221,120,82,.42)), rgba(0,0,0,0) 70%); filter: blur(10px); animation: sx-breathe 9s ease-in-out infinite; transition: background .8s ease; }
   .sx[data-role="owner"] .sx-stage { --sx-glow: rgba(75,142,192,.38); }
   @keyframes sx-breathe { 0%, 100% { transform: none; opacity: .85; } 50% { transform: translate(-40px, -30px) scale(1.08); opacity: 1; } }
@@ -37,7 +43,7 @@
   .sx-kinetic { margin: 0 !important; white-space: nowrap; min-height: calc(3 * .92em); font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: clamp(44px, 5.2vw, 100px); line-height: .92; letter-spacing: -0.045em; color: var(--cream) !important; }
   .sx-kinetic span { display: block; opacity: 0; transform: translateY(40%); filter: blur(12px); animation: sx-word .9s cubic-bezier(.2,.8,.2,1) forwards; }
   .sx-kinetic span:nth-child(1) { animation-delay: .1s; }
-  .sx-kinetic span:nth-child(2) { animation-delay: .45s; color: var(--coral-500); }
+  .sx-kinetic span:nth-child(2) { animation-delay: .45s; color: var(--coral-500); font-family: 'Fraunces', Georgia, serif; font-style: italic; font-weight: 600; font-variation-settings: 'SOFT' 100, 'WONK' 1, 'opsz' 144; letter-spacing: -0.03em; padding-right: .08em; }
   .sx-kinetic span:nth-child(3) { animation-delay: .8s; }
   .sx[data-role="owner"] .sx-kinetic span:nth-child(2) { color: #7fb6dd; }
   @keyframes sx-word { to { opacity: 1; transform: none; filter: none; } }
@@ -51,11 +57,6 @@
   .sx[data-role="owner"] .sx-perks i { color: #7fb6dd; }
   @keyframes sx-fade { to { opacity: 1; } }
   /* Faixa correndo — serviços que a Loov agenda. */
-  .sx-marquee { margin: 40px -64px 0; padding: 18px 0; border-top: 1px solid rgba(250,250,246,.1); overflow: hidden; white-space: nowrap; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; letter-spacing: .14em; text-transform: uppercase; color: rgba(250,250,246,.38); }
-  .sx-marquee div { display: inline-block; padding-left: 100%; animation: sx-run 38s linear infinite; }
-  .sx-marquee span { margin: 0 18px; }
-  .sx-marquee em { font-style: normal; color: var(--coral-500); }
-  @keyframes sx-run { to { transform: translateX(-100%); } }
 
   /* ── Metade do formulário ────────────────────────────────────────── */
   .sx-panel { display: flex; align-items: center; justify-content: center; padding: 48px 40px; }
@@ -130,12 +131,12 @@
     .sx-panel { align-items: flex-start; padding: 28px 22px 48px; }
     .sx-mobile-head { display: block; margin-bottom: 26px; }
     .sx-mobile-head h2 { margin: 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 30px; line-height: 1.08; letter-spacing: -0.03em; color: var(--ink) !important; }
-    .sx-mobile-head em { font-style: normal; color: var(--coral-500); }
+    .sx-mobile-head em { font-family: 'Fraunces', Georgia, serif; font-style: italic; font-weight: 600; font-variation-settings: 'SOFT' 100, 'WONK' 1, 'opsz' 144; color: var(--coral-500); }
     .sx-title { font-size: 28px; }
   }
   @media (prefers-reduced-motion: reduce) {
     .sx-kinetic span, .sx-perks li { animation: none; opacity: 1; transform: none; filter: none; }
-    .sx-stage::before, .sx-marquee div { animation: none; }
+    .sx-stage::before { animation: none; }
     .sx-step.is-on { animation: none; }
   }
 </style>
@@ -143,19 +144,18 @@
 <div class="sx" id="sx" data-role="<%= picked_role || 'client' %>">
 
   <section class="sx-stage" aria-hidden="true">
+    <canvas class="curvas" data-curvas="escuro"></canvas>
     <div class="sx-top" id="sx-top">Para quem quer o carro limpo</div>
     <div>
       <h1 class="sx-kinetic" id="sx-kinetic"><span>Sem fila.</span><span>Sem espera.</span><span>Só brilho.</span></h1>
     </div>
     <div>
       <ul class="sx-perks" id="sx-perks"></ul>
-      <div class="sx-marquee"><div>
-        <% 2.times do %><span>Lavagem</span><span><em>●</em></span><span>Polimento</span><span><em>●</em></span><span>Higienização</span><span><em>●</em></span><span>Vitrificação</span><span><em>●</em></span><span>Cristalização</span><span><em>●</em></span><span>Last Minute</span><span><em>●</em></span><% end %>
-      </div></div>
     </div>
   </section>
 
   <section class="sx-panel">
+    <canvas class="curvas" data-curvas="claro"></canvas>
     <div class="sx-wrap">
       <div class="sx-mobile-head"><h2>Seu carro <em>limpo</em>,<br>sem fila.</h2></div>
       <div class="sx-prog"><i class="is-on"></i><i id="sx-prog2"></i></div>
