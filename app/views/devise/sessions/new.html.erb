@@ -156,11 +156,12 @@
     font-size: 14px; color: var(--graphite); cursor: pointer;
   }
   .lx-remember input { width: 18px; height: 18px; accent-color: var(--coral-500); }
+  /* Coral é só de quem efetiva (o Entrar): o esqueci fica em tinta. */
   .lx-forgot {
-    font-size: 14px; font-weight: 600; color: var(--coral-700) !important;
+    font-size: 14px; font-weight: 600; color: var(--ink) !important;
     text-decoration: none; padding: 12px 0;
   }
-  .lx-forgot:hover { color: var(--coral-500) !important; }
+  .lx-forgot:hover { color: var(--graphite) !important; }
 
   .lx-submit {
     width: 100%; height: 56px;
@@ -190,8 +191,11 @@
     border-top: 1px solid var(--stone);
     text-align: center; font-size: 15px; color: var(--graphite);
   }
-  .lx-alt a { color: var(--coral-700); font-weight: 600; text-decoration: none; }
-  .lx-alt a:hover { color: var(--coral-500); }
+  /* Caminho alternativo explícito: pílula de contorno tinta (o padrão de
+     ação secundária), não link colorido. */
+  .lx-alt { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .lx-alt a { display: inline-flex; align-items: center; justify-content: center; height: 48px; padding: 0 24px; border-radius: 999px; border: 1.5px solid var(--ink); color: var(--ink) !important; font-weight: 600; font-size: 15px; text-decoration: none; transition: background .15s; }
+  .lx-alt a:hover { background: var(--sand); }
 
   /* ── Celular: vira a tela do app ──────────────────────────────────── */
   @media (max-width: 900px) {
@@ -281,7 +285,8 @@
       <% end %>
 
       <div class="lx-alt">
-        Novo por aqui? <%= link_to "Criar conta", new_registration_path(resource_name) %>
+        <span>Novo por aqui?</span>
+        <%= link_to "Criar conta", new_registration_path(resource_name) %>
       </div>
     </div>
   </section>
