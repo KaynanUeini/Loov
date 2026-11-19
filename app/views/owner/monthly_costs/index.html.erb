@@ -112,6 +112,45 @@
   .fn-plot svg { display: block; }
   .fn-plot .bk { cursor: pointer; }
   .fn-plot .bk:hover .hl { opacity: 1; }
+
+  /* Detalhe da barra clicada: o que justifica o faturamento, os custos e o lucro. */
+  .fn-why-hint { display: flex; align-items: center; gap: 8px; margin: 12px 2px 0; font-size: 13px; color: var(--graphite); }
+  .fn-why-hint svg { color: var(--ash); flex-shrink: 0; }
+  .fn-why { margin-top: 14px; padding: 20px; border-radius: 20px; background: var(--paper); border: 1px solid var(--stone); }
+  .fn-why-h { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+  .fn-why-h h3 { margin: 4px 0 0; font-size: 22px; letter-spacing: -.5px; }
+  .fn-why-x { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--stone); background: var(--paper); color: var(--ink); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+  .fn-why-x:hover { background: var(--sand); }
+  .fn-why-grid { display: grid; grid-template-columns: 1.35fr 1fr .8fr; gap: 16px; align-items: start; }
+  .fn-why-col { padding: 16px; border-radius: 16px; background: var(--cream); border: 1px solid var(--stone); min-width: 0; }
+  .fn-why-t { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .fn-why-t span { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--graphite); }
+  .fn-why-t span i { width: 9px; height: 9px; border-radius: 50%; }
+  .fn-why-t b { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 18px; color: var(--ink); }
+  .fn-why b.is-neg { color: var(--rose-500, #c85050); }
+  .fn-why-c { display: block; margin: 4px 0 10px; font-size: 12px; line-height: 1.45; color: var(--graphite); }
+  .fn-why-sub { margin: 12px 0 2px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.4px; color: var(--ash); }
+  .fn-why-row { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-top: 1px solid var(--stone); }
+  .fn-why-time { flex: 0 0 auto; min-width: 42px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--graphite); padding-top: 1px; }
+  .fn-why-main { flex: 1; min-width: 0; }
+  .fn-why-main b { display: block; font-size: 14px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fn-why-main small { display: block; margin-top: 1px; font-size: 12px; color: var(--graphite); }
+  .fn-why-row em { flex: 0 0 auto; font-style: normal; text-align: right; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px; color: var(--ink); }
+  .fn-why-row em small { display: block; margin-top: 2px; font-family: 'Inter', sans-serif; font-weight: 400; font-size: 10.5px; color: var(--ash); }
+  .fn-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+  .fn-tag { padding: 2px 8px; border-radius: 99px; background: var(--sand); border: 1px solid var(--stone); font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: .6px; color: var(--graphite); }
+  .fn-tag.is-coral { background: var(--coral-50); border-color: var(--coral-100); color: var(--coral-700); }
+  .fn-why-note { margin: 6px 0 0; font-size: 13px; color: var(--graphite); }
+  .fn-why-more { margin-top: 8px; height: 40px; padding: 0 16px; border-radius: 99px; border: 1.5px solid var(--ink); background: transparent; color: var(--ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .fn-why-more:hover { background: var(--sand); }
+  .fn-why-eq { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0; border-top: 1px solid var(--stone); font-size: 13.5px; color: var(--graphite); }
+  .fn-why-eq:first-of-type { margin-top: 10px; }
+  .fn-why-eq b { font-family: 'Space Grotesk', sans-serif; font-weight: 600; color: var(--ink); }
+  .fn-why-eq.is-tot { color: var(--ink); font-weight: 600; }
+  .fn-why-eq.is-tot b { font-size: 16px; font-weight: 700; }
+  .fn-why-res .fn-pill { margin-top: 10px; }
+  @media (max-width: 1080px) { .fn-why-grid { grid-template-columns: 1fr 1fr; } .fn-why-res { grid-column: 1 / -1; } }
+  @media (max-width: 680px) { .fn-why { padding: 14px; } .fn-why-grid { grid-template-columns: 1fr; } .fn-why-h h3 { font-size: 19px; } }
   .fn-empty-chart { padding: 40px 0; text-align: center; color: var(--graphite); font-size: 14px; }
 
   /* DRE */
@@ -295,12 +334,47 @@
 
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-  function icon(n, size, extra) { return window.feather && feather.icons[n] ? feather.icons[n].toSvg(Object.assign({ width: size, height: size }, extra || {})) : ''; }
+  // Cópia dos ícones Feather desta página: rede de empresa às vezes bloqueia
+  // o script e os botões ficavam sem ícone.
+  var FEATHER_IC = {
+    'alert-circle': '<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>',
+    'arrow-down-right': '<line x1="7" y1="7" x2="17" y2="17"></line><polyline points="17 7 17 17 7 17"></polyline>',
+    'arrow-up-right': '<line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline>',
+    'award': '<circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline>',
+    'bar-chart-2': '<line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line>',
+    'calendar': '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>',
+    'check-circle': '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>',
+    'chevron-down': '<polyline points="6 9 12 15 18 9"></polyline>',
+    'chevron-right': '<polyline points="9 18 15 12 9 6"></polyline>',
+    'file-text': '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline>',
+    'grid': '<rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect>',
+    'info': '<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line>',
+    'plus': '<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>',
+    'share': '<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line>',
+    'trending-down': '<polyline points="23 18 13.5 8.5 8.5 13.5 1 6"></polyline><polyline points="17 18 23 18 23 12"></polyline>',
+    'trending-up': '<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline>',
+    'x': '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>',
+    'zap': '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>',
+    'clock': '<circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>',
+    'tag': '<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line>',
+    'gift': '<polyline points="20 12 20 22 4 22 4 12"></polyline><rect x="2" y="7" width="20" height="5"></rect><line x1="12" y1="22" x2="12" y2="7"></line><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path>',
+    'user': '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>',
+    'users': '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path>',
+    'list': '<line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line>'
+  };
+  function icon(n, size, extra) {
+    var corpo = FEATHER_IC[n] || (window.feather && feather.icons[n] && feather.icons[n].contents);
+    if (!corpo) return '';
+    var cls = 'feather feather-' + n + (extra && extra['class'] ? ' ' + extra['class'] : '');
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="' + ((extra && extra['stroke-width']) || 2) + '" stroke-linecap="round" stroke-linejoin="round" class="' + cls + '" aria-hidden="true">' + corpo + '</svg>';
+  }
   function money(v, d) { var n = Number(v || 0); d = d == null ? 2 : d; return (n < 0 ? '−' : '') + 'R$ ' + Math.abs(n).toFixed(d).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
   function moneyC(v) { return Math.abs(Number(v || 0)) >= 1000 ? money(v, 0) : money(v, 2); }
   function q(o) { var s = 'period=' + encodeURIComponent(o.period); if (o.period === 'custom' && o.start && o.end) s += '&start_date=' + o.start + '&end_date=' + o.end; return s; }
 
-  var st = { period: 'month', start: null, end: null, data: null, open: null, sel: null, loading: false };
+  var st = { period: 'month', start: null, end: null, data: null, open: null, sel: null, pin: null, loading: false };
+  // Detalhe da barra clicada: o que formou o faturamento, os custos e o lucro.
+  var why = { cache: {}, seq: 0 };
 
   // ── Dados ────────────────────────────────────────────────────────────────
   var seqLoad = 0;
@@ -310,7 +384,7 @@
     else $('fn-body').style.opacity = '.55';
     fetch('/owner/financial_tracking.json?' + q(st), { credentials: 'same-origin', headers: { Accept: 'application/json' } })
       .then(function (r) { if (!r.ok) throw r.status; return r.json(); })
-      .then(function (d) { if (my !== seqLoad) return; st.data = d; st.sel = null; render(); })
+      .then(function (d) { if (my !== seqLoad) return; st.data = d; st.sel = null; st.pin = null; why.cache = {}; render(); })
       .catch(function () { if (my !== seqLoad) return; $('fn-body').innerHTML = '<div class="fn-empty"><h3>Não foi possível carregar</h3><p>Confira a conexão e tente de novo.</p></div>'; })
       .then(function () { $('fn-body').style.opacity = ''; });
   }
@@ -434,13 +508,75 @@
     var top = semMovimento(d)
       ? '<div class="fn-empty"><div class="fn-empty-ic">' + icon('bar-chart-2', 20) + '</div><h3>Sem movimento neste período</h3><p>Os números aparecem sozinhos conforme os atendimentos acontecem. Se quiser adiantar, lance seus custos fixos: sem eles o lucro aparece maior do que é.</p></div>'
       : '<div class="fn-grid">' + heroHtml(d) + '<div class="fn-side">' + sideHtml(d) + '</div></div>' +
-        '<div class="fn-sec"><h2>Evolução</h2><span class="fn-mono">' + esc(d.period_label) + '</span></div><div id="fn-chartbox">' + chartHtml(d) + '</div>';
+        '<div class="fn-sec"><h2>Evolução</h2><span class="fn-mono">' + esc(d.period_label) + '</span></div><div id="fn-chartbox">' + chartHtml(d) + '</div>' +
+        '<div id="fn-why"></div>';
     var dre = (d.monthly_dre || []).slice().reverse();
     $('fn-body').innerHTML = top +
       '<div class="fn-sec"><h2>DRE mensal</h2><button type="button" class="fn-add" id="fn-add-now">' + icon('plus', 16) + 'Lançar custos do mês atual</button></div>' +
       '<div class="fn-dre">' + dre.map(dreRowHtml).join('') + '</div>';
     // Redesenha o gráfico já com o cartão na tela, pra medir a largura real.
     if ($('fn-chartbox')) { renderChart(); var plot = $('fn-plot'); if (plot) plot.scrollLeft = plot.scrollWidth; }
+    renderWhy();
+  }
+
+  // ── Detalhe da barra ─────────────────────────────────────────────────────
+  var UNID = { hour: 'uma hora', day: 'um dia', month: 'um mês', year: 'um mês' };
+  function pinned() { var c = (st.data && st.data.chart) || []; return st.pin != null ? c[st.pin] : null; }
+  function abrirWhy() {
+    var b = pinned(); renderWhy();
+    if (!b || !b.key || why.cache[b.key]) return;
+    var my = ++why.seq;
+    fetch('/owner/financial_tracking/detail.json?' + q(st) + '&key=' + encodeURIComponent(b.key), { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      .then(function (r) { if (!r.ok) throw r.status; return r.json(); })
+      .then(function (d) { why.cache[b.key] = d; })
+      .catch(function (s) { why.cache[b.key] = { erro: s === 403 ? 'dono' : true }; })
+      .then(function () { if (my === why.seq) renderWhy(); });
+  }
+  function tagHtml(t) { return '<span class="fn-tag' + (t === 'Last Minute' || t === 'Hora Off' ? ' is-coral' : '') + '">' + esc(t) + '</span>'; }
+  function renderWhy() {
+    var box = $('fn-why'); if (!box || !st.data) return;
+    var b = pinned(), g = st.data.granularity;
+    if (!b) { box.innerHTML = '<p class="fn-why-hint">' + icon('info', 14) + 'Clique em ' + (UNID[g] || 'uma barra') + ' do gráfico para ver os atendimentos e os custos que formam o número.</p>'; return; }
+    var d = why.cache[b.key];
+    if (!d) { box.innerHTML = '<div class="fn-why"><div class="fn-loading"><span class="fn-spin"></span></div></div>'; return; }
+    if (d.erro) {
+      if (d.erro !== 'dono') delete why.cache[b.key]; // erro de rede: o próximo clique tenta de novo
+      box.innerHTML = '<div class="fn-why"><p class="fn-why-note">' + (d.erro === 'dono' ? 'Só o dono vê os atendimentos e os custos de cada dia.' : 'Não deu pra carregar o detalhe. Clique de novo para tentar.') + '</p></div>';
+      return;
+    }
+    var ap = d.appointments || [], mes = d.granularity === 'month', neg = Number(d.profit) < 0;
+    var fat = '';
+    if (mes && (d.services || []).length) {
+      fat += '<div class="fn-why-sub">POR SERVIÇO</div>' + d.services.map(function (s) {
+        return '<div class="fn-why-row"><span class="fn-why-main"><b>' + esc(s.title) + '</b><small>' + s.count + (s.count === 1 ? ' atendimento' : ' atendimentos') + '</small></span><em>' + money(s.revenue) + '</em></div>';
+      }).join('');
+    }
+    if (ap.length) {
+      var mostra = mes && !why.todos ? ap.slice(0, 6) : ap;
+      fat += (mes ? '<div class="fn-why-sub">ATENDIMENTOS</div>' : '') + mostra.map(function (a) {
+        return '<div class="fn-why-row"><span class="fn-why-time">' + esc(a.when) + '</span>' +
+          '<span class="fn-why-main"><b>' + esc(a.client) + '</b><small>' + esc(a.service || '') + '</small>' + ((a.tags || []).length ? '<span class="fn-tags">' + a.tags.map(tagHtml).join('') + '</span>' : '') + '</span>' +
+          '<em>' + money(a.value) + (Number(a.commission) > 0 ? '<small>' + money(a.gross) + ' − ' + money(a.commission) + ' Loov</small>' : '') + '</em></div>';
+      }).join('');
+      if (mes && ap.length > 6) fat += '<button type="button" class="fn-why-more" data-why-all>' + (why.todos ? 'Mostrar menos' : 'Ver os ' + ap.length + ' atendimentos') + '</button>';
+    } else {
+      fat += '<p class="fn-why-note">Nenhum atendimento concluído ' + (d.granularity === 'hour' ? 'nesta hora' : mes ? 'neste mês' : 'neste dia') + '.</p>';
+    }
+    var cus = (d.cost_lines || []).map(function (l) {
+      return '<div class="fn-why-row"><span class="fn-why-main"><b>' + esc(l.name) + '</b><small>' + (l.kind === 'variable' ? 'Variável' : 'Fixo') + (mes ? '' : ' · ' + money(l.month_amount) + ' no mês') + '</small></span><em>' + money(l.amount) + '</em></div>';
+    }).join('');
+    box.innerHTML = '<section class="fn-why" aria-live="polite">' +
+      '<div class="fn-why-h"><div><span class="fn-mono">O que formou</span><h3>' + esc(d.label) + '</h3></div><button type="button" class="fn-why-x" data-why-close aria-label="Fechar detalhe">' + icon('x', 16) + '</button></div>' +
+      '<div class="fn-why-grid">' +
+        '<div class="fn-why-col"><div class="fn-why-t"><span><i style="background:' + C.coral500 + '"></i>Faturamento</span><b>' + money(d.revenue) + '</b></div>' +
+          '<small class="fn-why-c">' + ap.length + (ap.length === 1 ? ' atendimento concluído' : ' atendimentos concluídos') + '</small>' + fat + '</div>' +
+        '<div class="fn-why-col"><div class="fn-why-t"><span><i style="background:' + C.graphite + '"></i>Custos</span><b>' + money(d.cost) + '</b></div>' +
+          '<p class="fn-why-c">' + esc(d.cost_note) + '</p>' + cus + '</div>' +
+        '<div class="fn-why-col fn-why-res"><div class="fn-why-t"><span><i style="background:' + C.ink + '"></i>Lucro</span><b class="' + (neg ? 'is-neg' : '') + '">' + money(d.profit) + '</b></div>' +
+          '<div class="fn-why-eq"><span>Faturamento</span><b>' + money(d.revenue) + '</b></div><div class="fn-why-eq"><span>− Custos</span><b>' + money(d.cost) + '</b></div>' +
+          '<div class="fn-why-eq is-tot"><span>= Lucro</span><b class="' + (neg ? 'is-neg' : '') + '">' + money(d.profit) + '</b></div>' +
+          (d.margin != null ? '<span class="fn-pill">Margem ' + Number(d.margin).toFixed(1).replace('.', ',') + '%</span>' : '') + '</div>' +
+      '</div></section>';
   }
 
   // ── Folhas ───────────────────────────────────────────────────────────────
@@ -637,7 +773,14 @@
     if ((t = e.target.closest('[data-toggle]'))) { st.open = st.open === t.dataset.toggle ? null : t.dataset.toggle; render(); return; }
     if (e.target.closest('#fn-add-now')) { var n = new Date(); openCosts(n.getFullYear(), n.getMonth() + 1); return; }
     if (e.target.closest('#fn-export')) { if (!st.data) return; $('sh-exp-m').textContent = st.data.period_label || ''; xerr(''); setBusy(null); openSheet('sh-exp'); return; }
-    if ((t = e.target.closest('.bk'))) { var bi = Number(t.dataset.i); st.sel = st.sel === bi ? null : bi; renderChart(); return; }
+    if ((t = e.target.closest('.bk'))) {
+      var bi = Number(t.dataset.i); st.pin = st.pin === bi ? null : bi; st.sel = st.pin; why.todos = false;
+      renderChart(); abrirWhy();
+      if (st.pin != null && $('fn-why')) $('fn-why').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
+    }
+    if (e.target.closest('[data-why-close]')) { st.pin = null; st.sel = null; renderChart(); renderWhy(); return; }
+    if (e.target.closest('[data-why-all]')) { why.todos = !why.todos; renderWhy(); return; }
     if (e.target.closest('[data-close]') || e.target.classList.contains('fn-sheet-bg')) { closeAll(); }
   });
   // Passar o mouse num dia do gráfico também mostra os números dele.
@@ -649,7 +792,7 @@
   // Tirou o mouse do gráfico: volta a mostrar o total do período.
   document.addEventListener('mouseout', function (e) {
     var plot = $('fn-plot'); if (!plot || st.sel == null) return;
-    if (plot.contains(e.target) && !plot.contains(e.relatedTarget)) { st.sel = null; renderChart(); }
+    if (plot.contains(e.target) && !plot.contains(e.relatedTarget)) { st.sel = st.pin; renderChart(); }
   });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') closeAll();
@@ -659,7 +802,11 @@
 
   // Redesenha o gráfico se a janela mudar de largura.
   var rzT = null; window.addEventListener('resize', function () { clearTimeout(rzT); rzT = setTimeout(function () { if (st.data) renderChart(); }, 150); });
-  if (window.feather) feather.replace();
+  // <i data-feather> do HTML: desenha com a cópia local, sem depender do script.
+  document.querySelectorAll('[data-feather]').forEach(function (el) {
+    var tam = parseInt(el.style.width, 10) || 18, svg = icon(el.getAttribute('data-feather'), tam, { 'class': el.getAttribute('class') || '' });
+    if (svg) el.outerHTML = svg;
+  });
   load();
 })();
 </script>

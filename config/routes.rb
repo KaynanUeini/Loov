@@ -174,6 +174,7 @@ Rails.application.routes.draw do
     resources :car_wash_appointments, only: [:index, :show]
 
     get  'financial_tracking', to: 'financial_tracking#index'
+    get  'financial_tracking/detail', to: 'financial_tracking#detail'
     get  'financial_report',   to: 'financial_reports#show'
     get  'ai_insights',        to: 'ai_insights#show'
     get  'ai_insights/status', to: 'ai_insights#status'

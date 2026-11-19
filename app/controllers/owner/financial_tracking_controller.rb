@@ -15,6 +15,8 @@ module Owner
     # Atendente também acessa pra ver/lançar custos (a UI mostra só as
     # linhas de custo pra ele, esconde faturamento/lucro). Owner vê tudo.
     before_action :ensure_owner_or_attendant
+    # O detalhe mostra atendimentos e faturamento: só o dono.
+    before_action :ensure_owner_only, only: :detail
 
     def index
       car_wash = current_user.linked_car_wash
@@ -310,7 +312,132 @@ module Owner
       end
     end
 
+    # ── Detalhe de uma barra do gráfico ───────────────────────────────────
+    # GET /owner/financial_tracking/detail.json?key=2026-11-16 (dia),
+    # key=2026-11-16T14 (hora) ou key=2026-11 (mês), com os mesmos params de
+    # período da tela pra recortar igual ao gráfico. Responde o que justifica
+    # o número: os atendimentos que entraram e as linhas de custo, na mesma
+    # fração que o gráfico usa (o custo do mês dividido pelos dias, ou pelas
+    # horas), pra conta bater com a barra.
+    def detail
+      car_wash = current_user.linked_car_wash
+      return render(json: { error: "Sem lava-rápido." }, status: :not_found) unless car_wash
+
+      resolve_financial_period!
+      zona = Time.find_zone("America/Sao_Paulo")
+      key  = params[:key].to_s
+
+      case key
+      when /\A(\d{4})-(\d{2})-(\d{2})T(\d{2})\z/
+        dia    = Date.new($1.to_i, $2.to_i, $3.to_i)
+        inicio = zona.local(dia.year, dia.month, dia.day, $4.to_i)
+        fim    = inicio + 1.hour
+        tipo   = "hour"
+        rotulo = "#{dia.strftime('%d/%m')} · #{format('%02dh', $4.to_i)} às #{format('%02dh', ($4.to_i + 1) % 24)}"
+        meses  = [[dia.year, dia.month, 1.0 / (Time.days_in_month(dia.month, dia.year) * 24)]]
+      when /\A(\d{4})-(\d{2})-(\d{2})\z/
+        dia    = Date.new($1.to_i, $2.to_i, $3.to_i)
+        inicio = zona.local(dia.year, dia.month, dia.day)
+        fim    = inicio + 1.day
+        tipo   = "day"
+        rotulo = "#{%w[Domingo Segunda Terça Quarta Quinta Sexta Sábado][dia.wday]}, #{dia.strftime('%d/%m')}"
+        meses  = [[dia.year, dia.month, 1.0 / Time.days_in_month(dia.month, dia.year)]]
+      when /\A(\d{4})-(\d{2})\z/
+        mes    = Date.new($1.to_i, $2.to_i, 1)
+        # Recorta no período da tela, como o gráfico (intervalo personalizado
+        # pode começar ou terminar no meio do mês).
+        de     = [mes, @start_date].max
+        ate    = [mes.end_of_month, @end_date].min
+        inicio = zona.local(de.year, de.month, de.day)
+        fim    = zona.local(ate.year, ate.month, ate.day) + 1.day
+        tipo   = "month"
+        rotulo = "#{MonthlyCost::MONTH_NAMES[mes.month - 1]} #{mes.year}"
+        meses  = [[mes.year, mes.month, 1.0]]
+      else
+        return render(json: { error: "Período inválido." }, status: :unprocessable_entity)
+      end
+
+      atendidos = car_wash.appointments
+        .where(status: "attended")
+        .where(scheduled_at: inicio.utc..(fim.utc - 1.second))
+        .includes(:service, :user)
+        .order(:scheduled_at)
+        .to_a
+
+      lista = atendidos.map do |a|
+        bruto    = (a.price_override || a.service&.price).to_f
+        comissao = a.commission_amount.to_f
+        tags = []
+        tags << "Avulso"          if a.walk_in?
+        tags << "Last Minute"     if a.disponivel?
+        tags << "Hora Off"        if a.preco_tipo == "off"
+        tags << "Hora Pico"       if a.preco_tipo == "pico"
+        tags << "Vale fidelidade" if a.reward_discount.to_f.positive?
+        {
+          id:         a.id,
+          when:       a.scheduled_at.in_time_zone(zona).strftime(tipo == "month" ? "%d/%m %H:%M" : "%H:%M"),
+          client:     a.display_client,
+          service:    a.service&.title,
+          gross:      bruto.round(2),
+          commission: comissao.round(2),
+          value:      (bruto - comissao).round(2),
+          tags:       tags
+        }
+      end
+
+      receita = lista.sum { |x| x[:value] }.round(2)
+      servicos = lista.group_by { |x| x[:service] }.map do |titulo, xs|
+        { title: titulo, count: xs.size, revenue: xs.sum { |x| x[:value] }.round(2) }
+      end.sort_by { |x| -x[:revenue] }
+
+      linhas = []
+      meses.each do |(ano, m, fracao)|
+        mc = car_wash.monthly_costs.includes(:custom_cost_lines).find_by(year: ano, month: m)
+        next unless mc
+        padrao = [
+          ["Aluguel", mc.rent, "fixed"], ["Salários", mc.salaries, "fixed"], ["Contas", mc.utilities, "fixed"],
+          ["Água", mc.water, "fixed"], ["Luz", mc.electricity, "fixed"], ["Outros fixos", mc.other_fixed, "fixed"],
+          ["Produtos", mc.products, "variable"], ["Manutenção", mc.maintenance, "variable"], ["Outros variáveis", mc.other_variable, "variable"]
+        ]
+        extras = mc.custom_cost_lines.sort_by { |l| [l.position.to_i, l.id] }.map { |l| [l.name, l.amount, l.cost_type] }
+        (padrao + extras).each do |(nome, valor, natureza)|
+          v = valor.to_f
+          next unless v.positive?
+          linhas << { name: nome, kind: natureza, month_amount: v.round(2), amount: (v * fracao).round(2), bruto: v * fracao }
+        end
+      end
+      linhas = linhas.each_with_index.sort_by { |l, i| [l[:kind] == "fixed" ? 0 : 1, i] }.map(&:first)
+      # Soma sem arredondar linha a linha, como o gráfico (senão sobra centavo).
+      custo = linhas.sum { |l| l[:bruto] }.round(2)
+      linhas.each { |l| l.delete(:bruto) }
+      lucro = (receita - custo).round(2)
+
+      nota =
+        if linhas.empty?
+          "Nenhum custo lançado para este mês. Sem os custos, o lucro aparece maior do que é."
+        elsif tipo == "day"
+          "Os custos são lançados por mês. Cada dia leva a sua parte: o valor do mês dividido pelos #{Time.days_in_month(meses[0][1], meses[0][0])} dias."
+        elsif tipo == "hour"
+          "Os custos são lançados por mês. Cada hora leva a sua parte: o valor do mês dividido pelos dias e pelas 24 horas."
+        else
+          "Custos lançados para o mês inteiro."
+        end
+
+      render json: {
+        key: key, granularity: tipo, label: rotulo,
+        revenue: receita, cost: custo, profit: lucro,
+        margin: receita.positive? ? (lucro / receita * 100).round(1) : nil,
+        appointments: lista, services: servicos,
+        cost_lines: linhas, cost_note: nota
+      }
+    end
+
     private
+
+    def ensure_owner_only
+      return if current_user&.owner?
+      render json: { error: "Só o dono vê o detalhe do faturamento." }, status: :forbidden
+    end
 
     def ensure_owner_or_attendant
       unless current_user&.owner? || current_user&.attendant?
@@ -524,6 +651,7 @@ module Owner
       (0..23).map do |h|
         rev = rev_by_hour[h] || 0.0
         {
+          key:     "#{day.iso8601}T#{format('%02d', h)}",
           label:   format("%02dh", h),
           revenue: rev.round(2),
           cost:    hourly_cost.round(2),
@@ -550,6 +678,7 @@ module Owner
         daily_cost    = mc ? (mc.total.to_f / days_in_month) : 0.0
         rev           = rev_by_day[day] || 0.0
         {
+          key:     day.iso8601,
           label:   day.strftime("%d/%m"),
           revenue: rev.round(2),
           cost:    daily_cost.round(2),
@@ -577,6 +706,7 @@ module Owner
         month_cost = mc&.total.to_f
         rev        = rev_by_month[[cursor.year, cursor.month]] || 0.0
         buckets << {
+          key:     cursor.strftime("%Y-%m"),
           label:   MonthlyCost::MONTH_NAMES[cursor.month - 1][0..2],
           revenue: rev.round(2),
           cost:    month_cost.round(2),
