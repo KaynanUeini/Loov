@@ -363,7 +363,47 @@
   .lh-feat-bar { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; overflow: hidden; }
   .lh-feat-bar b { display: block; height: 100%; background: var(--ink); transform-origin: left; transform: scaleX(0); }
   .lh-dono-phone { display: flex; justify-content: center; }
+  /* Notebook: lista mais compacta pra caber junto do celular (encolhido no JS, --dz). */
+  @media (min-width: 961px) { .lh-dono-phone { zoom: var(--dz, 1); } }
+  @media (min-width: 961px) and (max-height: 860px) {
+    .lh-feat { padding: 14px 0 12px; }
+    .lh-feat-t { font-size: 22px; }
+    .lh-feat-s { font-size: 15px; }
+  }
   .lh-phone--dono { transform: rotateY(-6deg) rotateX(3deg); }
+  /* AI Insights (OwnerAiInsightsScreen), na escala das outras telas do dono */
+  .ds-ai-head { display: flex; }
+  .ds-ai-btn { width: 30px; height: 30px; border-radius: 50%; background: var(--sand); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .ds-ai-tt { display: flex; align-items: flex-end; gap: 9px; margin: 8px 0 12px; }
+  .ds-ai-tt b { flex: 1; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 29px; line-height: 30px; letter-spacing: -1.1px; }
+  .ds-ai-dec { padding: 16px; border-radius: 20px; background: var(--ink); color: var(--cream); box-shadow: 0 10px 24px -12px rgba(25,20,15,.45); }
+  .ds-ai-dec-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 11px; }
+  .ds-ai-dec-top small { font-family: 'JetBrains Mono', monospace; font-weight: 500; font-size: 7.5px; letter-spacing: 1.5px; color: var(--coral-300); }
+  .ds-ai-dec-top em { display: flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 100px; background: rgba(255,255,255,.08); font-style: normal; font-family: 'JetBrains Mono', monospace; font-size: 6.5px; letter-spacing: 1px; color: var(--sand); }
+  .ds-ai-dec-top em i { width: 4px; height: 4px; border-radius: 50%; background: #5dc39f; }
+  .lh .ds-ai-dec p { font-family: 'Space Grotesk', sans-serif; font-weight: 500; font-size: 12.5px; line-height: 18.5px; letter-spacing: -.2px; }
+  .ds-ai-dec p b, .ds-ai-why p b { font-family: 'Inter', sans-serif; font-weight: 600; }
+  .ds-ai-rule { display: block; height: 1px; background: rgba(255,255,255,.1); margin: 13px 0 9px; }
+  .ds-ai-meta { font-family: 'JetBrains Mono', monospace; font-size: 8px; color: var(--ash); }
+  .ds-ai-why { margin-top: 13px; }
+  .ds-ai-why small { display: block; margin-bottom: 5px; font-family: 'JetBrains Mono', monospace; font-size: 7px; letter-spacing: 1.4px; color: var(--ash); }
+  .lh .ds-ai-why p { font-size: 10.5px; line-height: 16px; color: var(--graphite); }
+  .ds-ai-why p b { color: var(--ink); }
+  .ds-ai-bh { display: flex; align-items: baseline; justify-content: space-between; margin: 16px 0 9px; }
+  .ds-ai-bh b { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 13px; letter-spacing: -.2px; }
+  .ds-ai-bh small { font-size: 8.5px; color: var(--ash); }
+  .ds-ai-pulse { display: flex; gap: 16px; margin-bottom: 10px; font-size: 9px; color: var(--graphite); }
+  .ds-ai-pulse span { display: flex; align-items: baseline; gap: 4px; }
+  .ds-ai-pulse b { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px; letter-spacing: -.4px; }
+  .ds-ai-list { border-radius: 15px; background: var(--paper); border: 1px solid var(--stone); overflow: hidden; }
+  .ds-ai-row { display: flex; align-items: center; gap: 8px; padding: 10px 11px; }
+  .ds-ai-row + .ds-ai-row { border-top: 1px solid var(--sand); }
+  .ds-ai-row > i { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .ds-ai-row > i.is-up { background: rgba(93,195,159,.1); } .ds-ai-row > i.is-down { background: rgba(200,80,80,.1); } .ds-ai-row > i.is-flat { background: rgba(173,166,153,.1); }
+  .ds-ai-row b { flex: 1; font-size: 11px; font-weight: 600; }
+  .ds-ai-row em { font-style: normal; font-family: 'JetBrains Mono', monospace; font-size: 7px; letter-spacing: .9px; }
+  .lh-ds .is-up { color: #5dc39f; } .lh-ds .is-down { color: #c85050; } .lh-ds .is-flat { color: var(--ash); }
+  .ds-ai-chev { margin-left: 2px; }
   .lh-dono-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 24px; margin-top: 56px; padding-top: 28px; border-top: 1px solid var(--stone); }
   .lh-dono-mais { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
   .lh-dono-mais li { padding: 8px 14px; border-radius: 99px; border: 1px solid var(--stone); background: var(--paper); font-size: 14px; color: var(--graphite); }
@@ -1074,6 +1114,11 @@
             <span class="lh-feat-s">O lucro de verdade: o que entrou menos os custos fixos e variáveis, comparado ao mês passado. O que ainda vai acontecer fica à parte. Relatório em PDF e Excel pro contador.</span>
             <i class="lh-feat-bar"><b></b></i>
           </button>
+          <button type="button" class="lh-feat" role="tab" aria-selected="false" data-f="6">
+            <span class="lh-feat-t">AI Insights</span>
+            <span class="lh-feat-s">Toda semana a IA cruza vendas, serviços, clientes e agenda e devolve uma decisão concreta, com o impacto em reais e o porquê. Cada área aparece como subindo, estável ou caindo.</span>
+            <i class="lh-feat-bar"><b></b></i>
+          </button>
         </div>
 
         <div class="lh-dono-phone" aria-hidden="true">
@@ -1183,6 +1228,25 @@
                   <svg viewBox="0 0 100 100" preserveAspectRatio="none"><polyline fill="none" stroke="#28231c" stroke-width="2" vector-effect="non-scaling-stroke" points="8,70 25,60 42,66 58,48 75,34 92,42"/></svg>
                 </div>
                 <div class="ds-leg"><span><b class="fat"></b>Faturamento</span><span><b class="cus"></b>Custos</span><span><b class="luc"></b>Lucro</span></div>
+              </div>
+
+              <%# AI Insights do app do dono (OwnerAiInsightsScreen): a decisão
+                  da semana no card escuro, o porquê e a leitura de cada área. %>
+              <div class="lh-ds" data-ds="6">
+                <div class="ds-ai-head">
+                  <span class="ds-ai-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#28231c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></span>
+                </div>
+                <div class="ds-ai-tt"><b>AI Insights</b><span class="ds-ai-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#28231c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></span></div>
+                <div class="ds-ai-dec">
+                  <div class="ds-ai-dec-top"><small>A DECISÃO DESTA SEMANA</small><em><i></i>NOVA</em></div>
+                  <p>Ligue a Hora Off nas terças e quartas antes das 12h: esses horários ficaram <b>68% vazios</b> em outubro. Com 10% de desconto, dá pra recuperar cerca de <b>R$&nbsp;1.100/mês</b>.</p>
+                  <i class="ds-ai-rule"></i>
+                  <small class="ds-ai-meta">Gerada em 17/11 · próxima 24/11 (5d)</small>
+                </div>
+                <div class="ds-ai-why"><small>POR QUÊ</small><p>O tíquete médio subiu <b>8%</b>, mas as manhãs do meio da semana seguem paradas enquanto o sábado lota.</p></div>
+                <div class="ds-ai-bh"><b>Como cada área está</b><small>toque pra ler</small></div>
+                <div class="ds-ai-pulse"><span><b class="is-up">3</b>áreas subindo</span><span><b class="is-down">1</b>caindo</span><span><b class="is-flat">2</b>estáveis</span></div>
+                <div class="ds-ai-list"><div class="ds-ai-row"><i class="is-up"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#5dc39f" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg></i><b>Faturamento</b><em class="is-up">SUBINDO</em><svg class="ds-ai-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ada699" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div><div class="ds-ai-row"><i class="is-flat"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ada699" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></i><b>Serviços</b><em class="is-flat">ESTÁVEL</em><svg class="ds-ai-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ada699" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div><div class="ds-ai-row"><i class="is-up"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#5dc39f" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg></i><b>Clientes</b><em class="is-up">SUBINDO</em><svg class="ds-ai-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ada699" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div><div class="ds-ai-row"><i class="is-down"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#c85050" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg></i><b>Demanda</b><em class="is-down">CAINDO</em><svg class="ds-ai-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ada699" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div><div class="ds-ai-row"><i class="is-up"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#5dc39f" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg></i><b>Retenção</b><em class="is-up">SUBINDO</em><svg class="ds-ai-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ada699" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div><div class="ds-ai-row"><i class="is-flat"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ada699" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></i><b>Crescimento</b><em class="is-flat">ESTÁVEL</em><svg class="ds-ai-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ada699" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div></div>
               </div>
             </div>
           </div>
@@ -1531,6 +1595,16 @@
       };
       zoomHero();
       window.addEventListener('resize', zoomHero);
+    }
+    // Celular do dono (Agenda cheia): cabe inteiro na tela junto da lista.
+    var donoCel = document.querySelector('.lh-dono-phone');
+    if (donoCel) {
+      var zoomDono = function () {
+        var z = window.innerWidth < 961 ? 1 : Math.max(0.6, Math.min(1, (window.innerHeight - 130) / 650));
+        donoCel.style.setProperty('--dz', z.toFixed(3));
+      };
+      zoomDono();
+      window.addEventListener('resize', zoomDono);
     }
 
     // Celular acompanha o mouse de leve (só desktop, só com movimento).
