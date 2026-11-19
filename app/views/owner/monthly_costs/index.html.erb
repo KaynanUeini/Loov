@@ -236,7 +236,7 @@
   .fn-notes { width: 100%; min-height: 70px; padding: 12px 14px !important; border-radius: 12px !important; border: 1px solid var(--stone) !important; background: var(--paper) !important; font: inherit; font-size: 14px; resize: vertical; }
   .fn-btns { display: flex; gap: 10px; margin-top: 16px; }
   .fn-btns button { flex: 1; height: 52px; border-radius: 100px; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; }
-  .fn-cancel { border: 1px solid var(--stone); background: var(--paper); color: var(--ink); }
+  .fn-cancel { border: 1.5px solid var(--ink); background: transparent; color: var(--ink); }
   .fn-cancel:hover { background: var(--sand); }
   .fn-confirm { border: 0; background: var(--coral-500); color: var(--cream); }
   .fn-confirm[disabled] { opacity: .6; cursor: default; }
@@ -248,7 +248,30 @@
   .fn-xrow small { display: block; margin-top: 2px; font-size: 13px; color: var(--graphite); }
   .fn-xrow .fn-xgo { margin-left: auto; color: var(--ash); }
   .fn-xcap { margin: -4px 0 14px; font-size: 13.5px; color: var(--graphite); }
-  .fn-date { width: 100%; height: 50px; padding: 0 14px !important; border-radius: 12px !important; border: 1px solid var(--stone) !important; background: var(--paper) !important; font: inherit; font-size: 15px; margin-bottom: 10px; }
+  /* Intervalo: atalhos + dois campos de data. O campo tinha largura 100% mais
+     o padding (sem border-box) e o iOS ainda centraliza a data: estourava a
+     folha no celular. Agora o input vive dentro de uma caixa como as de valor. */
+  .fn-sheet-h .fn-rg-dias { flex-shrink: 0; white-space: nowrap; font-size: 16px; color: var(--graphite); }
+  .fn-rg-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .fn-rg-chips button { height: 36px; padding: 0 14px; border-radius: 99px; border: 1px solid var(--stone); background: transparent; color: var(--ink); font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
+  .fn-rg-chips button:hover { background: var(--sand); }
+  .fn-rg-chips button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--cream); }
+  .fn-rg-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .fn-rg-f { min-width: 0; }
+  .fn-rg-f .fn-glab { display: block; }
+  .fn-dwrap { position: relative; display: flex; align-items: center; gap: 8px; box-sizing: border-box; width: 100%; height: 52px; padding: 0 12px; border-radius: 14px; background: var(--paper); border: 1px solid var(--stone); transition: border-color .15s, box-shadow .15s; }
+  .fn-dwrap:focus-within { border-color: var(--coral-500); box-shadow: 0 0 0 4px rgba(221,120,82,.14); }
+  .fn-dwrap.is-err { border-color: var(--rose-500, #c85050); }
+  .fn-dwrap svg { flex-shrink: 0; color: var(--graphite); }
+  /* .fn-dwrap na frente: o estilo geral de input[type=date] do layout é
+     !important e mais específico que só .fn-date. */
+  .fn-dwrap .fn-date { box-sizing: border-box; display: block; flex: 1; min-width: 0; width: 100%; height: 100%; margin: 0; padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; outline: none; -webkit-appearance: none; appearance: none; font: inherit; font-size: 16px; color: var(--ink); text-align: left; }
+  .fn-dwrap .fn-date::-webkit-date-and-time-value { text-align: left; margin: 0; }
+  /* Um ícone só (o nosso, à esquerda): o seletor do Chrome fica invisível
+     cobrindo a caixa inteira, então clicar em qualquer ponto abre o calendário. */
+  .fn-dwrap .fn-date::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: auto; height: auto; margin: 0; padding: 0; opacity: 0; cursor: pointer; }
+  #rg-err .fn-banner { margin: 12px 0 0; }
+  @media (max-width: 380px) { .fn-rg-fields { grid-template-columns: 1fr; } }
 
   @media (min-width: 720px) {
     .fn-wrap { padding: 0 32px 80px; }
@@ -327,10 +350,20 @@
 <div class="fn-sheet-bg" id="sh-range" aria-hidden="true">
   <div class="fn-sheet" role="dialog" aria-modal="true" aria-labelledby="sh-range-t" style="max-width:440px">
     <div class="fn-handle"></div>
-    <div class="fn-sheet-h"><b id="sh-range-t">INTERVALO PERSONALIZADO</b></div>
-    <div class="fn-glab">INÍCIO</div><input type="date" class="fn-date" id="rg-start">
-    <div class="fn-glab">FIM</div><input type="date" class="fn-date" id="rg-end">
-    <div id="rg-err"></div>
+    <div class="fn-sheet-h"><b id="sh-range-t">INTERVALO PERSONALIZADO</b><span id="rg-dias" class="fn-rg-dias"></span></div>
+    <div class="fn-rg-chips" role="group" aria-label="Atalhos de período">
+      <button type="button" data-rg="7">Últimos 7 dias</button>
+      <button type="button" data-rg="30">Últimos 30 dias</button>
+      <button type="button" data-rg="mes-passado">Mês passado</button>
+      <button type="button" data-rg="ano">Este ano</button>
+    </div>
+    <div class="fn-rg-fields">
+      <div class="fn-rg-f"><label class="fn-glab" for="rg-start">DE</label>
+        <span class="fn-dwrap"><i data-feather="calendar" style="width:16px;height:16px"></i><input type="date" class="fn-date" id="rg-start"></span></div>
+      <div class="fn-rg-f"><label class="fn-glab" for="rg-end">ATÉ</label>
+        <span class="fn-dwrap"><i data-feather="calendar" style="width:16px;height:16px"></i><input type="date" class="fn-date" id="rg-end"></span></div>
+    </div>
+    <div id="rg-err" aria-live="polite"></div>
     <div class="fn-btns"><button type="button" class="fn-cancel" data-close>Cancelar</button><button type="button" class="fn-confirm" id="rg-apply">Aplicar</button></div>
   </div>
 </div>
@@ -806,15 +839,44 @@
     b.addEventListener('click', function () {
       var p = b.dataset.period;
       if (p === 'custom') {
-        $('rg-start').value = st.start || iso(new Date(Date.now() - 30 * 864e5)); $('rg-end').value = st.end || iso(new Date());
-        $('rg-err').innerHTML = ''; openSheet('sh-range'); return;
+        $('rg-start').value = st.start || iso(new Date(Date.now() - 29 * 864e5)); $('rg-end').value = st.end || iso(new Date());
+        rgPintar(); openSheet('sh-range'); return;
       }
       st.period = p; st.start = st.end = null; paintPeriod(); load();
     });
   });
-  $('rg-apply').addEventListener('click', function () {
+  // Atalhos, contagem de dias e validação ao vivo do intervalo.
+  function rgAtalho(k) {
+    var h = new Date(), a, z = h;
+    if (k === '7' || k === '30') a = new Date(h.getFullYear(), h.getMonth(), h.getDate() - (Number(k) - 1));
+    else if (k === 'mes-passado') { a = new Date(h.getFullYear(), h.getMonth() - 1, 1); z = new Date(h.getFullYear(), h.getMonth(), 0); }
+    else if (k === 'ano') a = new Date(h.getFullYear(), 0, 1);
+    return [iso(a), iso(z)];
+  }
+  function rgErro() {
     var a = $('rg-start').value, z = $('rg-end').value;
-    if (!a || !z || a > z) { $('rg-err').innerHTML = '<div class="fn-banner is-error">' + icon('alert-circle', 14) + '<span>Escolha um início antes do fim.</span></div>'; return; }
+    if (!a || !z) return 'Escolha as duas datas.';
+    if (a > z) return 'A data inicial precisa vir antes da final.';
+    return '';
+  }
+  function rgPintar() {
+    var a = $('rg-start').value, z = $('rg-end').value, err = rgErro();
+    document.querySelectorAll('[data-rg]').forEach(function (b) { var v = rgAtalho(b.dataset.rg); b.setAttribute('aria-pressed', v[0] === a && v[1] === z ? 'true' : 'false'); });
+    var n = !err ? Math.round((new Date(z + 'T12:00') - new Date(a + 'T12:00')) / 864e5) + 1 : 0;
+    $('rg-dias').textContent = n ? n + (n === 1 ? ' dia' : ' dias') : '';
+    $('rg-start').parentNode.classList.toggle('is-err', !!err && !!a && !!z);
+    $('rg-end').parentNode.classList.toggle('is-err', !!err && !!a && !!z);
+    // Com o botão travado, o motivo aparece na hora (não só ao clicar).
+    $('rg-err').innerHTML = err ? '<div class="fn-banner is-error">' + icon('alert-circle', 14) + '<span>' + err + '</span></div>' : '';
+    $('rg-apply').disabled = !!err;
+  }
+  ['rg-start', 'rg-end'].forEach(function (id) { $(id).addEventListener('input', rgPintar); $(id).addEventListener('change', rgPintar); });
+  document.querySelectorAll('[data-rg]').forEach(function (b) {
+    b.addEventListener('click', function () { var v = rgAtalho(b.dataset.rg); $('rg-start').value = v[0]; $('rg-end').value = v[1]; rgPintar(); });
+  });
+  $('rg-apply').addEventListener('click', function () {
+    var a = $('rg-start').value, z = $('rg-end').value, err = rgErro();
+    if (err) { $('rg-err').innerHTML = '<div class="fn-banner is-error">' + icon('alert-circle', 14) + '<span>' + err + '</span></div>'; return; }
     st.period = 'custom'; st.start = a; st.end = z; paintPeriod(); closeSheet('sh-range'); load();
   });
 
