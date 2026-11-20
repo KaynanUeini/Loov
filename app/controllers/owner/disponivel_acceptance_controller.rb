@@ -35,6 +35,10 @@ module Owner
           paused:       cws.any? && cws.all?(&:pausado?),
           paused_until: cws.filter_map(&:paused_until).max&.iso8601,
           open_now:     cws.any?(&:aberto_em?),
+          # A tela "esperando" (o placar do app): a vaga que está na vitrine
+          # agora, as duas meias horas seguintes e o que o Last Minute rendeu
+          # hoje. Com vários lava-rápidos, a vitrine é a do primeiro aberto.
+          vitrine: vitrine_de(cws),
         }
       else
         render json: lista
@@ -174,6 +178,34 @@ module Owner
       unless current_user&.owner? || current_user&.attendant?
         render json: { error: "Acesso negado." }, status: :forbidden
       end
+    end
+
+    def vitrine_de(cws)
+      agora = Time.current
+      cw = cws.find { |c| c.aberto_em?(agora) } || cws.first
+      return nil unless cw
+      vaga = cw.last_minute_slot(agora)
+      fecha = cw.closing_at(agora)
+      seguintes = []
+      if vaga && fecha
+        t = vaga + CarWash::PASSO_LAST_MINUTE.minutes
+        2.times do
+          break if t >= fecha
+          seguintes << { hora: t.strftime("%H:%M"), livre: cw.vaga_por?(t, CarWash::PASSO_LAST_MINUTE) }
+          t += CarWash::PASSO_LAST_MINUTE.minutes
+        end
+      end
+      hoje = Appointment.where(car_wash_id: cws.map(&:id)).disponivel
+        .where(status: %w[confirmed attended])
+        .where(scheduled_at: agora.beginning_of_day..agora.end_of_day)
+        .includes(:service).to_a
+      {
+        car_wash:   cw.name,
+        vaga:       vaga&.strftime("%H:%M"),
+        seguintes:  seguintes,
+        hoje_qtd:   hoje.size,
+        hoje_total: hoje.sum { |a| a.effective_price.to_f }.round(2),
+      }
     end
 
     def serialize(appointment)
