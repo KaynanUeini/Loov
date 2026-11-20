@@ -329,7 +329,7 @@
     var urgente = s <= 30 && !st.done;
     root.classList.toggle('urgent', urgente);
     if (!st.done) $('lma-eyebrow-txt').textContent = urgente ? 'Últimos segundos' : 'Novo pedido · Last Minute';
-    if (s <= 0 && !st.done && !st.acting) finish('no', 'Passou.', 'Os 3 minutos acabaram. O cliente não foi cobrado e o horário voltou pra vitrine.');
+    if (s <= 0 && !st.done && !st.acting) finish('no', 'passou.', 'Os 3 minutos acabaram. O cliente não foi cobrado e o horário voltou pra vitrine.');
   }
 
   function stopSignals() {
@@ -376,7 +376,7 @@
         if (x.ok) {
           var nome = $('lma-name').textContent;
           if (action === 'accept') finish('ok', 'preenchido.', nome + ' foi avisado e está a caminho. O horário saiu da vitrine e entrou na agenda do dia.');
-          else finish('no', 'Recusado.', nome + ' foi avisado e não é cobrado. O horário continua na vitrine.');
+          else finish('no', 'recusado.', nome + ' foi avisado e não é cobrado. O horário continua na vitrine.');
           document.dispatchEvent(new CustomEvent('loov:lm-decided', { detail: { action: action } }));
         } else {
           falhou((x.d && x.d.error) || 'Não foi possível concluir. Tente de novo.');
@@ -432,7 +432,7 @@
         if (st.cur && !st.done && !st.acting && !list.some(function (q) { return q.id === st.cur.id; })) {
           // Sumiu do servidor sem decisão daqui: decidido em outro aparelho
           // (app ou outra aba) ou expirou.
-          finish('no', 'Respondido.', 'Este pedido já foi respondido em outro aparelho ou expirou.');
+          finish('no', 'respondido.', 'Este pedido já foi respondido em outro aparelho ou expirou.');
         }
         if (st.cur) renderQueue(); else next();
       })
