@@ -176,8 +176,9 @@
   .fn-row-t small { display: block; margin-top: 2px; font-size: 13px; color: var(--graphite); }
   .fn-row-t small strong { color: var(--ink); font-weight: 600; }
   .fn-row-t small strong.is-neg { color: var(--rose-500, #c85050); }
-  .fn-row-plus { flex: 0 0 32px; height: 32px; border-radius: 50%; border: 0; background: var(--coral-50); color: var(--coral-700); display: flex; align-items: center; justify-content: center; transition: background .15s; }
-  .fn-row-plus:hover { background: var(--coral-100); }
+  /* Só abre a folha de custos: contorno tinta (coral é de quem efetiva). */
+  .fn-row-plus { flex: 0 0 32px; height: 32px; border-radius: 50%; border: 1.5px solid var(--ink); background: transparent; color: var(--ink); display: flex; align-items: center; justify-content: center; transition: background .15s; }
+  .fn-row-plus:hover { background: var(--sand); }
   .fn-row-chev { color: var(--graphite); transition: transform .2s; justify-self: end; }
   .fn-cols { display: none; }
   .fn-row.is-open .fn-row-chev { transform: rotate(180deg); }
@@ -192,7 +193,8 @@
   .fn-line.is-big b { font-family: 'Space Grotesk', sans-serif; font-size: 18px; }
   .fn-div { height: 1px; background: var(--stone); margin: 6px 0; }
   .fn-pill { display: inline-block; margin-top: 6px; padding: 4px 10px; border-radius: 100px; background: var(--coral-50); color: var(--coral-700); font-size: 12px; font-weight: 600; }
-  .fn-row-cta { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; padding: 10px 14px; border-radius: 100px; border: 1px dashed var(--coral-300); background: transparent; color: var(--coral-700); font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px; }
+  .fn-row-cta { display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; height: 40px; padding: 0 16px; border-radius: 100px; border: 1.5px solid var(--ink); background: transparent; color: var(--ink); font-size: 13px; font-weight: 600; transition: background .15s; }
+  .fn-row-cta:hover { background: var(--sand); }
 
   .fn-empty { padding: 26px; border-radius: 20px; background: var(--paper); border: 1px dashed var(--stone); }
   .fn-empty-ic { width: 44px; height: 44px; border-radius: 14px; background: var(--coral-50); color: var(--coral-500); display: flex; align-items: center; justify-content: center; }
@@ -232,7 +234,9 @@
   .fn-cline .fn-mwrap { width: 150px; }
   .fn-cline button { flex: 0 0 34px; height: 34px; border-radius: 50%; border: 0; background: transparent; color: var(--graphite); display: flex; align-items: center; justify-content: center; }
   .fn-cline button:hover { background: var(--sand); color: var(--rose-500, #c85050); }
-  .fn-addline { display: inline-flex; align-items: center; gap: 6px; margin: 4px 0 8px; padding: 9px 4px; border: 0; background: transparent; color: var(--coral-700); font-size: 13.5px; font-weight: 600; }
+  /* Acrescenta uma linha (não salva): tracejado em tinta, como no app. */
+  .fn-addline { display: flex; width: 100%; align-items: center; justify-content: center; gap: 6px; margin: 6px 0 10px; padding: 12px 14px; border: 1.5px dashed var(--ash); border-radius: 10px; background: transparent; color: var(--ink); font-size: 13.5px; font-weight: 600; transition: border-color .15s; }
+  .fn-addline:hover { border-color: var(--ink); }
   .fn-notes { width: 100%; min-height: 70px; padding: 12px 14px !important; border-radius: 12px !important; border: 1px solid var(--stone) !important; background: var(--paper) !important; font: inherit; font-size: 14px; resize: vertical; }
   .fn-btns { display: flex; gap: 10px; margin-top: 16px; }
   .fn-btns button { flex: 1; height: 52px; border-radius: 100px; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; }
@@ -533,7 +537,7 @@
         line('Total custos', cost(m.total_cost), 'is-bold ' + costCls(m.total_cost)) +
         '<div class="fn-div"></div>' + line(neg ? 'Prejuízo líquido' : 'Lucro líquido', amt(m.profit), 'is-bold is-big' + (neg ? ' is-neg' : '')) +
         (m.margin != null ? '<span class="fn-pill">Margem ' + Number(m.margin).toFixed(1).replace('.', ',') + '%</span>' : '') +
-        (!m.has_cost_record ? '<div><button type="button" class="fn-row-cta" data-cost="' + key + '">' + icon('plus', 13) + 'LANÇAR CUSTOS DESTE MÊS</button></div>' : '') +
+        (!m.has_cost_record ? '<div><button type="button" class="fn-row-cta" data-cost="' + key + '">' + icon('plus', 13) + 'Lançar custos</button></div>' : '') +
       '</div></div>';
   }
 
@@ -666,7 +670,50 @@
 
   // ── Folhas ───────────────────────────────────────────────────────────────
   function openSheet(id) { var s = $(id); s.classList.add('is-on'); s.setAttribute('aria-hidden', 'false'); }
-  function closeSheet(id) { var s = $(id); s.classList.remove('is-on'); s.setAttribute('aria-hidden', 'true'); }
+  function closeSheet(id) {
+    var s = $(id);
+    // A folha de custos encolhe de volta pro botão que a abriu.
+    if (id === 'sh-cost' && cs.origem && s.classList.contains('is-on')) return encolherCusto(function () { s.classList.remove('is-on'); s.setAttribute('aria-hidden', 'true'); });
+    s.classList.remove('is-on'); s.setAttribute('aria-hidden', 'true');
+  }
+
+  // ── Folha que nasce do botão ─────────────────────────────────────────────
+  // A transição do "+ Avulso" do painel e do app: a folha cresce a partir do
+  // botão tocado (o "+" do mês, o "Lançar custos" de um mês ou o do topo) em
+  // 700 ms com a curva expo.inOut, e o conteúdo entra em cascata. Só cresce
+  // com os custos carregados, pra não mudar de tamanho no meio. Sem Web
+  // Animations ou com movimento reduzido, abre e fecha direto.
+  var SEM_MOV = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var CURVA = 'cubic-bezier(.87,0,.13,1)';
+  function saltoCusto() {
+    var sh = $('sh-cost').querySelector('.fn-sheet'), o = cs.origem.getBoundingClientRect(), f = sh.getBoundingClientRect();
+    return 'translate(' + ((o.left + o.width / 2) - (f.left + f.width / 2)) + 'px,' + ((o.top + o.height / 2) - (f.top + f.height / 2)) + 'px) ' +
+      'scale(' + Math.max(.05, o.width / f.width) + ',' + Math.max(.02, o.height / f.height) + ')';
+  }
+  function crescerCusto() {
+    var sh = $('sh-cost').querySelector('.fn-sheet');
+    sh.style.visibility = '';
+    if (SEM_MOV || !sh.animate || !cs.origem || !cs.origem.isConnected) return;
+    sh.style.transition = 'none';
+    sh.animate([{ transform: saltoCusto(), opacity: 0 }, { opacity: 1, offset: .15 }, { transform: 'none', opacity: 1 }], { duration: 700, easing: CURVA });
+    Array.prototype.forEach.call(sh.children, function (k, i) {
+      k.animate([{ opacity: 0, transform: 'translateY(14px)' }, { opacity: 1, transform: 'none' }], { duration: 500, delay: 480 + i * 70, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' });
+    });
+  }
+  function encolherCusto(fim) {
+    var bg = $('sh-cost'), sh = bg.querySelector('.fn-sheet');
+    if (SEM_MOV || !sh.animate || !cs.origem.isConnected || cs.fechando) { cs.origem = null; return fim(); }
+    cs.fechando = true;
+    var filhos = Array.prototype.slice.call(sh.children);
+    filhos.forEach(function (k) { k.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, fill: 'forwards' }); });
+    var a = sh.animate([{ transform: 'none', opacity: 1 }, { opacity: 1, offset: .85 }, { transform: saltoCusto(), opacity: 0 }], { duration: 550, delay: 60, easing: CURVA, fill: 'forwards' });
+    a.onfinish = function () {
+      fim();
+      // Espera o fundo sumir pra soltar as animações (senão a folha pisca).
+      setTimeout(function () { [sh].concat(filhos).forEach(function (el) { el.getAnimations().forEach(function (x) { x.cancel(); }); }); sh.style.transition = ''; cs.fechando = false; }, 220);
+      cs.origem = null;
+    };
+  }
   function closeAll() { ['sh-cost', 'sh-exp', 'sh-range'].forEach(function (id) { if (id === 'sh-cost' && cs.saving) return; if (id === 'sh-exp' && xbusy) return; closeSheet(id); }); }
 
   // ── Lançar custos (mesma lógica do app) ──────────────────────────────────
@@ -678,10 +725,13 @@
   function centsDisplay(dg) { if (!dg) return ''; return ((parseInt(dg, 10) || 0) / 100).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
   function banner(type, text) { $('sh-cost-banner').innerHTML = text ? '<div class="fn-banner is-' + type + '">' + icon(type === 'success' ? 'check-circle' : type === 'error' ? 'alert-circle' : 'info', 14) + '<span>' + esc(text) + '</span></div>' : ''; }
 
-  function openCosts(year, month) {
+  function openCosts(year, month, origem) {
     cs.year = year; cs.month = month; cs.form = null;
+    cs.origem = origem && !SEM_MOV ? origem : null;
     $('sh-cost-m').textContent = MESES[month - 1] + ' ' + year;
     banner(); $('sh-cost-body').innerHTML = '<div class="fn-loading" style="padding:40px 0"><span class="fn-spin"></span></div>';
+    // Vindo de um botão, a folha espera os custos (o fundo já escurece) e cresce dele.
+    if (cs.origem) $('sh-cost').querySelector('.fn-sheet').style.visibility = 'hidden';
     openSheet('sh-cost');
     fetch('/owner/monthly_costs/edit.json?year=' + year + '&month=' + month, { credentials: 'same-origin', headers: { Accept: 'application/json' } })
       .then(function (r) { if (!r.ok) throw 0; return r.json(); })
@@ -707,9 +757,10 @@
         cs.hasPend = !!data.has_pending;
         if (cs.hasPend) banner('info', 'Há alterações aguardando aprovação neste mês.');
         renderCosts();
-        var first = $('sh-cost-body').querySelector('input'); if (first) first.focus();
+        crescerCusto();
+        var first = $('sh-cost-body').querySelector('input'); if (first) first.focus({ preventScroll: true });
       })
-      .catch(function () { $('sh-cost-body').innerHTML = ''; banner('error', 'Não foi possível carregar os custos deste mês.'); });
+      .catch(function () { $('sh-cost-body').innerHTML = ''; banner('error', 'Não foi possível carregar os custos deste mês.'); crescerCusto(); });
   }
   function moneyRow(k, label) {
     var p = cs.pend.indexOf(k) !== -1;
@@ -883,9 +934,9 @@
   // ── Eventos gerais ───────────────────────────────────────────────────────
   document.addEventListener('click', function (e) {
     var t;
-    if ((t = e.target.closest('[data-cost]'))) { e.stopPropagation(); var p = t.dataset.cost.split('-'); openCosts(Number(p[0]), Number(p[1])); return; }
+    if ((t = e.target.closest('[data-cost]'))) { e.stopPropagation(); var p = t.dataset.cost.split('-'); openCosts(Number(p[0]), Number(p[1]), t); return; }
     if ((t = e.target.closest('[data-toggle]'))) { st.open = st.open === t.dataset.toggle ? null : t.dataset.toggle; render(); return; }
-    if (e.target.closest('#fn-add-now')) { var n = new Date(); openCosts(n.getFullYear(), n.getMonth() + 1); return; }
+    if ((t = e.target.closest('#fn-add-now'))) { var n = new Date(); openCosts(n.getFullYear(), n.getMonth() + 1, t); return; }
     if (e.target.closest('#fn-export')) { if (!st.data) return; $('sh-exp-m').textContent = st.data.period_label || ''; xerr(''); setBusy(null); openSheet('sh-exp'); return; }
     if ((t = e.target.closest('.bk'))) {
       var bi = Number(t.dataset.i); st.pin = st.pin === bi ? null : bi; st.sel = st.pin; why.todos = false;
