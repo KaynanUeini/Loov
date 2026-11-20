@@ -1103,6 +1103,10 @@
     }
     return false;
   }
+  // Passou da tolerância sem ficha: o card já não segura vaga (libera_vaga_em vem do servidor).
+  function vagaLiberada(appt) {
+    return !!appt.aguardando_ficha && !!appt.libera_vaga_em && Date.now() >= new Date(appt.libera_vaga_em).getTime();
+  }
   function liveProgress(appt) {
     // Esperando a ficha: o tempo não anda até ela ser feita (no app).
     if (appt.aguardando_ficha) return { progress: 0, etaMinutes: null, phase: 'aguardando ficha' };
@@ -1201,7 +1205,7 @@
     const atrasoMin = esperandoFicha ? Math.max(0, Math.floor((Date.now() - new Date(appt.scheduled_at).getTime()) / 60000)) : 0;
     // Passou da tolerância sem ficha: o card já não segura vaga. Só informa,
     // em cinza e parado; se o cliente chegar, a ficha resolve.
-    const vagaSolta = esperandoFicha && !!appt.libera_vaga_em && Date.now() >= new Date(appt.libera_vaga_em).getTime();
+    const vagaSolta = esperandoFicha && vagaLiberada(appt);
     card.className = `owner-dash-card${isFinalized ? ' inactive' : ''}`;
     card.dataset.id = appt.id;
     if (isPast) card.dataset.past = '1';
@@ -1523,7 +1527,9 @@
         return (a.id || 0) - (b.id || 0);
       });
 
-    const inServiceCount = todayList.filter(isInService).length;
+    // Sem ficha (obrigatória) o carro não entrou: não está em serviço, nem
+    // dentro dos 30 min de tolerância nem depois, com a vaga liberada.
+    const inServiceCount = todayList.filter(a => isInService(a) && !a.aguardando_ficha).length;
 
     // Chip "N em serviço" ao lado do título da seção
     document.getElementById('od-live-chip').classList.toggle('visible', inServiceCount > 0);
