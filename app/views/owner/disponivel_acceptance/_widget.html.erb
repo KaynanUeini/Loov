@@ -67,16 +67,18 @@
 <style>
   #lm-alert[hidden], .lma-enable[hidden], #lm-alert [hidden] { display: none !important; }
   /* Placar: a tela inteira em coral (vermelho nos últimos 30 s), tinta por cima. */
-  #lm-alert { position: fixed; inset: 0; z-index: 2000; display: flex; justify-content: center; background: #dd7852; color: #28231c; font-family: 'Inter', sans-serif; transition: background .4s; }
-  #lm-alert.urgent { background: #c85050; }
-  #lm-alert.is-ok { background: #28231c; color: #fafaf6; }
-  #lm-alert.is-no { background: #fafaf6; }
-  #lm-alert.entra { animation: lmaSobe .55s cubic-bezier(.16,1,.3,1) both; }
-  #lm-alert.entra::after { content: ""; position: absolute; inset: 0; background: #fafaf6; pointer-events: none; animation: lmaClarao .5s .25s ease-out both; }
+  /* As cores moram no cartão: no celular ele é a tela inteira; no
+     computador, um cartão no centro sobre o fundo escurecido (como antes). */
+  #lm-alert { position: fixed; inset: 0; z-index: 2000; display: flex; justify-content: center; color: #28231c; font-family: 'Inter', sans-serif; }
+  .lma-card { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; overflow-x: hidden; overflow-y: auto; background: #dd7852; transition: background .4s, color .4s; }
+  #lm-alert.urgent .lma-card { background: #c85050; }
+  #lm-alert.is-ok .lma-card { background: #28231c; color: #fafaf6; }
+  #lm-alert.is-no .lma-card { background: #fafaf6; }
+  #lm-alert.entra .lma-card { animation: lmaSobe .55s cubic-bezier(.16,1,.3,1) both; }
+  #lm-alert.entra .lma-card::after { content: ""; position: absolute; inset: 0; background: #fafaf6; pointer-events: none; animation: lmaClarao .5s .25s ease-out both; }
   @keyframes lmaSobe { from { transform: translateY(100%); } }
   @keyframes lmaClarao { from { opacity: .85; } to { opacity: 0; } }
-  .lma-card { position: relative; width: 100%; max-width: 560px; height: 100%; display: flex; flex-direction: column; overflow-y: auto; }
-  .lma-track { position: fixed; top: 0; left: 0; right: 0; height: 6px; }
+  .lma-track { position: absolute; top: 0; left: 0; right: 0; height: 6px; z-index: 1; }
   .lma-track i { display: block; height: 100%; width: 100%; background: #28231c; transition: width .95s linear; }
   #lm-alert.is-ok .lma-track, #lm-alert.is-no .lma-track { display: none; }
   .lma-in { padding: max(48px, env(safe-area-inset-top, 0px)) 20px 0; }
@@ -118,7 +120,6 @@
   .lma-result span { display: block; margin-top: 10px; font-size: 15px; line-height: 22px; }
   #lm-alert.is-ok .lma-result span { color: #e0dbd0; }
   #lm-alert.is-err .lma-result b { font-size: 28px; color: #28231c; }
-  @media (prefers-reduced-motion: reduce) { #lm-alert.entra, #lm-alert.entra::after { animation: none; } }
 
   .lma-enable {
     position: fixed; left: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 1500;
@@ -133,8 +134,27 @@
   .lma-enable-x { margin-left: 4px; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; opacity: .55; }
   .lma-enable-x:hover { opacity: 1; background: rgba(255,255,255,.1); }
 
+  /* Computador: o cartão no centro, sobre o fundo escurecido e desfocado. */
+  @media (min-width: 768px) {
+    #lm-alert { align-items: center; padding: 24px; background: rgba(25,20,15,.62); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+    #lm-alert.entra { animation: lmaFundo .3s ease both; }
+    @keyframes lmaFundo { from { background: rgba(25,20,15,0); } }
+    .lma-card { max-width: 420px; height: auto; max-height: calc(100vh - 48px); border-radius: 28px; box-shadow: 0 30px 80px rgba(25,20,15,.5); }
+    #lm-alert.entra .lma-card { animation-name: lmaSobeCartao; }
+    @keyframes lmaSobeCartao { from { opacity: 0; transform: translateY(60px) scale(.96); } }
+    .lma-in { padding: 30px 24px 0; }
+    .lma-count { font-size: 112px; margin-top: 10px; }
+    .lma-quer { font-size: 34px !important; }
+    .lma-foot { padding-top: 22px; }
+    .lma-yes { height: 104px; }
+    .lma-yes-t b { font-size: 40px; }
+    .lma-result { padding: 28px 24px 30px; }
+    .lma-result .lma-r-hora { font-size: 96px; }
+    #lm-alert.is-ok .lma-foot, #lm-alert.is-no .lma-foot { margin: 0; }
+  }
   @media (prefers-reduced-motion: reduce) {
     .lma-enable { animation: none; }
+    #lm-alert.entra, #lm-alert.entra .lma-card, #lm-alert.entra .lma-card::after { animation: none; }
   }
 </style>
 
