@@ -1832,6 +1832,45 @@
     document.getElementById('od-wi-error').style.display = 'none';
     wiRenderServicos(); wiRenderHora(); wiAtualizarCta();
     document.getElementById('od-walkin-overlay').classList.add('open');
+    flipWalkIn(true);
+  }
+
+  // ── Avulso: a folha nasce do "+ Avulso" e encolhe de volta pra ele ─────
+  // A mesma transição do app e dos cards do "Perto de você" na home: curva
+  // expo.inOut em 700 ms, o fundo escurece junto e o conteúdo entra em
+  // cascata no fim. Sem Web Animations ou com movimento reduzido, abre e
+  // fecha direto.
+  const semMovOD = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const CURVA_OD = 'cubic-bezier(.87,0,.13,1)';
+  let wiFechando = false;
+  function flipWalkIn(abrir, depois) {
+    const ov = document.getElementById('od-walkin-overlay');
+    const sh = document.getElementById('od-walkin-sheet');
+    const btn = document.getElementById('od-walkin-btn');
+    const pronto = () => { depois && depois(); };
+    if (semMovOD || !sh.animate || !btn || !btn.offsetParent) {
+      if (!abrir) ov.classList.remove('open');
+      return pronto();
+    }
+    const o = btn.getBoundingClientRect(), f = sh.getBoundingClientRect();
+    const de = 'translate(' + ((o.left + o.width / 2) - (f.left + f.width / 2)) + 'px,' + ((o.top + o.height / 2) - (f.top + f.height / 2)) + 'px) ' +
+      'scale(' + Math.max(.05, o.width / f.width) + ',' + Math.max(.02, o.height / f.height) + ')';
+    const filhos = Array.from(sh.children);
+    const limpar = () => [sh, ov].concat(filhos).forEach(el => el.getAnimations().forEach(a => a.cancel()));
+    if (abrir) {
+      limpar();
+      sh.style.animation = 'none';
+      sh.animate([{ transform: de, opacity: 0 }, { opacity: 1, offset: .15 }, { transform: 'none', opacity: 1 }], { duration: 700, easing: CURVA_OD });
+      ov.animate([{ backgroundColor: 'rgba(25,20,15,0)', backdropFilter: 'blur(0px)' }, { backgroundColor: 'rgba(25,20,15,.5)', backdropFilter: 'blur(6px)' }], { duration: 700, easing: CURVA_OD });
+      filhos.forEach((k, i) => k.animate([{ opacity: 0, transform: 'translateY(14px)' }, { opacity: 1, transform: 'none' }], { duration: 500, delay: 480 + i * 70, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' }));
+      return pronto();
+    }
+    if (wiFechando) return;
+    wiFechando = true;
+    filhos.forEach(k => k.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, fill: 'forwards' }));
+    ov.animate([{ backgroundColor: 'rgba(25,20,15,.5)', backdropFilter: 'blur(6px)' }, { backgroundColor: 'rgba(25,20,15,0)', backdropFilter: 'blur(0px)' }], { duration: 610, easing: CURVA_OD, fill: 'forwards' });
+    const a = sh.animate([{ transform: 'none', opacity: 1 }, { opacity: 1, offset: .85 }, { transform: de, opacity: 0 }], { duration: 550, delay: 60, easing: CURVA_OD, fill: 'forwards' });
+    a.onfinish = () => { ov.classList.remove('open'); limpar(); wiFechando = false; pronto(); };
   }
   document.getElementById('od-wi-price').addEventListener('input', function () { this.value = this.value.replace(/[^\d,]/g, ''); wiAtualizarCta(); });
 
@@ -1892,7 +1931,10 @@
   function closeOverlay(kind) {
     const map = { edit:'od-edit-overlay', cancel:'od-cancel-overlay', walkin:'od-walkin-overlay', past:'od-past-overlay', menu:'od-menu-overlay' };
     const el = document.getElementById(map[kind]);
-    if (el) el.classList.remove('open');
+    if (!el) return;
+    // O avulso encolhe de volta pro "+ Avulso" antes de sumir.
+    if (kind === 'walkin' && el.classList.contains('open')) return flipWalkIn(false);
+    el.classList.remove('open');
   }
   document.querySelectorAll('[data-od-close]').forEach(btn => {
     btn.addEventListener('click', () => closeOverlay(btn.dataset.odClose));
