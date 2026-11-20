@@ -445,7 +445,7 @@
   function heroHtml(d) {
     var k = d.kpis, neg = Number(k.profit) < 0;
     return '<section class="fn-hero' + (neg ? ' is-neg' : '') + '">' +
-      '<div class="fn-hero-top"><span class="fn-mono">Lucro · ' + esc(d.period_label) + '</span>' +
+      '<div class="fn-hero-top"><span class="fn-mono">' + (neg ? 'Prejuízo' : 'Lucro') + ' · ' + esc(d.period_label) + '</span>' +
         (k.margin != null ? '<span class="fn-margin">' + icon(neg ? 'trending-down' : 'trending-up', 13) + Number(k.margin).toFixed(1).replace('.', ',') + '% margem</span>' : '') + '</div>' +
       '<div class="fn-profit">' + money(k.profit) + '</div>' + deltaHtml(d.previous) +
       '<div class="fn-rule"></div>' +
@@ -509,7 +509,7 @@
       '<div class="fn-detail' + (st.sel == null ? ' is-total' : '') + '"><span class="fn-detail-l">' + esc(String(s.label).toUpperCase()) + (m != null ? '<em>' + m.toFixed(1).replace('.', ',') + '% margem</em>' : '') + '</span>' +
         '<span class="fn-detail-i"><i style="background:' + C.coral500 + '"></i><span><small>Faturamento</small><b>' + moneyC(s.revenue) + '</b></span></span>' +
         '<span class="fn-detail-i"><i style="background:' + C.graphite + '"></i><span><small>Custos</small><b>' + moneyC(s.cost) + '</b></span></span>' +
-        '<span class="fn-detail-i"><i style="background:' + C.ink + '"></i><span><small>Lucro</small><b class="' + (neg ? 'is-neg' : '') + '">' + moneyC(s.profit) + '</b></span></span></div>' +
+        '<span class="fn-detail-i"><i style="background:' + C.ink + '"></i><span><small>' + (neg ? 'Prejuízo' : 'Lucro') + '</small><b class="' + (neg ? 'is-neg' : '') + '">' + moneyC(s.profit) + '</b></span></span></div>' +
       '<div class="fn-plot" id="fn-plot"><svg width="' + W + '" height="' + (H + 24) + '" viewBox="0 0 ' + W + ' ' + (H + 24) + '" role="img" aria-label="Gráfico de faturamento, custos e lucro">' + zero + bars + line + '</svg></div>' +
     '</div>';
   }
@@ -522,16 +522,16 @@
     var costCls = function (v) { return Number(v || 0) > 0 ? 'is-neg' : ''; };
     return '<div class="fn-row' + (open ? ' is-open' : '') + '">' +
       '<div class="fn-row-h"><button type="button" class="fn-row-main" data-toggle="' + key + '" aria-expanded="' + open + '"><span class="fn-row-t"><b>' + esc(m.label) + '</b>' +
-        '<small>Lucro <strong class="' + (neg ? 'is-neg' : '') + '">' + moneyC(m.profit) + '</strong>' + (m.margin != null ? ' · ' + Number(m.margin).toFixed(1).replace('.', ',') + '% margem' : '') + '</small></span>' +
+        '<small>' + (neg ? 'Prejuízo' : 'Lucro') + ' <strong class="' + (neg ? 'is-neg' : '') + '">' + moneyC(m.profit) + '</strong>' + (m.margin != null ? ' · ' + Number(m.margin).toFixed(1).replace('.', ',') + '% margem' : '') + '</small></span>' +
         '<span class="fn-cols"><span><small>FATURAMENTO</small>' + moneyC(m.revenue) + '</span><span><small>CUSTOS</small>' + moneyC(m.total_cost) + '</span>' +
-          '<span class="' + (neg ? 'is-neg' : '') + '"><small>LUCRO</small>' + moneyC(m.profit) + '</span><span><small>MARGEM</small>' + (m.margin != null ? Number(m.margin).toFixed(1).replace('.', ',') + '%' : '—') + '</span></span>' +
+          '<span class="' + (neg ? 'is-neg' : '') + '"><small>' + (neg ? 'PREJUÍZO' : 'LUCRO') + '</small>' + moneyC(m.profit) + '</span><span><small>MARGEM</small>' + (m.margin != null ? Number(m.margin).toFixed(1).replace('.', ',') + '%' : '—') + '</span></span>' +
         '<span class="fn-row-chev">' + icon('chevron-down', 18) + '</span></button>' +
         '<button type="button" class="fn-row-plus" data-cost="' + key + '" aria-label="Lançar custos de ' + esc(m.label) + '">' + icon('plus', 15) + '</button></div>' +
       '<div class="fn-row-b">' +
         line('Faturamento real', amt(m.revenue)) + line('Em aberto', amt(m.open_revenue), 'is-muted') + '<div class="fn-div"></div>' +
         line('Custos fixos', cost(m.fixed_cost), costCls(m.fixed_cost)) + line('Custos variáveis', cost(m.variable_cost), costCls(m.variable_cost)) +
         line('Total custos', cost(m.total_cost), 'is-bold ' + costCls(m.total_cost)) +
-        '<div class="fn-div"></div>' + line('Lucro líquido', amt(m.profit), 'is-bold is-big' + (neg ? ' is-neg' : '')) +
+        '<div class="fn-div"></div>' + line(neg ? 'Prejuízo líquido' : 'Lucro líquido', amt(m.profit), 'is-bold is-big' + (neg ? ' is-neg' : '')) +
         (m.margin != null ? '<span class="fn-pill">Margem ' + Number(m.margin).toFixed(1).replace('.', ',') + '%</span>' : '') +
         (!m.has_cost_record ? '<div><button type="button" class="fn-row-cta" data-cost="' + key + '">' + icon('plus', 13) + 'LANÇAR CUSTOS DESTE MÊS</button></div>' : '') +
       '</div></div>';
@@ -657,10 +657,10 @@
           '<small class="fn-why-c">' + ap.length + (ap.length === 1 ? ' atendimento concluído' : ' atendimentos concluídos') + '</small>' + fat + '</div>' +
         '<div class="fn-why-col"><div class="fn-why-t"><span><i style="background:' + C.graphite + '"></i>Custos</span><b>' + money(d.cost) + '</b></div>' +
           '<p class="fn-why-c">' + esc(d.cost_note) + '</p>' + cus + '</div>' +
-        '<div class="fn-why-col fn-why-res"><div class="fn-why-t"><span><i style="background:' + C.ink + '"></i>Lucro</span><b class="' + (neg ? 'is-neg' : '') + '">' + money(d.profit) + '</b></div>' +
+        // Prejuízo se chama prejuízo (valor sem o sinal, em vermelho); a margem não entra aqui.
+        '<div class="fn-why-col fn-why-res"><div class="fn-why-t"><span><i style="background:' + C.ink + '"></i>' + (neg ? 'Prejuízo' : 'Lucro') + '</span><b class="' + (neg ? 'is-neg' : '') + '">' + money(Math.abs(Number(d.profit))) + '</b></div>' +
           '<div class="fn-why-eq"><span>Faturamento</span><b>' + money(d.revenue) + '</b></div><div class="fn-why-eq"><span>− Custos</span><b>' + money(d.cost) + '</b></div>' +
-          '<div class="fn-why-eq is-tot"><span>= Lucro</span><b class="' + (neg ? 'is-neg' : '') + '">' + money(d.profit) + '</b></div>' +
-          (d.margin != null ? '<span class="fn-pill">Margem ' + Number(d.margin).toFixed(1).replace('.', ',') + '%</span>' : '') + '</div>' +
+          '<div class="fn-why-eq is-tot"><span>= ' + (neg ? 'Prejuízo' : 'Lucro') + '</span><b class="' + (neg ? 'is-neg' : '') + '">' + money(Math.abs(Number(d.profit))) + '</b></div></div>' +
       '</div></section>';
   }
 
