@@ -189,12 +189,17 @@ module Owner
       cw = cws.find { |c| c.aberto_em?(agora) } || cws.first
       return nil unless cw
       servicos = cw.services.last_minute.to_a
-      vaga = servicos.filter_map { |sv| cw.last_minute_slot(agora, sv) }.min
+      # Igual ao /disponivel do cliente: só lava-rápido aberto AGORA e sem
+      # fechamento cadastrado hoje entra no Last Minute. last_minute_slot só
+      # olha o fechamento, então de madrugada ele achava 00:30, 01:00… num
+      # lava-rápido que abre às 8h.
+      aberto = cw.aberto_em?(agora) && !cw.closed_on?(agora.to_date)
+      vaga = aberto ? servicos.filter_map { |sv| cw.last_minute_slot(agora, sv) }.min : nil
       fecha = cw.closing_at(agora)
       # Sem vaga: porque o dia acabou (nenhuma lavagem termina antes de fechar
       # na próxima marca) ou porque o pátio está cheio. A tela diz qual.
-      sem_vaga = nil
-      if vaga.nil? && !cw.pausado?(agora) && cw.aberto_em?(agora)
+      sem_vaga = aberto ? nil : "fora"
+      if vaga.nil? && aberto && !cw.pausado?(agora)
         passo = CarWash::PASSO_LAST_MINUTE * 60
         marca = agora.beginning_of_day + ((agora.seconds_since_midnight / passo.to_f).ceil * passo).seconds
         sem_vaga = servicos.any? { |sv| cw.fits_before_closing?(marca, sv) } ? "cheio" : "fechando"
@@ -222,10 +227,28 @@ module Owner
         vaga:       vaga&.strftime("%H:%M"),
         sem_vaga:   sem_vaga,
         fecha:      fecha&.strftime("%H:%M"),
+        abre:       aberto ? nil : proxima_abertura(cw, agora),
         seguintes:  seguintes,
         hoje_qtd:   hoje.size,
         hoje_total: hoje.sum { |a| a.effective_price.to_f }.round(2),
       }
+    end
+
+    # Quando o lava-rápido volta a abrir: { hora: "08:00", dia: "hoje" |
+    # "amanhã" | "segunda"… }. Pula os dias sem horário e os fechamentos
+    # cadastrados (férias, feriado).
+    DIAS = %w[domingo segunda terça quarta quinta sexta sábado].freeze
+    def proxima_abertura(cw, agora)
+      (0..7).each do |n|
+        dia = agora.to_date + n
+        oh = cw.operating_hours.detect { |h| h.day_of_week == dia.wday }
+        next unless oh&.opens_at && oh&.closes_at
+        next if cw.closed_on?(dia)
+        abre = agora.beginning_of_day + n.days + oh.opens_at.seconds_since_midnight.seconds
+        next if abre <= agora
+        return { hora: abre.strftime("%H:%M"), dia: n.zero? ? "hoje" : n == 1 ? "amanhã" : DIAS[dia.wday] }
+      end
+      nil
     end
 
     def serialize(appointment)
