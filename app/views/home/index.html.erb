@@ -284,6 +284,7 @@
   .owner-dash-pend { display:inline-flex; align-items:center; gap:6px; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.8px; color:var(--od-rose-500); }
   .owner-dash-pend i { width:7px; height:7px; border-radius:50%; background:currentColor; animation:odPend 1.4s ease-in-out infinite; }
   @keyframes odPend { 50% { opacity:.25; } }
+  .owner-dash-pend.solta { color:var(--od-ash); }
   .owner-dash-pend-t { display:block; margin-top:3px; font-size:12px; color:var(--od-graphite); }
   @media (prefers-reduced-motion: reduce) { .owner-dash-pend i { animation:none; } }
   .owner-dash-card-top { display:flex; align-items:center; gap:12px; }
@@ -1198,6 +1199,9 @@
     // (cliente não chegou ou falta a ficha). Sem sinal, parecia em andamento.
     const esperandoFicha = inService && !!appt.aguardando_ficha;
     const atrasoMin = esperandoFicha ? Math.max(0, Math.floor((Date.now() - new Date(appt.scheduled_at).getTime()) / 60000)) : 0;
+    // Passou da tolerância sem ficha: o card já não segura vaga. Só informa,
+    // em cinza e parado; se o cliente chegar, a ficha resolve.
+    const vagaSolta = esperandoFicha && !!appt.libera_vaga_em && Date.now() >= new Date(appt.libera_vaga_em).getTime();
     card.className = `owner-dash-card${isFinalized ? ' inactive' : ''}`;
     card.dataset.id = appt.id;
     if (isPast) card.dataset.past = '1';
@@ -1299,7 +1303,9 @@
     const liveRowHtml = inService ? `
       <div class="od-liverow">
         ${esperandoFicha
-          ? `<span class="owner-dash-pend"><i></i>SEM FICHA</span><span class="owner-dash-pend-t" style="margin:0">há ${atrasoMin} min</span>`
+          ? (vagaSolta
+              ? `<span class="owner-dash-pend solta">ATRASADO · VAGA LIBERADA</span><span class="owner-dash-pend-t" style="margin:0">há ${atrasoMin} min</span>`
+              : `<span class="owner-dash-pend"><i></i>SEM FICHA</span><span class="owner-dash-pend-t" style="margin:0">há ${atrasoMin} min</span>`)
           : `<span class="owner-dash-phase">${escapeHtml(phase)}</span>${etaMinutes != null ? `<span class="owner-dash-eta">${etaMinutes}m</span>` : ''}`}
       </div>
     ` : '';

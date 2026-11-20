@@ -166,6 +166,17 @@ class Appointment < ApplicationRecord
     vehicle_check.nil?
   end
 
+  # Quando este agendamento deixa de segurar vaga por falta de ficha (nil se
+  # ele não está nessa situação: já tem ficha, foi finalizado ou não depende
+  # de chegada). Mesma regra do effective_end_sql.
+  def libera_vaga_em
+    return nil if attended_at.present? || vehicle_check.present?
+    return nil unless car_wash&.ficha_obrigatoria?
+    return nil unless status == "confirmed" || (walk_in? && status == "attended")
+    fim_dia = scheduled_at.in_time_zone("America/Sao_Paulo").beginning_of_day + 1.day
+    [scheduled_at + OCCUPANCY_TOLERANCE_MIN.minutes, fim_dia].min
+  end
+
   # Quando o serviço começou de verdade, pro tempo do painel: com a ficha
   # obrigatória, é a hora em que a ficha foi feita (o carro só entra depois
   # dela), não o horário marcado. nil = conta do horário marcado.
@@ -559,14 +570,19 @@ class Appointment < ApplicationRecord
   #   obrigatória): segura a vaga "de agora até agora + duração" — o carro
   #   atrasado ainda vai ocupar a pista quando entrar. Antes a vaga de um
   #   13:30 de 5 min ficava livre às 13:35 mesmo sem o carro ter entrado, e o
-  #   Last Minute podia vender o mesmo espaço. Tolerância de 60 min depois da
-  #   hora marcada: card esquecido não trava a agenda o dia inteiro.
-  # - A tolerância não atravessa a meia-noite (de Brasília) do dia marcado:
-  #   virou "pendência de dia anterior", o dono resolve quando puder, mas o
-  #   pátio de hoje está livre. Um 23:30 sem resposta segurava a vaga até
-  #   00:30 + duração e o Last Minute da madrugada não abria.
-  # - Nunca termina antes da hora marcada + duração.
-  OCCUPANCY_TOLERANCE_MIN = 60
+  #   Last Minute podia vender o mesmo espaço.
+  # - Tolerância de 30 min depois da hora marcada. Passou disso sem ficha, o
+  #   cliente não veio: a vaga solta NA HORA (antes ela ainda ficava presa por
+  #   mais uma duração inteira — um 10:00 de 60 min segurava até 11:30). Se ele
+  #   chegar depois, a ficha volta a ocupar o pátio pela duração. O painel
+  #   mostra "vaga liberada" no card, sem pedir nada ao lavador. Só com a
+  #   ficha obrigatória: é ela que diz que o carro não entrou. Sem ela, o
+  #   agendamento segura pelo menos a hora marcada + duração.
+  # - Virou pendência de dia anterior (passou a meia-noite de Brasília do dia
+  #   marcado): solta também. Um 23:30 sem resposta travava o Last Minute da
+  #   madrugada.
+  # libera_vaga_em é a mesma regra em Ruby, pro card.
+  OCCUPANCY_TOLERANCE_MIN = 30
 
   def self.effective_end_sql(agora = Time.current)
     dur   = "(services.duration * interval '1 minute')"
@@ -577,11 +593,19 @@ class Appointment < ApplicationRecord
     # Meia-noite seguinte ao dia marcado, em Brasília, de volta em UTC (a coluna é UTC sem fuso).
     fim_dia = "((date_trunc('day', (appointments.scheduled_at AT TIME ZONE 'UTC') AT TIME ZONE 'America/Sao_Paulo') " \
               "+ interval '1 day') AT TIME ZONE 'America/Sao_Paulo') AT TIME ZONE 'UTC'"
-    rola  = "LEAST(LEAST(#{now}, appointments.scheduled_at + interval '#{OCCUPANCY_TOLERANCE_MIN} minutes') + #{dur}, #{fim_dia})"
-    "COALESCE(appointments.attended_at, GREATEST(appointments.scheduled_at + #{dur}, CASE " \
-      "WHEN #{ficha} IS NOT NULL THEN #{ficha} + #{dur} " \
-      "WHEN appointments.status = 'confirmed' OR (appointments.walk_in AND COALESCE(#{obrig}, false)) THEN #{rola} " \
-      "ELSE appointments.scheduled_at + #{dur} END))"
+    tol   = "appointments.scheduled_at + interval '#{OCCUPANCY_TOLERANCE_MIN} minutes'"
+    # Fim de quem ainda não começou. Solto = fim <= agora.
+    rola  = "(CASE WHEN #{now} >= #{fim_dia} THEN LEAST(#{tol}, #{fim_dia}) " \
+              "WHEN #{now} < #{tol} THEN GREATEST(appointments.scheduled_at + #{dur}, #{now} + #{dur}) " \
+              "ELSE #{tol} END)"
+    # Sem ficha obrigatória, "sem ficha" não quer dizer "não chegou": o carro
+    # pode estar sendo lavado. Ali segura pelo menos a hora marcada + duração.
+    nao_comecou = "(CASE WHEN COALESCE(#{obrig}, false) THEN #{rola} " \
+                  "ELSE GREATEST(appointments.scheduled_at + #{dur}, #{rola}) END)"
+    "COALESCE(appointments.attended_at, CASE " \
+      "WHEN #{ficha} IS NOT NULL THEN GREATEST(appointments.scheduled_at + #{dur}, #{ficha} + #{dur}) " \
+      "WHEN appointments.status = 'confirmed' OR (appointments.walk_in AND COALESCE(#{obrig}, false)) THEN #{nao_comecou} " \
+      "ELSE appointments.scheduled_at + #{dur} END)"
   end
 
   # Ocupação de várias lojas carregada numa consulta só, pra listagens (o

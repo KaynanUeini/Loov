@@ -504,6 +504,8 @@ module Owner
         aguardando_ficha: (a.status == "confirmed" || (a.walk_in? && a.status == "attended")) && a.ficha_pendente?,
         servico_desde:    a.servico_desde&.iso8601,
         em_andamento:     a.em_andamento?,
+        # Sem ficha até aqui, o card deixa de segurar vaga (só informa, não pede ação).
+        libera_vaga_em:   a.libera_vaga_em&.iso8601,
         show_code:        show_code,
         is_disponivel:    is_disponivel,
         prepayment_amount: prepayment,
