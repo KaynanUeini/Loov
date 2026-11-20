@@ -215,6 +215,7 @@
   .bk-time.is-lm { background: var(--coral-50); border: 1px dashed var(--coral-500); color: var(--coral-700) !important; }
   .bk-time.is-off { background: var(--sand); color: var(--ash) !important; text-decoration: line-through; cursor: not-allowed; }
   .bk-time.is-off:hover { border-color: var(--stone); }
+  .bk-time.is-loading { opacity: .6; cursor: progress; }
   .bk-time-zap { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; background: var(--coral-500); border: 2px solid var(--cream); color: var(--cream); display: flex; align-items: center; justify-content: center; }
   .bk-lmnote { display: flex; align-items: center; gap: 8px; margin: 14px 20px 0; font-size: 12px; color: var(--graphite); }
   .bk-lmnote span { flex: 0 0 18px; height: 18px; border-radius: 50%; background: var(--coral-500); color: var(--cream); display: flex; align-items: center; justify-content: center; }
@@ -598,15 +599,54 @@
     var quando = dia === hoje ? 'hoje' : dia === amanha ? 'amanhã' : dia.slice(8, 10) + '/' + dia.slice(5, 7);
     return quando + ' às ' + h + 'h' + (m === '00' ? '' : m);
   }
-  function lastMinuteUrl() { return '/disponivel' + (COORDS_QS ? COORDS_QS + '&' : '?') + 'car_wash_id=' + CW.id; }
-  // Oferta no Last Minute (os próximos 30 min) leva direto pra reserva de lá;
-  // a do agendamento comum abre o agendamento já no horário.
+  // ── Last Minute aqui mesmo (disponivel/_folha_reserva) ─────────────────
+  // A folha usa os dados da própria vitrine (GET /disponivel): preço, divisão
+  // do pagamento e vaga são os mesmos da lista. Reservou, vai pra espera do
+  // aceite de sempre, na página do Last Minute.
+  var lmAbrindo = false;
+  function lmAviso(msg) {
+    if (bk.service && $('bk-step')) { bk.error = msg; renderBooking(); }
+    else if (window.LoovReservaLM) window.LoovReservaLM.aviso(msg, 'error');
+  }
+  function abrirLastMinute(btn) {
+    if (lmAbrindo) return;
+    lmAbrindo = true; btn.classList.add('is-loading');
+    var svcId = Number(btn.dataset.lm), hora = btn.dataset.lmHora;
+    fetch('/disponivel' + (COORDS_QS ? COORDS_QS + '&' : '?') + 'car_wash_id=' + CW.id, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : []; })
+      .then(function (lista) {
+        var it = (Array.isArray(lista) ? lista : []).find(function (x) { return Number(x.car_wash.id) === Number(CW.id); });
+        var svc = it && (it.services || []).find(function (x) { return Number(x.id) === svcId; });
+        var slot = it && it.slots && it.slots[0];
+        if (!svc || !slot || slot.slice(11, 16) !== hora) {
+          lmAviso('Este horário acabou de sair do Last Minute. Os horários foram atualizados.');
+          if (bk.service) loadTimes();
+          return;
+        }
+        bk.error = null;
+        window.LoovReservaLM.abrir({ car_wash: it.car_wash, services: [svc], slots: it.slots }, {
+          origem: btn,
+          servico: svc.id,
+          voltar: location.pathname + location.search + (bk.service ? '#agendar-' + bk.service.id : ''),
+          toast: function (msg, tipo) { window.LoovReservaLM.aviso(msg, tipo); },
+          aoReservar: function (appt) {
+            try { sessionStorage.setItem('loov_lm_espera', JSON.stringify(appt)); } catch (e) {}
+            location.href = '/disponivel' + COORDS_QS;
+          },
+          aoFalhar: function () { if (bk.service) loadTimes(); }
+        });
+      })
+      .catch(function () { lmAviso('Erro de conexão. Tente novamente.'); })
+      .then(function () { lmAbrindo = false; btn.classList.remove('is-loading'); });
+  }
+  // Oferta no Last Minute (os próximos 30 min) abre a folha de reserva dele
+  // aqui; a do agendamento comum abre o agendamento já no horário.
   function ofertaHtml(s, o, bookable) {
     var lm = !!o.last_minute, tag;
     if (!bookable) tag = 'div';
-    else if (lm) tag = 'a href="' + lastMinuteUrl() + '"';
+    else if (lm) tag = 'button type="button" data-lm="' + s.id + '" data-lm-hora="' + esc(o.slot.slice(11, 16)) + '"';
     else tag = 'button type="button" data-svc="' + s.id + '" data-slot="' + esc(o.slot) + '"';
-    var fim = !bookable ? 'div' : lm ? 'a' : 'button';
+    var fim = !bookable ? 'div' : 'button';
     return '<' + tag + ' class="cw-svc-off">' +
       '<span class="cw-svc-off-ic">' + (lm ? icon('zap', 12) : HORA_OFF_IC) + '</span>' +
       '<span class="cw-svc-off-t"><b>Hora Off</b> · R$ ' + money(o.preco) + '<s>R$ ' + money(o.tabela) + '</s> ' + quandoOferta(o.slot) + (lm ? ' no Last Minute' : '') + '</span>' +
@@ -834,13 +874,15 @@
         var ts = t.time || t, only = !!t.disponivel_only, lm = only && CW.disponivel_eligible, off = only && !CW.disponivel_eligible;
         if (lm) anyLm = true;
         var cls = 'bk-time' + (ts === bk.time ? ' is-on' : '') + (lm ? ' is-lm' : '') + (off ? ' is-off' : '') + (comPreco && !off ? ' has-price' : '');
-        // Vaga de última hora: vai pro Disponível já com esta loja aberta.
+        // Vaga de última hora: a folha do Last Minute cresce deste botão, aqui
+        // mesmo (antes levava pra lista do Last Minute, sem o serviço).
         var precoLm = comPreco && t.price != null ? '<span class="bk-time-p' + (Number(t.price) < tabela ? ' is-menos' : '') + '">R$ ' + money(t.price) + '</span>' : '';
-        if (lm) return '<a class="' + cls + '" href="' + lastMinuteUrl() + '" title="Reservar pelo Last Minute">' + ts + precoLm + '<span class="bk-time-zap">' + icon('zap', 9) + '</span></a>';
+        if (lm) return '<button type="button" class="' + cls + '" data-lm="' + bk.service.id + '" data-lm-hora="' + ts + '" title="Reservar pelo Last Minute">' + ts + precoLm + '<span class="bk-time-zap">' + icon('zap', 9) + '</span></button>';
         var preco = precoNosComuns && !only ? '<span class="bk-time-p">R$ ' + money(t.price != null ? t.price : tabela) + '</span>' : '';
         return '<button type="button" class="' + cls + '" data-time="' + ts + '"' + (off ? ' disabled title="Só pelo Last Minute"' : '') + '>' + ts + preco + '</button>';
       }).join('') + '</div>' +
-      (anyLm ? '<div class="bk-lmnote"><span>' + icon('zap', 10) + '</span>Horário em cima da hora: reserva pelo Last Minute.</div>' : '');
+      (anyLm ? '<div class="bk-lmnote"><span>' + icon('zap', 10) + '</span>Horário em cima da hora: reserva pelo Last Minute.</div>' : '') +
+      (bk.error ? '<div class="bk-err">' + icon('alert-circle', 14) + '<span>' + esc(bk.error) + '</span></div>' : '');
     }
     return '<div class="bk-lab">Dia</div><div class="bk-days" id="bk-days">' + days + '</div><div class="bk-lab">Horário</div>' + body;
   }
@@ -1003,11 +1045,14 @@
 
   document.addEventListener('click', function (e) {
     var t;
+    // A folha do Last Minute cuida dos próprios cliques (o vale dela não é o daqui).
+    if (e.target.closest('#dp-sheet-bg')) return;
+    if ((t = e.target.closest('[data-lm]'))) { abrirLastMinute(t); return; }
     if ((t = e.target.closest('.cw-seg button'))) { setTab(t.dataset.tab); return; }
     if ((t = e.target.closest('[data-svc]'))) { openBooking(t.dataset.svc, true, t.dataset.slot); return; }
     if (e.target.closest('#cw-fav')) { toggleFav(); return; }
     if ((t = e.target.closest('[data-day]'))) { var i = Number(t.dataset.day); if (i !== bk.dateIdx) { bk.dateIdx = i; loadTimes(); } return; }
-    if ((t = e.target.closest('button[data-time]'))) { bk.time = t.dataset.time; renderBooking(); return; }
+    if ((t = e.target.closest('button[data-time]'))) { bk.time = t.dataset.time; bk.error = null; renderBooking(); return; }
     if (e.target.closest('[data-edit-when]') || e.target.closest('#bk-back')) { history.back(); return; }
     if (e.target.closest('#bk-cta')) { cta(); return; }
     if (e.target.closest('[data-vale]')) { bk.useReward = !bk.useReward; renderBooking(); return; }
@@ -1032,3 +1077,6 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
 </script>
+
+<%# Folha de reserva do Last Minute (a mesma da lista do Last Minute). %>
+<%= render "disponivel/folha_reserva" %>
