@@ -203,8 +203,12 @@ module Owner
       if vaga
         t = vaga + CarWash::PASSO_LAST_MINUTE.minutes
         2.times do
-          # Marca em que nenhum serviço termina antes de fechar já não é horário.
-          break unless servicos.any? { |sv| cw.fits_before_closing?(t, sv) }
+          # Marca em que nenhum serviço termina antes do fechamento DE HOJE já
+          # não é horário. closing_at(t) olha o dia de t: às 23:30, a marca
+          # 00:00 caía no dia seguinte e passava como "próxima na vitrine"
+          # num lava-rápido que só reabre às 8h.
+          break if fecha.nil? || t.to_date != vaga.to_date
+          break unless servicos.any? { |sv| t + cw.duracao_efetiva(sv).minutes <= fecha }
           seguintes << { hora: t.strftime("%H:%M"), livre: servicos.any? { |sv| cw.last_minute_cabe?(t, sv) } }
           t += CarWash::PASSO_LAST_MINUTE.minutes
         end
