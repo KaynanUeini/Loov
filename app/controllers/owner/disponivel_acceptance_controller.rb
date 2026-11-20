@@ -180,18 +180,32 @@ module Owner
       end
     end
 
+    # A vitrine responde o mesmo que o Last Minute do cliente: uma vaga só
+    # conta se ALGUM serviço do Last Minute cabe nela (espaço no pátio pela
+    # duração inteira e terminar antes de fechar). Olhar só o espaço anunciava
+    # 23:30 num lava-rápido que fecha 23:59, onde nenhuma lavagem cabe.
     def vitrine_de(cws)
       agora = Time.current
       cw = cws.find { |c| c.aberto_em?(agora) } || cws.first
       return nil unless cw
-      vaga = cw.last_minute_slot(agora)
+      servicos = cw.services.last_minute.to_a
+      vaga = servicos.filter_map { |sv| cw.last_minute_slot(agora, sv) }.min
       fecha = cw.closing_at(agora)
+      # Sem vaga: porque o dia acabou (nenhuma lavagem termina antes de fechar
+      # na próxima marca) ou porque o pátio está cheio. A tela diz qual.
+      sem_vaga = nil
+      if vaga.nil? && !cw.pausado?(agora) && cw.aberto_em?(agora)
+        passo = CarWash::PASSO_LAST_MINUTE * 60
+        marca = agora.beginning_of_day + ((agora.seconds_since_midnight / passo.to_f).ceil * passo).seconds
+        sem_vaga = servicos.any? { |sv| cw.fits_before_closing?(marca, sv) } ? "cheio" : "fechando"
+      end
       seguintes = []
-      if vaga && fecha
+      if vaga
         t = vaga + CarWash::PASSO_LAST_MINUTE.minutes
         2.times do
-          break if t >= fecha
-          seguintes << { hora: t.strftime("%H:%M"), livre: cw.vaga_por?(t, CarWash::PASSO_LAST_MINUTE) }
+          # Marca em que nenhum serviço termina antes de fechar já não é horário.
+          break unless servicos.any? { |sv| cw.fits_before_closing?(t, sv) }
+          seguintes << { hora: t.strftime("%H:%M"), livre: servicos.any? { |sv| cw.last_minute_cabe?(t, sv) } }
           t += CarWash::PASSO_LAST_MINUTE.minutes
         end
       end
@@ -202,6 +216,8 @@ module Owner
       {
         car_wash:   cw.name,
         vaga:       vaga&.strftime("%H:%M"),
+        sem_vaga:   sem_vaga,
+        fecha:      fecha&.strftime("%H:%M"),
         seguintes:  seguintes,
         hoje_qtd:   hoje.size,
         hoje_total: hoje.sum { |a| a.effective_price.to_f }.round(2),
