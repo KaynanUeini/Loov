@@ -464,13 +464,16 @@ module Owner
       # meio do atendimento, enquanto o painel continuava mostrando o card como
       # em andamento. Justamente quando o dono duplica a conferência.
       #
-      # Agora acompanha o atendimento de verdade: meia hora antes até meia hora
-      # depois do fim previsto.
-      duracao_min = a.service&.duration.to_i
-      duracao_min = 30 if duracao_min <= 0
+      # Depois passou a acompanhar o fim previsto + 30 min, e ainda sumia
+      # cedo: numa lavagem de 5 min, o atrasado perdia o código aos 35 min —
+      # junto com "vaga liberada" —, e se o cliente chegasse o dono não tinha
+      # o que conferir. Agora fica enquanto o card está em aberto no dia:
+      # meia hora antes da hora marcada até Finalizado/Ausente ou a
+      # meia-noite (pendência de dia anterior não confere chegada).
+      fim_do_dia = a.scheduled_at.in_time_zone("America/Sao_Paulo").beginning_of_day + 1.day
       show_code = a.status == "confirmed" &&
                   Time.current >= a.scheduled_at - 30.minutes &&
-                  Time.current <= a.scheduled_at + duracao_min.minutes + 30.minutes
+                  Time.current < fim_do_dia
 
       is_disponivel    = a.disponivel? rescue false
       # Last Minute ou agendamento comum com sinal: o que o cliente já pagou no app.
