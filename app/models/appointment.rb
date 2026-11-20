@@ -561,6 +561,10 @@ class Appointment < ApplicationRecord
   #   13:30 de 5 min ficava livre às 13:35 mesmo sem o carro ter entrado, e o
   #   Last Minute podia vender o mesmo espaço. Tolerância de 60 min depois da
   #   hora marcada: card esquecido não trava a agenda o dia inteiro.
+  # - A tolerância não atravessa a meia-noite (de Brasília) do dia marcado:
+  #   virou "pendência de dia anterior", o dono resolve quando puder, mas o
+  #   pátio de hoje está livre. Um 23:30 sem resposta segurava a vaga até
+  #   00:30 + duração e o Last Minute da madrugada não abria.
   # - Nunca termina antes da hora marcada + duração.
   OCCUPANCY_TOLERANCE_MIN = 60
 
@@ -570,7 +574,10 @@ class Appointment < ApplicationRecord
     obrig = "(SELECT cw.vehicle_check_enabled AND NOT cw.vehicle_check_skippable " \
             "FROM car_washes cw WHERE cw.id = appointments.car_wash_id)"
     now   = "CAST(#{connection.quote(agora.utc.strftime('%Y-%m-%d %H:%M:%S'))} AS timestamp)"
-    rola  = "(LEAST(#{now}, appointments.scheduled_at + interval '#{OCCUPANCY_TOLERANCE_MIN} minutes') + #{dur})"
+    # Meia-noite seguinte ao dia marcado, em Brasília, de volta em UTC (a coluna é UTC sem fuso).
+    fim_dia = "((date_trunc('day', (appointments.scheduled_at AT TIME ZONE 'UTC') AT TIME ZONE 'America/Sao_Paulo') " \
+              "+ interval '1 day') AT TIME ZONE 'America/Sao_Paulo') AT TIME ZONE 'UTC'"
+    rola  = "LEAST(LEAST(#{now}, appointments.scheduled_at + interval '#{OCCUPANCY_TOLERANCE_MIN} minutes') + #{dur}, #{fim_dia})"
     "COALESCE(appointments.attended_at, GREATEST(appointments.scheduled_at + #{dur}, CASE " \
       "WHEN #{ficha} IS NOT NULL THEN #{ficha} + #{dur} " \
       "WHEN appointments.status = 'confirmed' OR (appointments.walk_in AND COALESCE(#{obrig}, false)) THEN #{rola} " \
