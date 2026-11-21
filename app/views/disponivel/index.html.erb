@@ -162,8 +162,10 @@
   .dw-result > :nth-child(3) { animation-delay: .22s; }
   .dw-result > :nth-child(4) { animation-delay: .34s; }
   @keyframes dw-surge { to { opacity: 1; transform: none; } }
-  /* "Agendado" dentro da espera: a .dw-in já dá o respiro dos lados. */
-  .dw-in > .ok { width: 100%; padding: 0; }
+  /* "Agendado" dentro da espera: a .dw-in já dá o respiro dos lados, e a
+     margem automática centra o bloco na altura livre, sem buraco entre o
+     cartão e os botões. */
+  .dw-in > .ok { width: 100%; padding: 0; margin: auto 0; }
   .dw-result img { width: 86%; max-width: 340px; height: auto; margin-bottom: 20px; }
   .dw-result h2 { margin: 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 30px; letter-spacing: -0.7px; color: var(--ink) !important; }
   .dw-result p { margin: 0; max-width: 320px; font-size: 14.5px; line-height: 21px; color: var(--graphite); }
