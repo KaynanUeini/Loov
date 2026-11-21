@@ -27,24 +27,38 @@
   .dp-sheet-bg { position: fixed; inset: 0; z-index: 200; background: rgba(25,20,15,.55); display: flex; align-items: flex-end; justify-content: center; opacity: 0; transition: opacity .2s ease; }
   .dp-sheet-bg.is-open { opacity: 1; }
   .dp-sheet-bg[hidden] { display: none; } /* display:flex anula o hidden; sem isto a camada invisível bloquearia a página */
-  .dp-sheet { width: 100%; max-height: 85vh; overflow: auto; background: var(--paper); color: var(--ink); border-radius: 28px 28px 0 0; padding: 0 20px 30px; transform: translateY(100%); transition: transform .32s cubic-bezier(.2,.8,.2,1); }
+  /* Coluna: topo escuro e botão fixos, o miolo rola. Em tela baixa (abaixo)
+     a folha inteira rola, senão o miolo sumiria espremido entre os dois. */
+  .dp-sheet { width: 100%; max-height: 85vh; max-height: 85dvh; display: flex; flex-direction: column; overflow: hidden; background: var(--paper); color: var(--ink); border-radius: 28px 28px 0 0; padding: 0 20px calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateY(100%); transition: transform .32s cubic-bezier(.2,.8,.2,1); }
   .dp-sheet-bg.is-open .dp-sheet { transform: none; }
-  .dp-handle { width: 40px; height: 4px; border-radius: 2px; background: var(--stone); margin: 10px auto 4px; }
-  .dp-sh-head { display: flex; align-items: flex-start; gap: 12px; padding: 14px 0 12px; }
-  .dp-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ash); margin-bottom: 4px; }
-  .dp-sh-name { margin: 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 600; font-size: 22px; line-height: 26px; letter-spacing: -0.5px; color: var(--ink) !important; }
-  .dp-sh-addr { margin-top: 4px; font-size: 13px; line-height: 17px; color: var(--graphite); }
-  .dp-x { flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; border: 0; background: transparent; color: var(--graphite); display: flex; align-items: center; justify-content: center; }
-  .dp-x:hover { background: var(--sand); color: var(--ink); }
-  .dp-sh-stats { display: flex; align-items: center; gap: 6px; padding: 10px 0; margin-top: 4px; border-top: 1px solid var(--stone); border-bottom: 1px solid var(--stone); font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px; letter-spacing: -0.2px; }
-  .dp-sh-stats .s { display: inline-flex; align-items: center; gap: 5px; }
-  .dp-sh-stats .sep { color: var(--ash); margin: 0 4px; }
+  /* Topo no escuro da aba Last Minute: selo, a hora gigante da vaga e o
+     quanto falta pra ela começar. É o que diz que esta reserva é a vaga de
+     agora, não um agendamento. Sangra até a borda da folha. */
+  .dp-band { flex-shrink: 0; margin: 0 -20px; padding: 0 20px 18px; background: var(--obsidian, #1a1612); color: var(--cream); border-radius: 28px 28px 0 0; }
+  .dp-handle { width: 40px; height: 4px; border-radius: 2px; background: rgba(250,250,246,.25); margin: 0 auto; position: relative; top: 10px; }
+  .dp-band-top { display: flex; align-items: center; justify-content: space-between; padding-top: 18px; }
+  .dp-selo { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 100px; background: var(--coral-500); color: var(--cream); font-size: 12px; font-weight: 600; }
+  .dp-x { flex-shrink: 0; width: 40px; height: 40px; margin-right: -8px; border-radius: 50%; border: 0; background: transparent; color: var(--cream); display: flex; align-items: center; justify-content: center; }
+  .dp-x:hover { background: rgba(250,250,246,.1); }
+  /* line-height acima da fonte: igual ou menor cortava o topo dos números. */
+  .dp-hora { margin: 6px 0 0 -3px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 84px; line-height: 92px; letter-spacing: -5px; font-variant-numeric: tabular-nums; color: var(--cream); }
+  .dp-vivo { display: flex; align-items: center; gap: 8px; margin-top: 2px; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.4px; color: var(--coral-300, #e8a48a); }
+  .dp-vivo i { flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%; background: var(--coral-500); animation: dp-pulso 1.4s ease-in-out infinite; }
+  @keyframes dp-pulso { 50% { opacity: .25; } }
+  .dp-shop-row { flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 12px 0; }
+  .dp-shop-row > div { flex: 1; min-width: 0; }
+  .dp-sh-name { margin: 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 600; font-size: 22px; line-height: 26px; letter-spacing: -0.5px; color: var(--ink) !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dp-sh-addr { margin-top: 4px; font-size: 13px; line-height: 17px; color: var(--graphite); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dp-dist { flex-shrink: 0; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.6px; color: var(--ink); }
+  .dp-rule { flex-shrink: 0; height: 2px; background: var(--ink); }
+  .dp-mid { flex: 1 1 auto; min-height: 0; overflow: auto; overscroll-behavior: contain; padding-bottom: 2px; }
+  .dp-foot { flex-shrink: 0; }
   .dp-sh-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ash); margin: 20px 0 10px; }
   .dp-pills { display: flex; flex-wrap: wrap; gap: 8px; }
   .dp-pill { padding: 8px 14px; border-radius: 100px; border: 1px solid var(--stone); background: var(--cream); color: var(--graphite); font-size: 13px; font-weight: 600; transition: background .15s, color .15s, border-color .15s; }
   .dp-pill:hover { border-color: var(--ash); }
   .dp-pill[aria-pressed="true"] { background: var(--coral-500); border-color: var(--coral-500); color: var(--cream); }
-  .dp-svc { margin-top: 18px; max-height: 220px; overflow: auto; }
+  .dp-svc { margin-top: 16px; }
   .dp-svc h3 { margin: 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 600; font-size: 18px; letter-spacing: -0.3px; color: var(--ink) !important; }
   .dp-svc .price { margin-top: 4px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.5px; color: var(--coral-500); }
   /* Last Minute mais barato que o agendamento: preço normal riscado ao lado. */
@@ -92,13 +106,27 @@
     /* No computador a folha vira janela central — folha presa à base de uma
        tela larga é um gesto de celular sem o celular. */
     .dp-sheet-bg { align-items: center; padding: 24px; }
-    .dp-sheet { max-width: 520px; border-radius: 28px; padding-bottom: 26px; transform: translateY(24px) scale(.98); opacity: 0; transition: transform .28s cubic-bezier(.2,.8,.2,1), opacity .2s; }
+    .dp-sheet { max-width: 520px; border-radius: 28px; padding-bottom: 24px; transform: translateY(24px) scale(.98); opacity: 0; transition: transform .28s cubic-bezier(.2,.8,.2,1), opacity .2s; }
     .dp-sheet-bg.is-open .dp-sheet { opacity: 1; }
     .dp-handle { display: none; }
-    .dp-sh-head { padding-top: 24px; }
+    .dp-band-top { padding-top: 20px; }
+  }
+  /* Tela baixa (celular deitado, notebook pequeno com zoom): a folha inteira
+     rola, com o topo e o botão junto. */
+  @media (max-height: 620px) {
+    .dp-sheet { display: block; overflow: auto; overscroll-behavior: contain; }
+    .dp-mid { overflow: visible; }
+    .dp-hora { font-size: 64px; line-height: 72px; letter-spacing: -3.5px; }
+  }
+  @media (max-width: 360px) {
+    .dp-sheet { padding-left: 16px; padding-right: 16px; }
+    .dp-band { margin: 0 -16px; padding-left: 16px; padding-right: 16px; }
+    .dp-hora { font-size: 72px; line-height: 80px; letter-spacing: -4px; }
+    .dp-sh-name { font-size: 20px; line-height: 24px; }
   }
   @media (prefers-reduced-motion: reduce) {
     .dp-sheet { transition: none; }
+    .dp-vivo i { animation: none; }
   }
 </style>
 
@@ -177,6 +205,7 @@
     st.lastFocus = document.activeElement;
     var bg = $('dp-sheet-bg'), sh = $('dp-sheet');
     bg.hidden = false;
+    sh.scrollTop = 0;
     render();
     document.documentElement.style.overflow = 'hidden';
     if (st.origem && sh.animate) {
@@ -184,7 +213,7 @@
       sh.style.transition = 'none';
       bg.classList.add('is-open');
       sh.animate([{ transform: salto(), opacity: 0 }, { opacity: 1, offset: .15 }, { transform: 'none', opacity: 1 }], { duration: 700, easing: CURVA });
-      Array.prototype.forEach.call(sh.children, function (k, i) {
+      blocos(sh).forEach(function (k, i) {
         k.animate([{ opacity: 0, transform: 'translateY(14px)' }, { opacity: 1, transform: 'none' }], { duration: 500, delay: 480 + Math.min(i, 6) * 60, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' });
       });
       var x = bg.querySelector('.dp-x'); if (x) x.focus({ preventScroll: true });
@@ -200,7 +229,7 @@
       setTimeout(function () {
         bg.hidden = true; st.target = null;
         sh.getAnimations && sh.getAnimations().forEach(function (a) { a.cancel(); });
-        Array.prototype.forEach.call(sh.children, function (k) { k.getAnimations && k.getAnimations().forEach(function (a) { a.cancel(); }); });
+        blocos(sh).forEach(function (k) { k.getAnimations && k.getAnimations().forEach(function (a) { a.cancel(); }); });
         sh.style.transition = ''; st.fechando = false;
         if (depois) depois();
       }, 220);
@@ -209,7 +238,7 @@
     };
     st.fechando = true;
     if (st.origem && st.origem.isConnected && sh.animate) {
-      Array.prototype.forEach.call(sh.children, function (k) { k.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, fill: 'forwards' }); });
+      blocos(sh).forEach(function (k) { k.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, fill: 'forwards' }); });
       var a = sh.animate([{ transform: 'none', opacity: 1 }, { opacity: 1, offset: .85 }, { transform: salto(), opacity: 0 }], { duration: 550, delay: 60, easing: CURVA, fill: 'forwards' });
       a.onfinish = fim;
     } else fim();
@@ -223,25 +252,49 @@
     var addr = [[cw.logradouro, cw.numero].filter(Boolean).join(', '), cw.bairro].filter(Boolean).join(' · ') || cw.address || '';
     var dist = cw.distance_km != null ? Number(cw.distance_km).toFixed(1).replace('.', ',') + ' km' : null;
     var dur = svc && Number(svc.duration) > 0 ? ' · ' + svc.duration + ' min' : '';
-    $('dp-sheet').innerHTML = '<div class="dp-handle"></div>' +
-      '<div class="dp-sh-head"><div style="flex:1;min-width:0"><div class="dp-eyebrow">Reservar em</div><h2 class="dp-sh-name" id="dp-sh-name">' + esc(cw.name) + '</h2>' +
+    var mid = $('dp-mid'), rolou = mid ? mid.scrollTop : 0;
+    $('dp-sheet').innerHTML =
+      '<div class="dp-band"><div class="dp-handle"></div>' +
+        '<div class="dp-band-top"><span class="dp-selo">' + icon('zap', 12) + 'last minute</span>' +
+          '<button type="button" class="dp-x" id="dp-close" aria-label="Fechar"' + (st.reserving ? ' disabled' : '') + '>' + icon('x', 20) + '</button></div>' +
+        '<div class="dp-hora">' + fmtTime(it.slots[0]) + '</div>' +
+        '<div class="dp-vivo"><i></i><span id="dp-vivo">' + vivoTxt() + '</span></div></div>' +
+      '<div class="dp-shop-row"><div><h2 class="dp-sh-name" id="dp-sh-name">' + esc(cw.name) + '</h2>' +
         (addr ? '<div class="dp-sh-addr">' + esc(addr) + '</div>' : '') + '</div>' +
-        '<button type="button" class="dp-x" id="dp-close" aria-label="Fechar"' + (st.reserving ? ' disabled' : '') + '>' + icon('x', 20) + '</button></div>' +
-      '<div class="dp-sh-stats"><span class="s">' + icon('clock', 13, { color: 'var(--coral-500)' }) + fmtTime(it.slots[0]) + '</span>' +
-        (dist ? '<span class="sep">·</span><span class="s">' + icon('map-pin', 13, { color: 'var(--coral-500)' }) + dist + '</span>' : '') + '</div>' +
+        (dist ? '<span class="dp-dist">' + esc(dist.toUpperCase()) + '</span>' : '') + '</div>' +
+      '<div class="dp-rule"></div>' +
+      '<div class="dp-mid" id="dp-mid">' +
       (svcs.length > 1 ? '<div class="dp-sh-label">Escolha o serviço</div><div class="dp-pills" role="group" aria-label="Serviços">' +
         svcs.map(function (s) { return '<button type="button" class="dp-pill" data-svc="' + s.id + '" aria-pressed="' + (svc && s.id === svc.id) + '">' + esc(s.title) + '</button>'; }).join('') + '</div>' : '') +
+      // Descrição inteira: quem rola é o miolo, nada de caixa cortando o texto.
       (svc ? '<div class="dp-svc"><h3>' + esc(svc.title) + '</h3><div class="price">' + (Number(svc.regular_price) > Number(svc.price) ? '<s class="dp-old">R$ ' + money(svc.regular_price, 2) + '</s>' : '') + 'R$ ' + money(svc.price, 2) + '<small>' + dur + '</small></div>' +
         '<p>' + esc(svc.description && svc.description.trim() ? svc.description : 'Este lava-rápido não cadastrou uma descrição detalhada. Confirme os itens incluídos ao chegar.') + '</p></div>' : '') +
-      payBlock(svc, cw) +
-      '<p class="dp-hint">Os ' + PCT_LABEL + ' ficam reservados no cartão e só são cobrados se o lava-rápido aceitar em até 3 min. ' +
+      payBlock(svc, cw) + '</div>' +
+      '<div class="dp-foot"><p class="dp-hint">Os ' + PCT_LABEL + ' ficam reservados no cartão e só são cobrados se o lava-rápido aceitar: ele tem até 3 min pra responder. ' +
         'Se ele recusar ou o tempo acabar, o valor é liberado. Depois de aceita, não há reembolso se você não for; ' +
         'se o lava-rápido cancelar, você recebe de volta.</p>' +
       '<button type="button" class="dp-confirm" id="dp-confirm"' + (st.reserving || !svc ? ' disabled' : '') + '>' +
         (st.reserving ? '<span class="dp-spin"></span>'
           : (SIGNED_IN && !HAS_CARD) ? icon('credit-card', 16) + ' Cadastrar cartão para reservar'
-          : svc ? (prepayOf(totalDe(cw, svc)) ? 'Reservar e pagar R$ ' + money(prepayOf(totalDe(cw, svc)), 2) : 'Reservar com o vale') + ' ' + icon('arrow-right', 16)
-          : 'Confirmar reserva') + '</button>';
+          : svc ? icon('zap', 16) + (prepayOf(totalDe(cw, svc)) ? 'Reservar e pagar R$ ' + money(prepayOf(totalDe(cw, svc)), 2) : 'Reservar com o vale') + ' ' + icon('arrow-right', 16)
+          : 'Confirmar reserva') + '</button></div>';
+    // Trocar de serviço ou o vale redesenha a folha: o miolo fica onde estava.
+    if (rolou) $('dp-mid').scrollTop = rolou;
+  }
+  // Minutos até a vaga começar (a próxima marca de meia hora). Atualiza a
+  // cada 15 s com a folha aberta: não pode ficar mostrando um número velho.
+  function vivoTxt() {
+    var slot = st.target && st.target.slots && st.target.slots[0];
+    var m = slot ? Math.max(0, Math.ceil((new Date(slot).getTime() - Date.now()) / 60000)) : 0;
+    return m > 0 ? 'COMEÇA EM ' + m + ' MIN' : 'COMEÇA AGORA';
+  }
+  setInterval(function () { var el = st.target && $('dp-vivo'); if (el) el.textContent = vivoTxt(); }, 15000);
+  // Blocos que entram em cascata: o conteúdo, não a faixa escura (ela já é o
+  // que cresce do botão).
+  function blocos(sh) {
+    var band = sh.querySelector('.dp-band');
+    var dentro = band ? Array.prototype.filter.call(band.children, function (k) { return !k.classList.contains('dp-handle'); }) : [];
+    return dentro.concat(Array.prototype.filter.call(sh.children, function (k) { return k !== band; }));
   }
   // O "Pagamento na chegada" escondia que parte sai do cartão na hora. Agora a
   // divisão fica explícita antes do botão, com o valor em reais e o cartão
@@ -285,7 +338,9 @@
           if (!d) return; // banco não confirmou: já avisado, vaga liberada
           st.reserving = false;
           var appt = { id: d.appointment_id, expires_at: d.expires_at, seconds: d.seconds || 180, car_wash: it.car_wash, service: svc, slot: slot,
-            prepayment: d.prepayment != null ? d.prepayment : prepayOf(totalDe(it.car_wash, svc)) };
+            prepayment: d.prepayment != null ? d.prepayment : prepayOf(totalDe(it.car_wash, svc)),
+            // Total já com o vale: o que sobra pra pagar na chegada sai dele.
+            total: d.total != null ? Number(d.total) : totalDe(it.car_wash, svc), desconto: Number(d.reward_discount) || 0 };
           // Reservou: a folha sai sem encolher (a página vai pra espera).
           st.origem = null;
           fechar();

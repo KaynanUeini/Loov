@@ -1,0 +1,108 @@
+<%#
+  Tela de "Agendado": a do agendamento comum (página do lava-rápido) e a do
+  Last Minute aceito (espera em /disponivel). Uma só, pra reserva confirmada
+  ter a mesma cara venha de onde vier — no app é o ConfirmacaoAgendamento.
+  O Last Minute acrescenta o selo, o que já saiu do cartão e o aviso de que
+  esse valor não volta se o cliente não for.
+
+  window.LoovConfirmacao.html(o)
+    quando, cw, servico ({ title, duration })
+    agendaUrl     link do .ics ("Adicionar à agenda"), quando houver
+    lastMinute    selo da aba ao lado de QUANDO
+    pagoCartao    o que já saiu do cartão (sinal ou os 35%); pagoLabel
+    aPagar        o que falta pagar no lava-rápido; comVale; valeTxt
+    aviso         regra que o cliente precisa levar
+    homeUrl
+  Precisa do feather e do shared/loov_logos na página.
+%>
+<style>
+  .ok { max-width: 560px; margin: 0 auto; padding: 40px 24px 48px; }
+  .ok-check { width: 120px; height: 120px; margin: 0 auto 28px; border-radius: 50%; background: var(--coral-500); color: var(--cream); display: flex; align-items: center; justify-content: center; animation: okpop .5s cubic-bezier(.2,1.4,.4,1) both; }
+  @keyframes okpop { from { transform: scale(.4); opacity: 0; } }
+  .ok-title { margin: 0 !important; text-align: center; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 40px; line-height: 42px; letter-spacing: -1.2px; color: var(--ink) !important; }
+  /* Um acento só por tela: o coral fica no check; a frase de apoio é graphite. */
+  .ok-title em { display: block; margin-top: 6px; font-style: normal; font-size: 28px; line-height: 32px; letter-spacing: -0.6px; color: var(--graphite); }
+  .ok-card { margin-top: 28px; padding: 20px; background: var(--paper); border: 1px solid var(--stone); border-radius: 20px; }
+  .ok-lab-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .ok-lab { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; color: var(--ash); }
+  .ok-when { margin-top: 4px; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 24px; letter-spacing: -0.5px; }
+  /* Ação de apoio dentro do cartão: pílula de contorno tinta (padrão Loov). */
+  .ok-pill { display: inline-flex; align-items: center; gap: 8px; height: 40px; margin-top: 14px; padding: 0 16px; border-radius: 999px; border: 1.5px solid var(--ink); color: var(--ink) !important; font-size: 14px; font-weight: 600; text-decoration: none; transition: background .15s; }
+  .ok-pill:hover { background: var(--sand); }
+  .ok-addr { margin-top: 12px; font-size: 13px; line-height: 1.45; color: var(--graphite); }
+  .ok-pay { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 14px; color: var(--graphite); }
+  .ok-pay + .ok-pay { margin-top: 8px; }
+  .ok-pay b { display: inline-flex; align-items: center; gap: 6px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 24px; letter-spacing: -0.5px; color: var(--ink); white-space: nowrap; }
+  .ok-pay.is-sub b { font-size: 15px; font-weight: 600; letter-spacing: 0; }
+  .ok-vale { margin: 6px 0 0; font-size: 12.5px; color: var(--graphite); }
+  .ok-div { height: 1px; background: var(--stone); margin: 16px 0; }
+  .ok-shop { display: flex; align-items: center; gap: 10px; }
+  .ok-logo { flex: 0 0 56px; height: 56px; }
+  .ok-logo svg { width: 100%; height: 100%; display: block; }
+  .ok-shop-t { flex: 1; min-width: 0; }
+  .ok-shop-t b { display: block; font-size: 14px; font-weight: 600; }
+  .ok-shop-t small { display: block; margin-top: 2px; font-size: 12px; color: var(--graphite); }
+  .ok-actions { display: grid; gap: 10px; margin-top: 32px; }
+  /* Nada a efetivar aqui, só caminhos: o principal em tinta cheia (o preto da
+     Nike), o outro em contorno. Coral fica pra quem confirma. */
+  .ok-primary { display: block; padding: 16px; border-radius: 28px; background: var(--ink); color: var(--cream) !important; text-align: center; font-size: 16px; font-weight: 600; text-decoration: none; transition: transform .15s; }
+  .ok-primary:hover { transform: translateY(-1px); }
+  .ok-ghost { display: block; padding: 14.5px; border-radius: 28px; border: 1.5px solid var(--ink); text-align: center; color: var(--ink) !important; font-size: 16px; font-weight: 600; text-decoration: none; transition: background .15s; }
+  .ok-ghost:hover { background: var(--sand); }
+  /* Last Minute: o selo da aba, no tamanho do rótulo. */
+  .ok-lm { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 100px; background: var(--coral-500); color: var(--cream); font-size: 11px; font-weight: 600; }
+  .ok-lm svg { display: block; }
+  .ok-aviso { margin: 12px 0 0; font-size: 12.5px; line-height: 17px; color: var(--graphite); }
+  @media (max-width: 380px) {
+    .ok { padding-left: 16px; padding-right: 16px; }
+    .ok-check { width: 96px; height: 96px; margin-bottom: 22px; }
+    .ok-title { font-size: 34px; line-height: 38px; }
+    .ok-title em { font-size: 22px; line-height: 26px; }
+    .ok-card { padding: 16px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .ok-check { animation: none; } }
+</style>
+<script>
+(function () {
+  if (window.LoovConfirmacao) return;
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function icon(n, size, extra) { return window.feather && feather.icons[n] ? feather.icons[n].toSvg(Object.assign({ width: size, height: size }, extra || {})) : ''; }
+  function money(v, d) { var n = Number(v); return isFinite(n) ? n.toFixed(d || 0).replace('.', ',') : '—'; }
+  function rota(cw) {
+    // Com número, o endereço completo leva ao número exato (a coordenada é do meio da rua).
+    var lat = cw.lat != null ? cw.lat : cw.latitude, lng = cw.lng != null ? cw.lng : cw.longitude;
+    var q = cw.route_address || (lat != null && lng != null ? lat + ',' + lng : [cw.logradouro || cw.address, cw.bairro, cw.cidade].filter(Boolean).join(', '));
+    return q ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q) : null;
+  }
+  function html(o) {
+    var cw = o.cw, s = o.servico;
+    var endereco = cw.route_address || (cw.logradouro ? cw.logradouro + (cw.numero ? ', ' + cw.numero : '') + (cw.bairro ? ' · ' + cw.bairro : '') : cw.address);
+    var presente = o.comVale ? icon('gift', 16) : '';
+    var mapa = rota(cw);
+    // Como pagar fica sempre dito: sem isso o cliente fica com o "já paguei?".
+    var pagamento = (o.pagoCartao ? '<div class="ok-pay is-sub"><span>' + esc(o.pagoLabel || 'Sinal pago no cartão') + '</span><b>R$ ' + money(o.pagoCartao, 2) + '</b></div>' : '') +
+      '<div class="ok-pay"><span>' + (o.aPagar > 0 ? 'Você paga no lava-rápido' : o.comVale ? 'Pago com o vale' : 'Nada a pagar na chegada') + '</span><b>' + presente + 'R$ ' + money(o.aPagar, 2) + '</b></div>';
+    return '<div class="ok">' +
+      '<div class="ok-check">' + icon('check', 52, { 'stroke-width': 3 }) + '</div>' +
+      '<h1 class="ok-title">Agendado<em>Seu carro te agradece</em></h1>' +
+      '<div class="ok-card">' +
+        '<div class="ok-lab-row"><div class="ok-lab">QUANDO</div>' + (o.lastMinute ? '<span class="ok-lm">' + icon('zap', 11) + 'last minute</span>' : '') + '</div>' +
+        '<div class="ok-when">' + esc(o.quando) + '</div>' +
+        // O .ics abre no navegador, que oferece salvar na agenda.
+        (o.agendaUrl ? '<a class="ok-pill" href="' + esc(o.agendaUrl) + '">' + icon('calendar', 15) + 'Adicionar à agenda</a>' : '') +
+        '<div class="ok-div"></div>' +
+        '<div class="ok-shop"><div class="ok-logo">' + (window.LoovLogos ? LoovLogos.logoOf(cw) : '') + '</div>' +
+          '<div class="ok-shop-t"><b>' + esc(cw.name) + '</b><small>' + esc(s.title) + ' · ' + (s.duration || 30) + ' min</small></div></div>' +
+        // O próximo passo do cliente é ir até lá.
+        (endereco ? '<div class="ok-addr">' + esc(endereco) + '</div>' : '') +
+        (mapa ? '<a class="ok-pill" target="_blank" rel="noopener" href="' + mapa + '">' + icon('navigation', 15) + 'Ver rota</a>' : '') +
+        '<div class="ok-div"></div>' + pagamento +
+        (o.valeTxt ? '<p class="ok-vale">' + esc(o.valeTxt) + '</p>' : '') +
+        (o.aviso ? '<p class="ok-aviso">' + esc(o.aviso) + '</p>' : '') +
+      '</div>' +
+      '<div class="ok-actions"><a class="ok-primary" href="/appointments">Ver meus agendamentos</a><a class="ok-ghost" href="' + esc(o.homeUrl || '/') + '">Voltar pra home</a></div>' +
+    '</div>';
+  }
+  window.LoovConfirmacao = { html: html };
+})();
+</script>

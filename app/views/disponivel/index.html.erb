@@ -162,9 +162,8 @@
   .dw-result > :nth-child(3) { animation-delay: .22s; }
   .dw-result > :nth-child(4) { animation-delay: .34s; }
   @keyframes dw-surge { to { opacity: 1; transform: none; } }
-  .dw-mark { width: 44px; height: 44px; border-radius: 50%; background: var(--mint-500); display: flex; align-items: center; justify-content: center; color: var(--cream); margin-bottom: 18px; }
-  .dw-result.is-ok .dw-mark { animation: dw-pop .55s cubic-bezier(.3,1.6,.5,1) forwards; }
-  @keyframes dw-pop { from { opacity: 0; transform: scale(.7); } to { opacity: 1; transform: scale(1); } }
+  /* "Agendado" dentro da espera: a .dw-in já dá o respiro dos lados. */
+  .dw-in > .ok { width: 100%; padding: 22px 0 32px; }
   .dw-result img { width: 86%; max-width: 340px; height: auto; margin-bottom: 20px; }
   .dw-result h2 { margin: 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 30px; letter-spacing: -0.7px; color: var(--ink) !important; }
   .dw-result p { margin: 0; max-width: 320px; font-size: 14.5px; line-height: 21px; color: var(--graphite); }
@@ -226,6 +225,7 @@
 
 <%# Folha de reserva %>
 <%= render "disponivel/folha_reserva" %>
+<%= render "shared/confirmacao_agendamento" %>
 
 <%# Espera pelo aceite / desfecho %>
 <section class="dw" id="dw" aria-live="polite">
@@ -246,9 +246,6 @@
   var POLL_MS = 3000;
   var COORDS_KEY = 'loov_last_coords';
   var RECORD_KEY = 'loov_ave_recorde';
-  // Pelo site a reserva pré-autoriza esta fração no cartão (Appointment::PREPAYMENT_PCT).
-  var PCT       = <%= Appointment::PREPAYMENT_PCT %>;
-  var PCT_LABEL = Math.round(PCT * 100) + '%', REST_LABEL = (100 - Math.round(PCT * 100)) + '%';
   var HORA_OFF_IC = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 12l3-3M12 12v5M9.8 14.8L12 17l2.2-2.2"/></svg>';
 
   var state = {
@@ -496,7 +493,7 @@
     var wait = POLL_MS;
     var step = function () {
       api('/disponivel/' + id).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).then(function (d) {
-        if (d.status === 'confirmed') { stopPolling(); setOutcome('accepted'); }
+        if (d.status === 'confirmed') { stopPolling(); if (state.appt) state.appt.agenda_url = d.agenda_url || null; setOutcome('accepted'); }
         else if (['rejected', 'cancelled', 'expired'].indexOf(d.status) !== -1) { stopPolling(); setOutcome(d.status); }
         wait = POLL_MS;
       }).catch(function () { wait = Math.min(30000, wait * 2); }).finally(function () {
@@ -553,22 +550,37 @@
     renderScore();
     updateUrgency();
   }
+  // Aceita: a mesma tela de "Agendado" do agendamento comum
+  // (shared/_confirmacao_agendamento), com o que é do Last Minute.
+  function renderAceito() {
+    var a = state.appt, slot = new Date(a.slot), pago = Number(a.prepayment) || 0;
+    var total = a.total != null ? Number(a.total) : Number(a.service && a.service.price) || 0;
+    var dia = slot.toDateString() === new Date().toDateString() ? 'hoje' : ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'][slot.getDay()];
+    $('dw-in').innerHTML = LoovConfirmacao.html({
+      lastMinute: true,
+      quando: dia + ', ' + fmtTime(a.slot),
+      agendaUrl: a.agenda_url,
+      cw: a.car_wash, servico: a.service,
+      pagoCartao: pago, pagoLabel: 'Pago no cartão',
+      aPagar: Math.max(0, Math.round((total - pago) * 100) / 100),
+      comVale: a.desconto > 0, valeTxt: a.desconto > 0 ? 'Vale aplicado: −R$ ' + money(a.desconto, 2) : null,
+      aviso: 'Se não puder ir, o valor pago no cartão não é devolvido. Se o lava-rápido cancelar, você recebe de volta.',
+      homeUrl: '/'
+    });
+    $('dw').scrollTop = 0;
+    var b = document.querySelector('#dw-in .ok-primary'); if (b) b.focus({ preventScroll: true });
+  }
   function renderResult() {
     var o = state.outcome, a = state.appt || {}, name = (a.car_wash && a.car_wash.name) || 'O lava-rápido';
-    var total = a.service && a.service.price != null ? Number(a.service.price) : null;
-    var paid = total != null && a.prepayment != null ? 'R$ ' + money(a.prepayment, 2) : 'os ' + PCT_LABEL;
-    var rest = total != null && a.prepayment != null ? 'R$ ' + money(Math.max(0, total - a.prepayment), 2) : 'o restante';
+    if (o === 'accepted') { renderAceito(); return; }
     var freed = ' O valor reservado no cartão foi liberado: você não foi cobrado.';
-    var r = o === 'accepted'
-      ? { t: 'Reserva confirmada', s: 'Seu horário está garantido. Cobramos ' + paid + ' no cartão; ' + rest + ' você paga no lava-rápido.', cta: 'Ir para agendamento', go: 'appt' }
-      : o === 'expired'
+    var r = o === 'expired'
       ? { t: 'Tempo esgotado', s: name + ' não respondeu dentro dos 3 minutos e o horário foi liberado.' + freed, cta: 'Buscar outro lava-rápido', go: 'list' }
       : o === 'rejected'
       ? { t: 'Reserva recusada', s: name + ' não pôde atender agora.' + freed, cta: 'Buscar outro lava-rápido', go: 'list' }
       : { t: 'Reserva cancelada', s: 'O horário foi liberado.' + freed, cta: 'Buscar outro lava-rápido', go: 'list' };
-    $('dw-in').innerHTML = '<div class="dw-result' + (o === 'accepted' ? ' is-ok' : '') + '">' +
-      (o === 'accepted' ? '<div class="dw-mark">' + icon('check', 20) + '</div>'
-        : '<img src="' + ILL + 'reserva-vazia.svg" alt="Ilustração de um carro parado com bolhas de espuma, um relógio e um passarinho pousado no teto">') +
+    $('dw-in').innerHTML = '<div class="dw-result">' +
+      '<img src="' + ILL + 'reserva-vazia.svg" alt="Ilustração de um carro parado com bolhas de espuma, um relógio e um passarinho pousado no teto">' +
       '<h2>' + r.t + '</h2><p>' + esc(r.s) + '</p>' +
       '<div><button type="button" class="dw-cta" data-result="' + r.go + '">' + r.cta + icon('arrow-right', 15) + '</button></div></div>';
     var b = document.querySelector('.dw-cta'); if (b) b.focus();
@@ -770,7 +782,6 @@
     if ((t = e.target.closest('[data-sort]'))) { state.sortBy = t.dataset.sort; render(); return; }
     if (e.target.closest('#dp-retry')) { retryLocation(); return; }
     if ((t = e.target.closest('[data-result]'))) {
-      if (t.dataset.result === 'appt') { location.href = '<%= appointments_path %>'; return; }
       closeWaiting(); load(true);
     }
   });

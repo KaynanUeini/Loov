@@ -143,6 +143,7 @@ class DisponivelController < ApplicationController
               numero:        cw.numero,
               bairro:        cw.bairro,
               cidade:        cw.cidade,
+              route_address: cw.endereco_rota,
               uf:            cw.uf,
               latitude:      cw.latitude,
               longitude:     cw.longitude,
@@ -438,7 +439,9 @@ class DisponivelController < ApplicationController
       service_name:  appointment.service.title,
       scheduled_at:  appointment.scheduled_at.strftime("%d/%m/%Y às %H:%M"),
       prepayment:    appointment.prepayment_amount,
-      total:         appointment.effective_price
+      total:         appointment.effective_price,
+      # "Adicionar à agenda" da tela de Agendado, depois do aceite.
+      agenda_url:    (agenda_url(appointment.signed_id(purpose: :agenda, expires_in: 60.days)) if appointment.status == "confirmed")
     }
   end
 
