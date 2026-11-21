@@ -18,9 +18,9 @@
   #dp-sheet-bg *, #dp-sheet-bg *::before, #dp-sheet-bg *::after { box-sizing: border-box; }
   #dp-sheet-bg button { font-family: inherit; line-height: normal; cursor: pointer; }
   #dp-sheet-bg svg.feather { display: block; }
-  .dp-offrow { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0 0 10px; padding: 12px 14px; border-radius: 14px; background: var(--coral-50); font-size: 13.5px; color: var(--ink); }
+  .dp-offrow { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0 0 10px; padding: 12px 14px; border-radius: 14px; background: var(--sand); font-size: 13.5px; color: var(--ink); }
   .dp-offrow span { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
-  .dp-offrow b { font-family: 'Space Grotesk', sans-serif; font-weight: 600; color: var(--coral-700); white-space: nowrap; }
+  .dp-offrow b { font-family: 'Space Grotesk', sans-serif; font-weight: 600; color: var(--ink); white-space: nowrap; }
   .dp-spin { width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid rgba(221,120,82,.25); border-top-color: var(--coral-500); animation: dp-rot .8s linear infinite; }
   @keyframes dp-rot { to { transform: rotate(360deg); } }
   /* ── Folha "Reservar em" ──────────────────────────────────────────────── */
@@ -54,25 +54,38 @@
   .dp-mid { flex: 1 1 auto; min-height: 0; overflow: auto; overscroll-behavior: contain; padding-bottom: 2px; }
   .dp-foot { flex-shrink: 0; }
   .dp-sh-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ash); margin: 20px 0 10px; }
-  .dp-pills { display: flex; flex-wrap: wrap; gap: 8px; }
-  .dp-pill { padding: 8px 14px; border-radius: 100px; border: 1px solid var(--stone); background: var(--cream); color: var(--graphite); font-size: 13px; font-weight: 600; transition: background .15s, color .15s, border-color .15s; }
-  .dp-pill:hover { border-color: var(--ash); }
-  .dp-pill[aria-pressed="true"] { background: var(--coral-500); border-color: var(--coral-500); color: var(--cream); }
+  /* Lista de serviços: linhas grandes, preço em tinta. Coral fica pro topo e
+     pro botão de reservar (um acento só). */
+  .dp-svcs { list-style: none; margin: 0; padding: 0; }
+  .dp-svc-row { width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px 4px; border: 0; background: transparent; color: var(--ink); text-align: left; border-radius: 12px; transition: background .15s; }
+  .dp-svcs li + li .dp-svc-row { border-top: 1px solid var(--stone); border-radius: 0; }
+  .dp-svc-row:hover { background: var(--sand); }
+  .dp-svc-row:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .dp-svc-t { flex: 1; min-width: 0; }
+  .dp-svc-t b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 16px; line-height: 20px; letter-spacing: -0.2px; }
+  .dp-svc-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 4px; font-size: 12.5px; color: var(--graphite); }
+  .dp-svc-off { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 100px; background: var(--sand); color: var(--ink); font-size: 11px; font-weight: 600; }
+  .dp-svc-off svg { width: 11px; height: 11px; }
+  .dp-svc-pr { flex-shrink: 0; text-align: right; }
+  .dp-svc-pr s { display: block; font-size: 12px; color: var(--ash); }
+  .dp-svc-pr b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 17px; letter-spacing: -0.3px; white-space: nowrap; }
+  .dp-svc-row > svg { flex-shrink: 0; color: var(--ash); }
+  .dp-trocar { display: inline-flex; align-items: center; gap: 4px; height: 34px; margin-top: 14px; padding: 0 14px 0 10px; border: 1.5px solid var(--ink); border-radius: 999px; background: transparent; color: var(--ink); font-size: 13px; font-weight: 600; transition: background .15s; }
+  .dp-trocar:hover { background: var(--sand); }
   .dp-svc { margin-top: 16px; }
   .dp-svc h3 { margin: 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 600; font-size: 18px; letter-spacing: -0.3px; color: var(--ink) !important; }
-  .dp-svc .price { margin-top: 4px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.5px; color: var(--coral-500); }
+  .dp-svc .price { margin-top: 4px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px; letter-spacing: -0.5px; color: var(--ink); }
   /* Last Minute mais barato que o agendamento: preço normal riscado ao lado. */
   .dp-svc .price .dp-old { margin-right: 8px; font-family: 'Inter', sans-serif; font-weight: 400; font-size: 15px; letter-spacing: 0; color: var(--ash); }
   .dp-svc .price small { font-family: 'Inter', sans-serif; font-weight: 400; font-size: 14px; letter-spacing: 0; color: var(--graphite); }
   .dp-svc p { margin: 12px 0 0; font-size: 14px; line-height: 20px; color: var(--graphite); white-space: pre-line; }
   /* Divisão do pagamento: o que sai do cartão AGORA vem primeiro e maior —
      é a informação que o cliente precisa saber antes de tocar no botão. */
-  .dp-vale { display: flex; align-items: center; gap: 10px; margin-top: 18px; padding: 10px 12px; border-radius: 14px; background: var(--sand); color: var(--coral-500); }
-  .dp-vale.is-on { background: var(--coral-50); }
+  .dp-vale { display: flex; align-items: center; gap: 10px; margin-top: 18px; padding: 10px 12px; border-radius: 14px; background: var(--sand); color: var(--ink); }
   .dp-vale-t { flex: 1; min-width: 0; }
   .dp-vale-t b { display: block; font-size: 13.5px; font-weight: 600; color: var(--ink); }
   .dp-vale-t small { display: block; font-size: 12px; color: var(--graphite); }
-  .dp-vale-v { font-size: 14px; font-weight: 600; color: var(--coral-700); white-space: nowrap; }
+  .dp-vale-v { font-size: 14px; font-weight: 600; color: var(--ink); white-space: nowrap; }
   .dp-vale-sw { position: relative; flex: 0 0 44px; height: 26px; border: 0; border-radius: 13px; background: var(--stone); cursor: pointer; transition: background .2s; }
   .dp-vale-sw::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(25,20,15,.2); transition: transform .2s; }
   .dp-vale-sw[aria-checked="true"] { background: var(--ink); }
@@ -84,8 +97,7 @@
   .dp-pay-row span em { font-style: normal; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: .6px; color: var(--ash); margin-left: 6px; }
   .dp-pay-row b { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; color: var(--ink); white-space: nowrap; }
   .dp-pay-row.now span { color: var(--ink); font-weight: 600; }
-  .dp-pay-row.now span em { color: var(--coral-500); }
-  .dp-pay-row.now b { color: var(--coral-500); font-size: 18px; }
+  .dp-pay-row.now b { font-size: 18px; }
   .dp-pay-card { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-top: 1px solid var(--stone); background: var(--paper); font-size: 13px; color: var(--ink); }
   .dp-pay-card svg { color: var(--graphite); flex-shrink: 0; }
   /* Ação dentro de card é botão: pílula de contorno tinta. */
@@ -200,7 +212,10 @@
     st.op = op || {};
     st.target = it;
     var pre = st.op.servico && (it.services || []).find(function (s) { return Number(s.id) === Number(st.op.servico); });
-    st.selectedId = pre ? pre.id : (it.services && it.services[0] ? it.services[0].id : null);
+    // Nada vem escolhido quando há mais de um serviço: com a Lavagem Simples
+    // já marcada, o cliente ia direto pro pagamento sem ver as outras. Vindo
+    // da página do lava-rápido o serviço já foi escolhido lá.
+    st.selectedId = pre ? pre.id : ((it.services || []).length === 1 ? it.services[0].id : null);
     st.origem = st.op.origem && !SEM_MOV ? st.op.origem : null;
     st.lastFocus = document.activeElement;
     var bg = $('dp-sheet-bg'), sh = $('dp-sheet');
@@ -248,7 +263,7 @@
   function render() {
     var it = st.target; if (!it) return;
     var cw = it.car_wash, svcs = it.services || [];
-    var svc = svcs.find(function (s) { return s.id === st.selectedId; }) || svcs[0];
+    var svc = svcs.find(function (s) { return s.id === st.selectedId; }) || null;
     var addr = [[cw.logradouro, cw.numero].filter(Boolean).join(', '), cw.bairro].filter(Boolean).join(' · ') || cw.address || '';
     var dist = cw.distance_km != null ? Number(cw.distance_km).toFixed(1).replace('.', ',') + ' km' : null;
     var dur = svc && Number(svc.duration) > 0 ? ' · ' + svc.duration + ' min' : '';
@@ -264,20 +279,31 @@
         (dist ? '<span class="dp-dist">' + esc(dist.toUpperCase()) + '</span>' : '') + '</div>' +
       '<div class="dp-rule"></div>' +
       '<div class="dp-mid" id="dp-mid">' +
-      (svcs.length > 1 ? '<div class="dp-sh-label">Escolha o serviço</div><div class="dp-pills" role="group" aria-label="Serviços">' +
-        svcs.map(function (s) { return '<button type="button" class="dp-pill" data-svc="' + s.id + '" aria-pressed="' + (svc && s.id === svc.id) + '">' + esc(s.title) + '</button>'; }).join('') + '</div>' : '') +
+      // Primeiro momento: a lista inteira, nada marcado, sem pagamento.
+      (!svc ? '<div class="dp-sh-label" id="dp-svcs-t">Escolha o serviço</div><ul class="dp-svcs" aria-labelledby="dp-svcs-t">' +
+        svcs.map(function (s) {
+          var off = s.hora_off && Number(s.regular_price) > Number(s.price);
+          return '<li><button type="button" class="dp-svc-row" data-svc="' + s.id + '"><span class="dp-svc-t"><b>' + esc(s.title) + '</b><span class="dp-svc-meta">' +
+            (Number(s.duration) > 0 ? '<span>' + s.duration + ' min</span>' : '') + (off ? '<span class="dp-svc-off">' + HORA_OFF_IC + 'Hora Off</span>' : '') + '</span></span>' +
+            '<span class="dp-svc-pr">' + (Number(s.regular_price) > Number(s.price) ? '<s>R$ ' + money(s.regular_price, 2) + '</s>' : '') + '<b>R$ ' + money(s.price, 2) + '</b></span>' +
+            icon('chevron-right', 18) + '</button></li>';
+        }).join('') + '</ul>' : '') +
+      // Segundo momento: o serviço escolhido, com a volta pra lista.
+      (svc && svcs.length > 1 ? '<button type="button" class="dp-trocar" data-trocar' + (st.reserving ? ' disabled' : '') + '>' + icon('chevron-left', 15) + 'Trocar serviço</button>' : '') +
       // Descrição inteira: quem rola é o miolo, nada de caixa cortando o texto.
       (svc ? '<div class="dp-svc"><h3>' + esc(svc.title) + '</h3><div class="price">' + (Number(svc.regular_price) > Number(svc.price) ? '<s class="dp-old">R$ ' + money(svc.regular_price, 2) + '</s>' : '') + 'R$ ' + money(svc.price, 2) + '<small>' + dur + '</small></div>' +
         '<p>' + esc(svc.description && svc.description.trim() ? svc.description : 'Este lava-rápido não cadastrou uma descrição detalhada. Confirme os itens incluídos ao chegar.') + '</p></div>' : '') +
       payBlock(svc, cw) + '</div>' +
-      '<div class="dp-foot"><p class="dp-hint">Os ' + PCT_LABEL + ' ficam reservados no cartão e só são cobrados se o lava-rápido aceitar: ele tem até 3 min pra responder. ' +
-        'Se ele recusar ou o tempo acabar, o valor é liberado. Depois de aceita, não há reembolso se você não for; ' +
-        'se o lava-rápido cancelar, você recebe de volta.</p>' +
+      (svc ? '<div class="dp-foot"><p class="dp-hint">' + (prepayOf(totalDe(cw, svc))
+        ? 'Os ' + PCT_LABEL + ' ficam reservados no cartão e só são cobrados se o lava-rápido aceitar: ele tem até 3 min pra responder. ' +
+          'Se ele recusar ou o tempo acabar, o valor é liberado. Depois de aceita, não há reembolso se você não for; ' +
+          'se o lava-rápido cancelar, você recebe de volta.'
+        : 'Nada é cobrado no cartão agora. O lava-rápido tem até 3 min pra responder' + (descontoDe(cw, svc) > 0 ? '; se ele recusar ou o tempo acabar, o vale volta pra você' : '') + '.') + '</p>' +
       '<button type="button" class="dp-confirm" id="dp-confirm"' + (st.reserving || !svc ? ' disabled' : '') + '>' +
         (st.reserving ? '<span class="dp-spin"></span>'
           : (SIGNED_IN && !HAS_CARD) ? icon('credit-card', 16) + ' Cadastrar cartão para reservar'
           : svc ? icon('zap', 16) + (prepayOf(totalDe(cw, svc)) ? 'Reservar e pagar R$ ' + money(prepayOf(totalDe(cw, svc)), 2) : 'Reservar com o vale') + ' ' + icon('arrow-right', 16)
-          : 'Confirmar reserva') + '</button></div>';
+          : 'Confirmar reserva') + '</button></div>' : '');
     // Trocar de serviço ou o vale redesenha a folha: o miolo fica onde estava.
     if (rolou) $('dp-mid').scrollTop = rolou;
   }
@@ -313,15 +339,34 @@
       : '<div class="dp-pay-card missing">' + icon('credit-card', 15) + '<span>Para reservar no Last Minute você precisa de um cartão cadastrado. É ele que garante a vaga.</span></div>';
     var hoff = svc.hora_off ? Math.round((Number(svc.regular_price) - Number(svc.price)) * 100) / 100 : 0;
     var offRow = hoff > 0 ? '<div class="dp-offrow"><span>' + HORA_OFF_IC + 'Desconto Hora Off</span><b>−R$ ' + money(hoff, 2) + '</b></div>' : '';
-    return offRow + valeRow + '<div class="dp-pay">' +
-      '<div class="dp-pay-row now"><span>Agora, no cartão<em>' + PCT_LABEL + '</em></span><b>R$ ' + money(now, 2) + '</b></div>' +
-      '<div class="dp-pay-row"><span>Na chegada, no lava-rápido<em>' + REST_LABEL + '</em></span><b>R$ ' + money(rest, 2) + '</b></div>' +
-      cardLine + '</div>';
+    // Vale cobrindo tudo: "35% R$ 0,00 / 65% R$ 0,00" fazia parecer que havia
+    // alguma cobrança. Diz o que é. Sem sinal (abaixo do mínimo do Stripe),
+    // some a divisão em porcentagem.
+    var linhas = total <= 0
+      ? '<div class="dp-pay-row now"><span>Coberto pelo vale</span><b>R$ 0,00</b></div>'
+      : now <= 0
+      ? '<div class="dp-pay-row"><span>Nada no cartão agora</span><b>R$ 0,00</b></div>' +
+        '<div class="dp-pay-row now"><span>Na chegada, no lava-rápido</span><b>R$ ' + money(total, 2) + '</b></div>'
+      : '<div class="dp-pay-row now"><span>Agora, no cartão<em>' + PCT_LABEL + '</em></span><b>R$ ' + money(now, 2) + '</b></div>' +
+        '<div class="dp-pay-row"><span>Na chegada, no lava-rápido<em>' + REST_LABEL + '</em></span><b>R$ ' + money(rest, 2) + '</b></div>';
+    return offRow + valeRow + '<div class="dp-pay">' + linhas + cardLine + '</div>';
+  }
+  // Lista ⇄ serviço: o miolo volta pro topo e entra com um fade curto; o foco
+  // vai pro que o teclado precisa (o primeiro serviço ou o "Trocar").
+  function trocarPara(id) {
+    st.selectedId = id;
+    var mid = $('dp-mid'); if (mid) mid.scrollTop = 0;
+    $('dp-sheet').scrollTop = 0;
+    render();
+    var novo = $('dp-mid');
+    if (novo && novo.animate && !SEM_MOV) novo.animate([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 260, easing: 'cubic-bezier(.2,.8,.2,1)' });
+    var f = document.querySelector(id == null ? '#dp-sheet [data-svc]' : '#dp-sheet [data-trocar]');
+    if (f) f.focus({ preventScroll: true });
   }
   function falhou(msg) { toast(msg, 'error'); if (st.op.aoFalhar) st.op.aoFalhar(); }
   function confirmar() {
     var it = st.target;
-    var svc = it && ((it.services || []).find(function (s) { return s.id === st.selectedId; }) || (it.services || [])[0]);
+    var svc = it && (it.services || []).find(function (s) { return s.id === st.selectedId; });
     var slot = it && it.slots && it.slots[0];
     // Toque mudo em "Confirmar" era indistinguível de site travado.
     if (!it || !svc || !slot) { toast(!slot ? 'Este horário não está mais disponível. Atualize a lista.' : 'Selecione um serviço para continuar.', 'error'); return; }
@@ -379,7 +424,8 @@
   document.addEventListener('click', function (e) {
     if (!st.target) return;
     var t;
-    if ((t = e.target.closest('#dp-sheet [data-svc]'))) { st.selectedId = Number(t.dataset.svc); render(); return; }
+    if ((t = e.target.closest('#dp-sheet [data-svc]'))) { trocarPara(Number(t.dataset.svc)); return; }
+    if (e.target.closest('#dp-sheet [data-trocar]')) { trocarPara(null); return; }
     if (e.target.closest('#dp-close')) { fecharPeloCliente(); return; }
     if (e.target.id === 'dp-sheet-bg') { fecharPeloCliente(); return; }
     if (e.target.closest('#dp-confirm')) { confirmar(); return; }
