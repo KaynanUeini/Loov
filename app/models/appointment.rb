@@ -241,6 +241,20 @@ class Appointment < ApplicationRecord
     acceptance_expires_at.present? && acceptance_expires_at < Time.current
   end
 
+  # O que o cliente do Last Minute vê na espera. O banco não tem status de
+  # aceite expirado: os 3 minutos acabando gravam "cancelled", o mesmo da
+  # desistência do cliente, e a espera dizia "Você cancelou" pra quem só
+  # esperou o lava-rápido. A hora separa os dois: o cliente só consegue
+  # cancelar antes do prazo, então cancelado depois dele é tempo esgotado.
+  # Pendente com o prazo vencido também é: a limpeza é preguiçosa e pode
+  # levar alguns segundos pra gravar.
+  def status_para_cliente
+    return status unless disponivel? && acceptance_expires_at.present?
+    return "expired" if pending_acceptance? && acceptance_expired?
+    return "expired" if cancelled? && updated_at >= acceptance_expires_at
+    status
+  end
+
   # ── VALORES ───────────────────────────────────────────────────────────────
   def effective_price
     price_override.present? ? price_override.to_f : service.price.to_f

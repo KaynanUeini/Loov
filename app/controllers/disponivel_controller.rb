@@ -433,7 +433,7 @@ class DisponivelController < ApplicationController
       return
     end
     render json: {
-      status:        appointment.status,
+      status:        appointment.status_para_cliente,
       seconds_left:  appointment.seconds_until_expiry,
       car_wash_name: appointment.car_wash.name,
       service_name:  appointment.service.title,
