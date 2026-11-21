@@ -129,13 +129,22 @@
   .dw-rel { display: block; margin-left: -3px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: clamp(64px, min(27vw, 14vh), 112px); line-height: 1.05; letter-spacing: -0.045em; font-variant-numeric: tabular-nums; }
   .dw-frase { margin: 2px 0 0; font-family: 'Fraunces', Georgia, serif; font-style: italic; font-weight: 600; font-variation-settings: 'SOFT' 100, 'WONK' 1, 'opsz' 144; font-size: clamp(24px, min(8.4vw, 4.4vh), 34px); line-height: 1.15; letter-spacing: -0.02em; color: var(--coral-500); overflow-wrap: anywhere; }
   .dw-passos { display: flex; gap: 6px; font-size: 12px; color: var(--ash); }
-  .dw-passos > span { flex: 1; display: grid; gap: 6px; }
-  .dw-passos i { display: block; height: 3px; border-radius: 2px; background: rgba(250,250,246,.18); overflow: hidden; }
+  .dw-passos > span { flex: 1; display: grid; gap: 4px; }
+  /* A caixa tem a altura do carro, com o trilho no meio: os três passos
+     ficam alinhados mesmo só o do meio tendo carro. */
+  .dw-passos u { position: relative; display: flex; align-items: center; height: 14px; text-decoration: none; }
+  .dw-passos i { display: block; flex: 1; height: 3px; border-radius: 2px; background: rgba(250,250,246,.18); overflow: hidden; }
   .dw-passos .feito i { background: var(--cream); }
   .dw-passos .agora { color: var(--cream); }
+  /* A barra enche da esquerda pra direita, rumo a "Sua vaga", puxada por um
+     carro visto de cima. O carro anda só dentro do trilho: sai com a traseira
+     no começo e chega com a frente no fim. */
   .dw-passos b { display: block; height: 100%; background: var(--coral-500); transition: width 1s linear; }
+  .dw-carro { position: absolute; top: 0; width: 28px; height: 14px; color: var(--coral-500); transition: left 1s linear, transform 1s linear; }
+  .dw-carro svg { display: block; }
   .dw.is-urgent .dw-frase { color: var(--rose-500); }
   .dw.is-urgent .dw-dot, .dw.is-urgent .dw-passos b { background: var(--rose-500); }
+  .dw.is-urgent .dw-carro { color: var(--rose-500); }
   /* Linhas do placar: rótulo em mono, valor na fonte de título, fio de tinta. */
   .dw-linhas { padding-top: clamp(6px, 1.4vh, 12px); }
   .dw-lp { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: clamp(8px, 1.4vh, 11px) 0; border-top: 2px solid var(--ink); }
@@ -208,7 +217,7 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .dw-dot, .dw-fim > * { animation: none; }
-    .dw-passos b, .dw-desl.volta .dw-bola, .dw-desl.volta .dw-desl-r { transition: none; }
+    .dw-passos b, .dw-carro, .dw-desl.volta .dw-bola, .dw-desl.volta .dw-desl-r { transition: none; }
   }
 </style>
 
@@ -492,7 +501,9 @@
     var tick = function () {
       state.secondsLeft = Math.max(0, Math.round((new Date(exp).getTime() - Date.now()) / 1000));
       var el = $('dw-count'); if (el) el.textContent = relogio(state.secondsLeft);
-      var b = $('dw-barra'); if (b) b.style.width = (Math.min(1, state.secondsLeft / (state.appt.seconds || 180)) * 100).toFixed(1) + '%';
+      var p = passouPct(state.appt) + '%';
+      var b = $('dw-barra'); if (b) b.style.width = p;
+      var c = $('dw-carro'); if (c) { c.style.left = p; c.style.transform = 'translateX(-' + p + ')'; }
       updateUrgency();
     };
     tick(); tickT = setInterval(tick, 1000);
@@ -515,6 +526,16 @@
   function stopPolling() { clearTimeout(pollT); pollT = null; clearInterval(tickT); tickT = null; }
   function setOutcome(o) { state.outcome = o; renderWaiting(); }
   function relogio(sec) { sec = Math.max(0, sec | 0); return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); }
+  // O que já passou dos 3 minutos, em %: a barra de "Decidindo" enche.
+  function passouPct(a) { return (Math.max(0, Math.min(1, 1 - state.secondsLeft / ((a && a.seconds) || 180))) * 100).toFixed(1); }
+  // Carro visto de cima, de frente pra direita. A carroceria segue a cor da
+  // barra (currentColor).
+  var CARRO = '<svg width="28" height="14" viewBox="0 0 28 14" aria-hidden="true">' +
+    '<rect x="5" y="0" width="4" height="2" rx="1" fill="#ada699"/><rect x="18" y="0" width="4" height="2" rx="1" fill="#ada699"/>' +
+    '<rect x="5" y="12" width="4" height="2" rx="1" fill="#ada699"/><rect x="18" y="12" width="4" height="2" rx="1" fill="#ada699"/>' +
+    '<rect x="1" y="1.5" width="26" height="11" rx="4" fill="currentColor"/>' +
+    '<rect x="17" y="3.2" width="4.2" height="7.6" rx="1.6" fill="#1a1612" opacity=".85"/><rect x="4.4" y="3.6" width="3" height="6.8" rx="1.2" fill="#1a1612" opacity=".85"/>' +
+    '<circle cx="25.6" cy="4.2" r=".9" fill="#fafaf6"/><circle cx="25.6" cy="9.8" r=".9" fill="#fafaf6"/></svg>';
   function urgente() { return state.secondsLeft <= 30 && !state.outcome; }
   function frase(a) { return 'chegou pro ' + ((a.car_wash && a.car_wash.name) || 'lava-rápido') + '.'; }
   function updateUrgency() {
@@ -537,16 +558,18 @@
     if (state.outcome) { renderResult(); return; }
     var v = valores(a);
     var dur = Number(a.service && a.service.duration) > 0 ? ' · ' + a.service.duration + ' min' : '';
-    var pct = (Math.min(1, state.secondsLeft / (a.seconds || 180)) * 100).toFixed(1);
+    var pct = passouPct(a);
     $('dw-in').innerHTML = '<div class="dw-esp">' +
       '<div class="dw-faixa">' +
         '<div class="dw-vivo"><span><span class="dw-dot"></span><span id="dw-status-txt">Pedido enviado</span></span><span>' + quandoTopo(a) + '</span></div>' +
         '<div class="dw-meio"><span class="dw-rel" id="dw-count" role="timer" aria-label="Tempo até a resposta">' + relogio(state.secondsLeft) + '</span>' +
         '<p class="dw-frase" id="dw-frase">' + esc(frase(a)) + '</p></div>' +
-        // Enviado, decidindo, sua vaga. A barra do meio seca junto com a do
-        // lava-rápido: os dois lados veem o mesmo tempo.
+        // Enviado, decidindo, sua vaga. A barra do meio anda com o mesmo
+        // tempo do placar do lava-rápido, puxada pelo carro.
         '<div class="dw-passos" aria-label="Pedido enviado, esperando a decisão do lava-rápido">' +
-          '<span class="feito"><i></i>Enviado</span><span class="agora"><i><b id="dw-barra" style="width:' + pct + '%"></b></i>Decidindo</span><span><i></i>Sua vaga</span>' +
+          '<span class="feito"><u><i></i></u>Enviado</span>' +
+          '<span class="agora"><u><i><b id="dw-barra" style="width:' + pct + '%"></b></i><span class="dw-carro" id="dw-carro" style="left:' + pct + '%;transform:translateX(-' + pct + '%)">' + CARRO + '</span></u>Decidindo</span>' +
+          '<span><u><i></i></u>Sua vaga</span>' +
         '</div>' +
       '</div>' +
       '<div class="dw-linhas">' +
