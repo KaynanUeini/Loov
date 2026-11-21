@@ -15,6 +15,7 @@
   filtrada sem indicação nem saída deixava o cliente preso em uma loja.
 %>
 <%= render "shared/loov_logos" %>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@1,9..144,600,100,1&display=swap">
 <script src="/vendor/feather-4.29.2.min.js"></script>
 <%# Leaflet (BSD-2) hospedado aqui; mapa do OpenStreetMap, sem chave de API. %>
 <link rel="stylesheet" href="/vendor/leaflet-1.9.4/leaflet.css">
@@ -112,65 +113,70 @@
   /* ── Espera / desfecho ────────────────────────────────────────────────── */
   .dw { position: fixed; inset: 60px 0 0 0; z-index: 150; background: var(--cream); color: var(--ink); overflow: hidden auto; display: none; }
   .dw.is-on { display: block; }
-  .dw-in { position: relative; z-index: 1; max-width: 460px; margin: 0 auto; min-height: 100%; padding: 18px 22px 24px; display: flex; flex-direction: column; }
-  .dw-head { text-align: center; padding-top: 6px; }
-  .dw-status { display: inline-flex; align-items: center; gap: 7px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); }
-  .dw-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: dw-blink 1.6s ease-in-out infinite; }
-  @keyframes dw-blink { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
-  .dw-shop { margin: 8px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 26px; line-height: 30px; letter-spacing: -0.6px; color: var(--ink) !important; }
-  .dw-hero { display: flex; flex-direction: column; align-items: center; gap: 18px; padding-top: 28px; }
-  .dw-stage { position: relative; width: 232px; height: 232px; display: flex; align-items: center; justify-content: center; }
-  .dw-ring { position: absolute; width: 196px; height: 196px; border-radius: 50%; border: 2px solid var(--accent); animation: dw-ring 1.6s ease-out infinite; }
-  @keyframes dw-ring { from { opacity: .45; transform: scale(.9); } to { opacity: 0; transform: scale(1.7); } }
-  .dw-halo { position: absolute; width: 200px; height: 200px; border-radius: 50%; background: color-mix(in srgb, var(--accent) 8%, transparent); animation: dw-halo 1.6s ease-in-out infinite; }
-  @keyframes dw-halo { 50% { transform: scale(1.05); } }
-  .dw-count { position: relative; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 62px; line-height: 66px; letter-spacing: -1.5px; font-variant-numeric: tabular-nums; color: var(--ink); }
-  .dw.is-urgent .dw-count { color: var(--rose-500); }
-  .dw-subtle { max-width: 260px; text-align: center; font-size: 13.5px; color: var(--graphite); }
-  .dw-card { margin-top: 30px; background: var(--paper); border: 1px solid var(--stone); border-radius: 18px; padding: 0 16px; overflow: hidden; }
-  .dw-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--stone); }
-  .dw-row span { color: var(--ash); font-size: 13.5px; font-weight: 500; }
-  .dw-row b { max-width: 62%; text-align: right; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14.5px; letter-spacing: -0.2px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .dw-cancel { position: relative; display: block; width: calc(100% + 32px); margin: 0 -16px; padding: 15px 16px; border: 0; background: transparent; color: var(--rose-500); font-size: 13.5px; font-weight: 600; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .dw-in { position: relative; z-index: 1; max-width: 460px; margin: 0 auto; min-height: 100%; padding: 0 20px 24px; display: flex; flex-direction: column; }
+  /* Espera do aceite: o espelho do placar do lava-rápido. Abre com o topo
+     escuro da folha de reserva, o relógio dos 3 minutos em número grande, a
+     frase em destaque e a barra secando junto com a do lava-rápido. Tudo
+     cabe sem rolar a partir de ~360x640: relógio e respiros seguem a altura. */
+  /* No celular a faixa cola no topo, como a folha; em tela larga o bloco
+     se centra na altura. */
+  .dw-fim { margin-block: auto; }
+  .dw-faixa { margin: 0 -20px; padding: clamp(14px, 3vh, 24px) 22px 18px; background: var(--obsidian, #1a1612); color: var(--cream); border-radius: 0 0 28px 28px; }
+  .dw-vivo { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--ash); }
+  .dw-vivo > span:first-child { display: inline-flex; align-items: center; gap: 7px; min-width: 0; color: var(--cream); }
+  .dw-dot { flex: 0 0 7px; height: 7px; border-radius: 50%; background: var(--coral-500); animation: dw-blink 1.6s ease-in-out infinite; }
+  @keyframes dw-blink { 50% { opacity: .25; } }
+  .dw-rel { display: block; margin: clamp(6px, 1.6vh, 14px) 0 0 -3px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: clamp(64px, min(27vw, 14vh), 112px); line-height: .96; letter-spacing: -0.045em; font-variant-numeric: tabular-nums; }
+  .dw-frase { margin: 2px 0 0; font-family: 'Fraunces', Georgia, serif; font-style: italic; font-weight: 600; font-variation-settings: 'SOFT' 100, 'WONK' 1, 'opsz' 144; font-size: clamp(24px, min(8.4vw, 4.4vh), 34px); line-height: 1.12; letter-spacing: -0.02em; color: var(--coral-500); overflow-wrap: anywhere; }
+  .dw-passos { display: flex; gap: 6px; margin-top: clamp(12px, 2.6vh, 22px); font-size: 12px; color: var(--ash); }
+  .dw-passos > span { flex: 1; display: grid; gap: 6px; }
+  .dw-passos i { display: block; height: 3px; border-radius: 2px; background: rgba(250,250,246,.18); overflow: hidden; }
+  .dw-passos .feito i { background: var(--cream); }
+  .dw-passos .agora { color: var(--cream); }
+  .dw-passos b { display: block; height: 100%; background: var(--coral-500); transition: width 1s linear; }
+  .dw.is-urgent .dw-frase { color: var(--rose-500); }
+  .dw.is-urgent .dw-dot, .dw.is-urgent .dw-passos b { background: var(--rose-500); }
+  .dw-corpo { display: grid; gap: 10px; padding-top: clamp(10px, 2.2vh, 18px); }
+  .dw-card { background: var(--paper); border: 1px solid var(--stone); border-radius: 18px; overflow: hidden; }
+  .dw-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: clamp(9px, 1.6vh, 12px) 14px; font-size: 14px; }
+  .dw-row + .dw-row, .dw-card .dw-cancel { border-top: 1px solid var(--stone); }
+  .dw-row span { min-width: 0; color: var(--graphite); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dw-row b { flex-shrink: 0; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14.5px; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .dw-cancel { position: relative; display: block; width: 100%; height: 46px; border: 0; background: transparent; color: var(--rose-500); font-size: 14px; font-weight: 600; touch-action: none; user-select: none; -webkit-user-select: none; }
   .dw-cancel i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: color-mix(in srgb, var(--rose-500) 13%, transparent); }
   .dw-cancel.is-holding i { width: 100%; transition: width 2.5s linear; }
   .dw-cancel span { position: relative; }
   .dw-cancel:focus-visible { outline: 2px solid var(--rose-500); outline-offset: -2px; }
-  .dw-reassure { margin-top: 10px; padding: 0 16px; text-align: center; font-size: 11.5px; color: var(--ash); }
-  .dw-game { margin-top: auto; height: 40px; display: flex; align-items: center; justify-content: center; padding-top: 24px; pointer-events: none; }
-  .dw-tip { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--ash); }
-  .dw-score { display: inline-flex; align-items: center; gap: 7px; padding: 5px 13px 5px 8px; border-radius: 999px; background: var(--paper); border: 1px solid var(--stone); font-family: 'JetBrains Mono', monospace; font-size: 13px; }
-  .dw-score img { width: 17px; height: 28px; }
-  .dw-score em { font-style: normal; font-size: 8.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--coral-500); }
+  .dw-calma { margin: 0; text-align: center; font-size: 12.5px; color: var(--graphite); }
 
-  /* Passarinho: camada por cima da tela; só ele recebe clique. Fixa na janela
-     (mesmo recorte da .dw), não absoluta: em tela baixa a espera rola, e a
-     camada absoluta rolava junto, cortando o voo no meio do card. */
-  .dw-sky { position: fixed; inset: 60px 0 0 0; z-index: 2; pointer-events: none; overflow: hidden; }
-  .dw-bird { position: absolute; left: 0; top: 0; width: 56px; height: 92px; pointer-events: auto; cursor: pointer; border: 0; background: transparent; padding: 0; opacity: 0; will-change: transform; -webkit-tap-highlight-color: transparent; }
-  .dw-bird img { position: absolute; left: var(--slack, 0px); top: var(--slack, 0px); width: 56px; height: 92px; opacity: 0; pointer-events: none; }
-  .dw-bird img.on { opacity: 1; }
-  .dw-trail { position: absolute; width: 16px; height: 3.5px; border-radius: 2px; background: var(--ink); opacity: 0; }
-  .dw-puff-ring { position: absolute; width: 68px; height: 68px; border-radius: 50%; border: 2.5px solid var(--coral-500); animation: dw-puff .52s cubic-bezier(.2,.8,.2,1) forwards; }
-  @keyframes dw-puff { from { transform: scale(.25); opacity: .9; } to { transform: scale(1.5); opacity: 0; } }
-  .dw-feather { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: var(--coral-600); animation: dw-feather .52s cubic-bezier(.2,.8,.2,1) forwards; }
-  @keyframes dw-feather { 0% { opacity: 0; transform: translate(0,0) scale(.5); } 12% { opacity: 1; } 25% { transform: translate(calc(var(--fx) * .25), calc(var(--fy) * .25)) scale(1); } 100% { opacity: 0; transform: translate(var(--fx), var(--fy)) scale(.35); } }
-
-  .dw-result { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 24px 8px; }
-  .dw-result > * { opacity: 0; transform: translateY(16px); animation: dw-surge .6s cubic-bezier(.2,.8,.2,1) forwards; }
-  .dw-result > :nth-child(2) { animation-delay: .12s; }
-  .dw-result > :nth-child(3) { animation-delay: .22s; }
-  .dw-result > :nth-child(4) { animation-delay: .34s; }
-  @keyframes dw-surge { to { opacity: 1; transform: none; } }
+  /* Desfecho sem reserva: o mesmo molde do placar, em creme. */
+  .dw-fim { padding-top: clamp(14px, 3vh, 24px); }
+  .dw-fim .dw-vivo { color: var(--graphite); }
+  .dw-fim .dw-vivo > span:first-child { color: var(--graphite); }
+  .dw-fim .dw-vivo .is-rec { color: var(--rose-500); }
+  .dw-fim .dw-rel { margin-left: 0; font-size: clamp(56px, min(23vw, 12vh), 96px); color: var(--ink); }
+  .dw-fim .dw-frase { color: var(--ink); }
+  .dw-fim .dw-frase.riscada { color: var(--ash); text-decoration: line-through; text-decoration-thickness: 2px; font-size: clamp(19px, min(6.4vw, 3.4vh), 26px); }
+  .dw-fim-txt { margin: 12px 0 0; max-width: 36ch; font-size: 14.5px; line-height: 21px; color: var(--graphite); }
+  .dw-fim .dw-card { margin-top: clamp(12px, 2.4vh, 18px); }
+  .dw-cta { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 52px; margin-top: clamp(14px, 2.8vh, 22px); border: 0; border-radius: 28px; background: var(--ink); color: var(--cream); font-size: 15.5px; font-weight: 600; }
+  .dw-cta:hover { background: #3a342b; }
+  .dw-fim > * { animation: dw-surge .6s cubic-bezier(.2,.8,.2,1) both; }
+  .dw-fim > :nth-child(2) { animation-delay: .06s; }
+  .dw-fim > :nth-child(3), .dw-fim > :nth-child(4) { animation-delay: .14s; }
+  .dw-fim > :nth-child(5) { animation-delay: .22s; }
+  .dw-fim > :nth-child(6), .dw-fim > :nth-child(7) { animation-delay: .3s; }
+  @keyframes dw-surge { from { opacity: 0; transform: translateY(16px); } }
   /* "Agendado" dentro da espera: a .dw-in já dá o respiro dos lados, e a
      margem automática centra o bloco na altura livre, sem buraco entre o
      cartão e os botões. */
-  .dw-in > .ok { width: 100%; padding: 0; margin: auto 0; }
-  .dw-result img { width: 86%; max-width: 340px; height: auto; margin-bottom: 20px; }
-  .dw-result h2 { margin: 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 30px; letter-spacing: -0.7px; color: var(--ink) !important; }
-  .dw-result p { margin: 0; max-width: 320px; font-size: 14.5px; line-height: 21px; color: var(--graphite); }
-  .dw-cta { margin-top: 30px; display: inline-flex; align-items: center; gap: 8px; padding: 14px 26px; border: 0; border-radius: 9999px; background: var(--ink); color: var(--cream); font-size: 14.5px; font-weight: 600; }
-  .dw-cta:hover { background: #3a342b; }
+  .dw-in > .ok { width: 100%; padding: 22px 0 0; margin: auto 0; }
+  /* Tela larga: a faixa deixa de sangrar e vira um bloco arredondado. */
+  @media (min-width: 520px) {
+    .dw-in { padding-top: 24px; }
+    .dw-faixa { margin: 0; border-radius: 28px; }
+    .dw-esp { margin-block: auto; }
+  }
 
   .dp-toast { position: fixed; left: 50%; bottom: 28px; z-index: 300; transform: translate(-50%, 20px); opacity: 0; display: inline-flex; align-items: center; gap: 8px; max-width: calc(100% - 32px); padding: 12px 16px; border-radius: 14px; background: var(--paper); border: 1px solid var(--stone); box-shadow: 0 12px 30px rgba(0,0,0,.25); color: var(--coral-500); font-size: 13px; font-weight: 600; transition: opacity .2s, transform .2s; }
   .dp-toast.is-on { opacity: 1; transform: translate(-50%, 0); }
@@ -193,11 +199,10 @@
     .dp { --pad: 48px; }
     .dp-top { padding: 16px 40px 0; }
     .dp-hero { padding-top: 36px; }
-    .dw-in { padding-top: 32px; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .dw-ring, .dw-halo, .dw-dot { animation: none; }
-    .dw-result > * { animation: none; opacity: 1; transform: none; }
+    .dw-dot, .dw-fim > * { animation: none; }
+    .dw-passos b { transition: none; }
   }
 </style>
 
@@ -231,7 +236,6 @@
 
 <%# Espera pelo aceite / desfecho %>
 <section class="dw" id="dw" aria-live="polite">
-  <div class="dw-sky" id="dw-sky"></div>
   <div class="dw-in" id="dw-in"></div>
 </section>
 
@@ -247,7 +251,6 @@
   var ILL = '/illustrations/';
   var POLL_MS = 3000;
   var COORDS_KEY = 'loov_last_coords';
-  var RECORD_KEY = 'loov_ave_recorde';
   var HORA_OFF_IC = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 12l3-3M12 12v5M9.8 14.8L12 17l2.2-2.2"/></svg>';
 
   var state = {
@@ -263,7 +266,6 @@
   function money(v, d) { var n = Number(v); return isFinite(n) ? n.toFixed(d || 0).replace('.', ',') : '—'; }
   function fmtTime(iso) { if (!iso) return ''; var d = new Date(iso); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
   function fmtDistance(km) { if (km == null) return null; return km < 1 ? Math.round(km * 1000) + ' m' : Number(km).toFixed(1).replace('.', ',') + ' km'; }
-  function mmss(s) { s = Math.max(0, s | 0); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
   function itemMinPrice(it) {
     var mp = Number(it && it.min_price); if (isFinite(mp) && mp > 0) return mp;
     var p = (it.services || []).map(function (s) { return Number(s.price); }).filter(isFinite);
@@ -478,13 +480,13 @@
     // (inclusive o relógio) — na ordem inversa o contador ficava em 03:00.
     startPolling(appt.id);
     startTicker(appt.expires_at);
-    bird.start();
   }
   function startTicker(exp) {
     clearInterval(tickT);
     var tick = function () {
       state.secondsLeft = Math.max(0, Math.round((new Date(exp).getTime() - Date.now()) / 1000));
-      var el = $('dw-count'); if (el) el.textContent = mmss(state.secondsLeft);
+      var el = $('dw-count'); if (el) el.textContent = relogio(state.secondsLeft);
+      var b = $('dw-barra'); if (b) b.style.width = (Math.min(1, state.secondsLeft / (state.appt.seconds || 180)) * 100).toFixed(1) + '%';
       updateUrgency();
     };
     tick(); tickT = setInterval(tick, 1000);
@@ -505,51 +507,54 @@
     pollT = setTimeout(step, POLL_MS);
   }
   function stopPolling() { clearTimeout(pollT); pollT = null; clearInterval(tickT); tickT = null; }
-  function setOutcome(o) { state.outcome = o; bird.stop(); renderWaiting(); }
-  function accentOf() {
-    var urgent = state.secondsLeft < 30 && !state.outcome;
-    return state.outcome === 'accepted' ? 'var(--mint-500)' : (state.outcome || urgent) ? 'var(--rose-500)' : 'var(--coral-500)';
-  }
-  function statusLabel() {
-    var o = state.outcome, urgent = state.secondsLeft < 30 && !o;
-    return o === 'accepted' ? 'RESERVA CONFIRMADA' : o === 'rejected' ? 'RESERVA RECUSADA' : o === 'expired' ? 'TEMPO ESGOTADO'
-      : o === 'cancelled' ? 'RESERVA CANCELADA' : urgent ? 'EXPIRA EM SEGUNDOS' : 'AGUARDANDO ACEITE';
-  }
+  function setOutcome(o) { state.outcome = o; renderWaiting(); }
+  function relogio(sec) { sec = Math.max(0, sec | 0); return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); }
+  function urgente() { return state.secondsLeft <= 30 && !state.outcome; }
+  function frase(a) { return 'chegou pro ' + ((a.car_wash && a.car_wash.name) || 'lava-rápido') + '.'; }
   function updateUrgency() {
-    var dw = $('dw'), urgent = state.secondsLeft < 30 && !state.outcome;
-    dw.classList.toggle('is-urgent', urgent);
-    dw.style.setProperty('--accent', accentOf());
-    var st = $('dw-status-txt'); if (st) st.textContent = statusLabel();
-    var sub = $('dw-subtle'); if (sub) sub.textContent = urgent ? 'O lava-rápido está prestes a responder' : 'O lava-rápido tem até 3 min pra aceitar';
+    var u = urgente();
+    $('dw').classList.toggle('is-urgent', u);
+    var st = $('dw-status-txt'); if (st) st.textContent = u ? 'Resposta a qualquer segundo' : 'Pedido enviado';
+    var fr = $('dw-frase'); if (fr) fr.textContent = u ? 'a qualquer segundo.' : frase(state.appt);
+  }
+  function valores(a) {
+    var total = a.total != null ? Number(a.total) : Number(a.service && a.service.price) || 0;
+    var held = Number(a.prepayment) || 0;
+    return { total: total, held: held, rest: Math.max(0, Math.round((total - held) * 100) / 100) };
+  }
+  function quandoTopo(a) {
+    var hoje = new Date(a.slot).toDateString() === new Date().toDateString();
+    return fmtTime(a.slot) + (hoje ? ' · hoje' : '');
   }
   function renderWaiting() {
-    var a = state.appt, dw = $('dw');
-    dw.style.setProperty('--accent', accentOf());
+    var a = state.appt;
     if (state.outcome) { renderResult(); return; }
-    var total = a.service && a.service.price != null ? Number(a.service.price) : null;
-    var held = total != null ? a.prepayment : null;
-    var rest = total != null ? Math.max(0, Math.round((total - held) * 100) / 100) : null;
+    var v = valores(a);
     var dur = Number(a.service && a.service.duration) > 0 ? ' · ' + a.service.duration + ' min' : '';
-    $('dw-in').innerHTML =
-      '<div class="dw-head"><div class="dw-status"><span class="dw-dot"></span><span id="dw-status-txt">' + statusLabel() + '</span></div>' +
-        '<h2 class="dw-shop">' + esc(a.car_wash.name) + '</h2></div>' +
-      '<div class="dw-hero"><div class="dw-stage"><span class="dw-ring"></span><span class="dw-halo"></span>' +
-        '<span class="dw-count" id="dw-count" role="timer" aria-label="Tempo restante">' + mmss(state.secondsLeft) + '</span></div>' +
-        '<div class="dw-subtle" id="dw-subtle">O lava-rápido tem até 3 min pra aceitar</div></div>' +
-      '<div class="dw-card">' +
-        '<div class="dw-row"><span>Serviço</span><b>' + esc(a.service.title || '—') + '</b></div>' +
-        '<div class="dw-row"><span>Horário</span><b>' + fmtTime(a.slot) + dur + '</b></div>' +
-        (held != null ? '<div class="dw-row"><span>Reservado no cartão</span><b style="color:var(--coral-500)">R$ ' + money(held, 2) + '</b></div>' : '') +
-        (rest != null ? '<div class="dw-row"><span>Na chegada</span><b>R$ ' + money(rest, 2) + '</b></div>' : '') +
-        // Cancelar exige SEGURAR 2,5s: com um alvo voando pela tela, um toque
-        // perdido na caça ao passarinho não pode desfazer a reserva.
-        '<button type="button" class="dw-cancel" id="dw-cancel" aria-label="Cancelar reserva. Mantenha pressionado por dois segundos e meio">' +
+    var pct = (Math.min(1, state.secondsLeft / (a.seconds || 180)) * 100).toFixed(1);
+    $('dw-in').innerHTML = '<div class="dw-esp">' +
+      '<div class="dw-faixa">' +
+        '<div class="dw-vivo"><span><span class="dw-dot"></span><span id="dw-status-txt">Pedido enviado</span></span><span>' + quandoTopo(a) + '</span></div>' +
+        '<span class="dw-rel" id="dw-count" role="timer" aria-label="Tempo até a resposta">' + relogio(state.secondsLeft) + '</span>' +
+        '<p class="dw-frase" id="dw-frase">' + esc(frase(a)) + '</p>' +
+        // Enviado, decidindo, sua vaga. A barra do meio seca junto com a do
+        // lava-rápido: os dois lados veem o mesmo tempo.
+        '<div class="dw-passos" aria-label="Pedido enviado, esperando a decisão do lava-rápido">' +
+          '<span class="feito"><i></i>Enviado</span><span class="agora"><i><b id="dw-barra" style="width:' + pct + '%"></b></i>Decidindo</span><span><i></i>Sua vaga</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="dw-corpo"><div class="dw-card">' +
+        '<div class="dw-row"><span>' + esc(a.service.title || 'Lavagem') + '</span><b>' + fmtTime(a.slot) + dur + '</b></div>' +
+        (a.desconto > 0 ? '<div class="dw-row"><span>Vale aplicado</span><b>−R$ ' + money(a.desconto, 2) + '</b></div>' : '') +
+        '<div class="dw-row"><span>' + (v.held > 0 ? 'Reservado no cartão' : 'No cartão') + '</span><b>' + (v.held > 0 ? 'R$ ' + money(v.held, 2) : 'nada') + '</b></div>' +
+        '<div class="dw-row"><span>Na chegada</span><b>R$ ' + money(v.rest, 2) + '</b></div>' +
+        // Cancelar exige SEGURAR 2,5s: um toque perdido não desfaz o pedido.
+        '<button type="button" class="dw-cancel" id="dw-cancel" aria-label="Cancelar pedido. Mantenha pressionado por dois segundos e meio">' +
           '<i></i><span id="dw-cancel-txt">Segure para cancelar</span></button>' +
       '</div>' +
-      '<p class="dw-reassure">O valor reservado só vira cobrança se a reserva for aceita</p>' +
-      '<div class="dw-game" id="dw-game"></div>';
+      '<p class="dw-calma">Se não for aceito, nada é cobrado.</p></div></div>';
+    $('dw').scrollTop = 0;
     bindCancel();
-    renderScore();
     updateUrgency();
   }
   // Aceita: a mesma tela de "Agendado" do agendamento comum
@@ -573,22 +578,29 @@
     var b = document.querySelector('#dw-in .ok-primary'); if (b) b.focus({ preventScroll: true });
   }
   function renderResult() {
-    var o = state.outcome, a = state.appt || {}, name = (a.car_wash && a.car_wash.name) || 'O lava-rápido';
+    var o = state.outcome, a = state.appt || {}, name = (a.car_wash && a.car_wash.name) || 'lava-rápido';
     if (o === 'accepted') { renderAceito(); return; }
-    var freed = ' O valor reservado no cartão foi liberado: você não foi cobrado.';
-    var r = o === 'expired'
-      ? { t: 'Tempo esgotado', s: name + ' não respondeu dentro dos 3 minutos e o horário foi liberado.' + freed, cta: 'Buscar outro lava-rápido', go: 'list' }
-      : o === 'rejected'
-      ? { t: 'Reserva recusada', s: name + ' não pôde atender agora.' + freed, cta: 'Buscar outro lava-rápido', go: 'list' }
-      : { t: 'Reserva cancelada', s: 'O horário foi liberado.' + freed, cta: 'Buscar outro lava-rápido', go: 'list' };
-    $('dw-in').innerHTML = '<div class="dw-result">' +
-      '<img src="' + ILL + 'reserva-vazia.svg" alt="Ilustração de um carro parado com bolhas de espuma, um relógio e um passarinho pousado no teto">' +
-      '<h2>' + r.t + '</h2><p>' + esc(r.s) + '</p>' +
-      '<div><button type="button" class="dw-cta" data-result="' + r.go + '">' + r.cta + icon('arrow-right', 15) + '</button></div></div>';
-    var b = document.querySelector('.dw-cta'); if (b) b.focus();
+    var v = valores(a);
+    var estado = o === 'rejected' ? 'Recusado' : o === 'expired' ? 'Sem resposta' : 'Cancelado';
+    var palavra = o === 'rejected' ? 'não rolou.' : o === 'expired' ? 'passou.' : 'cancelado.';
+    var motivo = o === 'rejected' ? 'O ' + name + ' não pôde aceitar agora.'
+      : o === 'expired' ? 'O ' + name + ' não respondeu em 3 minutos.'
+      : 'Você cancelou o pedido e o horário foi liberado.';
+    var dinheiro = v.held > 0 ? ' Os R$ ' + money(v.held, 2) + ' reservados no cartão foram liberados: nada foi cobrado.' : ' Nada foi cobrado.';
+    $('dw-in').innerHTML = '<div class="dw-fim">' +
+      '<div class="dw-vivo"><span>Last Minute</span><span' + (o === 'rejected' ? ' class="is-rec"' : '') + '>' + estado + '</span></div>' +
+      '<span class="dw-rel">' + fmtTime(a.slot) + '</span>' +
+      (o !== 'cancelled' ? '<p class="dw-frase riscada">' + esc(frase(a)) + '</p>' : '') +
+      '<p class="dw-frase">' + palavra + '</p>' +
+      '<p class="dw-fim-txt">' + esc(motivo + dinheiro) + '</p>' +
+      '<div class="dw-card"><div class="dw-row"><span>' + esc((a.service && a.service.title) || 'Lavagem') + '</span><b>' + fmtTime(a.slot) + ' · R$ ' + money(v.total, 2) + '</b></div></div>' +
+      '<button type="button" class="dw-cta" data-result="list">Buscar outro lava-rápido' + icon('arrow-right', 15) + '</button>' +
+    '</div>';
+    $('dw').scrollTop = 0;
+    var b = document.querySelector('.dw-cta'); if (b) b.focus({ preventScroll: true });
   }
   function closeWaiting() {
-    stopPolling(); bird.stop();
+    stopPolling();
     state.appt = null; state.outcome = null;
     $('dw').classList.remove('is-on', 'is-urgent');
     document.documentElement.style.overflow = '';
@@ -618,164 +630,9 @@
     var id = state.appt && state.appt.id;
     closeWaiting();
     if (id) api('/disponivel/' + id + '/cancel', { method: 'PATCH' }).catch(function () {});
-    toast('Reserva desistida. Horário e valor no cartão liberados.', 'error');
+    toast('Pedido cancelado. Horário e valor no cartão liberados.', 'error');
     load(true);
   }
-
-  // ── passarinho (porte do jogo do app) ────────────────────────────────────
-  // Entra por um canto, faz curvas, sai por outro e volta depois de uma pausa.
-  // Pegar sobe o nível: mais rápido, mais curvas, menos folga de mira.
-  var record = 0; try { record = Number(localStorage.getItem(RECORD_KEY)) || 0; } catch (e) {}
-  var level = 0;
-  function renderScore() {
-    var g = $('dw-game'); if (!g) return;
-    g.innerHTML = level === 0 ? '<span class="dw-tip">toque no passarinho</span>'
-      : '<span class="dw-score"><img src="' + ILL + 'voo-abertas.svg" alt="">' + level + (level >= record ? '<em>recorde</em>' : '') + '</span>';
-  }
-  function difficulty(n) {
-    var fall = function (from, floor, rate) { return floor + (from - floor) * Math.pow(rate, n); };
-    return { dur: fall(7200, 1750, .82), pause: fall(1900, 280, .80), turns: Math.min(6, 1 + Math.floor(n / 2.2)),
-      rough: Math.min(.55, .15 + n * .03), slack: Math.max(0, 16 - n * 2), trail: Math.max(.20, .5 - n * .03) };
-  }
-  function sampleRoute(pts, per) {
-    var n = pts.length - 1, segs = [];
-    var clip = function (b, vx, vy, cap, sign) { var m = Math.hypot(vx, vy), k = m > cap ? cap / m : 1; return { x: b.x + sign * vx * k, y: b.y + sign * vy * k }; };
-    for (var s = 0; s < n; s++) {
-      var prev = pts[Math.max(0, s - 1)], p0 = pts[s], p3 = pts[s + 1], next = pts[Math.min(n, s + 2)];
-      var cap = Math.hypot(p3.x - p0.x, p3.y - p0.y) / 3;
-      segs.push({ p0: p0, p3: p3, p1: clip(p0, (p3.x - prev.x) / 6, (p3.y - prev.y) / 6, cap, 1), p2: clip(p3, (next.x - p0.x) / 6, (next.y - p0.y) / 6, cap, -1) });
-    }
-    var x = [], y = [], ang = [];
-    var push = function (sg, u) {
-      var v = 1 - u, p0 = sg.p0, p1 = sg.p1, p2 = sg.p2, p3 = sg.p3;
-      x.push(v*v*v*p0.x + 3*v*v*u*p1.x + 3*v*u*u*p2.x + u*u*u*p3.x);
-      y.push(v*v*v*p0.y + 3*v*v*u*p1.y + 3*v*u*u*p2.y + u*u*u*p3.y);
-      var dx = 3*v*v*(p1.x-p0.x) + 6*v*u*(p2.x-p1.x) + 3*u*u*(p3.x-p2.x), dy = 3*v*v*(p1.y-p0.y) + 6*v*u*(p2.y-p1.y) + 3*u*u*(p3.y-p2.y);
-      ang.push(Math.hypot(dx, dy) < 1e-6 && ang.length ? ang[ang.length - 1] : Math.atan2(dy, dx) * 180 / Math.PI);
-    };
-    for (var i = 0; i < n; i++) for (var k = 0; k < per; k++) push(segs[i], k / per);
-    push(segs[n - 1], 1);
-    for (var j = 1; j < ang.length; j++) { while (ang[j] - ang[j-1] > 180) ang[j] -= 360; while (ang[j] - ang[j-1] < -180) ang[j] += 360; }
-    var acc = [0]; for (var q = 1; q < x.length; q++) acc.push(acc[q-1] + Math.max(Math.hypot(x[q]-x[q-1], y[q]-y[q-1]), 1e-4));
-    var tot = acc[acc.length - 1] || 1;
-    return { t: acc.map(function (v) { return v / tot; }), x: x, y: y, ang: ang };
-  }
-  function at(c, t) {
-    t = Math.min(1, Math.max(0, t)); var i = 0;
-    while (i < c.t.length - 2 && c.t[i + 1] < t) i++;
-    var f = (t - c.t[i]) / (c.t[i + 1] - c.t[i] || 1);
-    return { x: c.x[i] + (c.x[i+1] - c.x[i]) * f, y: c.y[i] + (c.y[i+1] - c.y[i]) * f, a: c.ang[i] + (c.ang[i+1] - c.ang[i]) * f };
-  }
-  var bird = (function () {
-    var W = 56, H = 92, raf = null, timer = null, el = null, imgs = null, route = null, t0 = 0, d = null, caught = false, running = false, trail = [];
-    function sky() { return $('dw-sky'); }
-    function rand(a, b) { return a + Math.random() * (b - a); }
-    function edge(w, h, which) {
-      return which === 0 ? { x: rand(.1, .8) * w, y: -H - 30 } : which === 1 ? { x: w + 30, y: rand(.15, .75) * h }
-        : which === 2 ? { x: rand(.1, .8) * w, y: h + 30 } : { x: -W - 30, y: rand(.15, .75) * h };
-    }
-    function newRoute(w, h, dd) {
-      var p0, pf, len, dx, dy;
-      for (var k = 0; k < 8; k++) {
-        p0 = edge(w, h, Math.floor(Math.random() * 4)); pf = edge(w, h, Math.floor(Math.random() * 4));
-        dx = pf.x - p0.x; dy = pf.y - p0.y; len = Math.hypot(dx, dy);
-        if (len > .5 * Math.max(w, h)) break;
-      }
-      len = len || 1;
-      var nx = -dy / len, ny = dx / len, pts = [p0], side = Math.random() < .5 ? 1 : -1, gap = len / (dd.turns + 1);
-      var room = function (b, ux, uy) {
-        var m = Infinity;
-        if (ux > 1e-6) m = Math.min(m, (w - 34 - b.x) / ux); else if (ux < -1e-6) m = Math.min(m, (b.x - 34) / -ux);
-        if (uy > 1e-6) m = Math.min(m, (h - 74 - b.y) / uy); else if (uy < -1e-6) m = Math.min(m, (b.y - 74) / -uy);
-        return Math.max(0, m);
-      };
-      for (var i = 1; i <= dd.turns; i++) {
-        var u = i / (dd.turns + 1), off = rand(-.28, .28) * gap;
-        var base = { x: p0.x + dx * u + (dx / len) * off, y: p0.y + dy * u + (dy / len) * off };
-        var amp = Math.min(rand(.5, 1) * dd.rough * gap, room(base, nx * side, ny * side));
-        pts.push({ x: base.x + nx * side * amp, y: base.y + ny * side * amp }); side = -side;
-      }
-      pts.push(pf);
-      var c = sampleRoute(pts, 10);
-      return { c: c, step: Math.max(2, Math.round(c.t.length / 14)) };
-    }
-    function ensureEl() {
-      if (el && el.isConnected) return;
-      el = document.createElement('button');
-      el.type = 'button'; el.className = 'dw-bird'; el.setAttribute('aria-label', 'Pegar o passarinho');
-      el.innerHTML = ['voo-abertas', 'voo-meio', 'voo-levantadas'].map(function (n) { return '<img src="' + ILL + n + '.svg" alt="">'; }).join('');
-      imgs = el.querySelectorAll('img');
-      el.addEventListener('pointerdown', function (e) { e.preventDefault(); catchIt(); });
-      el.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); catchIt(); } });
-      sky().appendChild(el);
-    }
-    function clearTrail() { trail.forEach(function (x) { x.el.remove(); }); trail = []; }
-    function trip() {
-      if (!running) return;
-      var s = sky(), w = s.clientWidth, h = s.clientHeight;
-      d = difficulty(level); route = newRoute(w, h, d); caught = false;
-      ensureEl(); clearTrail();
-      el.style.setProperty('--slack', d.slack + 'px');
-      el.style.width = (W + 2 * d.slack) + 'px'; el.style.height = (H + 2 * d.slack) + 'px';
-      route.c.t.forEach(function (tp, k) {
-        if (k % route.step !== 1 || k >= route.c.t.length - 1) return;
-        var dot = document.createElement('span'); dot.className = 'dw-trail';
-        dot.style.left = (route.c.x[k] + 20) + 'px'; dot.style.top = (route.c.y[k] + 44) + 'px';
-        dot.style.transform = 'rotate(' + route.c.ang[k].toFixed(1) + 'deg)';
-        s.insertBefore(dot, el); trail.push({ el: dot, tp: tp });
-      });
-      el.style.opacity = '1';
-      t0 = performance.now();
-      cancelAnimationFrame(raf); raf = requestAnimationFrame(frame);
-    }
-    function frame(now) {
-      if (!running || caught) return;
-      var t = (now - t0) / d.dur;
-      if (t >= 1) { el.style.opacity = '0'; clearTrail(); timer = setTimeout(trip, d.pause); return; }
-      var p = at(route.c, t);
-      el.style.transform = 'translate(' + (p.x - d.slack) + 'px,' + (p.y - d.slack) + 'px) rotate(' + p.a.toFixed(1) + 'deg)';
-      // Asas: abertas → meio → levantadas → meio, troca seca de quadro.
-      var period = Math.max(130, Math.min(300, d.dur / 26)) * 2, ph = ((now - t0) % period) / period;
-      var f = ph < .33 ? 0 : ph < .5 ? 1 : ph < .83 ? 2 : 1;
-      for (var i = 0; i < 3; i++) imgs[i].classList.toggle('on', i === f);
-      // Rastro tracejado: cada traço acende quando ele passa e apaga devagar.
-      trail.forEach(function (x) {
-        var o = t < x.tp ? 0 : t < x.tp + .02 ? .6 * (t - x.tp) / .02 : t < x.tp + d.trail ? .6 * (1 - (t - x.tp) / d.trail) : 0;
-        x.el.style.opacity = o.toFixed(3);
-      });
-      raf = requestAnimationFrame(frame);
-    }
-    function catchIt() {
-      if (!running || caught || !route) return;
-      caught = true; cancelAnimationFrame(raf);
-      var p = at(route.c, (performance.now() - t0) / d.dur);
-      puff(p.x + W / 2, p.y + H / 2);
-      el.style.opacity = '0';
-      trail.forEach(function (x) { x.el.style.transition = 'opacity .38s'; x.el.style.opacity = '0'; });
-      setTimeout(clearTrail, 400);
-      level += 1;
-      if (level > record) { record = level; try { localStorage.setItem(RECORD_KEY, String(record)); } catch (e) {} }
-      renderScore();
-      timer = setTimeout(trip, difficulty(level).pause * .55);
-    }
-    function puff(x, y) {
-      var s = sky(), ring = document.createElement('span');
-      ring.className = 'dw-puff-ring'; ring.style.left = (x - 34) + 'px'; ring.style.top = (y - 34) + 'px'; s.appendChild(ring);
-      [[-36, -24], [31, -32], [44, 9], [-41, 14], [-7, -46], [13, 40]].forEach(function (v) {
-        var f = document.createElement('span'); f.className = 'dw-feather';
-        f.style.left = x + 'px'; f.style.top = y + 'px'; f.style.setProperty('--fx', v[0] + 'px'); f.style.setProperty('--fy', v[1] + 'px');
-        s.appendChild(f); setTimeout(function () { f.remove(); }, 600);
-      });
-      setTimeout(function () { ring.remove(); }, 600);
-    }
-    return {
-      start: function () {
-        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-        running = true; level = 0; renderScore(); timer = setTimeout(trip, 600);
-      },
-      stop: function () { running = false; cancelAnimationFrame(raf); clearTimeout(timer); clearTrail(); if (el) el.style.opacity = '0'; }
-    };
-  })();
 
   // ── eventos ──────────────────────────────────────────────────────────────
   document.addEventListener('click', function (e) {
