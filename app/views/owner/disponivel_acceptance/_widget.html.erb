@@ -298,6 +298,7 @@
     $('lma-yes').disabled = $('lma-no').disabled = $('lma-c-ok').disabled = $('lma-c-back').disabled = false;
     $('lma-eyebrow-txt').textContent = 'Novo pedido · Last Minute';
     root.classList.remove('is-ok', 'is-no', 'is-err', 'entra');
+    marcaVisto();
     confirmando = null;
     var card = root.querySelector('.lma-card'); card.style.height = '';
     root.hidden = false; renderQueue();
@@ -356,6 +357,20 @@
     st.queue = st.queue.filter(function (q) { return q.id !== id; });
     setTimeout(hide, kind === 'ok' ? 2600 : 3000);
   }
+
+  // "Visto": o cliente que espera fica sabendo que o pedido apareceu na tela
+  // de alguém. Só com a aba à vista; em segundo plano, conta quando voltar.
+  var vistos = {};
+  function marcaVisto() {
+    var a = st.cur;
+    if (!a || document.hidden || vistos[a.id]) return;
+    vistos[a.id] = true;
+    fetch('/owner/disponivel_acceptance/' + a.id + '/seen', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { Accept: 'application/json', 'X-CSRF-Token': CSRF }
+    }).catch(function () { vistos[a.id] = false; });
+  }
+  document.addEventListener('visibilitychange', function () { if (!st.done) marcaVisto(); });
 
   function next() {
     if (st.cur) return;

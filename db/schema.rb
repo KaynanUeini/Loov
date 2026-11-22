@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_11_07_180000) do
+ActiveRecord::Schema[7.1].define(version: 2026_11_22_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -82,6 +82,7 @@ ActiveRecord::Schema[7.1].define(version: 2026_11_07_180000) do
     t.decimal "preco_tabela", precision: 10, scale: 2
     t.decimal "preco_dinamico", precision: 10, scale: 2
     t.string "preco_tipo"
+    t.datetime "acceptance_seen_at"
     t.index ["acceptance_expires_at"], name: "index_appointments_on_acceptance_expires_at"
     t.index ["appointment_type"], name: "index_appointments_on_appointment_type"
     t.index ["attended_at"], name: "index_appointments_on_attended_at"

@@ -435,6 +435,8 @@ class DisponivelController < ApplicationController
     render json: {
       status:        appointment.status_para_cliente,
       seconds_left:  appointment.seconds_until_expiry,
+      # "Visto às 12:58": quando o pedido apareceu na tela do dono.
+      seen_at:       appointment.acceptance_seen_at&.strftime("%H:%M"),
       car_wash_name: appointment.car_wash.name,
       service_name:  appointment.service.title,
       scheduled_at:  appointment.scheduled_at.strftime("%d/%m/%Y às %H:%M"),

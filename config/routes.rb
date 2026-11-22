@@ -203,6 +203,7 @@ Rails.application.routes.draw do
       member do
         patch :accept
         patch :reject
+        post  :seen
       end
     end
 

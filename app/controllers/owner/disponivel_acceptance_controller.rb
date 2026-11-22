@@ -5,7 +5,7 @@ module Owner
     before_action :ensure_owner_or_attendant
     before_action :set_car_wash
     before_action :expire_stale_acceptances!
-    before_action :set_appointment, only: [:show, :accept, :reject]
+    before_action :set_appointment, only: [:show, :accept, :reject, :seen]
 
     # GET /owner/disponivel_acceptance
     # Lista agendamentos disponíveis aguardando aceite (para polling do painel)
@@ -129,6 +129,17 @@ module Owner
       else
         render json: { error: "Não foi possível aceitar o agendamento." }, status: :unprocessable_entity
       end
+    end
+
+    # POST /owner/disponivel_acceptance/:id/seen
+    # O painel chama quando o pedido aparece na tela de alguém, com a aba ou o
+    # app em primeiro plano. Só a primeira vez conta: o cliente vê "Visto às
+    # 12:58", e esse horário não pode andar a cada polling.
+    def seen
+      if @appointment.status == "pending_acceptance" && @appointment.acceptance_seen_at.nil?
+        @appointment.update_column(:acceptance_seen_at, Time.current)
+      end
+      head :no_content
     end
 
     # PATCH /owner/disponivel_acceptance/:id/reject

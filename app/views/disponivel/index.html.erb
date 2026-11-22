@@ -120,27 +120,36 @@
      linhas com fio de tinta. No celular o topo ocupa a altura que sobra e as
      linhas ficam no pé da tela, sem vão; relógio e respiros seguem a altura. */
   .dw-esp { flex: 1; display: flex; flex-direction: column; }
-  .dw-faixa { flex: 1; display: flex; flex-direction: column; margin: 0 -20px; padding: clamp(14px, 3vh, 24px) 22px 18px; background: var(--obsidian, #1a1612); color: var(--cream); border-radius: 0 0 28px 28px; }
+  .dw-faixa { position: relative; isolation: isolate; overflow: hidden; flex: 1; display: flex; flex-direction: column; margin: 0 -20px; padding: clamp(14px, 3vh, 24px) 22px 18px; background: var(--obsidian, #1a1612); color: var(--cream); border-radius: 0 0 28px 28px; }
   .dw-meio { margin-block: auto; padding-block: clamp(8px, 2vh, 18px); }
   .dw-vivo { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--ash); }
   .dw-vivo > span:first-child { display: inline-flex; align-items: center; gap: 7px; min-width: 0; color: var(--cream); }
   .dw-dot { flex: 0 0 7px; height: 7px; border-radius: 50%; background: var(--coral-500); animation: dw-blink 1.6s ease-in-out infinite; }
   @keyframes dw-blink { 50% { opacity: .25; } }
+  /* O creme que escorre por cima do escuro no desfecho ruim. */
+  .dw-escorre { position: absolute; inset: 0; z-index: -1; background: var(--cream); clip-path: inset(0 0 100% 0); }
   .dw-rel { display: block; margin-left: -3px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: clamp(64px, min(27vw, 14vh), 112px); line-height: 1.05; letter-spacing: -0.045em; font-variant-numeric: tabular-nums; }
+  /* O relógio rola como placar: o tempo sobe e sai, o horário vem de baixo. */
+  .dw-esp .dw-rel { position: relative; height: 1.05em; overflow: hidden; }
+  .dw-esp .dw-rel > span { display: block; }
+  .dw-rel-n { position: absolute; left: 0; top: 0; transform: translateY(100%); }
+  /* O risco da frase é um fundo que cresce da esquerda pra direita. */
+  .dw-frase-t { background-image: linear-gradient(currentColor, currentColor); background-repeat: no-repeat; background-position: 0 58%; background-size: 0 2px; }
   .dw-frase { margin: 2px 0 0; font-family: 'Fraunces', Georgia, serif; font-style: italic; font-weight: 600; font-variation-settings: 'SOFT' 100, 'WONK' 1, 'opsz' 144; font-size: clamp(24px, min(8.4vw, 4.4vh), 34px); line-height: 1.15; letter-spacing: -0.02em; color: var(--coral-500); overflow-wrap: anywhere; }
-  .dw-passos { display: flex; gap: 6px; font-size: 12px; color: var(--ash); }
+  .dw-passos { position: relative; display: flex; gap: 6px; font-size: 12px; color: var(--ash); }
   .dw-passos > span { flex: 1; display: grid; gap: 4px; }
   /* A caixa tem a altura do carro, com o trilho no meio: os três passos
      ficam alinhados mesmo só o do meio tendo carro. */
   .dw-passos u { position: relative; display: flex; align-items: center; height: 14px; text-decoration: none; }
-  .dw-passos i { display: block; flex: 1; height: 3px; border-radius: 2px; background: rgba(250,250,246,.18); overflow: hidden; }
+  .dw-passos i { position: relative; display: block; flex: 1; height: 3px; border-radius: 2px; background: rgba(250,250,246,.18); overflow: hidden; }
   .dw-passos .feito i { background: var(--cream); }
   .dw-passos .agora { color: var(--cream); }
   /* A barra enche da esquerda pra direita, rumo a "Sua vaga", puxada por um
-     carro visto de cima. O carro anda só dentro do trilho: sai com a traseira
-     no começo e chega com a frente no fim. */
-  .dw-passos b { display: block; height: 100%; background: var(--coral-500); transition: width 1s linear; }
-  .dw-carro { position: absolute; top: 0; width: 28px; height: 14px; color: var(--coral-500); transition: left 1s linear, transform 1s linear; }
+     carro visto de cima. O carro anda só dentro do trilho de "Decidindo": sai
+     com a traseira no começo e chega com a frente no fim. */
+  .dw-passos b { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--coral-500); transition: width 1s linear; }
+  .dw-passos .vaga.acesa { color: var(--cream); }
+  .dw-carro { position: absolute; left: 0; top: 0; width: 28px; height: 14px; color: var(--coral-500); transition: transform 1s linear; }
   .dw-carro svg { display: block; }
   .dw.is-urgent .dw-frase { color: var(--rose-500); }
   .dw.is-urgent .dw-dot, .dw.is-urgent .dw-passos b { background: var(--rose-500); }
@@ -163,6 +172,90 @@
   .dw-desl.volta .dw-bola { transition: transform .45s cubic-bezier(.3,1.5,.5,1); }
   .dw-desl.volta .dw-desl-r { transition: width .45s cubic-bezier(.3,1.5,.5,1); }
   .dw-desl.volta .dw-desl-t { transition: opacity .3s; }
+  /* Relógio de placar mecânico: o dígito que muda cai e o novo desce de cima. */
+  .dw-dg { position: relative; display: inline-block; overflow: hidden; height: 1.05em; vertical-align: top; padding: 0 .1em; margin: 0 -.1em; }
+  .dw-dg > span { display: block; }
+  .dw-dg > span + span { position: absolute; top: 0; left: 0; right: 0; text-align: center; }
+  /* "Visto": o pedido apareceu na tela do lava-rápido. */
+  .dw-visto { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; font-size: 13.5px; color: var(--ash); }
+  .dw-visto i { font-style: normal; font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: -.14em; color: var(--graphite); transition: color .4s; }
+  .dw-visto.on { color: inherit; }
+  .dw-visto.on i { color: var(--coral-500); }
+  .dw-visto.novo { animation: dw-surge .5s cubic-bezier(.2,.8,.2,1); }
+  .dw-onde b em { font-style: normal; }
+  .dw-onde b small { font: inherit; }
+  .dw-onde b small::before { content: ' · '; }
+  /* Só no computador: dica da aba, logo do lugar, box da rua e o cancelar
+     com clique. */
+  .dw-dica, .dw-canc, .dw-box, .dw-onde-logo { display: none; }
+  .dw-fim-baixo.on { display: block; }
+
+  /* Computador com mouse: a espera abre na largura toda. O placar ocupa a
+     faixa de ponta a ponta com o relógio à esquerda e a frase à direita, os
+     passos viram uma rua vista de cima com o box de lavagem no fim, e as
+     linhas ficam numa linha só. Celular e tablet, mesmo deitados, ficam com
+     a coluna e o deslizar: lá o gesto é do dedo. */
+  @media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+    .dw-in:has(> .dw-esp) { max-width: none; padding: 0; }
+    .dw-in > .dw-esp { flex: 1; margin-block: 0; }
+    .dw-esp .dw-faixa { flex: 1; margin: 0; border-radius: 0; padding: clamp(18px, 4vh, 34px) max(32px, calc((100% - 1120px) / 2)) clamp(16px, 3.4vh, 28px); }
+    .dw-esp .dw-meio { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: clamp(32px, 5vw, 72px); align-items: end; align-content: end; }
+    .dw-esp .dw-meio > * { grid-column: 2; }
+    .dw-esp .dw-meio > .dw-rel { grid-column: 1; grid-row: 1 / span 8; align-self: end; min-width: 2.85em; margin-left: 0; font-size: clamp(120px, min(16vw, 30vh), 240px); }
+    .dw-esp .dw-frase { font-size: clamp(30px, min(3.6vw, 6.4vh), 52px); }
+    .dw-esp .dw-visto { margin-top: 14px; font-size: 16px; }
+    .dw-esp .dw-visto i { font-size: 14px; }
+    .dw-dica { display: block; max-width: 42ch; margin: 12px 0 clamp(4px, 2vh, 22px); font-size: 15px; line-height: 1.55; color: var(--ash); }
+    .dw-dica b { font-weight: 500; color: var(--cream); }
+    .dw-esp .dw-passos { margin-top: clamp(12px, 3vh, 30px); font-size: 14px; }
+    .dw-esp .dw-passos > span { gap: 10px; }
+    .dw-esp .dw-passos .vaga { text-align: right; }
+    .dw-esp .dw-passos u { height: 52px; }
+    .dw-esp .dw-passos i { height: 100%; border-radius: 0; background: #2a251f; }
+    .dw-esp .dw-passos .feito i { background: #2a251f; box-shadow: inset 0 -3px 0 var(--cream); border-radius: 10px 0 0 10px; }
+    .dw-esp .dw-passos .vaga i { border-radius: 0 10px 10px 0; }
+    .dw-esp .dw-passos i::after { content: ''; position: absolute; left: 14px; right: 14px; top: 50%; height: 2px; margin-top: -1px; background: repeating-linear-gradient(90deg, #4a443c 0 14px, transparent 14px 26px); }
+    .dw-esp .dw-passos .vaga i::after { right: 164px; }
+    .dw-esp .dw-passos b { top: auto; height: 3px; }
+    .dw-esp .dw-carro { top: 12px; width: 56px; height: 28px; z-index: 2; }
+    .dw-esp .dw-carro svg { width: 100%; height: 100%; }
+    .dw-box { display: block; position: absolute; top: 0; right: 0; bottom: 0; width: 150px; z-index: 1; background: #221d18; border: 3px solid #575148; border-left: 0; border-radius: 0 10px 10px 0; }
+    .dw-box s { position: absolute; left: 34px; width: 70px; height: 7px; border-radius: 4px; background: #3a342d; transition: background .4s; }
+    .dw-box s:first-child { top: 5px; }
+    .dw-box s + s { bottom: 5px; }
+    .dw-box em { position: absolute; width: 12px; height: 12px; border-radius: 50%; background: var(--cream); opacity: 0; }
+    .dw-box em:nth-of-type(1) { left: 30px; top: 12px; }
+    .dw-box em:nth-of-type(2) { left: 58px; top: 26px; width: 16px; height: 16px; animation-delay: .3s !important; }
+    .dw-box em:nth-of-type(3) { left: 86px; top: 10px; width: 10px; height: 10px; animation-delay: .6s !important; }
+    .dw-box em:nth-of-type(4) { left: 102px; top: 28px; animation-delay: .9s !important; }
+    .dw-passos .vaga.acesa .dw-box s { background: var(--coral-500); }
+    .dw-passos .vaga.acesa .dw-box em { animation: dw-bolha 1.6s ease-out infinite; }
+    .dw-esp .dw-linhas { display: flex; align-items: center; width: min(1120px, 100% - 64px); margin: 0 auto; padding-block: clamp(14px, 3vh, 26px); }
+    .dw-esp .dw-lp { flex: 1 1 0; min-width: 0; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 6px; padding: 0 22px; border-top: 0; border-left: 1.5px solid var(--ink); }
+    .dw-esp .dw-lp:first-child { padding-left: 0; border-left: 0; }
+    .dw-esp .dw-lp b { max-width: 100%; text-align: left; font-size: 20px; }
+    .dw-esp .dw-onde + .dw-lp { flex: 1.5 1 0; }
+    .dw-esp .dw-onde + .dw-lp b { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .dw-esp .dw-onde { flex: 1.7 1 0; display: grid; grid-template-columns: 64px minmax(0, 1fr); column-gap: 14px; row-gap: 6px; align-items: center; }
+    .dw-onde-logo { display: block; grid-row: 1 / span 2; width: 64px; height: 64px; border-radius: 14px; overflow: hidden; }
+    .dw-onde-logo svg, .dw-onde-logo img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    .dw-esp .dw-onde b { display: grid; gap: 2px; white-space: normal; }
+    .dw-onde b em { font-style: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dw-onde b small { font-family: 'Inter', sans-serif; font-weight: 400; font-size: 13px; color: var(--graphite); }
+    .dw-onde b small::before { content: none; }
+    .dw-esp .dw-desl { display: none; }
+    .dw-canc { display: flex; flex: 0 0 auto; flex-direction: column; align-items: flex-end; gap: 10px; padding-left: 22px; }
+    .dw-canc p { margin: 0; font-size: 14px; line-height: 1.4; text-align: right; color: var(--graphite); }
+    .dw-canc div { display: flex; gap: 8px; }
+    .dw-canc button { height: 46px; padding: 0 22px; border-radius: 999px; border: 1.5px solid var(--ink); background: transparent; color: var(--ink); font-size: 15px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+    .dw-canc .is-rosa { border-color: var(--rose-500); color: var(--rose-500); }
+    .dw-canc .is-cheio { border-color: var(--rose-500); background: var(--rose-500); color: var(--cream); }
+    .dw-canc button:focus-visible { outline: 2px solid var(--coral-500); outline-offset: 2px; }
+    .dw-esp .dw-fim-baixo.on { display: flex; align-items: center; gap: 24px; width: min(1120px, 100% - 64px); margin: 0 auto; padding-block: clamp(14px, 3vh, 26px); }
+    .dw-esp .dw-fim-baixo .dw-lp { flex: 1; border-top: 0; padding-left: 0; }
+    .dw-esp .dw-fim-baixo .dw-cta { width: auto; margin-top: 0; padding: 0 28px; }
+  }
+  @keyframes dw-bolha { 0% { opacity: 0; transform: scale(.2); } 30% { opacity: .9; } 100% { opacity: 0; transform: scale(1.3) translateY(-6px); } }
 
   /* Desfecho sem reserva: o mesmo molde do placar, em creme. */
   .dw-fim { padding-top: clamp(14px, 3vh, 24px); }
@@ -173,6 +266,11 @@
   .dw-fim .dw-frase { color: var(--ink); }
   .dw-fim .dw-frase.riscada { color: var(--ash); text-decoration: line-through; text-decoration-thickness: 2px; font-size: clamp(19px, min(6.4vw, 3.4vh), 26px); }
   .dw-fim-txt { margin: 12px 0 0; max-width: 36ch; font-size: 14.5px; line-height: 21px; color: var(--graphite); }
+  .dw-fim-baixo { display: none; }
+  /* Aceite: o Agendado fica por baixo e a espera, opaca, sobe como cortina. */
+  .dw-ag { position: absolute; top: 0; left: 0; right: 0; z-index: 0; }
+  #dw-in-velho { background: var(--cream); }
+  .dw-fim-baixo .dw-lp { border-top: 2px solid var(--ink); }
   .dw-fim .dw-lp { margin-top: clamp(12px, 2.4vh, 18px); border-top: 2px solid var(--ink); }
   .dw-cta { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 52px; margin-top: clamp(14px, 2.8vh, 22px); border: 0; border-radius: 28px; background: var(--ink); color: var(--cream); font-size: 15.5px; font-weight: 600; }
   .dw-cta:hover { background: #3a342b; }
@@ -500,10 +598,11 @@
     clearInterval(tickT);
     var tick = function () {
       state.secondsLeft = Math.max(0, Math.round((new Date(exp).getTime() - Date.now()) / 1000));
-      var el = $('dw-count'); if (el) el.textContent = relogio(state.secondsLeft);
+      var el = $('dw-count'); if (el) rola(el, relogio(state.secondsLeft));
+      if (!state.outcome) document.title = relogio(state.secondsLeft) + ' · Decidindo · Loov';
       var p = passouPct(state.appt) + '%';
       var b = $('dw-barra'); if (b) b.style.width = p;
-      var c = $('dw-carro'); if (c) { c.style.left = p; c.style.transform = 'translateX(-' + p + ')'; }
+      poeCarro();
       updateUrgency();
     };
     tick(); tickT = setInterval(tick, 1000);
@@ -514,6 +613,7 @@
     var wait = POLL_MS;
     var step = function () {
       api('/disponivel/' + id).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).then(function (d) {
+        if (d.seen_at && state.appt && !state.appt.seen_at) { state.appt.seen_at = d.seen_at; marcaVisto(); }
         if (d.status === 'confirmed') { stopPolling(); if (state.appt) state.appt.agenda_url = d.agenda_url || null; setOutcome('accepted'); }
         else if (['rejected', 'cancelled', 'expired'].indexOf(d.status) !== -1) { stopPolling(); setOutcome(d.status); }
         wait = POLL_MS;
@@ -524,7 +624,60 @@
     pollT = setTimeout(step, POLL_MS);
   }
   function stopPolling() { clearTimeout(pollT); pollT = null; clearInterval(tickT); tickT = null; }
-  function setOutcome(o) { state.outcome = o; renderWaiting(); }
+  // O desfecho chega com a espera na tela: um movimento conta o que
+  // aconteceu antes da tela seguinte. Sem a espera na tela, vai direto.
+  function setOutcome(o) {
+    state.outcome = o;
+    avisaAba(o);
+    if (state.saindo) return;
+    if (!document.querySelector('#dw-in .dw-esp')) { renderWaiting(); return; }
+    if (o === 'accepted') transAceito(); else transVirar(o);
+  }
+  // Relógio de placar: um slot por caractere, e só o dígito que muda rola.
+  function slotsDe(txt) { return txt.split('').map(function (c) { return '<span class="dw-dg"><span>' + c + '</span></span>'; }).join(''); }
+  function rola(el, txt) {
+    var cur = el.dataset.t || '';
+    if (cur.length !== txt.length || el.children.length !== txt.length) { el.innerHTML = slotsDe(txt); el.dataset.t = txt; return; }
+    for (var i = 0; i < txt.length; i++) {
+      if (txt[i] === cur[i]) continue;
+      var slot = el.children[i], velho = slot.lastElementChild, novo = document.createElement('span');
+      novo.textContent = txt[i];
+      slot.appendChild(novo);
+      if (REDUZ || !velho.animate) { velho.remove(); continue; }
+      velho.animate([{ transform: 'none' }, { transform: 'translateY(100%)' }], { duration: 420, easing: CALMA, fill: 'forwards' })
+        .finished.then((function (v) { return function () { v.remove(); }; })(velho)).catch(function () {});
+      novo.animate([{ transform: 'translateY(-100%)' }, { transform: 'none' }], { duration: 420, easing: CALMA });
+    }
+    el.dataset.t = txt;
+  }
+  // A aba trabalha pela pessoa: o título mostra o tempo e, se ela estiver em
+  // outra aba quando a resposta chegar, alterna com o desfecho até ela voltar.
+  var TITULO = document.title, piscaT = null;
+  function paraPisca() { clearInterval(piscaT); piscaT = null; }
+  function avisaAba(o) {
+    var a = state.appt || {}, name = (a.car_wash && a.car_wash.name) || 'lava-rápido';
+    var t = o === 'accepted' ? '✓ Aceito · ' + name + ' · Loov' : o === 'rejected' ? 'Não rolou · Loov' : o === 'expired' ? 'Não deu tempo · Loov' : TITULO;
+    paraPisca();
+    document.title = t;
+    if (!document.hidden || o === 'cancelled') return;
+    var vez = false;
+    piscaT = setInterval(function () { vez = !vez; document.title = vez ? '● ' + t : t; }, 1000);
+  }
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && piscaT) { paraPisca(); if (state.outcome) avisaAba(state.outcome); } });
+  function enviadoAs(a) { return a.expires_at ? fmtTime(new Date(new Date(a.expires_at).getTime() - 180000).toISOString()) : ''; }
+  function vistoTxt(a) {
+    var name = (a.car_wash && a.car_wash.name) || 'lava-rápido';
+    if (a.seen_at) return 'Visto às ' + a.seen_at + ' · o ' + name + ' abriu seu pedido.';
+    var h = enviadoAs(a);
+    return (h ? 'Enviado às ' + h + '. ' : '') + 'Esperando o ' + name + ' abrir.';
+  }
+  function marcaVisto() {
+    var v = $('dw-visto'), t = $('dw-visto-txt');
+    if (!v || !t || state.outcome) return;
+    t.textContent = vistoTxt(state.appt);
+    v.classList.add('on', 'novo');
+    updateUrgency();
+  }
   function relogio(sec) { sec = Math.max(0, sec | 0); return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); }
   // O que já passou dos 3 minutos, em %: a barra de "Decidindo" enche.
   function passouPct(a) { return (Math.max(0, Math.min(1, 1 - state.secondsLeft / ((a && a.seconds) || 180))) * 100).toFixed(1); }
@@ -541,7 +694,7 @@
   function updateUrgency() {
     var u = urgente();
     $('dw').classList.toggle('is-urgent', u);
-    var st = $('dw-status-txt'); if (st) st.textContent = u ? 'Resposta a qualquer segundo' : 'Pedido enviado';
+    var st = $('dw-status-txt'); if (st) st.textContent = u ? 'Resposta a qualquer segundo' : (state.appt && state.appt.seen_at ? 'Pedido visto' : 'Pedido enviado');
     var fr = $('dw-frase'); if (fr) fr.textContent = u ? 'a qualquer segundo.' : frase(state.appt);
   }
   function valores(a) {
@@ -553,26 +706,151 @@
     var hoje = new Date(a.slot).toDateString() === new Date().toDateString();
     return fmtTime(a.slot) + (hoje ? ' · hoje' : '');
   }
+  // ── transições dos desfechos ─────────────────────────────────────────────
+  // A mesma curva da folha de reserva (expo.inOut), pra aba ter um ritmo só.
+  var CURVA = 'cubic-bezier(.87,0,.13,1)', CALMA = 'cubic-bezier(.2,.8,.2,1)';
+  var REDUZ = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function anima(el, kf, ms, ease, delay) {
+    if (!el || !el.animate) return Promise.resolve();
+    return el.animate(kf, { duration: REDUZ ? Math.min(ms, 180) : ms, easing: ease || CURVA, delay: REDUZ ? 0 : (delay || 0), fill: 'forwards' }).finished.catch(function () {});
+  }
+  function pausa(ms) { return new Promise(function (r) { setTimeout(r, REDUZ ? 0 : ms); }); }
+  // Geometria dos passos: o carro anda só dentro do trilho de "Decidindo".
+  function trilhoDe(sel) {
+    var p = document.querySelector('#dw-in .dw-passos'), t = document.querySelector('#dw-in .dw-passos ' + sel + ' i');
+    if (!p || !t) return null;
+    var a = p.getBoundingClientRect(), b = t.getBoundingClientRect();
+    return { x: b.left - a.left, w: b.width };
+  }
+  function carroW() { var c = $('dw-carro'); return (c && c.offsetWidth) || 28; }
+  function carroEm(frac) { var t = trilhoDe('.agora'); return t ? t.x + frac * (t.w - carroW()) : 0; }
+  // Onde o carro para no aceite: no fim de "Sua vaga" ou, no computador,
+  // dentro do box de lavagem.
+  function vagaX() {
+    var t3 = trilhoDe('.vaga'), box = document.querySelector('#dw-in .dw-box');
+    if (!t3) return 0;
+    if (box && box.offsetWidth) return t3.x + t3.w - box.offsetWidth / 2 - carroW() / 2 - 2;
+    return t3.x + t3.w - carroW();
+  }
+  function poeCarro() {
+    var c = $('dw-carro'); if (!c || state.outcome) return;
+    c.style.transform = 'translateX(' + carroEm(passouPct(state.appt) / 100) + 'px)';
+  }
+
+  // Aceito: o carro estaciona em "Sua vaga" e o topo sobe como cortina,
+  // revelando o Agendado, que entra em cascata.
+  function transAceito() {
+    clearInterval(tickT);
+    var c = $('dw-carro');
+    $('dw').classList.remove('is-urgent');
+    $('dw-barra').style.transition = 'none';
+    anima($('dw-barra'), [{ width: $('dw-barra').style.width }, { width: '100%' }], 380, CALMA);
+    anima($('dw-f3'), [{ width: '0%' }, { width: '100%' }], 520, CURVA, 380);
+    c.style.transition = 'none';
+    anima(c, [{ transform: c.style.transform }, { transform: 'translateX(' + vagaX() + 'px)' }], 900, CURVA)
+      .then(function () {
+        var v = document.querySelector('#dw-in .dw-passos .vaga'); if (v) v.classList.add('acesa');
+        var st = $('dw-status-txt'); if (st) st.textContent = 'Aceito';
+        return pausa(250);
+      })
+      .then(function () {
+        var esp = $('dw-in');
+        var ag = document.createElement('div');
+        ag.className = 'dw-in dw-ag';
+        esp.parentNode.insertBefore(ag, esp);
+        var tmp = $('dw-in'); tmp.id = 'dw-in-velho'; ag.id = 'dw-in';
+        renderAceito();
+        ag.querySelectorAll('.ok-head, .ok-card, .ok-actions').forEach(function (el, i) {
+          el.style.opacity = '0';
+          anima(el, [{ opacity: 0, transform: 'translateY(18px)' }, { opacity: 1, transform: 'none' }], 520, CALMA, 260 + i * 80);
+        });
+        return anima(tmp, [{ clipPath: 'inset(0 0 0 0)' }, { clipPath: 'inset(0 0 100% 0)' }], 760, CURVA).then(function () { tmp.remove(); ag.classList.remove('dw-ag'); });
+      });
+  }
+
+  // Recusado e tempo esgotado: o placar vira ali mesmo. O creme escorre por
+  // cima do escuro, o relógio rola até o horário, a frase é riscada e a
+  // palavra nova sobe. Sem quique: é notícia ruim.
+  function transVirar(o) {
+    clearInterval(tickT);
+    var a = state.appt || {}, name = (a.car_wash && a.car_wash.name) || 'lava-rápido', v = valores(a);
+    var dw = $('dw'), meio = document.querySelector('#dw-in .dw-meio');
+    dw.classList.remove('is-urgent');
+    var desl = $('dw-desl'); if (desl) desl.style.pointerEvents = 'none';
+    var canc = $('dw-canc'); if (canc) canc.style.pointerEvents = 'none';
+    document.querySelectorAll('#dw-in .dw-visto, #dw-in .dw-dica').forEach(function (el) {
+      anima(el, [{ opacity: 1 }, { opacity: 0 }], 260, CALMA).then(function () { el.style.display = 'none'; });
+    });
+    anima(document.querySelector('#dw-in .dw-passos'), [{ opacity: 1 }, { opacity: 0 }], 260, CALMA);
+    anima(document.querySelector('#dw-in .dw-linhas'), [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(10px)' }], 300, CALMA);
+    anima(document.querySelector('#dw-in .dw-escorre'), [{ clipPath: 'inset(0 0 100% 0)' }, { clipPath: 'inset(0 0 0% 0)' }], 700, CURVA, 120);
+    anima(document.querySelector('#dw-in .dw-faixa'), [{ color: '#fafaf6' }, { color: '#28231c' }], 500, CALMA, 300);
+    // Sem isto a borda arredondada do escuro deixava um fio por trás do creme.
+    anima(document.querySelector('#dw-in .dw-faixa'), [{ backgroundColor: '#1a1612' }, { backgroundColor: '#fafaf6' }], 200, CALMA, 820);
+    var st = $('dw-status-txt');
+    if (st) { st.textContent = o === 'rejected' ? 'Recusado' : o === 'expired' ? 'Tempo esgotado' : 'Cancelado'; anima(st, [{ color: '#fafaf6' }, { color: o === 'rejected' ? '#c85050' : '#575148' }], 500, CALMA, 300); }
+    var dot = document.querySelector('#dw-in .dw-dot'); if (dot) { dot.style.animation = 'none'; anima(dot, [{ opacity: 1 }, { opacity: 0 }], 200, CALMA, 300); }
+    anima($('dw-count'), [{ transform: 'none' }, { transform: 'translateY(-100%)' }], 560, CURVA, 520);
+    anima(document.querySelector('#dw-in .dw-rel-n'), [{ transform: 'translateY(100%)' }, { transform: 'none' }], 560, CURVA, 520);
+    var fr = $('dw-frase'), frP = fr && fr.parentNode;
+    if (fr) fr.textContent = frase(a);
+    var riscar = o === 'cancelled'
+      ? anima(frP, [{ opacity: 1 }, { opacity: 0 }], 300, CALMA, 900).then(function () { frP.style.display = 'none'; })
+      : anima(frP, [{ color: '#dd7852', fontSize: getComputedStyle(frP).fontSize }, { color: '#ada699', fontSize: 'clamp(19px, min(6.4vw, 3.4vh), 26px)' }], 520, CALMA, 900);
+    if (fr && o !== 'cancelled') anima(fr, [{ backgroundSize: '0 2px' }, { backgroundSize: '100% 2px' }], 520, CALMA, 900);
+    riscar.then(function () {
+      // Cada desfecho diz quem decidiu. O tempo esgotado não diz "não
+      // respondeu": soa como se o lava-rápido tivesse visto e ignorado.
+      var palavra = o === 'rejected' ? 'não rolou.' : o === 'expired' ? 'não deu tempo.' : 'pedido cancelado.';
+      var motivo = o === 'rejected' ? 'O ' + name + ' não pôde aceitar agora.'
+        : o === 'expired' ? 'O ' + name + ' não conseguiu responder dentro dos 3 minutos.'
+        : 'O pedido foi cancelado e o horário foi liberado.';
+      var dinheiro = v.held > 0 ? ' Os R$ ' + money(v.held, 2) + ' reservados foram liberados: nada foi cobrado.' : ' Nada foi cobrado.';
+      var antes = meio.getBoundingClientRect().top;
+      var p1 = document.createElement('p'); p1.className = 'dw-frase'; p1.style.color = 'var(--ink)'; p1.textContent = palavra;
+      var p2 = document.createElement('p'); p2.className = 'dw-fim-txt'; p2.textContent = motivo + dinheiro;
+      meio.appendChild(p1); meio.appendChild(p2);
+      // FLIP: o bloco do meio ganha altura sem pular.
+      var depois = meio.getBoundingClientRect().top;
+      anima(meio, [{ transform: 'translateY(' + (antes - depois) + 'px)' }, { transform: 'none' }], 480, CALMA);
+      anima(p1, [{ opacity: 0, transform: 'translateY(16px)' }, { opacity: 1, transform: 'none' }], 480, CALMA, 60);
+      anima(p2, [{ opacity: 0, transform: 'translateY(16px)' }, { opacity: 1, transform: 'none' }], 480, CALMA, 160);
+      var linhas = document.querySelector('#dw-in .dw-linhas'), fb = $('dw-fim-baixo');
+      if (linhas) linhas.style.display = 'none';
+      if (fb) { fb.classList.add('on'); anima(fb, [{ opacity: 0, transform: 'translateY(16px)' }, { opacity: 1, transform: 'none' }], 480, CALMA, 260); }
+      var b = document.querySelector('#dw-in .dw-cta'); if (b) b.focus({ preventScroll: true });
+    });
+  }
+
   function renderWaiting() {
     var a = state.appt;
     if (state.outcome) { renderResult(); return; }
     var v = valores(a);
     var dur = Number(a.service && a.service.duration) > 0 ? ' · ' + a.service.duration + ' min' : '';
     var pct = passouPct(a);
+    var cw = a.car_wash || {}, nome = cw.name || 'lava-rápido';
+    var onde = [cw.bairro, fmtDistance(cw.distance_km)].filter(Boolean).join(' · ');
     $('dw-in').innerHTML = '<div class="dw-esp">' +
-      '<div class="dw-faixa">' +
+      '<div class="dw-faixa"><span class="dw-escorre"></span>' +
         '<div class="dw-vivo"><span><span class="dw-dot"></span><span id="dw-status-txt">Pedido enviado</span></span><span>' + quandoTopo(a) + '</span></div>' +
-        '<div class="dw-meio"><span class="dw-rel" id="dw-count" role="timer" aria-label="Tempo até a resposta">' + relogio(state.secondsLeft) + '</span>' +
-        '<p class="dw-frase" id="dw-frase">' + esc(frase(a)) + '</p></div>' +
+        '<div class="dw-meio"><span class="dw-rel"><span id="dw-count" role="timer" aria-label="Tempo até a resposta" data-t="' + relogio(state.secondsLeft) + '">' + slotsDe(relogio(state.secondsLeft)) + '</span>' +
+          '<span class="dw-rel-n" aria-hidden="true">' + fmtTime(a.slot) + '</span></span>' +
+        '<p class="dw-frase"><span class="dw-frase-t" id="dw-frase">' + esc(frase(a)) + '</span></p>' +
+        '<p class="dw-visto' + (a.seen_at ? ' on' : '') + '" id="dw-visto"><i aria-hidden="true">✓✓</i><span id="dw-visto-txt" aria-live="polite">' + esc(vistoTxt(a)) + '</span></p>' +
+        '<p class="dw-dica">O ' + esc(nome) + ' tem até 3 minutos pra aceitar. <b>Pode trocar de aba:</b> o título da aba mostra o tempo e avisa quando ele responder.</p></div>' +
         // Enviado, decidindo, sua vaga. A barra do meio anda com o mesmo
         // tempo do placar do lava-rápido, puxada pelo carro.
         '<div class="dw-passos" aria-label="Pedido enviado, esperando a decisão do lava-rápido">' +
           '<span class="feito"><u><i></i></u>Enviado</span>' +
-          '<span class="agora"><u><i><b id="dw-barra" style="width:' + pct + '%"></b></i><span class="dw-carro" id="dw-carro" style="left:' + pct + '%;transform:translateX(-' + pct + '%)">' + CARRO + '</span></u>Decidindo</span>' +
-          '<span><u><i></i></u>Sua vaga</span>' +
+          '<span class="agora"><u><i><b id="dw-barra" style="width:' + pct + '%"></b></i></u>Decidindo</span>' +
+          '<span class="vaga"><u><i><b id="dw-f3"></b><span class="dw-box" aria-hidden="true"><s></s><s></s><em></em><em></em><em></em><em></em></span></i></u>Sua vaga</span>' +
+          '<span class="dw-carro" id="dw-carro">' + CARRO + '</span>' +
         '</div>' +
       '</div>' +
       '<div class="dw-linhas">' +
+        // Onde: o cliente vai ter que ir até lá.
+        '<div class="dw-lp dw-onde"><i class="dw-onde-logo" aria-hidden="true">' + (window.LoovLogos ? LoovLogos.logoOf(cw) : '') + '</i><span>Onde</span>' +
+          '<b><em>' + esc(nome) + '</em>' + (onde ? '<small>' + esc(onde) + '</small>' : '') + '</b></div>' +
         '<div class="dw-lp"><span>Serviço</span><b>' + esc(a.service.title || 'Lavagem') + dur + '</b></div>' +
         (a.desconto > 0 ? '<div class="dw-lp"><span>Vale</span><b>−R$ ' + money(a.desconto, 2) + '</b></div>' : '') +
         '<div class="dw-lp"><span>No cartão</span><b>' + (v.held > 0 ? 'R$ ' + money(v.held, 2) : 'nada') + '</b></div>' +
@@ -580,10 +858,16 @@
         '<div class="dw-desl" id="dw-desl"><span class="dw-desl-r" id="dw-desl-r"></span>' +
           '<span class="dw-desl-t" id="dw-desl-t">Deslize para cancelar<em aria-hidden="true">›››</em></span>' +
           '<button type="button" class="dw-bola" id="dw-bola" aria-label="Cancelar pedido. Deslize até o fim, ou aperte Enter">' + icon('x', 20, { 'stroke-width': 2.6 }) + '</button></div>' +
-      '</div></div>';
+        // Com mouse, cancelar é clicar e confirmar.
+        '<div class="dw-canc" id="dw-canc">' + cancHtml(false) + '</div>' +
+      '</div>' +
+      '<div class="dw-fim-baixo" id="dw-fim-baixo"><div class="dw-lp"><span>' + esc(a.service.title || 'Lavagem') + '</span><b>' + fmtTime(a.slot) + ' · R$ ' + money(v.total, 2) + '</b></div>' +
+        '<button type="button" class="dw-cta" data-result="list">Buscar outro lava-rápido' + icon('arrow-right', 15) + '</button></div>' +
+      '</div>';
     $('dw').scrollTop = 0;
     bindSlide();
     updateUrgency();
+    poeCarro();
   }
   // Aceita: a mesma tela de "Agendado" do agendamento comum
   // (shared/_confirmacao_agendamento), com o que é do Last Minute.
@@ -629,9 +913,15 @@
     $('dw').scrollTop = 0;
     var b = document.querySelector('.dw-cta'); if (b) b.focus({ preventScroll: true });
   }
+  function cancHtml(perguntando) {
+    return perguntando
+      ? '<p>Cancelar o pedido?<br>O horário volta a ficar livre.</p><div><button type="button" data-canc="manter">Manter</button><button type="button" class="is-cheio" data-canc="sim">Sim, cancelar</button></div>'
+      : '<button type="button" class="is-rosa" data-canc="perguntar">Cancelar pedido</button>';
+  }
   function closeWaiting() {
     stopPolling();
-    state.appt = null; state.outcome = null;
+    paraPisca(); document.title = TITULO;
+    state.appt = null; state.outcome = null; state.saindo = false;
     $('dw').classList.remove('is-on', 'is-urgent');
     document.documentElement.style.overflow = '';
   }
@@ -664,12 +954,29 @@
     bola.addEventListener('click', function (e) { if (e.detail === 0) cancela(); });
     bola.addEventListener('contextmenu', function (e) { e.preventDefault(); });
   }
+  // Cancelado pelo cliente: a espera desce e encolhe, o contrário de como a
+  // folha abriu, e o cliente vai pra Home. O pedido é cancelado durante a
+  // saída; se o lava-rápido tiver aceitado no mesmo instante, o servidor
+  // recusa o cancelamento e a tela mostra o aceite.
   function giveUp() {
+    if (state.outcome || state.saindo) return;
     var id = state.appt && state.appt.id;
-    closeWaiting();
-    if (id) api('/disponivel/' + id + '/cancel', { method: 'PATCH' }).catch(function () {});
-    toast('Pedido cancelado. Nada foi cobrado.', 'error');
-    load(true);
+    state.saindo = true;
+    stopPolling();
+    var esp = $('dw-in');
+    var pedido = id ? api('/disponivel/' + id + '/cancel', { method: 'PATCH' }).then(function (r) { return r.ok ? null : r.json().catch(function () { return {}; }); }).catch(function () { return null; }) : Promise.resolve(null);
+    // Encolhe inteira e só some no fim: esmaecer cedo deixava a espera cinza.
+    var saida = anima(esp, [{ transform: 'none', opacity: 1, borderRadius: '0px' }, { opacity: 1, offset: .85 }, { transform: 'translateY(60%) scale(.86)', opacity: 0, borderRadius: '34px' }], 680, CURVA);
+    Promise.all([pedido, saida]).then(function (r) {
+      state.saindo = false;
+      if (r[0] && r[0].status === 'confirmed') {
+        esp.getAnimations().forEach(function (an) { an.cancel(); });
+        state.outcome = 'accepted';
+        renderAceito();
+        return;
+      }
+      window.location.href = '/';
+    });
   }
 
   // ── eventos ──────────────────────────────────────────────────────────────
@@ -678,6 +985,14 @@
     if ((t = e.target.closest('[data-open]'))) { var it = state.items.find(function (x) { return String(x.car_wash.id) === t.dataset.open; }); if (it) openSheet(it); return; }
     if ((t = e.target.closest('[data-sort]'))) { state.sortBy = t.dataset.sort; render(); return; }
     if (e.target.closest('#dp-retry')) { retryLocation(); return; }
+    if ((t = e.target.closest('[data-canc]'))) {
+      var c = $('dw-canc'); if (!c || state.outcome || state.saindo) return;
+      if (t.dataset.canc === 'sim') { giveUp(); return; }
+      var perg = t.dataset.canc === 'perguntar';
+      c.innerHTML = cancHtml(perg);
+      var f = c.querySelector(perg ? '[data-canc="manter"]' : '[data-canc="perguntar"]'); if (f) f.focus();
+      return;
+    }
     if ((t = e.target.closest('[data-result]'))) {
       closeWaiting(); load(true);
     }
