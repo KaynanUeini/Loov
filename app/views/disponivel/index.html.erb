@@ -98,6 +98,8 @@
      no cartão escuro. A Hora Pico não tem selo: o cliente vê só o preço. */
   .dp-off { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; background: rgba(232,154,124,.18); color: #e89a7c; display: inline-flex; align-items: center; justify-content: center; }
   .dp-tags { display: contents; }
+  /* Desconto do Last Minute: só na linha do computador (abaixo). */
+  .dp-de, .dp-pct { display: none; }
   .dp-rate { flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 100px; background: rgba(250,250,246,.08); font-size: 11px; font-weight: 600; }
 
   .dp-state { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 56px var(--pad) 80px; }
@@ -348,6 +350,11 @@
     .dp-stat span { margin-top: 2px; font-size: 8.5px; letter-spacing: 1.2px; }
     .dp-shop-name { font-size: 16px; line-height: 20px; -webkit-line-clamp: 1; }
     .dp-shop-meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* Last Minute mais barato que a tabela: o preço normal riscado acima e o
+       % num selo verde, no lugar do ícone solto da Hora Off. */
+    .dp-de { display: block; font-size: 12px; line-height: 14px; color: rgba(250,250,246,.45); }
+    .dp-pct { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 100px; background: rgba(111,200,140,.16); color: #8fe0ae; font-size: 11.5px; font-weight: 700; }
+    .dp-pct ~ .dp-off { display: none; }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -497,6 +504,15 @@
     if (!isFinite(p)) return '—';
     return '<small>R$</small>' + (Math.round(p) === p ? String(p) : money(p, 2));
   }
+  // Desconto do Last Minute sobre a tabela, no serviço mais barato (o mesmo
+  // do "a partir de"). O /disponivel já manda price e regular_price por
+  // serviço; a folha usava, a lista não.
+  function descontoLm(it) {
+    var p = itemMinPrice(it), sv = (it.services || []).filter(function (x) { return Number(x.price) === p; })[0];
+    var reg = sv && Number(sv.regular_price);
+    if (!isFinite(p) || !(reg > p)) return null;
+    return { de: reg, pct: Math.round((1 - p / reg) * 100) };
+  }
   function card(it, now, common) {
     var cw = it.car_wash, slot = new Date(it.slots[0]);
     var mins = Math.ceil((slot.getTime() - now) / 60000);
@@ -504,15 +520,16 @@
     var street = cw.logradouro ? cw.logradouro + (cw.numero ? ', ' + cw.numero : '') : null;
     var reviews = Number(cw.reviews_count) || 0, rating = Number(cw.rating_avg) || 0;
     var meta = [street, cw.bairro].filter(Boolean).join(' · ') || '—';
+    var desc = descontoLm(it);
     return '<button type="button" class="dp-card" data-open="' + cw.id + '" aria-label="Reservar em ' + esc(cw.name) + ', ' + fmtTime(it.slots[0]) + '">' +
       '<div class="dp-stats"><div class="dp-stat"><b>' + esc(fmtDistance(cw.distance_km) || '—') + '</b><span>DISTÂNCIA</span></div><div class="dp-div"></div>' +
-      '<div class="dp-stat"><b>' + priceLabel(it) + '</b><span>A PARTIR DE</span></div></div>' +
+      '<div class="dp-stat">' + (desc ? '<s class="dp-de">R$ ' + money(desc.de, desc.de % 1 ? 2 : 0) + '</s>' : '') + '<b>' + priceLabel(it) + '</b><span>A PARTIR DE</span></div></div>' +
       '<div class="dp-shop"><div class="dp-logo">' + LoovLogos.logoOf(cw) + '</div>' +
         '<div class="dp-shop-txt"><div class="dp-shop-name">' + esc(cw.name) + '</div>' +
         '<div class="dp-shop-meta">' + esc(meta) + (differs ? ' · <span class="dp-when">às ' + fmtTime(it.slots[0]) + (mins > 0 && mins < 1000 ? ' (em ' + mins + 'min)' : '') + '</span>' : '') + '</div></div>' +
         // Selos num grupo só: no celular ele some (display: contents) e cada
         // selo fica na linha como antes; no computador vira uma coluna.
-        '<span class="dp-tags">' +
+        '<span class="dp-tags">' + (desc ? '<span class="dp-pct" title="Mais barato que o agendamento comum">−' + desc.pct + '%</span>' : '') +
         ((it.services || []).some(function (s) { return s.hora_off; }) ? '<span class="dp-off" role="img" aria-label="Hora Off" title="Hora Off">' + HORA_OFF_IC + '</span>' : '') +
         (cw.favorited ? '<span class="dp-fav" title="Favorito">' + icon('heart', 13) + '</span>' : '') +
         (reviews ? '<span class="dp-rate">' + icon('star', 10, { color: 'var(--coral-500)' }) + rating.toFixed(1).replace('.', ',') + '</span>' : '') +
