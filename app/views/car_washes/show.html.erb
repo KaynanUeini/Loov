@@ -363,7 +363,9 @@
     .cw-lmcard:focus-visible { outline: 2px solid var(--coral-500); outline-offset: 3px; }
     .cw-lmcard small { display: inline-flex; align-items: center; gap: 5px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--coral-500); }
     .cw-lmcard b { font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; letter-spacing: -0.4px; }
-    .cw-lmcard span { grid-column: 2; grid-row: 1 / span 2; padding: 10px 16px; border-radius: 999px; background: var(--coral-500); color: var(--cream); font-size: 14px; font-weight: 600; }
+    .cw-lmcard em { grid-column: 1; font-style: normal; font-size: 13px; color: rgba(250,250,246,.65); }
+    .cw-lmcard em s { color: rgba(250,250,246,.4); }
+    .cw-lmcard span { grid-column: 2; grid-row: 1 / span 3; padding: 10px 16px; border-radius: 999px; background: var(--coral-500); color: var(--cream); font-size: 14px; font-weight: 600; }
     .cw-lmcard.is-loading { opacity: .6; cursor: progress; }
     .cw-body { padding-top: 4px; }
     .cw-svcs { grid-template-columns: 1fr 1fr; }
@@ -378,11 +380,26 @@
     .cw-pn-h { height: 38px; padding: 0; border-radius: 10px; border: 1px solid var(--stone); background: var(--paper); color: var(--ink); font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 13.5px; transition: border-color .15s, background .15s; }
     .cw-pn-h:hover { border-color: var(--ink); }
     .cw-pn-h.is-on { background: var(--ink); border-color: var(--ink); color: var(--cream); }
-    .cw-pn-h.is-lm { background: var(--coral-50); border: 1px dashed var(--coral-500); color: var(--coral-700); }
+    .cw-pn-h.has-p { height: 46px; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.15; }
+    .cw-pn-h small { font-family: 'Inter', sans-serif; font-weight: 500; font-size: 11px; color: var(--graphite); }
+    .cw-pn-h small.is-menos { color: #2d6b42; }
+    .cw-pn-h.is-on small { color: rgba(250,250,246,.75); }
+    .cw-pn-l s { font-weight: 400; color: var(--ash); }
+    .cw-pn-lm { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border-radius: 14px; border: 1px dashed var(--coral-500); background: var(--coral-50); color: var(--ink); text-align: left; transition: border-color .15s; }
+    .cw-pn-lm:hover { border-style: solid; }
+    .cw-pn-lm.is-loading { opacity: .6; cursor: progress; }
+    .cw-pn-lm b { display: inline-flex; align-items: center; gap: 5px; font-family: 'Space Grotesk', sans-serif; font-size: 15px; color: var(--coral-700); }
+    .cw-pn-lm small { display: block; margin-top: 2px; font-size: 12px; color: var(--graphite); }
+    .cw-pn-lm-p { flex-shrink: 0; text-align: right; }
+    .cw-pn-lm-p s { display: block; font-size: 12px; color: var(--ash); }
+    .cw-pn-lm-p b { color: var(--ink); font-size: 16px; }
+    .cw-pn-ou { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 1px; text-transform: uppercase; color: var(--graphite); }
+    .cw-pn-off { display: inline-flex; align-items: center; gap: 4px; margin-right: 6px; padding: 2px 8px; border-radius: 999px; background: #d1ebd6; color: #2d6b42; font-weight: 600; }
     .cw-pn-h.is-outro { font-family: 'Inter', sans-serif; font-size: 12.5px; color: var(--graphite); }
     .cw-pn-h.is-loading { opacity: .6; cursor: progress; }
     .cw-pn-nota { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 12px; color: var(--graphite); }
-    .cw-pn-nota i { display: inline-flex; color: var(--coral-500); }
+    p.cw-pn-nota { display: block; line-height: 1.6; }
+    .cw-pn-horas:has(.has-p) .cw-pn-h { height: 46px; }
     .cw-pn-cta { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 50px; border: 0; border-radius: 28px; background: var(--coral-500); color: var(--cream); font-size: 15px; font-weight: 600; }
     .cw-pn-cta:disabled { opacity: .45; cursor: not-allowed; }
     /* Endereço primeiro; dos horários fica só o de hoje, e a semana abre no clique. */
@@ -651,7 +668,10 @@
         var slot = it && it.slots && it.slots[0], b = $('cw-lmcard');
         if (!b || !slot || !(it.services || []).length) return;
         lmItem = it;
-        b.innerHTML = '<small>' + icon('zap', 11) + 'Last Minute</small><b>Vaga às ' + esc(slot.slice(11, 16)) + '</b><span>Reservar</span>';
+        var min = Math.min.apply(null, it.services.map(function (x) { return Number(x.price); }));
+        var regMin = Math.min.apply(null, it.services.map(function (x) { return Number(x.regular_price) || Number(x.price); }));
+        b.innerHTML = '<small>' + icon('zap', 11) + 'Last Minute</small><b>Vaga às ' + esc(slot.slice(11, 16)) + '</b>' +
+          (isFinite(min) ? '<em>a partir de ' + (regMin > min ? '<s>R$ ' + moneyC(regMin) + '</s> ' : '') + 'R$ ' + moneyC(min) + '</em>' : '') + '<span>Reservar</span>';
         b.setAttribute('aria-label', 'Reservar pelo Last Minute às ' + slot.slice(11, 16));
         b.hidden = false;
       })
@@ -850,30 +870,50 @@
         renderPainel();
       });
   }
+  // Cada horário tem o seu preço (available_times, PrecoDinamico): com a
+  // Hora Off, 20:30 pode sair mais barato que 19:00. O painel mostra o preço
+  // embaixo do horário quando ele foge da tabela, e a vaga do Last Minute sai
+  // da grade e vira uma linha própria, com quando começa e quanto custa.
+  // Com centavos só quando há: R$ 72,25 não pode virar R$ 72.
+  function moneyC(v) { return money(v, Math.round(Number(v) * 100) % 100 ? 2 : 0); }
+  function precoPn(t) { var p = t && t.price != null ? Number(t.price) : NaN; return isFinite(p) ? p : Number(pn.svc.price); }
   function renderPainel() {
     var el = $('cw-pn'); if (!el) return;
     if (!(IS_CLIENT || !SIGNED_IN) || !services.length) { el.hidden = true; return; }
     el.hidden = false;
-    var s = pn.svc, hoje = dates[0], corpo, anyLm = false;
+    var s = pn.svc, hoje = dates[0], corpo = '', tabela = s ? Number(s.price) : 0, escolhido = null, temOff = false;
     var outro = '<button type="button" class="cw-pn-h is-outro" data-pn-outro>outro dia</button>';
     if (!s) corpo = '<p class="cw-pn-vazio">Escolha um serviço para ver os horários de hoje.</p>';
     else if (closedOn(hoje)) corpo = '<p class="cw-pn-vazio">Fechado hoje.</p><div class="cw-pn-horas">' + outro + '</div>';
     else if (pn.loading) corpo = '<p class="cw-pn-vazio">Buscando os horários de hoje…</p>';
     else {
-      var livres = pn.times.filter(function (t) { return t.available !== false && !(t.disponivel_only && !CW.disponivel_eligible); }).slice(0, 7);
-      corpo = (livres.length ? '' : '<p class="cw-pn-vazio">Sem horários livres hoje.</p>') +
-        '<div class="cw-pn-horas">' + livres.map(function (t) {
-          var ts = t.time || t;
-          if (t.disponivel_only) { anyLm = true; return '<button type="button" class="cw-pn-h is-lm" data-lm="' + s.id + '" data-lm-hora="' + ts + '" title="Reservar pelo Last Minute">' + ts + '</button>'; }
-          return '<button type="button" class="cw-pn-h' + (ts === pn.time ? ' is-on' : '') + '" data-pn-time="' + ts + '">' + ts + '</button>';
-        }).join('') + outro + '</div>' +
-        (anyLm ? '<p class="cw-pn-nota"><i>' + icon('zap', 11) + '</i>Em coral: vaga em cima da hora, pelo Last Minute.</p>' : '');
+      var livres = pn.times.filter(function (t) { return t.available !== false && !(t.disponivel_only && !CW.disponivel_eligible); });
+      var lm = livres.filter(function (t) { return t.disponivel_only; })[0];
+      var comuns = livres.filter(function (t) { return !t.disponivel_only; }).slice(0, 7);
+      escolhido = comuns.filter(function (t) { return (t.time || t) === pn.time; })[0] || null;
+      if (lm) {
+        var lh = lm.time || lm, lp = precoPn(lm);
+        var falta = Math.max(0, Math.round((new Date(ymd(hoje) + 'T' + lh + ':00').getTime() - Date.now()) / 60000));
+        corpo += '<button type="button" class="cw-pn-lm" data-lm="' + s.id + '" data-lm-hora="' + lh + '">' +
+          '<span><b>' + icon('zap', 12) + lh + ' · Last Minute</b><small>' + (falta > 0 ? 'começa em ' + falta + ' min · ' : '') + 'reserva com cartão</small></span>' +
+          '<span class="cw-pn-lm-p">' + (lp < tabela ? '<s>R$ ' + moneyC(tabela) + '</s>' : '') + '<b>R$ ' + moneyC(lp) + '</b></span></button>' +
+          (comuns.length ? '<div class="cw-pn-ou">Ou um horário normal</div>' : '');
+      }
+      if (!livres.length) corpo += '<p class="cw-pn-vazio">Sem horários livres hoje.</p>';
+      corpo += '<div class="cw-pn-horas">' + comuns.map(function (t) {
+        var ts = t.time || t, p = precoPn(t), difere = p !== tabela;
+        if (p < tabela) temOff = true;
+        return '<button type="button" class="cw-pn-h' + (ts === pn.time ? ' is-on' : '') + (difere ? ' has-p' : '') + '" data-pn-time="' + ts + '">' + ts +
+          (difere ? '<small class="' + (p < tabela ? 'is-menos' : '') + '">R$ ' + moneyC(p) + '</small>' : '') + '</button>';
+      }).join('') + outro + '</div>' +
+        (temOff ? '<p class="cw-pn-nota"><span class="cw-pn-off">' + HORA_OFF_IC + 'Hora Off</span>preço menor em horário com pouco movimento.</p>' : '');
     }
+    var preco = escolhido ? precoPn(escolhido) : tabela;
     el.innerHTML = '<h2 class="cw-pn-t">Seu agendamento</h2>' +
-      (s ? '<div class="cw-pn-l"><span>' + esc(s.title) + ' · ' + (s.duration || 30) + ' min</span><b>R$ ' + money(s.price) + '</b></div>' +
+      (s ? '<div class="cw-pn-l"><span>' + esc(s.title) + ' · ' + (s.duration || 30) + ' min</span><b>' + (preco < tabela ? '<s>R$ ' + moneyC(tabela) + '</s> ' : '') + 'R$ ' + moneyC(preco) + '</b></div>' +
         '<div class="cw-pn-l"><span>Hoje, ' + WD_LOWER[hoje.getDay()] + '</span><b>' + (pn.time || 'escolha o horário') + '</b></div>' : '') +
       corpo +
-      (s ? '<button type="button" class="cw-pn-cta" data-pn-go' + (pn.time ? '' : ' disabled') + '>Continuar' + icon('arrow-right', 16) + '</button>' : '');
+      (s ? '<button type="button" class="cw-pn-cta" data-pn-go' + (pn.time ? '' : ' disabled') + '>Continuar' + (pn.time ? ' · R$ ' + moneyC(preco) : '') + icon('arrow-right', 16) + '</button>' : '');
   }
   // Veio do painel com o horário escolhido: pula a escolha e abre a
   // confirmação assim que o horário for confirmado como livre.
