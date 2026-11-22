@@ -1182,7 +1182,8 @@
     // A mesma tela do Last Minute aceito (shared/_confirmacao_agendamento).
     $('cw-done').innerHTML = LoovConfirmacao.html({
       quando: dayLabel(d) + ', ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' · ' + bk.time,
-      agendaUrl: res && res.agenda_url,
+      cancelaAte: (function () { var h = bk.time.split(':'), x = new Date(d); x.setHours(Number(h[0]) - 2, Number(h[1]), 0, 0);
+        return String(x.getHours()).padStart(2, '0') + ':' + String(x.getMinutes()).padStart(2, '0') + (x.getDate() !== d.getDate() ? ' do dia anterior' : ''); })(),
       cw: CW, servico: s,
       pagoCartao: deposit || null,
       aPagar: Math.max(0, total - (deposit || 0)),
@@ -1191,6 +1192,7 @@
     });
     history.replaceState({ v: 'done' }, '', '#agendado');
     showView('done');
+    LoovConfirmacao.montar($('cw-done'));
   }
 
   // Voltar: um passo de cada vez, como no app.

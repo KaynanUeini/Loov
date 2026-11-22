@@ -201,6 +201,9 @@
   @media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
     .dw-in:has(> .dw-esp) { max-width: none; padding: 0; }
     .dw-in > .dw-esp { flex: 1; margin-block: 0; }
+    /* O Agendado do Last Minute aceito tem duas colunas no computador. */
+    .dw-in:has(> .ok) { max-width: none; }
+    #dw .dw-in > .ok { margin-inline: auto; }
     .dw-esp .dw-faixa { flex: 1; margin: 0; border-radius: 0; padding: clamp(18px, 4vh, 34px) max(32px, calc((100% - 1120px) / 2)) clamp(16px, 3.4vh, 28px); }
     .dw-esp .dw-meio { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: clamp(32px, 5vw, 72px); align-items: end; align-content: end; }
     .dw-esp .dw-meio > * { grid-column: 2; }
@@ -818,7 +821,7 @@
         esp.parentNode.insertBefore(ag, esp);
         var tmp = $('dw-in'); tmp.id = 'dw-in-velho'; ag.id = 'dw-in';
         renderAceito();
-        ag.querySelectorAll('.ok-head, .ok-card, .ok-actions').forEach(function (el, i) {
+        ag.querySelectorAll('.ok-head, .ok-card, .ok-actions, .ok-lado').forEach(function (el, i) {
           el.style.opacity = '0';
           anima(el, [{ opacity: 0, transform: 'translateY(18px)' }, { opacity: 1, transform: 'none' }], 520, CALMA, 260 + i * 80);
         });
@@ -936,7 +939,6 @@
     $('dw-in').innerHTML = LoovConfirmacao.html({
       lastMinute: true,
       quando: dia + ', ' + fmtTime(a.slot),
-      agendaUrl: a.agenda_url,
       cw: a.car_wash, servico: a.service,
       pagoCartao: pago, pagoLabel: 'Pago no cartão',
       aPagar: Math.max(0, Math.round((total - pago) * 100) / 100),
@@ -945,6 +947,7 @@
       homeUrl: '/'
     });
     $('dw').scrollTop = 0;
+    LoovConfirmacao.montar($('dw-in'));
     var b = document.querySelector('#dw-in .ok-primary'); if (b) b.focus({ preventScroll: true });
   }
   function renderResult() {

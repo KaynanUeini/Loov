@@ -7,13 +7,17 @@
 
   window.LoovConfirmacao.html(o)
     quando, cw, servico ({ title, duration })
-    agendaUrl     link do .ics ("Adicionar à agenda"), quando houver
+    cancelaAte    "17:00": até quando cancelar sem custo (agendamento comum)
     lastMinute    selo da aba ao lado de QUANDO
     pagoCartao    o que já saiu do cartão (sinal ou os 35%); pagoLabel
     aPagar        o que falta pagar no lava-rápido; comVale; valeTxt
     aviso         regra que o cliente precisa levar
     homeUrl
   Precisa do feather e do shared/loov_logos na página.
+
+  window.LoovConfirmacao.montar(raiz)
+    Depois de pôr o html na página: monta o mapa do cartão "Como vai ser"
+    (só no computador, com o Leaflet carregado).
 %>
 <style>
   /* Tudo tem que caber na tela sem rolar, botões inclusive. */
@@ -86,6 +90,35 @@
     .ok-pills { gap: 6px; }
     .ok-pill { padding: 0 11px; font-size: 12.5px; }
   }
+  /* Cartão "Como vai ser": só no computador (abaixo). */
+  .ok-lado { display: none; }
+  /* Computador com mouse: a coluna de sempre à esquerda, e o espaço que
+     sobrava responde "e agora?": mapa, rota e como vai ser a chegada, o
+     pagamento e o cancelamento. Celular igual, cabendo sem rolar. */
+  @media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+    .ok { max-width: 1000px; display: grid; grid-template-columns: 440px 520px; grid-template-rows: auto auto auto 1fr; column-gap: 40px; justify-content: center; align-content: start; align-items: start; padding-top: 40px; }
+    .ok-head, .ok-card, .ok-actions { grid-column: 1; }
+    .ok-head { display: flex; align-items: center; gap: 14px; text-align: left; }
+    .ok-check { flex: 0 0 56px; width: 56px; height: 56px; margin: 0; }
+    .ok-check svg { width: 28px; height: 28px; }
+    .ok .ok-addr, .ok .ok-pills, .ok .ok-aviso { display: none; }
+    .ok-lado { display: block; grid-column: 2; grid-row: 1 / span 4; align-self: start; overflow: hidden; background: var(--paper); border: 1px solid var(--stone); border-radius: 24px; }
+    .ok-mapa { height: 230px; background: var(--sand); }
+    .ok-mapa .leaflet-tile-pane { filter: grayscale(1) sepia(.18) contrast(.92) brightness(1.03); }
+    .ok-mapa .leaflet-control-attribution { font-size: 9px; background: rgba(250,250,246,.8); }
+    .ok-pino { width: 20px; height: 20px; border-radius: 50%; background: var(--coral-500); border: 4px solid var(--cream); box-shadow: 0 2px 8px rgba(0,0,0,.35); }
+    .ok-lado-in { padding: 18px 22px 22px; }
+    .ok-end { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+    .ok-end b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 16px; }
+    .ok-end small { display: block; margin-top: 2px; font-size: 13px; color: var(--graphite); }
+    .ok-rota { flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 16px; border-radius: 999px; background: var(--ink); color: var(--cream) !important; font-size: 13.5px; font-weight: 600; text-decoration: none; }
+    .ok-rota:hover { background: #3a342b; }
+    .ok-como { margin: 16px 0 10px !important; padding-top: 14px; border-top: 2px solid var(--ink); font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 18px; color: var(--ink) !important; }
+    .ok-passos { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+    .ok-passos li { display: grid; grid-template-columns: 10px 1fr; gap: 12px; font-size: 14.5px; line-height: 1.5; color: var(--graphite); }
+    .ok-passos li::before { content: ''; width: 10px; height: 10px; margin-top: 6px; border-radius: 50%; background: var(--coral-500); }
+    .ok-passos b { color: var(--ink); font-weight: 600; }
+  }
   @media (prefers-reduced-motion: reduce) { .ok-check { animation: none; } }
 </style>
 <script>
@@ -119,18 +152,57 @@
           '<div class="ok-shop-t"><b>' + esc(cw.name) + '</b><small>' + esc(s.title) + ' · ' + (s.duration || 30) + ' min</small></div></div>' +
         // O próximo passo do cliente é ir até lá.
         (endereco ? '<div class="ok-addr">' + esc(endereco) + '</div>' : '') +
-        // O .ics abre no navegador, que oferece salvar na agenda.
-        (o.agendaUrl || mapa ? '<div class="ok-pills">' +
-          (o.agendaUrl ? '<a class="ok-pill" href="' + esc(o.agendaUrl) + '">' + icon('calendar', 14) + 'Adicionar à agenda</a>' : '') +
-          (mapa ? '<a class="ok-pill" target="_blank" rel="noopener" href="' + mapa + '">' + icon('navigation', 14) + 'Ver rota</a>' : '') +
-        '</div>' : '') +
+        // Sem "Adicionar à agenda": o .ics abria como texto no navegador.
+        (mapa ? '<div class="ok-pills"><a class="ok-pill" target="_blank" rel="noopener" href="' + mapa + '">' + icon('navigation', 14) + 'Ver rota</a></div>' : '') +
         '<div class="ok-div"></div>' + pagamento +
         (o.valeTxt ? '<p class="ok-vale">' + esc(o.valeTxt) + '</p>' : '') +
         (o.aviso ? '<p class="ok-aviso">' + esc(o.aviso) + '</p>' : '') +
       '</div>' +
       '<div class="ok-actions"><a class="ok-primary" href="/appointments">Ver meus agendamentos</a><a class="ok-ghost" href="' + esc(o.homeUrl || '/') + '">Voltar pra home</a></div>' +
+      ladoHtml(o, mapa) +
     '</div>';
   }
-  window.LoovConfirmacao = { html: html };
+  function coords(cw) {
+    var lat = cw.lat != null ? cw.lat : cw.latitude, lng = cw.lng != null ? cw.lng : cw.longitude;
+    return lat != null && lng != null ? [Number(lat), Number(lng)] : null;
+  }
+  // O que o cliente precisa saber depois de agendar, que antes estava
+  // espalhado: o código de conferência (só em Meus agendamentos), o que paga
+  // lá e até quando cancelar (só antes de confirmar).
+  function ladoHtml(o, mapa) {
+    var cw = o.cw, c = coords(cw);
+    var rua = cw.logradouro ? cw.logradouro + (cw.numero ? ', ' + cw.numero : '') : (cw.address || '');
+    var sub = [cw.bairro, cw.cidade].filter(Boolean).join(' · ') + (cw.distance_km != null ? ' · a ' + Number(cw.distance_km).toFixed(1).replace('.', ',') + ' km de você' : '');
+    var pagar = o.aPagar > 0
+      ? '<b>Pague R$ ' + money(o.aPagar, 2) + ' lá:</b> dinheiro, PIX ou cartão.' + (o.pagoCartao ? ' Os R$ ' + money(o.pagoCartao, 2) + ' do cartão já foram pagos.' : '')
+      : '<b>Nada a pagar na chegada.</b>' + (o.pagoCartao ? ' Os R$ ' + money(o.pagoCartao, 2) + ' já foram pagos no cartão.' : '');
+    var cancelar = o.lastMinute
+      ? (o.aviso ? esc(o.aviso).replace(/^([^.]*\.)/, '<b>$1</b>') : '')
+      : o.cancelaAte ? '<b>Cancelamento grátis até ' + esc(o.cancelaAte) + '</b> (2 h antes). Falta sem cancelar conta contra você.' : '';
+    return '<div class="ok-lado">' +
+      (c ? '<div class="ok-mapa" data-lat="' + c[0] + '" data-lng="' + c[1] + '"></div>' : '') +
+      '<div class="ok-lado-in">' +
+        '<div class="ok-end"><span><b>' + esc(rua) + '</b>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</span>' +
+          (mapa ? '<a class="ok-rota" target="_blank" rel="noopener" href="' + mapa + '">' + icon('navigation', 14) + 'Ver rota</a>' : '') + '</div>' +
+        '<h2 class="ok-como">Como vai ser</h2><ul class="ok-passos">' +
+          '<li><span><b>Na chegada, confirme o código.</b> São os 4 últimos dígitos do seu celular; ele aparece em Meus agendamentos 15 min antes.</span></li>' +
+          '<li><span>' + pagar + '</span></li>' +
+          (cancelar ? '<li><span>' + cancelar + '</span></li>' : '') +
+        '</ul></div></div>';
+  }
+  function montar(raiz) {
+    var el = (raiz || document).querySelector('.ok-mapa');
+    if (!el || !window.L || el.offsetParent === null || el._mapa) return;
+    var c = [Number(el.dataset.lat), Number(el.dataset.lng)];
+    var m = L.map(el, { zoomControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false, touchZoom: false }).setView(c, 15);
+    m.attributionControl.setPrefix(false);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(m);
+    L.marker(c, { icon: L.divIcon({ className: '', html: '<div class="ok-pino"></div>', iconSize: [20, 20], iconAnchor: [10, 10] }) }).addTo(m);
+    el._mapa = m;
+    // A tela pode mudar de tamanho logo depois (a cortina do Last Minute):
+    // sem isto parte do mapa ficava sem desenhar.
+    try { new ResizeObserver(function () { m.invalidateSize(); }).observe(el); } catch (e) { setTimeout(function () { m.invalidateSize(); }, 900); }
+  }
+  window.LoovConfirmacao = { html: html, montar: montar };
 })();
 </script>
