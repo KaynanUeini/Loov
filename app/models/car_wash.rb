@@ -177,16 +177,20 @@ class CarWash < ApplicationRecord
     fecha = closing_at(agora)
     return nil if fecha.nil?
 
-    # A janela para no fechamento: não adianta oferecer 23:30 quando fecha
-    # 23:00.
-    limite = [agora + JANELA_LAST_MINUTE, fecha].min
+    # A vaga começa depois do prazo de aceite: o dono tem 3 minutos pra
+    # responder, e uma vaga mais perto que isso podia ser aceita com o horário
+    # já passado. A janela conta a partir daí (sem isso, nos 3 minutos antes
+    # de cada meia hora não havia vaga nenhuma) e para no fechamento: não
+    # adianta oferecer 23:30 quando fecha 23:00.
+    inicio = agora + Appointment::ACCEPTANCE_TTL
+    limite = [inicio + JANELA_LAST_MINUTE, fecha].min
     # Arredonda pelos SEGUNDOS, não pelos minutos: às 20:30:30, contar só hora
     # e minuto devolve 1230 e o arredondamento pra cima cai em 20:30 — meio
     # minuto no passado. O checkout recusa horário que já passou, então seria
     # mais uma vaga anunciada que o backend nega no fim do fluxo.
     passo = PASSO_LAST_MINUTE * 60
-    atual = agora.beginning_of_day +
-            ((agora.seconds_since_midnight / passo.to_f).ceil * passo).seconds
+    atual = inicio.beginning_of_day +
+            ((inicio.seconds_since_midnight / passo.to_f).ceil * passo).seconds
 
     while atual <= limite
       return atual if service ? last_minute_cabe?(atual, service) : vaga_por?(atual, PASSO_LAST_MINUTE)

@@ -1044,6 +1044,12 @@
   wideMap.addEventListener('change', function () { renderMap(validItems()); });
   // Contagem "em Xmin" dos cards se atualiza sozinha (como o app, a cada 15s).
   setInterval(function () { if (!state.appt && !state.loading && state.loc === 'granted') render(); }, 15000);
+  // As vagas mudam a cada meia hora: com a aba aberta (ou esquecida), a lista
+  // busca de novo a cada minuto e ao voltar pra aba. Antes ela ficava com os
+  // horários de quando abriu.
+  function atualizaVagas() { if (!state.appt && !state.loading && state.loc === 'granted') load(true); }
+  setInterval(function () { if (!document.hidden) atualizaVagas(); }, 60000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) atualizaVagas(); });
 
   function boot() {
     if (window.feather) feather.replace(); $('dp-maptoggle-ic').innerHTML = icon('map', 16); render(); initLocation();

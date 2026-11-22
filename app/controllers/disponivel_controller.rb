@@ -239,9 +239,25 @@ class DisponivelController < ApplicationController
 
     car_wash = CarWash.find(params[:car_wash_id])
     service  = car_wash.services.find(params[:service_id])
-    slot     = Time.zone.parse(params[:slot])
+    slot     = params[:slot].present? ? Time.zone.parse(params[:slot].to_s) : nil
 
-    Rails.logger.info("#{log_tag} resolved car_wash_id=#{car_wash.id} service_id=#{service.id} slot=#{slot.iso8601}")
+    Rails.logger.info("#{log_tag} resolved car_wash_id=#{car_wash.id} service_id=#{service.id} slot=#{slot&.iso8601}")
+
+    # Só se reserva a vaga que o Last Minute oferece AGORA. Uma tela parada
+    # (aba aberta desde o almoço) manda o horário que viu; sem esta conta o
+    # servidor aceitava um horário que já tinha passado, e o dono conseguia
+    # aceitar.
+    # A lista calcula a vaga sem serviço e a página do lava-rápido com ele;
+    # as duas são ofertas válidas do momento.
+    agora   = Time.current
+    ofertas = [car_wash.last_minute_slot(agora), car_wash.last_minute_slot(agora, service)].compact
+    oferta  = ofertas.first
+    if slot.nil? || !ofertas.include?(slot)
+      Rails.logger.warn("#{log_tag} slot_gone car_wash_id=#{car_wash.id} slot=#{slot&.iso8601} oferta=#{oferta&.iso8601}")
+      render json: { error: "Esse horário não está mais no Last Minute. Atualizamos as vagas: escolha de novo.", code: "slot_gone" },
+             status: :unprocessable_entity
+      return
+    end
 
     appointment   = nil
     slot_taken    = false
@@ -369,6 +385,16 @@ class DisponivelController < ApplicationController
       Rails.logger.warn("#{log_tag} intent #{intent.id} status=#{intent.status} appointment_id=#{appointment.id}")
       return render json: { error: "O banco não confirmou o pagamento. Nada foi cobrado; tente de novo ou use outro cartão.", code: "card_declined" },
                     status: :payment_required
+    end
+
+    # O banco pode levar minutos: se nesse meio-tempo o horário ficou perto
+    # demais pro dono responder, a vaga não vale mais.
+    if appointment.scheduled_at <= Time.current + Appointment::ACCEPTANCE_TTL
+      release_prepayment(appointment)
+      appointment.update_columns(status: "cancelled", updated_at: Time.current)
+      Rails.logger.warn("#{log_tag} slot_gone appointment_id=#{appointment.id} scheduled_at=#{appointment.scheduled_at.iso8601}")
+      return render json: { error: "O horário passou enquanto o banco confirmava. Nada foi cobrado; escolha outra vaga.", code: "slot_gone" },
+                    status: :unprocessable_entity
     end
 
     promoted = false

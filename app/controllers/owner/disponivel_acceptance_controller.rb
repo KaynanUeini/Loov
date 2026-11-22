@@ -118,6 +118,16 @@ module Owner
         return
       end
 
+      # Horário já passou: aceitar marcaria o cliente pra um horário que não
+      # existe mais. O pedido sai como tempo esgotado e a reserva no cartão é
+      # desfeita.
+      if @appointment.horario_passou?
+        @appointment.update_columns(acceptance_expires_at: Time.current)
+        @appointment.expire!(StripeService.new)
+        render json: { error: "O horário deste pedido já passou. Ele foi cancelado e nada foi cobrado do cliente." }, status: :unprocessable_entity
+        return
+      end
+
       stripe_service = StripeService.new
 
       if @appointment.accept!(stripe_service)

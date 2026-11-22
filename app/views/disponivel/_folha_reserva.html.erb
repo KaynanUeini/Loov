@@ -372,12 +372,18 @@
     if (!it || !svc || !slot) { toast(!slot ? 'Este horário não está mais disponível. Atualize a lista.' : 'Selecione um serviço para continuar.', 'error'); return; }
     if (!SIGNED_IN) { toast('Entre na sua conta para reservar.', 'error'); setTimeout(function () { location.href = '/users/sign_in'; }, 900); return; }
     if (!HAS_CARD) { location.href = cardUrl(it.car_wash.id); return; }
+    // Folha aberta há tempo (aba esquecida): o horário já passou. O servidor
+    // também recusa; aqui só evita a ida e volta.
+    if (new Date(slot).getTime() <= Date.now()) { fechar(); falhou('Esse horário já passou. Atualizamos as vagas: escolha de novo.'); return; }
     st.reserving = true; render();
     api('/disponivel', { method: 'POST', body: JSON.stringify({ car_wash_id: it.car_wash.id, service_id: svc.id, slot: slot, use_reward: !!valeDe(it.car_wash) && useReward }) })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { r: r, d: d }; }); })
       .then(function (x) {
         if (x.r.status === 401) { location.href = '/users/sign_in'; return; }
         if (x.d.code === 'card_required') { location.href = cardUrl(it.car_wash.id); return; }
+        // A vaga saiu do Last Minute (tela parada, horário passou): fecha a
+        // folha e recarrega a lista, em vez de deixar o cliente tentar de novo.
+        if (x.d.code === 'slot_gone') { st.reserving = false; fechar(); falhou(x.d.error); return; }
         if (!x.r.ok || !x.d.ok) { toast(x.d.error || ('Erro ' + x.r.status + ': não foi possível reservar.'), 'error'); return; }
         return (x.d.requires_action ? confirmarNoBanco(x.d) : Promise.resolve(x.d)).then(function (d) {
           if (!d) return; // banco não confirmou: já avisado, vaga liberada

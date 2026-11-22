@@ -237,6 +237,11 @@ class Appointment < ApplicationRecord
     [(acceptance_expires_at - Time.current).to_i, 0].max
   end
 
+  # Last Minute pendente cujo horário já chegou: não pode mais ser aceito.
+  def horario_passou?
+    scheduled_at.present? && scheduled_at <= Time.current
+  end
+
   def acceptance_expired?
     acceptance_expires_at.present? && acceptance_expires_at < Time.current
   end
@@ -383,6 +388,7 @@ class Appointment < ApplicationRecord
   def accept!(stripe_service = nil)
     return false unless pending_acceptance? && disponivel?
     return false if acceptance_expired?
+    return false if horario_passou?
 
     ActiveRecord::Base.transaction do
       # Captura o PaymentIntent no Stripe (de autorizado para capturado)
