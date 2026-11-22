@@ -97,6 +97,7 @@
   /* Selo Hora Off: o relógio com a seta pra baixo, num tom de coral que se lê
      no cartão escuro. A Hora Pico não tem selo: o cliente vê só o preço. */
   .dp-off { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; background: rgba(232,154,124,.18); color: #e89a7c; display: inline-flex; align-items: center; justify-content: center; }
+  .dp-tags { display: contents; }
   .dp-rate { flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 100px; background: rgba(250,250,246,.08); font-size: 11px; font-weight: 600; }
 
   .dp-state { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 56px var(--pad) 80px; }
@@ -313,6 +314,42 @@
     .dp-top { padding: 16px 40px 0; }
     .dp-hero { padding-top: 36px; }
   }
+  /* Computador com mouse: como a lista do Uber Eats e do Rappi com o mapa
+     aberto. Título numa faixa com o voltar, vagas e ordenação numa barra e
+     cada lava-rápido numa linha (logo, nome, endereço, selos, distância,
+     preço): cabem uns 7 na tela em vez de 2. Celular e tablet com toque
+     ficam com os cards. */
+  @media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+    .dp-top { position: relative; z-index: 2; height: 0; padding: 0; }
+    .dp-back { position: absolute; top: 18px; left: var(--pad); }
+    .dp-hero { display: flex; align-items: center; gap: 12px; padding: 20px var(--pad) 0 calc(var(--pad) + 54px); }
+    .dp-title { margin: 0 !important; font-size: 30px; letter-spacing: -0.03em; }
+    .dp-left { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; }
+    #dp-body { grid-column: 1 / -1; }
+    .dp-strip { margin: 16px 0 0 var(--pad); padding: 7px 14px 7px 7px; gap: 10px; border-radius: 12px; }
+    .dp-strip-ic { flex-basis: 30px; height: 30px; border-radius: 9px; }
+    .dp-strip b { font-size: 14px; }
+    .dp-strip span { margin-top: 0; }
+    .dp-sort { padding: 16px var(--pad) 0 10px; }
+    .dp .dp-left .dp-list { grid-template-columns: 1fr; gap: 8px; padding-top: 14px; }
+    .dp-card { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto 92px 100px 20px; align-items: center; column-gap: 16px; padding: 12px 16px; border-radius: 16px; box-shadow: none; }
+    .dp-card:hover { transform: none; background: #322c25; box-shadow: none; }
+    .dp-stats, .dp-shop { display: contents; }
+    .dp-div { display: none; }
+    .dp-logo { grid-column: 1; grid-row: 1; width: 44px; height: 44px; }
+    .dp-shop-txt { grid-column: 2; grid-row: 1; }
+    .dp-tags { grid-column: 3; grid-row: 1; display: flex; align-items: center; gap: 6px; }
+    .dp-stat { grid-row: 1; text-align: right; }
+    .dp-stat:first-child { grid-column: 4; }
+    .dp-stat:last-child { grid-column: 5; }
+    .dp-chev { grid-column: 6; grid-row: 1; }
+    .dp-stat b { font-size: 20px; line-height: 24px; letter-spacing: -0.5px; }
+    .dp-stat b small { font-size: 12px; }
+    .dp-stat span { margin-top: 2px; font-size: 8.5px; letter-spacing: 1.2px; }
+    .dp-shop-name { font-size: 16px; line-height: 20px; -webkit-line-clamp: 1; }
+    .dp-shop-meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .dw-dot, .dw-fim > * { animation: none; }
     .dw-passos b, .dw-carro, .dw-desl.volta .dw-bola, .dw-desl.volta .dw-desl-r { transition: none; }
@@ -473,9 +510,13 @@
       '<div class="dp-shop"><div class="dp-logo">' + LoovLogos.logoOf(cw) + '</div>' +
         '<div class="dp-shop-txt"><div class="dp-shop-name">' + esc(cw.name) + '</div>' +
         '<div class="dp-shop-meta">' + esc(meta) + (differs ? ' · <span class="dp-when">às ' + fmtTime(it.slots[0]) + (mins > 0 && mins < 1000 ? ' (em ' + mins + 'min)' : '') + '</span>' : '') + '</div></div>' +
+        // Selos num grupo só: no celular ele some (display: contents) e cada
+        // selo fica na linha como antes; no computador vira uma coluna.
+        '<span class="dp-tags">' +
         ((it.services || []).some(function (s) { return s.hora_off; }) ? '<span class="dp-off" role="img" aria-label="Hora Off" title="Hora Off">' + HORA_OFF_IC + '</span>' : '') +
         (cw.favorited ? '<span class="dp-fav" title="Favorito">' + icon('heart', 13) + '</span>' : '') +
         (reviews ? '<span class="dp-rate">' + icon('star', 10, { color: 'var(--coral-500)' }) + rating.toFixed(1).replace('.', ',') + '</span>' : '') +
+        '</span>' +
         '<span class="dp-chev">' + icon('chevron-right', 20) + '</span></div>' +
     '</button>';
   }
