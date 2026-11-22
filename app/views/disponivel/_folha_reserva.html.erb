@@ -123,6 +123,33 @@
     .dp-handle { display: none; }
     .dp-band-top { padding-top: 20px; }
   }
+  /* Folha larga do computador com mouse (renderLarga). */
+  @media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+    .dp-sheet.is-dk { max-width: 880px; height: min(600px, 92vh); max-height: none; display: grid; grid-template-columns: 360px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); padding: 0; overflow: hidden; }
+    .dp-dk-esq { margin: 0; padding: 26px 26px 22px; border-radius: 0; overflow: auto; display: flex; flex-direction: column; }
+    .dp-dk-esq .dp-selo { align-self: flex-start; }
+    .dp-dk-esq .dp-hora { margin-top: 12px; }
+    .dp-dk-loja { margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(250,250,246,.14); }
+    .dp-dk-loja .dp-sh-name { color: var(--cream) !important; white-space: normal; }
+    .dp-dk-loja .dp-sh-addr { color: rgba(250,250,246,.6); white-space: normal; }
+    .dp-dk-esq .dp-sh-label { color: rgba(250,250,246,.5); margin: 18px 0 8px; }
+    .dp-dk-svcs { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+    .dp-dk-svc { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; border: 2px solid transparent; border-radius: 14px; background: rgba(250,250,246,.06); color: var(--cream); text-align: left; transition: background .15s, border-color .15s; }
+    .dp-dk-svc:hover { background: rgba(250,250,246,.1); }
+    .dp-dk-svc.is-on { border-color: var(--coral-500); background: rgba(250,250,246,.1); }
+    .dp-dk-svc:focus-visible { outline: 2px solid var(--cream); outline-offset: 2px; }
+    .dp-dk-svc b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15.5px; }
+    .dp-dk-svc small { display: block; margin-top: 2px; font-size: 12.5px; color: rgba(250,250,246,.55); }
+    .dp-dk-pr { flex-shrink: 0; text-align: right; }
+    .dp-dk-pr s { display: block; font-size: 12px; color: rgba(250,250,246,.45); }
+    .dp-dk-pr b { font-size: 16px; white-space: nowrap; }
+    .dp-dk-dir { position: relative; padding: 26px 30px 24px; overflow: auto; overscroll-behavior: contain; display: flex; flex-direction: column; }
+    .dp-dk-dir .dp-svc { margin-top: 0; padding-right: 44px; }
+    .dp-dk-dir .dp-foot { margin-top: auto; }
+    .dp-dk-x { position: absolute; top: 16px; right: 18px; margin: 0; color: var(--ink); }
+    .dp-dk-x:hover { background: var(--sand); }
+    .dp-dk-vazio { margin: auto 0; color: var(--graphite); font-size: 15px; text-align: center; }
+  }
   /* Tela baixa (celular deitado, notebook pequeno com zoom): a folha inteira
      rola, com o topo e o botão junto. */
   @media (max-height: 620px) {
@@ -167,6 +194,7 @@
     expires: v.expires_at.in_time_zone("America/Sao_Paulo").strftime("%d/%m") }] }.to_json) %>;
   var HORA_OFF_IC = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 12l3-3M12 12v5M9.8 14.8L12 17l2.2-2.2"/></svg>';
   var SEM_MOV = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var DESK = window.matchMedia('(min-width: 1024px) and (hover: hover) and (pointer: fine)');
   var CURVA = 'cubic-bezier(.87,0,.13,1)';
 
   var useReward = true;
@@ -215,7 +243,9 @@
     // Nada vem escolhido quando há mais de um serviço: com a Lavagem Simples
     // já marcada, o cliente ia direto pro pagamento sem ver as outras. Vindo
     // da página do lava-rápido o serviço já foi escolhido lá.
-    st.selectedId = pre ? pre.id : ((it.services || []).length === 1 ? it.services[0].id : null);
+    // No computador a lista fica sempre ao lado do pagamento, então o
+    // primeiro já vem escolhido.
+    st.selectedId = pre ? pre.id : ((it.services || []).length === 1 || DESK.matches ? it.services[0].id : null);
     st.origem = st.op.origem && !SEM_MOV ? st.op.origem : null;
     st.lastFocus = document.activeElement;
     var bg = $('dp-sheet-bg'), sh = $('dp-sheet');
@@ -267,6 +297,8 @@
     var addr = [[cw.logradouro, cw.numero].filter(Boolean).join(', '), cw.bairro].filter(Boolean).join(' · ') || cw.address || '';
     var dist = cw.distance_km != null ? Number(cw.distance_km).toFixed(1).replace('.', ',') + ' km' : null;
     var dur = svc && Number(svc.duration) > 0 ? ' · ' + svc.duration + ' min' : '';
+    $('dp-sheet').classList.toggle('is-dk', DESK.matches);
+    if (DESK.matches) { renderLarga(it, cw, svcs, svc, addr, dist, dur); return; }
     var mid = $('dp-mid'), rolou = mid ? mid.scrollTop : 0;
     $('dp-sheet').innerHTML =
       '<div class="dp-band"><div class="dp-handle"></div>' +
@@ -294,7 +326,43 @@
       (svc ? '<div class="dp-svc"><h3>' + esc(svc.title) + '</h3><div class="price">' + (Number(svc.regular_price) > Number(svc.price) ? '<s class="dp-old">R$ ' + money(svc.regular_price, 2) + '</s>' : '') + 'R$ ' + money(svc.price, 2) + '<small>' + dur + '</small></div>' +
         '<p>' + esc(svc.description && svc.description.trim() ? svc.description : 'Este lava-rápido não cadastrou uma descrição detalhada. Confirme os itens incluídos ao chegar.') + '</p></div>' : '') +
       payBlock(svc, cw) + '</div>' +
-      (svc ? '<div class="dp-foot"><p class="dp-hint">' + (prepayOf(totalDe(cw, svc))
+      (svc ? footHtml(svc, cw) : '');
+    // Trocar de serviço ou o vale redesenha a folha: o miolo fica onde estava.
+    if (rolou) $('dp-mid').scrollTop = rolou;
+  }
+  // Computador com mouse: a folha do celular centralizada escondia a divisão
+  // do pagamento numa caixinha com rolagem, logo antes do botão que cobra.
+  // Aqui ela vira um cartão largo: à esquerda (escuro) a vaga, o lava-rápido
+  // e os serviços; à direita o serviço escolhido, o pagamento e o botão, tudo
+  // à vista.
+  function renderLarga(it, cw, svcs, svc, addr, dist, dur) {
+    var dir = $('dp-dk-dir'), rolou = dir ? dir.scrollTop : 0;
+    $('dp-sheet').innerHTML =
+      '<div class="dp-band dp-dk-esq">' +
+        '<span class="dp-selo">' + icon('zap', 12) + 'last minute</span>' +
+        '<div class="dp-hora">' + fmtTime(it.slots[0]) + '</div>' +
+        '<div class="dp-vivo"><i></i><span id="dp-vivo">' + vivoTxt() + '</span></div>' +
+        '<div class="dp-dk-loja"><h2 class="dp-sh-name" id="dp-sh-name">' + esc(cw.name) + '</h2>' +
+          '<div class="dp-sh-addr">' + esc([addr, dist].filter(Boolean).join(' · ')) + '</div></div>' +
+        '<div class="dp-sh-label" id="dp-svcs-t">Serviço</div>' +
+        '<ul class="dp-dk-svcs" aria-labelledby="dp-svcs-t">' + svcs.map(function (s) {
+          var on = svc && s.id === svc.id;
+          return '<li><button type="button" class="dp-dk-svc' + (on ? ' is-on' : '') + '" data-svc="' + s.id + '" aria-pressed="' + !!on + '"' + (st.reserving ? ' disabled' : '') + '>' +
+            '<span><b>' + esc(s.title) + '</b>' + (Number(s.duration) > 0 ? '<small>' + s.duration + ' min</small>' : '') + '</span>' +
+            '<span class="dp-dk-pr">' + (Number(s.regular_price) > Number(s.price) ? '<s>R$ ' + money(s.regular_price, 2) + '</s>' : '') + '<b>R$ ' + money(s.price, 2) + '</b></span></button></li>';
+        }).join('') + '</ul></div>' +
+      '<div class="dp-dk-dir" id="dp-dk-dir">' +
+        '<button type="button" class="dp-x dp-dk-x" id="dp-close" aria-label="Fechar"' + (st.reserving ? ' disabled' : '') + '>' + icon('x', 20) + '</button>' +
+        (svc
+          ? '<div class="dp-svc"><h3>' + esc(svc.title) + '</h3><div class="price">' + (Number(svc.regular_price) > Number(svc.price) ? '<s class="dp-old">R$ ' + money(svc.regular_price, 2) + '</s>' : '') + 'R$ ' + money(svc.price, 2) + '<small>' + dur + '</small></div>' +
+              '<p>' + esc(svc.description && svc.description.trim() ? svc.description : 'Este lava-rápido não cadastrou uma descrição detalhada. Confirme os itens incluídos ao chegar.') + '</p></div>' +
+            payBlock(svc, cw) + footHtml(svc, cw)
+          : '<p class="dp-dk-vazio">Escolha o serviço ao lado para ver o pagamento.</p>') +
+      '</div>';
+    if (rolou) $('dp-dk-dir').scrollTop = rolou;
+  }
+  function footHtml(svc, cw) {
+    return '<div class="dp-foot"><p class="dp-hint">' + (prepayOf(totalDe(cw, svc))
         ? 'Os ' + PCT_LABEL + ' ficam reservados no cartão e só são cobrados se o lava-rápido aceitar: ele tem até 3 min pra responder. ' +
           'Se ele recusar ou o tempo acabar, o valor é liberado. Depois de aceita, não há reembolso se você não for; ' +
           'se o lava-rápido cancelar, você recebe de volta.'
@@ -303,9 +371,7 @@
         (st.reserving ? '<span class="dp-spin"></span>'
           : (SIGNED_IN && !HAS_CARD) ? icon('credit-card', 16) + ' Cadastrar cartão para reservar'
           : svc ? icon('zap', 16) + (prepayOf(totalDe(cw, svc)) ? 'Reservar e pagar R$ ' + money(prepayOf(totalDe(cw, svc)), 2) : 'Reservar com o vale') + ' ' + icon('arrow-right', 16)
-          : 'Confirmar reserva') + '</button></div>' : '');
-    // Trocar de serviço ou o vale redesenha a folha: o miolo fica onde estava.
-    if (rolou) $('dp-mid').scrollTop = rolou;
+          : 'Confirmar reserva') + '</button></div>';
   }
   // Minutos até a vaga começar (a próxima marca de meia hora). Atualiza a
   // cada 15 s com a folha aberta: não pode ficar mostrando um número velho.
@@ -318,6 +384,7 @@
   // Blocos que entram em cascata: o conteúdo, não a faixa escura (ela já é o
   // que cresce do botão).
   function blocos(sh) {
+    if (sh.classList.contains('is-dk')) return Array.prototype.slice.call(sh.querySelectorAll('.dp-dk-esq > *, .dp-dk-dir > *:not(.dp-dk-x)'));
     var band = sh.querySelector('.dp-band');
     var dentro = band ? Array.prototype.filter.call(band.children, function (k) { return !k.classList.contains('dp-handle'); }) : [];
     return dentro.concat(Array.prototype.filter.call(sh.children, function (k) { return k !== band; }));
@@ -355,10 +422,10 @@
   // vai pro que o teclado precisa (o primeiro serviço ou o "Trocar").
   function trocarPara(id) {
     st.selectedId = id;
-    var mid = $('dp-mid'); if (mid) mid.scrollTop = 0;
+    var mid = $('dp-mid') || $('dp-dk-dir'); if (mid) mid.scrollTop = 0;
     $('dp-sheet').scrollTop = 0;
     render();
-    var novo = $('dp-mid');
+    var novo = $('dp-mid') || $('dp-dk-dir');
     if (novo && novo.animate && !SEM_MOV) novo.animate([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 260, easing: 'cubic-bezier(.2,.8,.2,1)' });
     var f = document.querySelector(id == null ? '#dp-sheet [data-svc]' : '#dp-sheet [data-trocar]');
     if (f) f.focus({ preventScroll: true });
