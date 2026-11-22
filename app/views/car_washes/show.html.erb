@@ -335,6 +335,9 @@
     .bk-tot b { font-size: 26px; }
     .bk-cta { width: 100%; }
   }
+  @media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+    .bk-aside-sum .bk-conta { margin: 0; padding: 0; border: 0; background: transparent; }
+  }
 
   /* Computador com mouse: como a loja no iFood e no Uber Eats. Sem a faixa
      escura (era o lugar de uma capa que o lava-rápido não tem), cabeçalho
@@ -970,6 +973,14 @@
     $('bk-prog2').classList.toggle('is-on', bk.step >= 2);
     $('bk-sum-mob').innerHTML = sumHtml();
     var w = whenText();
+    // Confirmação no computador: cada coisa uma vez, como a sacola do iFood.
+    // À esquerda o que se escolhe (quando e pagamento); à direita a conta
+    // (lava-rápido, serviço, vale) e o total com o Confirmar.
+    if (DESK.matches && bk.step === 2) {
+      $('bk-aside-sum').innerHTML = '<div class="bk-sum bk-sum-loja"><div class="bk-sum-logo">' + LoovLogos.logoOf(CW) + '</div>' +
+          '<div class="bk-sum-txt"><div class="bk-sum-shop">' + esc(CW.name) + '</div><div class="bk-sum-svc">' + esc([CW.bairro, CW.cidade].filter(Boolean).join(' · ')) + '</div></div></div>' +
+        '<div class="bk-break bk-conta">' + contaHtml(s) + '</div>';
+    } else
     $('bk-aside-sum').innerHTML = '<div class="bk-sum">' + sumHtml() + '</div>' +
       '<div class="bk-aside-line"><span>Quando</span><b>' + (w ? esc(w) : 'Escolha dia e horário') + '</b></div>' +
       (usaVale() && descontoDe(s) ? '<div class="bk-aside-line"><span>Vale</span><b>' + esc(VALE.short) + '</b></div>' : '') +
@@ -1046,21 +1057,25 @@
     return '<div class="bk-lab">Dia</div><div class="bk-days" id="bk-days">' + days + '</div><div class="bk-lab">Horário</div>' + body;
   }
 
+  // As linhas da conta (serviço, Hora Off, vale), sem o total.
+  function contaHtml(s) {
+    return '<div class="bk-brow"><span>' + esc(s.title) + (DESK.matches ? ' · ' + (s.duration || 30) + ' min' : '') + '</span><b>R$ ' + money(s.price, 2) + '</b></div>' +
+      (horaOffDe(s) > 0
+        ? '<div class="bk-brow"><span class="bk-off"><span class="bk-off-ic">' + HORA_OFF_IC + '</span>Desconto Hora Off</span><b class="bk-off-v">−R$ ' + money(horaOffDe(s), 2) + '</b></div>'
+        : '') +
+      valeHtml(s);
+  }
   function step2Html() {
     var s = bk.service, d = dates[bk.dateIdx];
     return '<div class="bk-lab">Quando</div>' +
       '<div class="bk-when"><span class="bk-when-ic">' + icon('calendar', 18) + '</span><span><b>' + esc(whenText()) + '</b><small>' + esc(CW.name) + '</small></span>' +
         '<button type="button" data-edit-when>Alterar</button></div>' +
-      '<div class="bk-lab" style="margin-top:24px">Resumo</div>' +
-      '<div class="bk-break">' +
-        '<div class="bk-brow"><span>' + esc(s.title) + '</span><b>R$ ' + money(s.price, 2) + '</b></div>' +
-        (horaOffDe(s) > 0
-          ? '<div class="bk-brow"><span class="bk-off"><span class="bk-off-ic">' + HORA_OFF_IC + '</span>Desconto Hora Off</span><b class="bk-off-v">−R$ ' + money(horaOffDe(s), 2) + '</b></div>'
-          : '') +
-        valeHtml(s) +
+      // No computador a conta fica só no cartão da direita (renderBooking).
+      (DESK.matches ? '' : '<div class="bk-lab" style="margin-top:24px">Resumo</div>' +
+      '<div class="bk-break">' + contaHtml(s) +
         '<div class="bk-bdiv"></div>' +
         '<div class="bk-brow bk-btot"><span>Total</span><b>R$ ' + money(totalDe(s), 2) + '</b></div>' +
-      '</div>' +
+      '</div>') +
       '<div class="bk-lab" style="margin-top:24px">Pagamento</div>' +
       (comSinal()
         ? '<div class="bk-break">' +
