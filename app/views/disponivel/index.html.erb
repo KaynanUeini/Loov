@@ -190,7 +190,22 @@
   .dw-onde b small::before { content: ' · '; }
   /* Só no computador: dica da aba, logo do lugar, box da rua e o cancelar
      com clique. */
-  .dw-dica, .dw-canc, .dw-box, .dw-onde-logo { display: none; }
+  .dw-dica, .dw-canc, .dw-onde-logo { display: none; }
+  /* O box de lavagem no fim de "Sua vaga", visto de cima: no aceite o carro
+     entra nele, os rolos acendem e sai espuma. No celular ele cabe na faixa
+     do carro, sem mudar a altura da tela; no computador cresce (abaixo). */
+  .dw-passos .vaga i { overflow: visible; }
+  .dw-box { position: absolute; right: 0; top: 50%; width: 52px; height: 22px; margin-top: -11px; background: #221d18; border: 2px solid rgba(250,250,246,.3); border-left: 0; border-radius: 0 7px 7px 0; }
+  .dw-box s { position: absolute; left: 10px; width: 28px; height: 3px; border-radius: 2px; background: #3a342d; transition: background .4s; }
+  .dw-box s:first-child { top: 2px; }
+  .dw-box s + s { bottom: 2px; }
+  .dw-box em { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: var(--cream); opacity: 0; }
+  .dw-box em:nth-of-type(1) { left: 8px; top: 3px; }
+  .dw-box em:nth-of-type(2) { left: 20px; top: 9px; width: 8px; height: 8px; animation-delay: .3s !important; }
+  .dw-box em:nth-of-type(3) { left: 32px; top: 2px; animation-delay: .6s !important; }
+  .dw-box em:nth-of-type(4) { left: 40px; top: 11px; width: 5px; height: 5px; animation-delay: .9s !important; }
+  .dw-passos .vaga.acesa .dw-box s { background: var(--coral-500); }
+  .dw-passos .vaga.acesa .dw-box em { animation: dw-bolha 1.6s ease-out infinite; }
   .dw-fim-baixo.on { display: block; }
 
   /* Computador com mouse: a espera abre na largura toda. O placar ocupa a
@@ -225,7 +240,7 @@
     .dw-esp .dw-passos b { top: auto; height: 3px; }
     .dw-esp .dw-carro { top: 12px; width: 56px; height: 28px; z-index: 2; }
     .dw-esp .dw-carro svg { width: 100%; height: 100%; }
-    .dw-box { display: block; position: absolute; top: 0; right: 0; bottom: 0; width: 150px; z-index: 1; background: #221d18; border: 3px solid #575148; border-left: 0; border-radius: 0 10px 10px 0; }
+    .dw-box { display: block; position: absolute; top: 0; right: 0; bottom: 0; width: 150px; height: auto; margin-top: 0; z-index: 1; background: #221d18; border: 3px solid #575148; border-left: 0; border-radius: 0 10px 10px 0; }
     .dw-box s { position: absolute; left: 34px; width: 70px; height: 7px; border-radius: 4px; background: #3a342d; transition: background .4s; }
     .dw-box s:first-child { top: 5px; }
     .dw-box s + s { bottom: 5px; }
@@ -234,8 +249,6 @@
     .dw-box em:nth-of-type(2) { left: 58px; top: 26px; width: 16px; height: 16px; animation-delay: .3s !important; }
     .dw-box em:nth-of-type(3) { left: 86px; top: 10px; width: 10px; height: 10px; animation-delay: .6s !important; }
     .dw-box em:nth-of-type(4) { left: 102px; top: 28px; animation-delay: .9s !important; }
-    .dw-passos .vaga.acesa .dw-box s { background: var(--coral-500); }
-    .dw-passos .vaga.acesa .dw-box em { animation: dw-bolha 1.6s ease-out infinite; }
     .dw-esp .dw-linhas { display: flex; align-items: center; width: min(1120px, 100% - 64px); margin: 0 auto; padding-block: clamp(14px, 3vh, 26px); }
     .dw-esp .dw-lp { flex: 1 1 0; min-width: 0; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 6px; padding: 0 22px; border-top: 0; border-left: 1.5px solid var(--ink); }
     .dw-esp .dw-lp:first-child { padding-left: 0; border-left: 0; }
@@ -812,7 +825,8 @@
       .then(function () {
         var v = document.querySelector('#dw-in .dw-passos .vaga'); if (v) v.classList.add('acesa');
         var st = $('dw-status-txt'); if (st) st.textContent = 'Aceito';
-        return pausa(250);
+        // Um respiro pra espuma do box aparecer antes da cortina subir.
+        return pausa(700);
       })
       .then(function () {
         var esp = $('dw-in');
