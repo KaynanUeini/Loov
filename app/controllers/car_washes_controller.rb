@@ -439,7 +439,10 @@ class CarWashesController < ApplicationController
       now            = Time.current.in_time_zone("America/Sao_Paulo")
       now_minutes    = now.hour * 60 + now.min
       is_today       = date == Date.current
-      lock_threshold = now_minutes + lock_minutes
+      # A trava conta os segundos, como o checkout: às 18:45:30 o 19:30 está a
+      # 44,5 min e já não é oferecido. Contando só hora e minuto ele aparecia e
+      # o checkout recusava no fim do fluxo.
+      lock_threshold = (now.seconds_since_midnight / 60.0).ceil + lock_minutes
 
       # ── Grade fixa de 30 em 30, ancorada no RELÓGIO ────────────────────
       #

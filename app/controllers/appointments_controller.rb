@@ -1,4 +1,7 @@
 class AppointmentsController < ApplicationController
+  # Tempo pra passar pela confirmação depois de escolher o horário.
+  FOLGA_CONFIRMACAO = 5.minutes
+
   before_action :authenticate_user!
   # O app manda o login no cabeçalho Authorization, sem o token CSRF do
   # formulário. O cancelamento fica livre só nesse caso: um site de terceiros
@@ -91,11 +94,16 @@ class AppointmentsController < ApplicationController
       return
     end
 
-    minutes_until = ((@appointment.scheduled_at.in_time_zone("America/Sao_Paulo") - Time.current.in_time_zone("America/Sao_Paulo")) / 60).to_i
-    if @appointment.regular? && minutes_until < 45 && minutes_until >= 0
+    # Trava de 45 min do agendamento comum (abaixo disso a vaga é do Last
+    # Minute). A lista só oferece horário a 45 min ou mais; aqui há 5 min de
+    # folga, o tempo de passar pela confirmação. Sem a folga, quem escolhia um
+    # horário no limite sempre o perdia no último clique.
+    faltam = @appointment.scheduled_at - Time.current
+    if @appointment.regular? && faltam >= 0 && faltam < PrecoDinamico::TRAVA_AGENDAMENTO - FOLGA_CONFIRMACAO
+      msg = "Esse horário ficou a menos de 45 minutos e não pode mais ser agendado. Escolha outro horário."
       respond_to do |format|
-        format.html { redirect_to disponivel_index_path, alert: "Este horário só pode ser reservado pelo Disponível." }
-        format.json { render json: { error: "Este horário só pode ser reservado pelo Disponível." }, status: :unprocessable_entity }
+        format.html { redirect_to car_wash_path(@car_wash, anchor: 'booking'), alert: msg }
+        format.json { render json: { error: msg, code: "slot_locked" }, status: :unprocessable_entity }
       end
       return
     end

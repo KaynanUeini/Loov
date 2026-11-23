@@ -1157,6 +1157,19 @@
         bk.submitting = false;
         if (res.ok) { renderDone(res.data); return; }
         bk.error = res.data.error || 'Não foi possível agendar.';
+        // O horário entrou na trava de 45 min enquanto o cliente confirmava:
+        // volta pra escolha com a lista nova e o aviso, em vez de deixar o
+        // Confirmar batendo no mesmo horário.
+        if (res.data.code === 'slot_locked') {
+          var aviso = bk.error;
+          bk.step = 1;
+          history.replaceState({ v: 'book', svc: bk.service.id, step: 1 }, '', '#agendar-' + bk.service.id);
+          window.scrollTo(0, 0);
+          loadTimes();
+          bk.error = aviso;
+          renderBooking();
+          return;
+        }
         renderBooking();
       })
       .catch(function () { bk.submitting = false; bk.error = 'Erro de conexão.'; renderBooking(); });
