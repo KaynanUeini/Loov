@@ -99,13 +99,23 @@ class CarWash < ApplicationRecord
   # é a diferença entre o lava-rápido nunca aparecer pra ninguém perto e
   # aparecer com uma coordenada só um pouco menos exata.
   def geocode
-    [geocoding_address_numero, geocoding_address, geocoding_address_bairro, geocoding_address_cep].each do |query|
+    achado = localizar
+    return nil unless achado
+    self.latitude  = achado[:lat]
+    self.longitude = achado[:lng]
+    [achado[:lat], achado[:lng]]
+  end
+
+  # A mesma cascata, sem gravar, dizendo em que degrau achou: { lat:, lng:,
+  # precisao: "numero" | "rua" | "bairro" | "cep" }. É o ponto de partida do
+  # pino que o dono arrasta até a porta (só "numero" cai perto dela).
+  def localizar
+    { "numero" => geocoding_address_numero, "rua" => geocoding_address,
+      "bairro" => geocoding_address_bairro, "cep" => geocoding_address_cep }.each do |precisao, query|
       next if query.blank?
       result = Geocoder.search(query).first
       next unless result&.latitude && result&.longitude
-      self.latitude  = result.latitude
-      self.longitude = result.longitude
-      return [result.latitude, result.longitude]
+      return { lat: result.latitude.to_f, lng: result.longitude.to_f, precisao: precisao }
     end
     nil
   end

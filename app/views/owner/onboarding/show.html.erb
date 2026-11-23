@@ -17,6 +17,7 @@
   segurança); o nome digitado no cadastro chega por localStorage.
 %>
 <%= render "shared/loov_logos" %>
+<%= render "shared/pino_mapa" %>
 <script src="/vendor/feather-4.29.2.min.js" nonce="<%= csp_nonce %>"></script>
 <style>
   html, body { overflow-x: clip !important; } /* senão o sticky da prévia não funciona */
@@ -210,6 +211,7 @@
           <div class="ob-f"><label for="f-uf">UF</label><input class="ob-in" id="f-uf" placeholder="SP" maxlength="2" style="text-transform:uppercase"></div>
         </div>
         <div class="ob-f"><label for="f-cidade">Cidade</label><input class="ob-in" id="f-cidade" placeholder="Cidade" autocomplete="address-level2"><div class="ob-ferr" data-for="f-cidade"></div></div>
+        <div class="ob-f"><label>Entrada no mapa</label><div id="ob-pino"></div></div>
       </div>
 
       <%# ── 2 · Operação ── %>
@@ -308,6 +310,7 @@
   function go(n) {
     st.step = n; err('');
     document.querySelectorAll('.ob-step').forEach(function (s) { s.classList.toggle('is-on', Number(s.dataset.step) === n); });
+    if (n === 1 && window.pinoOb) setTimeout(function () { window.pinoOb.montar(); }, 0);
     document.querySelectorAll('#ob-prog > div').forEach(function (d) { var k = Number(d.dataset.n); d.classList.toggle('is-on', k <= n); d.classList.toggle('is-now', k === n); });
     $('ob-prog').style.visibility = n === 5 ? 'hidden' : '';
     // Voltar só antes de o lava-rápido existir (passo 2) ou entre horários e serviços.
@@ -348,6 +351,7 @@
           var el = $(p[0]); el.value = p[1]; el.classList.remove('ob-filled'); void el.offsetWidth; el.classList.add('ob-filled'); fieldErr(p[0], '');
         });
         $('f-numero').focus();
+        localizaDepois();
         renderPreview();
       })
       .catch(function () { lastCep = ''; fieldErr('f-cep', 'Não foi possível buscar o CEP agora. Preencha o endereço abaixo.'); })
@@ -360,6 +364,17 @@
   });
   ['f-name', 'f-bairro', 'f-cidade'].forEach(function (id) { $(id).addEventListener('input', renderPreview); });
   $('f-uf').addEventListener('input', function () { this.value = this.value.toUpperCase().replace(/[^A-Z]/g, ''); });
+
+  // ── Pino no mapa: começa onde o endereço cai, o dono arrasta até a porta ──
+  var pino = window.pinoOb = window.LoovPino.criar({});
+  $('ob-pino').appendChild(pino.el);
+  var pinoT = null;
+  function campos() {
+    return { cep: cep.value.trim(), logradouro: $('f-rua').value.trim(), numero: $('f-numero').value.trim(),
+      bairro: $('f-bairro').value.trim(), cidade: $('f-cidade').value.trim(), uf: $('f-uf').value.trim() };
+  }
+  function localizaDepois() { clearTimeout(pinoT); pinoT = setTimeout(function () { pino.localizar(campos()); }, 700); }
+  ['f-numero', 'f-rua', 'f-cidade', 'f-bairro', 'f-uf'].forEach(function (id) { $(id).addEventListener('change', localizaDepois); });
 
   function step1() {
     var bad = Object.keys(RULES).filter(function (id) { return !$(id).value.trim(); });
@@ -391,6 +406,7 @@
     post('<%= owner_onboarding_car_wash_path %>', { car_wash: {
       name: $('f-name').value.trim(), cep: cep.value.trim(), logradouro: $('f-rua').value.trim(), numero: $('f-numero').value.trim(),
       bairro: $('f-bairro').value.trim(), cidade: $('f-cidade').value.trim(), uf: $('f-uf').value.trim().toUpperCase(),
+      latitude: pino.coords() ? pino.coords().lat : null, longitude: pino.coords() ? pino.coords().lng : null,
       capacity_per_slot: st.capacity, num_employees: st.employees } })
       .then(function (res) {
         saving(false);

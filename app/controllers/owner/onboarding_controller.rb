@@ -37,6 +37,19 @@ class Owner::OnboardingController < ApplicationController
     }
   end
 
+  # GET /owner/localizar?logradouro=..&numero=..&bairro=..&cidade=..&uf=..&cep=..
+  # Onde o endereço digitado cai no mapa, pro pino começar perto. O dono
+  # arrasta até a porta: nenhum serviço gratuito acerta o número no Brasil.
+  def localizar
+    campos = params.permit(:cep, :logradouro, :numero, :bairro, :cidade, :uf)
+    achado = CarWash.new(campos).localizar
+    return head(:no_content) unless achado
+    render json: achado
+  rescue => e
+    Rails.logger.error("[localizar] #{e.class}: #{e.message}")
+    head :no_content
+  end
+
   def save_car_wash
     address = [
       params.dig(:car_wash, :logradouro),
@@ -50,6 +63,10 @@ class Owner::OnboardingController < ApplicationController
     @car_wash.address = address
 
     if @car_wash.save
+      # O dono confirmou o pino no mapa: a coordenada dele vale e não há o
+      # que geocodificar.
+      return render(json: { success: true, car_wash_id: @car_wash.id }) if @car_wash.has_valid_coordinates?
+
       # Geocoding em background para não travar o wizard
       begin
         @car_wash.geocode
@@ -112,6 +129,6 @@ class Owner::OnboardingController < ApplicationController
   end
 
   def car_wash_params
-    params.require(:car_wash).permit(:name, :cep, :logradouro, :numero, :bairro, :cidade, :uf, :capacity_per_slot, :num_employees)
+    params.require(:car_wash).permit(:name, :cep, :logradouro, :numero, :bairro, :cidade, :uf, :capacity_per_slot, :num_employees, :latitude, :longitude)
   end
 end

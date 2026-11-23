@@ -115,6 +115,7 @@ Rails.application.routes.draw do
     get  'onboarding',          to: 'onboarding#show',          as: :onboarding
     get  'onboarding/status',   to: 'onboarding#status',        as: :onboarding_status
     post 'onboarding/car_wash', to: 'onboarding#save_car_wash', as: :onboarding_car_wash
+    get  'localizar',           to: 'onboarding#localizar',     as: :localizar
     post 'onboarding/hours',    to: 'onboarding#save_hours',    as: :onboarding_hours
     post 'onboarding/services', to: 'onboarding#save_services', as: :onboarding_services
     get  'loyalty_program', to: 'loyalty_programs#show', as: :loyalty_program

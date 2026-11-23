@@ -653,6 +653,8 @@ class CarWashesController < ApplicationController
         address:           cw.address,
         capacity_per_slot: cw.capacity_per_slot,
         has_coordinates:   cw.has_valid_coordinates?,
+        latitude:          cw.latitude&.to_f,
+        longitude:         cw.longitude&.to_f,
         operating_hours:   cw.operating_hours.order(:day_of_week).map { |oh|
           {
             id:                 oh.id,

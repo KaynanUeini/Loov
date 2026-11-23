@@ -11,6 +11,7 @@
   o estado da loja sem abrir nada. No celular volta a ser a lista de cartões
   recolhíveis do app.
 %>
+<%= render "shared/pino_mapa" %>
 <script src="/vendor/feather-4.29.2.min.js" nonce="<%= csp_nonce %>"></script>
 <%= render "shared/loov_logos" %>
 <script src="/logo/processa.js" nonce="<%= csp_nonce %>"></script>
@@ -657,6 +658,7 @@
     return {
       name: d.name || '', cep: d.cep || '', logradouro: d.logradouro || '', numero: d.numero || '',
       bairro: d.bairro || '', cidade: d.cidade || '', uf: d.uf || '', address: d.address || '',
+      latitude: d.latitude ?? null, longitude: d.longitude ?? null,
       capacity: String(d.capacity_per_slot ?? 1),
       hours: (d.operating_hours || []).map(h => ({
         _l: lid(), id: h.id, day_of_week: h.day_of_week,
@@ -925,6 +927,7 @@
       const el = document.querySelector(`[data-f="${keepFocus}"]`);
       if (el) { el.focus(); try { el.setSelectionRange(keepSel, keepSel); } catch {} }
     }
+    encaixaPino();
   }
 
   function renderBar() {
@@ -1120,7 +1123,8 @@
           ${field('UF', 'uf', st.uf, 'placeholder="SP" maxlength="2" style="text-transform:uppercase"')}
           ${field('Endereço (mapa)', 'address', st.address, 'placeholder="Preenchido pelo CEP"')}
         </div>
-        <div class="gm-hint">O CEP preenche o resto. O endereço do mapa é o que usamos para localizar a loja.</div>`;
+        <div class="gm-hint">O CEP preenche o resto.</div>
+        <div class="gm-field"><span class="gm-label">Entrada no mapa</span><div id="gm-pino-host"></div></div>`;
     },
 
     hours() {
@@ -1477,6 +1481,7 @@
         refreshLight(); return;
       } else {
         st[f] = v;
+        if (['logradouro', 'numero', 'bairro', 'cidade', 'uf'].includes(f)) localizaDepois();
       }
       refreshLight();
       return;
@@ -1634,6 +1639,22 @@
     render();
   }
 
+  // ── Pino no mapa ─────────────────────────────────────────────────────
+  // O render redesenha a seção inteira; o mapa é um só e muda de lugar.
+  // Arrastar o pino conta como alteração (Salvar acende).
+  let pino = null, pinoT = null;
+  function encaixaPino() {
+    const host = document.getElementById('gm-pino-host');
+    if (!host || !window.LoovPino) return;
+    if (!pino) pino = window.LoovPino.criar({ lat: st.latitude, lng: st.longitude, aoMudar(lat, lng) { st.latitude = lat; st.longitude = lng; refreshLight(); } });
+    if (pino.el.parentNode !== host) host.appendChild(pino.el);
+    pino.montar();
+  }
+  function localizaDepois() {
+    clearTimeout(pinoT);
+    pinoT = setTimeout(() => pino && pino.localizar({ cep: st.cep, logradouro: st.logradouro, numero: st.numero, bairro: st.bairro, cidade: st.cidade, uf: st.uf }), 900);
+  }
+
   // ── CEP ───────────────────────────────────────────────────────────────
   let cepSeq = 0;
   async function lookupCep(cep) {
@@ -1650,7 +1671,7 @@
     } catch {
       if (my === cepSeq) toast('error', 'Não foi possível consultar o CEP. Preencha manualmente.');
     } finally {
-      if (my === cepSeq) { ui.cep = false; render(); document.querySelector('[data-f=numero]')?.focus(); }
+      if (my === cepSeq) { ui.cep = false; render(); document.querySelector('[data-f=numero]')?.focus(); localizaDepois(); }
     }
   }
 
@@ -1840,6 +1861,7 @@
     const payload = { car_wash: {
       name: st.name.trim(), cep: st.cep.replace(/\D/g, ''), logradouro: st.logradouro, numero: st.numero,
       bairro: st.bairro, cidade: st.cidade, uf: st.uf, address: st.address,
+      latitude: st.latitude, longitude: st.longitude,
       capacity_per_slot: defCap(),
       operating_hours_attributes: hours, services_attributes: svcs,
     } };

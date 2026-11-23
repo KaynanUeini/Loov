@@ -1,0 +1,102 @@
+<%#
+  Mapa com o pino do lava-rápido, pro dono arrastar até a entrada. Usado no
+  cadastro (owner/onboarding) e no gerenciar (car_washes/manage). Nenhum
+  serviço gratuito acerta o número das casas no Brasil: sem isto, a rota e
+  as distâncias saíam do meio da rua ou do centro do bairro.
+
+  var p = window.LoovPino.criar({ lat, lng, aoMudar(lat, lng) })
+    p.el                   o bloco (mapa + texto), pra pôr na página
+    p.montar()             depois de o bloco estar visível na página
+    p.localizar(campos)    { cep, logradouro, numero, bairro, cidade, uf }:
+                           põe o pino onde o endereço cai (GET /owner/localizar),
+                           a não ser que o dono já tenha arrastado
+    p.coords()             { lat, lng } ou null (sem pino ainda)
+%>
+<link rel="stylesheet" href="/vendor/leaflet-1.9.4/leaflet.css">
+<script src="/vendor/leaflet-1.9.4/leaflet.js" nonce="<%= csp_nonce %>"></script>
+<style>
+  .lp { display: grid; gap: 8px; }
+  .lp-mapa { height: 240px; border-radius: 16px; overflow: hidden; border: 1px solid var(--stone); background: var(--sand); }
+  .lp-mapa .leaflet-tile-pane { filter: grayscale(1) sepia(.18) contrast(.92) brightness(1.03); }
+  .lp-mapa .leaflet-control-attribution { font-size: 9px; background: rgba(250,250,246,.8); }
+  .lp-mapa .leaflet-bar { border: 1px solid var(--stone); border-radius: 10px; overflow: hidden; }
+  .lp-mapa .leaflet-bar a { color: var(--ink); }
+  /* Pino em gota, com a ponta no lugar exato. */
+  .lp-pino { width: 30px; height: 30px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: var(--coral-500, #dd7852); border: 3px solid var(--cream, #fafaf6); box-shadow: 0 3px 10px rgba(0,0,0,.35); cursor: grab; }
+  .lp-pino::after { content: ''; position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: var(--cream, #fafaf6); }
+  .lp-txt { margin: 0; font-size: 13px; line-height: 1.45; color: var(--graphite); }
+  .lp-txt b { color: var(--ink); font-weight: 600; }
+  .lp-txt.is-aviso { color: #8a4a2c; }
+</style>
+<script nonce="<%= csp_nonce %>">
+(function () {
+  if (window.LoovPino) return;
+  var INICIO = [-23.5505, -46.6333]; // sem endereço ainda: São Paulo
+  var TXT = {
+    vazio: 'Preencha o endereço: o pino aparece no mapa.',
+    buscando: 'Procurando o endereço no mapa…',
+    numero: '<b>Confira o pino.</b> Se não estiver na entrada do lava-rápido, arraste até lá.',
+    rua: '<b>Achamos a rua, mas não o número.</b> Arraste o pino até a entrada do lava-rápido.',
+    bairro: '<b>Achamos só o bairro.</b> Arraste o pino até a entrada do lava-rápido.',
+    cep: '<b>Achamos só a região do CEP.</b> Arraste o pino até a entrada do lava-rápido.',
+    nada: '<b>Não achamos esse endereço no mapa.</b> Clique no lugar do lava-rápido ou arraste o pino até lá.',
+    mexeu: '<b>Pino ajustado.</b> É aqui que a rota do cliente vai terminar.'
+  };
+  function criar(op) {
+    op = op || {};
+    var el = document.createElement('div');
+    el.className = 'lp';
+    el.innerHTML = '<div class="lp-mapa" role="application" aria-label="Mapa: arraste o pino até a entrada do lava-rápido"></div><p class="lp-txt" aria-live="polite"></p>';
+    var caixa = el.firstChild, txt = el.lastChild;
+    var temPino = op.lat != null && op.lng != null && Number(op.lat) !== 0;
+    var pos = temPino ? [Number(op.lat), Number(op.lng)] : null;
+    var mapa = null, pino = null, seq = 0;
+    var api = { el: el, mexeu: false };
+    function diz(k) { txt.innerHTML = TXT[k]; txt.classList.toggle('is-aviso', k !== 'numero' && k !== 'mexeu' && k !== 'buscando'); }
+    diz(temPino ? 'numero' : 'vazio');
+    function poe(lat, lng, zoom) {
+      pos = [lat, lng];
+      if (!mapa) return;
+      if (!pino) {
+        pino = L.marker(pos, { draggable: true, keyboard: true, title: 'Arraste até a entrada',
+          icon: L.divIcon({ className: '', html: '<div class="lp-pino"></div>', iconSize: [30, 30], iconAnchor: [15, 34] }) }).addTo(mapa);
+        pino.on('dragend', function () { var p = pino.getLatLng(); mudou(p.lat, p.lng); });
+      } else pino.setLatLng(pos);
+      mapa.setView(pos, zoom || Math.max(mapa.getZoom(), 17));
+    }
+    function mudou(lat, lng) {
+      pos = [lat, lng]; api.mexeu = true; diz('mexeu');
+      if (op.aoMudar) op.aoMudar(Number(lat.toFixed(6)), Number(lng.toFixed(6)));
+    }
+    api.montar = function () {
+      if (mapa) { mapa.invalidateSize(); return; }
+      if (!window.L || caixa.offsetParent === null) return;
+      mapa = L.map(caixa, { scrollWheelZoom: false, zoomControl: true }).setView(pos || INICIO, pos ? 17 : 11);
+      mapa.attributionControl.setPrefix(false);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(mapa);
+      // Clicar no mapa também leva o pino, mais fácil que arrastar de longe.
+      mapa.on('click', function (e) { poe(e.latlng.lat, e.latlng.lng); mudou(e.latlng.lat, e.latlng.lng); });
+      if (pos) poe(pos[0], pos[1], 17);
+    };
+    api.localizar = function (c) {
+      if (api.mexeu || !c || !(c.logradouro || c.cep) || !c.cidade && !c.cep) return;
+      var my = ++seq;
+      diz('buscando');
+      var q = ['cep', 'logradouro', 'numero', 'bairro', 'cidade', 'uf'].map(function (k) { return k + '=' + encodeURIComponent(c[k] || ''); }).join('&');
+      fetch('/owner/localizar?' + q, { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+        .then(function (r) { return r.status === 200 ? r.json() : null; })
+        .then(function (d) {
+          if (my !== seq || api.mexeu) return;
+          if (!d) { diz(pos ? 'numero' : 'nada'); return; }
+          poe(d.lat, d.lng, d.precisao === 'numero' ? 18 : d.precisao === 'rua' ? 17 : 15);
+          diz(d.precisao);
+          if (op.aoMudar) op.aoMudar(Number(d.lat.toFixed(6)), Number(d.lng.toFixed(6)));
+        })
+        .catch(function () { if (my === seq) diz(pos ? 'numero' : 'nada'); });
+    };
+    api.coords = function () { return pos ? { lat: Number(pos[0].toFixed(6)), lng: Number(pos[1].toFixed(6)) } : null; };
+    return api;
+  }
+  window.LoovPino = { criar: criar };
+})();
+</script>

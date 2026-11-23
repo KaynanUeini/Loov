@@ -105,7 +105,12 @@
     .ok-check svg { width: 28px; height: 28px; }
     .ok .ok-addr, .ok .ok-pills, .ok .ok-aviso { display: none; }
     .ok-lado { display: block; grid-column: 2; grid-row: 1 / span 4; align-self: start; overflow: hidden; background: var(--paper); border: 1px solid var(--stone); border-radius: 24px; }
-    .ok-mapa { height: 230px; background: var(--sand); }
+    .ok-mapa { position: relative; height: 250px; background: var(--sand); }
+    .ok-mapa .leaflet-bar { border: 1px solid var(--stone); box-shadow: 0 2px 8px rgba(40,35,28,.12); border-radius: 10px; overflow: hidden; }
+    .ok-mapa .leaflet-bar a { width: 32px; height: 32px; line-height: 32px; color: var(--ink); display: flex; align-items: center; justify-content: center; }
+    .ok-mapa .leaflet-bar a:hover { background: var(--sand); }
+    .ok-mapa-dica { position: absolute; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; background: rgba(26,22,18,.45); color: var(--cream); font-size: 14px; font-weight: 600; opacity: 0; pointer-events: none; transition: opacity .2s; }
+    .ok-mapa-dica.is-on { opacity: 1; }
     .ok-mapa .leaflet-tile-pane { filter: grayscale(1) sepia(.18) contrast(.92) brightness(1.03); }
     .ok-mapa .leaflet-control-attribution { font-size: 9px; background: rgba(250,250,246,.8); }
     .ok-voce { width: 16px; height: 16px; border-radius: 50%; background: var(--ink); border: 3px solid var(--cream); box-shadow: 0 0 0 6px rgba(40,35,28,.15); }
@@ -198,8 +203,33 @@
     var el = (raiz || document).querySelector('.ok-mapa');
     if (!el || !window.L || el.offsetParent === null || el._mapa) return;
     var c = [Number(el.dataset.lat), Number(el.dataset.lng)];
-    var m = L.map(el, { zoomControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false, keyboard: false, touchZoom: false }).setView(c, 15);
+    // Dá pra olhar a rota de perto: botões + e −, arrastar e duplo clique.
+    // A rodinha só com Ctrl (⌘ no Mac), senão quem rola a página por cima
+    // do mapa dava zoom sem querer; sem a tecla, aparece a dica.
+    var m = L.map(el, { zoomControl: false, dragging: true, scrollWheelZoom: false, doubleClickZoom: true, boxZoom: false, keyboard: true, touchZoom: true }).setView(c, 15);
     m.attributionControl.setPrefix(false);
+    L.control.zoom({ position: 'topright', zoomInTitle: 'Aproximar', zoomOutTitle: 'Afastar' }).addTo(m);
+    el._vista = function () { m.setView(c, 15); };
+    var Centro = L.Control.extend({ options: { position: 'topright' }, onAdd: function () {
+      var b = L.DomUtil.create('div', 'leaflet-bar ok-centro');
+      b.innerHTML = '<a href="#" role="button" title="Ver a rota inteira" aria-label="Ver a rota inteira">' + icon('maximize', 14) + '</a>';
+      L.DomEvent.on(b, 'click', function (e) { L.DomEvent.preventDefault(e); L.DomEvent.stopPropagation(e); el._vista(); });
+      return b;
+    } });
+    new Centro().addTo(m);
+    var mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+    var dica = L.DomUtil.create('div', 'ok-mapa-dica', el);
+    dica.textContent = 'Use ' + (mac ? '⌘' : 'Ctrl') + ' + rolagem para dar zoom';
+    var dicaT = null;
+    el.addEventListener('wheel', function (e) {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        m.setZoomAround(m.mouseEventToContainerPoint(e), m.getZoom() + (e.deltaY < 0 ? 1 : -1));
+        return;
+      }
+      dica.classList.add('is-on');
+      clearTimeout(dicaT); dicaT = setTimeout(function () { dica.classList.remove('is-on'); }, 1400);
+    }, { passive: false });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(m);
     L.marker(c, { icon: L.divIcon({ className: '', html: '<div class="ok-pino"></div>', iconSize: [20, 20], iconAnchor: [10, 10] }) }).addTo(m);
     el._mapa = m;
@@ -226,6 +256,7 @@
         if (!d || !d.pontos || d.pontos.length < 2) return;
         var p = d.pontos;
         m.fitBounds(p, { padding: [34, 34] });
+        el._vista = function () { m.fitBounds(p, { padding: [34, 34] }); };
         L.marker(p[0], { icon: L.divIcon({ className: '', html: '<div class="ok-voce"></div>', iconSize: [16, 16], iconAnchor: [8, 8] }) }).addTo(m);
         var linha = L.polyline([], { color: '#dd7852', weight: 5, opacity: .95, lineCap: 'round', lineJoin: 'round' }).addTo(m);
         var t = raiz.querySelector('.ok-end small');
