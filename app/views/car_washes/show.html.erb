@@ -1205,7 +1205,9 @@
     });
     history.replaceState({ v: 'done' }, '', '#agendado');
     showView('done');
-    LoovConfirmacao.montar($('cw-done'));
+    // De onde o cliente veio (a lista manda a localização na URL): a rota sai daí.
+    var qs = new URLSearchParams(location.search);
+    LoovConfirmacao.montar($('cw-done'), qs.get('latitude') ? { lat: qs.get('latitude'), lng: qs.get('longitude') } : null);
   }
 
   // Voltar: um passo de cada vez, como no app.

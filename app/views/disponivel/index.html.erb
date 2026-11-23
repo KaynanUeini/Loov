@@ -947,7 +947,7 @@
       homeUrl: '/'
     });
     $('dw').scrollTop = 0;
-    LoovConfirmacao.montar($('dw-in'));
+    LoovConfirmacao.montar($('dw-in'), state.coords ? { lat: state.coords.latitude, lng: state.coords.longitude } : null);
     var b = document.querySelector('#dw-in .ok-primary'); if (b) b.focus({ preventScroll: true });
   }
   function renderResult() {

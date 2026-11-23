@@ -39,6 +39,9 @@ Rails.application.routes.draw do
   end
 
   # ── ABA DISPONÍVEIS ───────────────────────────────────────────────────────
+  # Rota de carro até o lava-rápido, pro mapa do Agendado (RotaDeCarro).
+  get "rota", to: "rotas#show", as: :rota
+
   resources :disponivel, only: [:index, :create, :show] do
     member do
       get   :confirmacao

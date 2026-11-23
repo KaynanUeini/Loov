@@ -15,9 +15,11 @@
     homeUrl
   Precisa do feather e do shared/loov_logos na página.
 
-  window.LoovConfirmacao.montar(raiz)
+  window.LoovConfirmacao.montar(raiz, origem)
     Depois de pôr o html na página: monta o mapa do cartão "Como vai ser"
-    (só no computador, com o Leaflet carregado).
+    (só no computador, com o Leaflet carregado). Com `origem` ({ lat, lng },
+    de onde o cliente veio) ou a localização já liberada no navegador,
+    desenha a rota de carro até o lava-rápido e diz o tempo (GET /rota).
 %>
 <style>
   /* Tudo tem que caber na tela sem rolar, botões inclusive. */
@@ -106,6 +108,8 @@
     .ok-mapa { height: 230px; background: var(--sand); }
     .ok-mapa .leaflet-tile-pane { filter: grayscale(1) sepia(.18) contrast(.92) brightness(1.03); }
     .ok-mapa .leaflet-control-attribution { font-size: 9px; background: rgba(250,250,246,.8); }
+    .ok-voce { width: 16px; height: 16px; border-radius: 50%; background: var(--ink); border: 3px solid var(--cream); box-shadow: 0 0 0 6px rgba(40,35,28,.15); }
+    .ok-tempo { color: var(--ink); font-weight: 600; }
     .ok-pino { width: 20px; height: 20px; border-radius: 50%; background: var(--coral-500); border: 4px solid var(--cream); box-shadow: 0 2px 8px rgba(0,0,0,.35); }
     .ok-lado-in { padding: 18px 22px 22px; }
     .ok-end { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
@@ -180,7 +184,7 @@
       ? (o.aviso ? esc(o.aviso).replace(/^([^.]*\.)/, '<b>$1</b>') : '')
       : o.cancelaAte ? '<b>Cancelamento grátis até ' + esc(o.cancelaAte) + '</b> (2 h antes). Falta sem cancelar conta contra você.' : '';
     return '<div class="ok-lado">' +
-      (c ? '<div class="ok-mapa" data-lat="' + c[0] + '" data-lng="' + c[1] + '"></div>' : '') +
+      (c ? '<div class="ok-mapa" data-lat="' + c[0] + '" data-lng="' + c[1] + '" data-cw="' + esc(cw.id) + '"></div>' : '') +
       '<div class="ok-lado-in">' +
         '<div class="ok-end"><span><b>' + esc(rua) + '</b>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</span>' +
           (mapa ? '<a class="ok-rota" target="_blank" rel="noopener" href="' + mapa + '">' + icon('navigation', 14) + 'Ver rota</a>' : '') + '</div>' +
@@ -190,7 +194,7 @@
           (cancelar ? '<li><span>' + cancelar + '</span></li>' : '') +
         '</ul></div></div>';
   }
-  function montar(raiz) {
+  function montar(raiz, origem) {
     var el = (raiz || document).querySelector('.ok-mapa');
     if (!el || !window.L || el.offsetParent === null || el._mapa) return;
     var c = [Number(el.dataset.lat), Number(el.dataset.lng)];
@@ -202,6 +206,41 @@
     // A tela pode mudar de tamanho logo depois (a cortina do Last Minute):
     // sem isto parte do mapa ficava sem desenhar.
     try { new ResizeObserver(function () { m.invalidateSize(); }).observe(el); } catch (e) { setTimeout(function () { m.invalidateSize(); }, 900); }
+    var vai = function (o) { if (o && isFinite(o.lat) && isFinite(o.lng)) desenhaRota(m, el, raiz || document, o); };
+    if (origem && origem.lat != null) { vai({ lat: Number(origem.lat), lng: Number(origem.lng) }); return; }
+    // Sem a origem da página: só usa a localização se ela já estiver
+    // liberada. Pedir permissão aqui seria um susto logo depois de agendar.
+    if (navigator.permissions && navigator.geolocation) {
+      navigator.permissions.query({ name: 'geolocation' }).then(function (p) {
+        if (p.state !== 'granted') return;
+        navigator.geolocation.getCurrentPosition(function (pos) { vai({ lat: pos.coords.latitude, lng: pos.coords.longitude }); }, function () {}, { maximumAge: 300000, timeout: 8000 });
+      }).catch(function () {});
+    }
+  }
+  // A rota se desenha da sua posição até o pino, e o tempo de carro entra ao
+  // lado do endereço. Sem rota (serviço fora, cota), fica o mapa com o pino.
+  function desenhaRota(m, el, raiz, o) {
+    fetch('/rota?car_wash_id=' + encodeURIComponent(el.dataset.cw) + '&lat=' + o.lat + '&lng=' + o.lng, { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      .then(function (r) { return r.status === 200 ? r.json() : null; })
+      .then(function (d) {
+        if (!d || !d.pontos || d.pontos.length < 2) return;
+        var p = d.pontos;
+        m.fitBounds(p, { padding: [34, 34] });
+        L.marker(p[0], { icon: L.divIcon({ className: '', html: '<div class="ok-voce"></div>', iconSize: [16, 16], iconAnchor: [8, 8] }) }).addTo(m);
+        var linha = L.polyline([], { color: '#dd7852', weight: 5, opacity: .95, lineCap: 'round', lineJoin: 'round' }).addTo(m);
+        var t = raiz.querySelector('.ok-end small');
+        if (t && d.duracao_s) t.insertAdjacentHTML('beforeend', ' · <b class="ok-tempo">' + Math.max(1, Math.round(d.duracao_s / 60)) + ' min de carro</b>');
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { linha.setLatLngs(p); return; }
+        var t0 = null, dur = 1400;
+        var passo = function (agora) {
+          if (t0 == null) t0 = agora;
+          var f = Math.min(1, (agora - t0) / dur), e = f < .5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;
+          linha.setLatLngs(p.slice(0, Math.max(2, Math.ceil(e * p.length))));
+          if (f < 1) requestAnimationFrame(passo);
+        };
+        setTimeout(function () { requestAnimationFrame(passo); }, 350);
+      })
+      .catch(function () {});
   }
   window.LoovConfirmacao = { html: html, montar: montar };
 })();
