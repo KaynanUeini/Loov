@@ -1495,7 +1495,9 @@
   // depende do texto: resumos e a barra.
   function refreshLight() {
     document.querySelectorAll('[data-rail]').forEach(b => {
-      b.querySelector('.gm-sec-sum').textContent = summary(b.dataset.rail);
+      // O item aberto do menu não tem a linha de resumo.
+      const sum = b.querySelector('.gm-sec-sum');
+      if (sum) sum.textContent = summary(b.dataset.rail);
     });
     renderBar();
   }
@@ -1646,7 +1648,7 @@
   function encaixaPino() {
     const host = document.getElementById('gm-pino-host');
     if (!host || !window.LoovPino) return;
-    if (!pino) pino = window.LoovPino.criar({ lat: st.latitude, lng: st.longitude, aoMudar(lat, lng) { st.latitude = lat; st.longitude = lng; refreshLight(); } });
+    if (!pino) pino = window.LoovPino.criar({ lat: st.latitude, lng: st.longitude, aoMudar(lat, lng) { st.latitude = lat; st.longitude = lng; renderBar(); } });
     if (pino.el.parentNode !== host) host.appendChild(pino.el);
     pino.montar();
   }
