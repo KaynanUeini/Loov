@@ -58,13 +58,21 @@ class Appointment < ApplicationRecord
   # quando o horário muda. Uma vez criado, o agendamento fica imune — senão
   # mudanças de status (compareceu/ausente) quebrariam em casos limítrofes
   # (ex: owner editou operating_hours depois, ou validação ficou mais estrita).
-  validate :within_operating_hours, unless: :walk_in?,
+  validate :within_operating_hours, unless: -> { walk_in? || ja_aconteceu? },
            if: -> { new_record? || will_save_change_to_scheduled_at? || will_save_change_to_service_id? }
   validate :not_during_closure, unless: :walk_in?,
            if: -> { new_record? || will_save_change_to_scheduled_at? }
   validate :service_allows_disponivel, if: :disponivel?
-  validate :fits_in_capacity, unless: :skip_capacity_check,
+  validate :fits_in_capacity, unless: -> { skip_capacity_check || ja_aconteceu? },
            if: -> { new_record? || will_save_change_to_scheduled_at? || will_save_change_to_service_id? }
+
+  # Horário que já começou e não está mudando: o dono só está acertando o que
+  # aconteceu (trocar o serviço de uma pendência de ontem, por exemplo).
+  # Capacidade e horário de fechar protegem a agenda daqui pra frente; no
+  # passado não há o que proteger, e travar ali só impedia o acerto.
+  def ja_aconteceu?
+    persisted? && !will_save_change_to_scheduled_at? && scheduled_at.present? && scheduled_at <= Time.current
+  end
 
   # ── SCOPES ────────────────────────────────────────────────────────────────
   scope :regular,            -> { where(appointment_type: "regular") }
