@@ -373,9 +373,46 @@
     .cw-lmcard.is-loading { opacity: .6; cursor: progress; }
     .cw-body { padding-top: 4px; }
     .cw-svcs { grid-template-columns: 1fr 1fr; }
-    .cw-svc.is-sel { border: 2px solid var(--ink); padding: 15px; }
+    /* Escolher o serviço: a tinta nasce num círculo no ponto do clique e
+       cobre o card (o verso dos cards do "Perto de você" da home); 0,5 s
+       depois o painel "Seu agendamento" se enche do mesmo jeito. Tinta e
+       creme, sem coral: o coral é a cor do Last Minute. */
+    .cw-svc { position: relative; isolation: isolate; overflow: hidden; }
+    .cw-svc::before { content: ''; position: absolute; inset: 0; z-index: -1; background: var(--obsidian, #1a1612); clip-path: circle(0px at var(--x, 50%) var(--y, 50%)); transition: clip-path .6s cubic-bezier(.7,0,.2,1); }
+    .cw-svc.is-sel::before { clip-path: circle(150% at var(--x, 50%) var(--y, 50%)); }
+    .cw-svc.is-sel { border-color: var(--obsidian, #1a1612); color: var(--cream); }
+    .cw-svc .cw-svc-desc, .cw-svc .cw-svc-dur, .cw-svc .cw-svc-go, .cw-svc .cw-svc-ic { transition: color .3s .15s, background .3s .15s, border-color .3s .15s; }
+    .cw-svc.is-sel .cw-svc-desc { color: rgba(250,250,246,.7); }
+    .cw-svc.is-sel .cw-svc-dur { color: rgba(250,250,246,.5); }
+    .cw-svc.is-sel .cw-svc-go { color: var(--cream); }
+    .cw-svc.is-sel .cw-svc-ic { background: rgba(250,250,246,.08); border-color: rgba(250,250,246,.16); color: var(--cream); }
+    .cw-svc.is-sel:hover { border-color: var(--obsidian, #1a1612); }
     .cw-aside { display: flex; flex-direction: column; gap: 12px; }
-    .cw-pn:not([hidden]) { display: grid; gap: 12px; position: sticky; top: 84px; z-index: 4; padding: 20px; background: var(--paper); border: 1px solid var(--stone); border-radius: 22px; box-shadow: 0 14px 36px -24px rgba(40,35,28,.45); }
+    .cw-pn:not([hidden]) { display: grid; gap: 12px; position: sticky; top: 84px; z-index: 4; isolation: isolate; overflow: hidden; padding: 20px; background: var(--paper); border: 1px solid var(--stone); border-radius: 22px; box-shadow: 0 14px 36px -24px rgba(40,35,28,.45); transition: border-color .3s; }
+    .cw-pn::before { content: ''; position: absolute; inset: 0; z-index: -1; background: var(--obsidian, #1a1612); clip-path: circle(0px at var(--x, 0px) var(--y, 50%)); }
+    .cw-pn.cheio::before { clip-path: circle(160% at var(--x, 0px) var(--y, 50%)); transition: clip-path .6s cubic-bezier(.7,0,.2,1); }
+    .cw-pn.cheio { border-color: var(--obsidian, #1a1612); }
+    .cw-pn.cheio .cw-pn-t { color: var(--cream) !important; }
+    .cw-pn.cheio .cw-pn-l, .cw-pn.cheio .cw-pn-vazio, .cw-pn.cheio .cw-pn-nota, .cw-pn.cheio .cw-pn-ou { color: rgba(250,250,246,.65); }
+    .cw-pn.cheio .cw-pn-l b { color: var(--cream); }
+    .cw-pn.cheio .cw-pn-l s { color: rgba(250,250,246,.4); }
+    .cw-pn.cheio .cw-pn-h { background: transparent; border-color: rgba(250,250,246,.18); color: var(--cream); }
+    .cw-pn.cheio .cw-pn-h:hover { border-color: var(--cream); }
+    .cw-pn.cheio .cw-pn-h small { color: rgba(250,250,246,.6); }
+    .cw-pn.cheio .cw-pn-h small.is-menos { color: #8fe0ae; }
+    .cw-pn.cheio .cw-pn-h.is-on { background: var(--cream); border-color: var(--cream); color: var(--ink); }
+    .cw-pn.cheio .cw-pn-h.is-on small { color: var(--graphite); }
+    .cw-pn.cheio .cw-pn-lm { background: transparent; color: var(--cream); }
+    .cw-pn.cheio .cw-pn-lm small { color: rgba(250,250,246,.6); }
+    .cw-pn.cheio .cw-pn-lm-p b { color: var(--cream); }
+    .cw-pn.cheio .cw-pn-off { background: rgba(111,200,140,.16); color: #8fe0ae; }
+    .cw-pn.cheio .cw-pn-cta { background: var(--cream); color: var(--ink); }
+    /* O conteúdo entra em cascata enquanto a tinta passa. */
+    .cw-pn.entra > * { animation: cw-pn-sobe .5s cubic-bezier(.2,.8,.2,1) both; }
+    .cw-pn.entra > *:nth-child(2) { animation-delay: .06s; } .cw-pn.entra > *:nth-child(3) { animation-delay: .12s; }
+    .cw-pn.entra > *:nth-child(4) { animation-delay: .18s; } .cw-pn.entra > *:nth-child(5) { animation-delay: .24s; }
+    .cw-pn.entra > *:nth-child(n+6) { animation-delay: .3s; }
+    @keyframes cw-pn-sobe { from { opacity: 0; transform: translateY(10px); } }
     .cw-pn-t { margin: 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-size: 18px; font-weight: 700; letter-spacing: -0.3px; color: var(--ink) !important; }
     .cw-pn-l { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--graphite); }
     .cw-pn-l b { color: var(--ink); font-weight: 600; white-space: nowrap; }
@@ -404,6 +441,10 @@
     .cw-pn-nota { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 12px; color: var(--graphite); }
     p.cw-pn-nota { display: block; line-height: 1.6; }
     .cw-pn-horas:has(.has-p) .cw-pn-h { height: 46px; }
+    @media (prefers-reduced-motion: reduce) {
+      .cw-svc::before, .cw-pn.cheio::before { transition: none; }
+      .cw-pn.entra > * { animation: none; }
+    }
     .cw-pn-cta { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 50px; border: 0; border-radius: 28px; background: var(--coral-500); color: var(--cream); font-size: 15px; font-weight: 600; }
     .cw-pn-cta:disabled { opacity: .45; cursor: not-allowed; }
     /* Endereço primeiro; dos horários fica só o de hoje, e a semana abre no clique. */
@@ -854,11 +895,37 @@
   // próximos horários de hoje. Escolheu e continuou, vai direto pra
   // confirmação do agendamento de sempre; outro dia abre a escolha de data.
   var pn = { svc: null, times: [], loading: false, time: null, seq: 0 };
-  function pnEscolhe(id) {
+  // A tinta do serviço nasce no ponto do clique; 0,5 s depois a do painel
+  // nasce na borda esquerda, na altura do clique (a tinta continua do
+  // serviço pro painel). Trocar de serviço esvazia o painel e enche de novo.
+  var pnTinta = null;
+  function pnEscolhe(id, ev) {
     var s = svcById(id); if (!s) return;
+    var mesmo = pn.svc && pn.svc.id === s.id;
     pn.svc = s; pn.time = null;
-    document.querySelectorAll('#cw-pane-servicos .cw-svc').forEach(function (b) { b.classList.toggle('is-sel', b.dataset.svc === String(s.id)); });
+    var alvo = null;
+    document.querySelectorAll('#cw-pane-servicos .cw-svc').forEach(function (b) {
+      var on = b.dataset.svc === String(s.id);
+      if (on && !b.classList.contains('is-sel')) {
+        var r = b.getBoundingClientRect();
+        var x = ev && ev.clientX ? ev.clientX - r.left : r.width / 2, y = ev && ev.clientY ? ev.clientY - r.top : r.height / 2;
+        b.style.setProperty('--x', x + 'px'); b.style.setProperty('--y', y + 'px');
+        alvo = ev && ev.clientY ? ev.clientY : r.top + r.height / 2;
+      }
+      b.classList.toggle('is-sel', on);
+    });
     pnHorarios();
+    if (mesmo) return;
+    var el = $('cw-pn'), REDUZ = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    clearTimeout(pnTinta);
+    el.classList.remove('cheio', 'entra');
+    var py = Math.max(24, Math.min(el.offsetHeight - 24, (alvo || 0) - el.getBoundingClientRect().top));
+    el.style.setProperty('--x', '0px'); el.style.setProperty('--y', py + 'px');
+    var enche = function () {
+      el.classList.add('cheio', 'entra');
+      setTimeout(function () { el.classList.remove('entra'); }, 900);
+    };
+    if (REDUZ) enche(); else pnTinta = setTimeout(enche, 500);
   }
   function pnHorarios() {
     var s = pn.svc, my = ++pn.seq;
@@ -1231,7 +1298,7 @@
     if ((t = e.target.closest('.cw-seg button'))) { setTab(t.dataset.tab); return; }
     if (e.target.closest('#cw-lmcard')) { abrirLmCard(e.target.closest('#cw-lmcard')); return; }
     if ((t = e.target.closest('[data-svc]'))) {
-      if (DESK.matches && !t.dataset.slot && t.closest('#cw-pane-servicos') && !$('cw-pn').hidden) { pnEscolhe(t.dataset.svc); return; }
+      if (DESK.matches && !t.dataset.slot && t.closest('#cw-pane-servicos') && !$('cw-pn').hidden) { pnEscolhe(t.dataset.svc, e); return; }
       openBooking(t.dataset.svc, true, t.dataset.slot); return;
     }
     if ((t = e.target.closest('[data-pn-time]'))) { pn.time = t.dataset.pnTime; renderPainel(); return; }
