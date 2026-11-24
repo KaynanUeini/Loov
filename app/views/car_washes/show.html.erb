@@ -172,7 +172,7 @@
   .cw-aside { display: none; }
   /* Só no computador (bloco no fim): painel do agendamento, cartão do Last
      Minute no cabeçalho e "ver a semana" nos horários. */
-  .cw-pn, .cw-lmcard, .cw-semana { display: none; }
+  .cw-pn, .cw-semana { display: none; }
 
   /* ── Agendamento ───────────────────────────────────────────────────── */
   .bk { padding-bottom: 140px; }
@@ -348,7 +348,8 @@
     .cw-hero { height: auto; background: transparent; overflow: visible; }
     .cw-hero-bar { padding: 16px 32px 0; }
     .cw-glass { box-shadow: none; border: 1px solid var(--stone); }
-    .cw-stats-wrap { margin-top: 6px; padding: 0 32px; }
+    /* 20 px entre o voltar e o logo (grade de 8; com 6 o logo encostava). */
+    .cw-stats-wrap { margin-top: 20px; padding: 0 32px; }
     .cw-stats { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 24px; align-items: center; padding: 0 0 18px; background: transparent; border: 0; border-bottom: 1.5px solid var(--ink); border-radius: 0; box-shadow: none; }
     .cw-stats-top { grid-column: 1; align-items: center; }
     /* O selo de aberto encosta no nome, em vez de ficar solto no meio. */
@@ -362,15 +363,6 @@
     .cw-stat-lab { margin: 0; font-family: 'Inter', sans-serif; font-size: 13px; letter-spacing: 0; text-transform: none; color: var(--graphite); }
     .cw-stat-sep { display: none; }
     .cw-loy { grid-column: 1 / -1; }
-    .cw-lmcard:not([hidden]) { grid-column: 2; grid-row: 1 / span 2; display: grid; grid-template-columns: auto auto; gap: 2px 16px; align-items: center; padding: 14px 16px 14px 18px; border: 0; border-radius: 18px; background: var(--obsidian); color: var(--cream); text-align: left; transition: transform .15s; }
-    .cw-lmcard:hover { transform: translateY(-2px); }
-    .cw-lmcard:focus-visible { outline: 2px solid var(--coral-500); outline-offset: 3px; }
-    .cw-lmcard small { display: inline-flex; align-items: center; gap: 5px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--coral-500); }
-    .cw-lmcard b { font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; letter-spacing: -0.4px; }
-    .cw-lmcard em { grid-column: 1; font-style: normal; font-size: 13px; color: rgba(250,250,246,.65); }
-    .cw-lmcard em s { color: rgba(250,250,246,.4); }
-    .cw-lmcard span { grid-column: 2; grid-row: 1 / span 3; padding: 10px 16px; border-radius: 999px; background: var(--coral-500); color: var(--cream); font-size: 14px; font-weight: 600; }
-    .cw-lmcard.is-loading { opacity: .6; cursor: progress; }
     .cw-body { padding-top: 4px; }
     .cw-svcs { grid-template-columns: 1fr 1fr; }
     /* Escolher o serviço: a tinta nasce num círculo no ponto do clique e
@@ -402,9 +394,10 @@
     .cw-pn.cheio .cw-pn-h small.is-menos { color: #8fe0ae; }
     .cw-pn.cheio .cw-pn-h.is-on { background: var(--cream); border-color: var(--cream); color: var(--ink); }
     .cw-pn.cheio .cw-pn-h.is-on small { color: var(--graphite); }
-    .cw-pn.cheio .cw-pn-lm { background: transparent; color: var(--cream); }
-    .cw-pn.cheio .cw-pn-lm small { color: rgba(250,250,246,.6); }
-    .cw-pn.cheio .cw-pn-lm-p b { color: var(--cream); }
+    .cw-pn.cheio .cw-pn-lmc { background: rgba(221,120,82,.08); color: var(--cream); }
+    .cw-pn.cheio .cw-pn-lmc small { color: var(--coral-500); }
+    .cw-pn.cheio .cw-pn-lmc em { color: rgba(250,250,246,.6); }
+    .cw-pn.cheio .cw-pn-lmc em s { color: rgba(250,250,246,.4); }
     .cw-pn.cheio .cw-pn-off { background: rgba(111,200,140,.16); color: #8fe0ae; }
     .cw-pn.cheio .cw-pn-cta { background: var(--cream); color: var(--ink); }
     .cw-pn.cheio .cw-pn-regra { background: rgba(250,250,246,.06); border-color: rgba(250,250,246,.16); color: var(--cream); }
@@ -431,14 +424,15 @@
     .cw-pn-h small.is-menos { color: #2d6b42; }
     .cw-pn-h.is-on small { color: rgba(250,250,246,.75); }
     .cw-pn-l s { font-weight: 400; color: var(--ash); }
-    .cw-pn-lm { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; border-radius: 14px; border: 1px dashed var(--coral-500); background: var(--coral-50); color: var(--ink); text-align: left; transition: border-color .15s; }
-    .cw-pn-lm:hover { border-style: solid; }
-    .cw-pn-lm.is-loading { opacity: .6; cursor: progress; }
-    .cw-pn-lm b { display: inline-flex; align-items: center; gap: 5px; font-family: 'Space Grotesk', sans-serif; font-size: 15px; color: var(--coral-700); }
-    .cw-pn-lm small { display: block; margin-top: 2px; font-size: 12px; color: var(--graphite); }
-    .cw-pn-lm-p { flex-shrink: 0; text-align: right; }
-    .cw-pn-lm-p s { display: block; font-size: 12px; color: var(--ash); }
-    .cw-pn-lm-p b { color: var(--ink); font-size: 16px; }
+    .cw-pn-lmc { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px 12px; padding: 12px 12px 12px 16px; border-radius: 16px; border: 1.5px solid var(--coral-500); background: var(--coral-50); color: var(--ink); }
+    .cw-pn-lmc small { grid-column: 1; display: inline-flex; align-items: center; gap: 5px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--coral-700); }
+    .cw-pn-lmc b { grid-column: 1; font-family: 'Space Grotesk', sans-serif; font-size: 19px; font-weight: 700; letter-spacing: -0.3px; }
+    .cw-pn-lmc em { grid-column: 1; font-style: normal; font-size: 12.5px; color: var(--graphite); }
+    .cw-pn-lmc em s { color: var(--ash); }
+    .cw-pn-lmc button { grid-column: 2; grid-row: 1 / span 3; height: 42px; padding: 0 16px; border: 0; border-radius: 999px; background: var(--coral-500); color: #fff; font-size: 14px; font-weight: 600; white-space: nowrap; transition: background .15s, transform .15s; }
+    .cw-pn-lmc button:hover { background: var(--coral-700); transform: translateY(-1px); }
+    .cw-pn-lmc button:focus-visible { outline: 2px solid var(--coral-500); outline-offset: 2px; }
+    .cw-pn-lmc button.is-loading { opacity: .6; cursor: progress; }
     .cw-pn-ou { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 1px; text-transform: uppercase; color: var(--graphite); }
     .cw-pn-off { display: inline-flex; align-items: center; gap: 4px; margin-right: 6px; padding: 2px 8px; border-radius: 999px; background: #d1ebd6; color: #2d6b42; font-weight: 600; }
     .cw-pn-h.is-outro { font-family: 'Inter', sans-serif; font-size: 12.5px; color: var(--graphite); }
@@ -663,8 +657,7 @@
         '<div class="cw-stat"><div class="cw-stat-top">' + icon('clock', 13, { color: 'var(--graphite)' }) + '<span class="cw-stat-val">' + todayHours() + '</span></div><div class="cw-stat-lab">hoje</div></div>' +
         '<div class="cw-stat-sep"></div>' +
         '<div class="cw-stat"><div class="cw-stat-top">' + icon('droplet', 13, { color: 'var(--pool-500)' }) + '<span class="cw-stat-val">' + (minPrice != null ? 'R$' + money(minPrice) : '—') + '</span></div><div class="cw-stat-lab">a partir</div></div>' +
-      '</div>' + loyaltyBadge() +
-      '<button type="button" class="cw-lmcard" id="cw-lmcard" hidden></button>';
+      '</div>' + loyaltyBadge();
   }
 
   // Programa de fidelidade do lava-rápido (null quando não tem). O texto é
@@ -715,15 +708,10 @@
       .then(function (r) { return r.ok ? r.json() : []; })
       .then(function (lista) {
         var it = (Array.isArray(lista) ? lista : []).find(function (x) { return Number(x.car_wash.id) === Number(CW.id); });
-        var slot = it && it.slots && it.slots[0], b = $('cw-lmcard');
-        if (!b || !slot || !(it.services || []).length) return;
+        var slot = it && it.slots && it.slots[0];
+        if (!slot || !(it.services || []).length) return;
         lmItem = it;
-        var min = Math.min.apply(null, it.services.map(function (x) { return Number(x.price); }));
-        var regMin = Math.min.apply(null, it.services.map(function (x) { return Number(x.regular_price) || Number(x.price); }));
-        b.innerHTML = '<small>' + icon('zap', 11) + 'Last Minute</small><b>Vaga às ' + esc(slot.slice(11, 16)) + '</b>' +
-          (isFinite(min) ? '<em>a partir de ' + (regMin > min ? '<s>R$ ' + moneyC(regMin) + '</s> ' : '') + 'R$ ' + moneyC(min) + '</em>' : '') + '<span>Reservar</span>';
-        b.setAttribute('aria-label', 'Reservar pelo Last Minute às ' + slot.slice(11, 16));
-        b.hidden = false;
+        renderPainel();
       })
       .catch(function () {});
   }
@@ -734,7 +722,7 @@
       voltar: location.pathname + location.search,
       toast: function (msg, tipo) { window.LoovReservaLM.aviso(msg, tipo); },
       aoReservar: irPraEspera,
-      aoFalhar: function () { $('cw-lmcard').hidden = true; lmItem = null; buscaLastMinute(); }
+      aoFalhar: function () { lmItem = null; renderPainel(); buscaLastMinute(); }
     });
   }
   function lmAviso(msg) {
@@ -960,7 +948,16 @@
     var s = pn.svc, hoje = dates[0], corpo = '', tabela = s ? Number(s.price) : 0, escolhido = null, temOff = false;
     var travado = IS_CLIENT && (bloqueado() || noLimite());
     var outro = '<button type="button" class="cw-pn-h is-outro" data-pn-outro>outro dia</button>';
-    if (!s) corpo = '<p class="cw-pn-vazio">Escolha um serviço para ver os horários de hoje.</p>';
+    if (!s) {
+      corpo = '<p class="cw-pn-vazio">Escolha um serviço para ver os horários de hoje.</p>';
+      var vaga = lmItem && lmItem.slots && lmItem.slots[0];
+      if (vaga) {
+        var hv = vaga.slice(11, 16);
+        var min = Math.min.apply(null, lmItem.services.map(function (x) { return Number(x.price); }));
+        var reg = Math.min.apply(null, lmItem.services.map(function (x) { return Number(x.regular_price) || Number(x.price); }));
+        corpo += '<div class="cw-pn-ou">Ou agora mesmo</div>' + lmCardHtml(hv, { por: min, de: reg > min ? reg : null }, true, faltaPara(hv), 'data-lm-card');
+      }
+    }
     else if (closedOn(hoje)) corpo = '<p class="cw-pn-vazio">Fechado hoje.</p><div class="cw-pn-horas">' + outro + '</div>';
     else if (pn.loading) corpo = '<p class="cw-pn-vazio">Buscando os horários de hoje…</p>';
     else {
@@ -971,9 +968,7 @@
       if (lm) {
         var lh = lm.time || lm, lp = precoPn(lm);
         var falta = Math.max(0, Math.round((new Date(ymd(hoje) + 'T' + lh + ':00').getTime() - Date.now()) / 60000));
-        corpo += '<button type="button" class="cw-pn-lm" data-lm="' + s.id + '" data-lm-hora="' + lh + '">' +
-          '<span><b>' + icon('zap', 12) + lh + ' · Last Minute</b><small>' + (falta > 0 ? 'começa em ' + falta + ' min · ' : '') + 'reserva com cartão</small></span>' +
-          '<span class="cw-pn-lm-p">' + (lp < tabela ? '<s>R$ ' + moneyC(tabela) + '</s>' : '') + '<b>R$ ' + moneyC(lp) + '</b></span></button>' +
+        corpo += lmCardHtml(lh, { por: lp, de: lp < tabela ? tabela : null }, false, falta, 'data-lm="' + s.id + '" data-lm-hora="' + lh + '"') +
           (comuns.length && !travado ? '<div class="cw-pn-ou">Ou um horário normal</div>' : '');
       }
       // No limite de agendamentos ou bloqueado por faltas: o aviso da tela de
@@ -998,6 +993,17 @@
       corpo +
       (s && !travado ? '<button type="button" class="cw-pn-cta" data-pn-go' + (pn.time ? '' : ' disabled') + '>Continuar' + (pn.time ? ' · R$ ' + moneyC(preco) : '') + icon('arrow-right', 16) + '</button>' : '');
   }
+  // A vaga do Last Minute no painel: cartão com contorno coral e a pílula
+  // "Reservar" (o único lugar dela na página; antes havia também um cartão no
+  // cabeçalho). Antes de escolher o serviço, abre a folha com todos; depois,
+  // já com o serviço escolhido.
+  function lmCardHtml(hora, preco, de, falta, attrs) {
+    return '<div class="cw-pn-lmc"><small>' + icon('zap', 11) + 'Last Minute</small>' +
+      '<b>Vaga às ' + esc(hora) + '</b>' +
+      '<em>' + (falta > 0 ? 'começa em ' + falta + ' min · ' : '') + (de ? 'a partir de ' : '') + (preco.de ? '<s>R$ ' + moneyC(preco.de) + '</s> ' : '') + 'R$ ' + moneyC(preco.por) + '</em>' +
+      '<button type="button" ' + attrs + ' aria-label="Reservar pelo Last Minute às ' + esc(hora) + '">Reservar</button></div>';
+  }
+  function faltaPara(hora) { return Math.max(0, Math.round((new Date(ymd(dates[0]) + 'T' + hora + ':00').getTime() - Date.now()) / 60000)); }
   function regraHtml() {
     var b = bloqueado();
     return '<div class="bk-rule cw-pn-regra">' + icon(b ? 'slash' : 'calendar', 18) + '<div>' +
@@ -1320,7 +1326,7 @@
     if (e.target.closest('#dp-sheet-bg')) return;
     if ((t = e.target.closest('[data-lm]'))) { abrirLastMinute(t); return; }
     if ((t = e.target.closest('.cw-seg button'))) { setTab(t.dataset.tab); return; }
-    if (e.target.closest('#cw-lmcard')) { abrirLmCard(e.target.closest('#cw-lmcard')); return; }
+    if ((t = e.target.closest('[data-lm-card]'))) { abrirLmCard(t); return; }
     if ((t = e.target.closest('[data-svc]'))) {
       if (DESK.matches && !t.dataset.slot && t.closest('#cw-pane-servicos') && !$('cw-pn').hidden) { pnEscolhe(t.dataset.svc, e); return; }
       openBooking(t.dataset.svc, true, t.dataset.slot); return;
