@@ -222,6 +222,12 @@
       navigator.geolocation.getCurrentPosition(function (pos) { vai({ lat: pos.coords.latitude, lng: pos.coords.longitude }); }, function () {}, { maximumAge: 300000, timeout: 8000 });
     }).catch(function () {});
   }
+  // Com trânsito (TomTom): "14 min de carro (+3 min de trânsito)". Sem ele
+  // (a reserva, OpenRouteService): "≈ 12 min de carro".
+  function tempoTxt(d) {
+    var min = Math.max(1, Math.round(d.duracao_s / 60)), atraso = Math.round((d.atraso_s || 0) / 60);
+    return d.transito ? min + ' min de carro' + (atraso >= 1 ? ' (+' + atraso + ' min de trânsito)' : '') : '≈ ' + min + ' min de carro';
+  }
   function buscaRota(cw, o) {
     return fetch('/rota?car_wash_id=' + encodeURIComponent(cw) + '&lat=' + o.lat + '&lng=' + o.lng, { credentials: 'same-origin', headers: { Accept: 'application/json' } })
       .then(function (r) { return r.status === 200 ? r.json() : null; });
@@ -230,7 +236,6 @@
     var r = raiz || document, el = r.querySelector('.ok-mapa');
     if (!el) return;
     // Celular e tablet: sem mapa, só o tempo de carro ao lado do Ver rota.
-    // O serviço calcula sem trânsito, daí o "≈".
     if (!window.L || el.offsetParent === null) {
       var t = r.querySelector('.ok-tempo-m');
       if (!t || el._tempo) return;
@@ -239,7 +244,7 @@
         if (!isFinite(o.lat) || !isFinite(o.lng)) return;
         buscaRota(el.dataset.cw, o).then(function (d) {
           if (!d || !d.duracao_s) return;
-          t.textContent = '≈ ' + Math.max(1, Math.round(d.duracao_s / 60)) + ' min de carro';
+          t.textContent = tempoTxt(d);
           t.hidden = false;
         }).catch(function () {});
       });
@@ -294,7 +299,7 @@
         L.marker(p[0], { title: 'Você', icon: L.divIcon({ className: '', html: '<div class="ok-voce"></div>', iconSize: [16, 16], iconAnchor: [8, 8] }) }).addTo(m);
         var linha = L.polyline([], { color: '#dd7852', weight: 5, opacity: .95, lineCap: 'round', lineJoin: 'round' }).addTo(m);
         var t = raiz.querySelector('.ok-end small');
-        if (t && d.duracao_s) t.insertAdjacentHTML('beforeend', ' · <b class="ok-tempo">' + Math.max(1, Math.round(d.duracao_s / 60)) + ' min de carro</b>');
+        if (t && d.duracao_s) t.insertAdjacentHTML('beforeend', ' · <b class="ok-tempo">' + esc(tempoTxt(d)) + '</b>');
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { linha.setLatLngs(p); return; }
         var t0 = null, dur = 1400;
         var passo = function (agora) {
