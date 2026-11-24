@@ -380,7 +380,9 @@
     .cw-svc.is-sel .cw-svc-ic { background: rgba(250,250,246,.08); border-color: rgba(250,250,246,.16); color: var(--cream); }
     .cw-svc.is-sel:hover { border-color: var(--obsidian, #1a1612); }
     .cw-aside { display: flex; flex-direction: column; gap: 12px; }
-    .cw-pn:not([hidden]) { display: grid; gap: 12px; position: sticky; top: 84px; z-index: 4; isolation: isolate; overflow: hidden; padding: 20px; background: var(--paper); border: 1px solid var(--stone); border-radius: 22px; box-shadow: 0 14px 36px -24px rgba(40,35,28,.45); transition: border-color .3s; }
+    /* Parado no lugar: preso à rolagem ele passava por cima do endereço e
+       dos horários embaixo. */
+    .cw-pn:not([hidden]) { display: grid; gap: 12px; position: relative; isolation: isolate; overflow: hidden; padding: 20px; background: var(--paper); border: 1px solid var(--stone); border-radius: 22px; box-shadow: 0 14px 36px -24px rgba(40,35,28,.45); transition: border-color .3s; }
     .cw-pn::before { content: ''; position: absolute; inset: 0; z-index: -1; background: var(--obsidian, #1a1612); clip-path: circle(0px at var(--x, 0px) var(--y, 50%)); }
     .cw-pn.cheio::before { clip-path: circle(160% at var(--x, 0px) var(--y, 50%)); transition: clip-path .6s cubic-bezier(.7,0,.2,1); }
     .cw-pn.cheio { border-color: var(--obsidian, #1a1612); }
@@ -699,32 +701,6 @@
     try { sessionStorage.setItem('loov_lm_espera', JSON.stringify(appt)); } catch (e) {}
     location.href = '/disponivel' + COORDS_QS;
   }
-  // Cartão do Last Minute no cabeçalho (só no computador): se o lava-rápido
-  // tem vaga agora, leva direto pra folha, com todos os serviços dela.
-  var lmItem = null;
-  function buscaLastMinute() {
-    if (!DESK.matches || !(IS_CLIENT || !SIGNED_IN) || !CW.disponivel_eligible) return;
-    fetch('/disponivel' + (COORDS_QS ? COORDS_QS + '&' : '?') + 'car_wash_id=' + CW.id, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
-      .then(function (r) { return r.ok ? r.json() : []; })
-      .then(function (lista) {
-        var it = (Array.isArray(lista) ? lista : []).find(function (x) { return Number(x.car_wash.id) === Number(CW.id); });
-        var slot = it && it.slots && it.slots[0];
-        if (!slot || !(it.services || []).length) return;
-        lmItem = it;
-        renderPainel();
-      })
-      .catch(function () {});
-  }
-  function abrirLmCard(btn) {
-    if (!lmItem) return;
-    window.LoovReservaLM.abrir(lmItem, {
-      origem: btn,
-      voltar: location.pathname + location.search,
-      toast: function (msg, tipo) { window.LoovReservaLM.aviso(msg, tipo); },
-      aoReservar: irPraEspera,
-      aoFalhar: function () { lmItem = null; renderPainel(); buscaLastMinute(); }
-    });
-  }
   function lmAviso(msg) {
     if (bk.service && $('bk-step')) { bk.error = msg; renderBooking(); }
     else if (window.LoovReservaLM) window.LoovReservaLM.aviso(msg, 'error');
@@ -948,16 +924,9 @@
     var s = pn.svc, hoje = dates[0], corpo = '', tabela = s ? Number(s.price) : 0, escolhido = null, temOff = false;
     var travado = IS_CLIENT && (bloqueado() || noLimite());
     var outro = '<button type="button" class="cw-pn-h is-outro" data-pn-outro>outro dia</button>';
-    if (!s) {
-      corpo = '<p class="cw-pn-vazio">Escolha um serviço para ver os horários de hoje.</p>';
-      var vaga = lmItem && lmItem.slots && lmItem.slots[0];
-      if (vaga) {
-        var hv = vaga.slice(11, 16);
-        var min = Math.min.apply(null, lmItem.services.map(function (x) { return Number(x.price); }));
-        var reg = Math.min.apply(null, lmItem.services.map(function (x) { return Number(x.regular_price) || Number(x.price); }));
-        corpo += '<div class="cw-pn-ou">Ou agora mesmo</div>' + lmCardHtml(hv, { por: min, de: reg > min ? reg : null }, true, faltaPara(hv), 'data-lm-card');
-      }
-    }
+    // Sem serviço: só aponta pra lista ao lado. A vaga do Last Minute vem
+    // depois de escolher, senão o cliente procurava o serviço aqui dentro.
+    if (!s) corpo = '<p class="cw-pn-vazio">' + (services.length === 1 ? 'Escolha o serviço ao lado' : 'Escolha um dos serviços ao lado') + ' para ver os horários de hoje.</p>';
     else if (closedOn(hoje)) corpo = '<p class="cw-pn-vazio">Fechado hoje.</p><div class="cw-pn-horas">' + outro + '</div>';
     else if (pn.loading) corpo = '<p class="cw-pn-vazio">Buscando os horários de hoje…</p>';
     else {
@@ -993,17 +962,14 @@
       corpo +
       (s && !travado ? '<button type="button" class="cw-pn-cta" data-pn-go' + (pn.time ? '' : ' disabled') + '>Continuar' + (pn.time ? ' · R$ ' + moneyC(preco) : '') + icon('arrow-right', 16) + '</button>' : '');
   }
-  // A vaga do Last Minute no painel: cartão com contorno coral e a pílula
-  // "Reservar" (o único lugar dela na página; antes havia também um cartão no
-  // cabeçalho). Antes de escolher o serviço, abre a folha com todos; depois,
-  // já com o serviço escolhido.
+  // A vaga do Last Minute no painel, depois de escolher o serviço: cartão
+  // com contorno coral e a pílula "Reservar" (o único lugar dela na página).
   function lmCardHtml(hora, preco, de, falta, attrs) {
     return '<div class="cw-pn-lmc"><small>' + icon('zap', 11) + 'Last Minute</small>' +
       '<b>Vaga às ' + esc(hora) + '</b>' +
       '<em>' + (falta > 0 ? 'começa em ' + falta + ' min · ' : '') + (de ? 'a partir de ' : '') + (preco.de ? '<s>R$ ' + moneyC(preco.de) + '</s> ' : '') + 'R$ ' + moneyC(preco.por) + '</em>' +
       '<button type="button" ' + attrs + ' aria-label="Reservar pelo Last Minute às ' + esc(hora) + '">Reservar</button></div>';
   }
-  function faltaPara(hora) { return Math.max(0, Math.round((new Date(ymd(dates[0]) + 'T' + hora + ':00').getTime() - Date.now()) / 60000)); }
   function regraHtml() {
     var b = bloqueado();
     return '<div class="bk-rule cw-pn-regra">' + icon(b ? 'slash' : 'calendar', 18) + '<div>' +
@@ -1326,7 +1292,6 @@
     if (e.target.closest('#dp-sheet-bg')) return;
     if ((t = e.target.closest('[data-lm]'))) { abrirLastMinute(t); return; }
     if ((t = e.target.closest('.cw-seg button'))) { setTab(t.dataset.tab); return; }
-    if ((t = e.target.closest('[data-lm-card]'))) { abrirLmCard(t); return; }
     if ((t = e.target.closest('[data-svc]'))) {
       if (DESK.matches && !t.dataset.slot && t.closest('#cw-pane-servicos') && !$('cw-pn').hidden) { pnEscolhe(t.dataset.svc, e); return; }
       openBooking(t.dataset.svc, true, t.dataset.slot); return;
@@ -1363,7 +1328,7 @@
   function boot() {
     if (window.feather) feather.replace();
     renderStats(); renderServices(); renderReviews(); renderAbout(); renderFav();
-    renderPainel(); buscaLastMinute();
+    renderPainel();
     // Link direto pra #agendar-ID (ou recarregar no meio do agendamento).
     var m = location.hash.match(/^#agendar-(\d+)/);
     history.replaceState({ v: 'detail' }, '', location.pathname + location.search);
