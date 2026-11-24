@@ -38,6 +38,8 @@
   .ok-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
   .ok-pill { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 999px; border: 1.5px solid var(--ink); color: var(--ink) !important; font-size: 13px; font-weight: 600; text-decoration: none; transition: background .15s; }
   .ok-pill:hover { background: var(--sand); }
+  .ok-pills { align-items: center; }
+  .ok-tempo-m { font-size: 13px; color: var(--graphite); }
   .ok-addr { margin-top: 8px; font-size: 12.5px; line-height: 17px; color: var(--graphite); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .ok-pay { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 14px; color: var(--graphite); }
   .ok-pay + .ok-pay { margin-top: 6px; }
@@ -166,7 +168,8 @@
         // O próximo passo do cliente é ir até lá.
         (endereco ? '<div class="ok-addr">' + esc(endereco) + '</div>' : '') +
         // Sem "Adicionar à agenda": o .ics abria como texto no navegador.
-        (mapa ? '<div class="ok-pills"><a class="ok-pill" target="_blank" rel="noopener" href="' + mapa + '">' + icon('navigation', 14) + 'Ver rota</a></div>' : '') +
+        // No celular não há mapa: o tempo de carro vem ao lado do Ver rota.
+        (mapa ? '<div class="ok-pills"><a class="ok-pill" target="_blank" rel="noopener" href="' + mapa + '">' + icon('navigation', 14) + 'Ver rota</a><span class="ok-tempo-m" hidden></span></div>' : '') +
         '<div class="ok-div"></div>' + pagamento +
         (o.valeTxt ? '<p class="ok-vale">' + esc(o.valeTxt) + '</p>' : '') +
         (o.aviso ? '<p class="ok-aviso">' + esc(o.aviso) + '</p>' : '') +
@@ -208,9 +211,41 @@
     '<path d="M4 17v-3.2l1.6-3.6A2 2 0 0 1 7.4 9h9.2a2 2 0 0 1 1.8 1.2L20 13.8V17"/><path d="M3 17h18v2.2a.8.8 0 0 1-.8.8h-1.4a.8.8 0 0 1-.8-.8V19H6v.2a.8.8 0 0 1-.8.8H3.8a.8.8 0 0 1-.8-.8z"/>' +
     '<circle cx="7.5" cy="15" r=".6" fill="currentColor"/><circle cx="16.5" cy="15" r=".6" fill="currentColor"/>' +
     '<path d="M8 2.5s-1.4 1.6-1.4 2.5a1.4 1.4 0 0 0 2.8 0C9.4 4.1 8 2.5 8 2.5z"/><path d="M16 2.5s-1.4 1.6-1.4 2.5a1.4 1.4 0 0 0 2.8 0c0-.9-1.4-2.5-1.4-2.5z"/><path d="M12 1.5s-1.2 1.4-1.2 2.2a1.2 1.2 0 0 0 2.4 0c0-.8-1.2-2.2-1.2-2.2z"/></svg>';
+  // De onde o cliente sai: a origem da página (a lista manda a localização)
+  // ou a do navegador, só se já estiver liberada. Pedir permissão aqui seria
+  // um susto logo depois de agendar.
+  function comOrigem(origem, vai) {
+    if (origem && origem.lat != null) { vai({ lat: Number(origem.lat), lng: Number(origem.lng) }); return; }
+    if (!navigator.permissions || !navigator.geolocation) return;
+    navigator.permissions.query({ name: 'geolocation' }).then(function (p) {
+      if (p.state !== 'granted') return;
+      navigator.geolocation.getCurrentPosition(function (pos) { vai({ lat: pos.coords.latitude, lng: pos.coords.longitude }); }, function () {}, { maximumAge: 300000, timeout: 8000 });
+    }).catch(function () {});
+  }
+  function buscaRota(cw, o) {
+    return fetch('/rota?car_wash_id=' + encodeURIComponent(cw) + '&lat=' + o.lat + '&lng=' + o.lng, { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      .then(function (r) { return r.status === 200 ? r.json() : null; });
+  }
   function montar(raiz, origem) {
-    var el = (raiz || document).querySelector('.ok-mapa');
-    if (!el || !window.L || el.offsetParent === null || el._mapa) return;
+    var r = raiz || document, el = r.querySelector('.ok-mapa');
+    if (!el) return;
+    // Celular e tablet: sem mapa, só o tempo de carro ao lado do Ver rota.
+    // O serviço calcula sem trânsito, daí o "≈".
+    if (!window.L || el.offsetParent === null) {
+      var t = r.querySelector('.ok-tempo-m');
+      if (!t || el._tempo) return;
+      el._tempo = true;
+      comOrigem(origem, function (o) {
+        if (!isFinite(o.lat) || !isFinite(o.lng)) return;
+        buscaRota(el.dataset.cw, o).then(function (d) {
+          if (!d || !d.duracao_s) return;
+          t.textContent = '≈ ' + Math.max(1, Math.round(d.duracao_s / 60)) + ' min de carro';
+          t.hidden = false;
+        }).catch(function () {});
+      });
+      return;
+    }
+    if (el._mapa) return;
     var c = [Number(el.dataset.lat), Number(el.dataset.lng)];
     // Dá pra olhar a rota de perto: botões + e −, arrastar e duplo clique.
     // A rodinha só com Ctrl (⌘ no Mac), senão quem rola a página por cima
@@ -245,22 +280,12 @@
     // A tela pode mudar de tamanho logo depois (a cortina do Last Minute):
     // sem isto parte do mapa ficava sem desenhar.
     try { new ResizeObserver(function () { m.invalidateSize(); }).observe(el); } catch (e) { setTimeout(function () { m.invalidateSize(); }, 900); }
-    var vai = function (o) { if (o && isFinite(o.lat) && isFinite(o.lng)) desenhaRota(m, el, raiz || document, o); };
-    if (origem && origem.lat != null) { vai({ lat: Number(origem.lat), lng: Number(origem.lng) }); return; }
-    // Sem a origem da página: só usa a localização se ela já estiver
-    // liberada. Pedir permissão aqui seria um susto logo depois de agendar.
-    if (navigator.permissions && navigator.geolocation) {
-      navigator.permissions.query({ name: 'geolocation' }).then(function (p) {
-        if (p.state !== 'granted') return;
-        navigator.geolocation.getCurrentPosition(function (pos) { vai({ lat: pos.coords.latitude, lng: pos.coords.longitude }); }, function () {}, { maximumAge: 300000, timeout: 8000 });
-      }).catch(function () {});
-    }
+    comOrigem(origem, function (o) { if (o && isFinite(o.lat) && isFinite(o.lng)) desenhaRota(m, el, r, o); });
   }
   // A rota se desenha da sua posição até o pino, e o tempo de carro entra ao
   // lado do endereço. Sem rota (serviço fora, cota), fica o mapa com o pino.
   function desenhaRota(m, el, raiz, o) {
-    fetch('/rota?car_wash_id=' + encodeURIComponent(el.dataset.cw) + '&lat=' + o.lat + '&lng=' + o.lng, { credentials: 'same-origin', headers: { Accept: 'application/json' } })
-      .then(function (r) { return r.status === 200 ? r.json() : null; })
+    buscaRota(el.dataset.cw, o)
       .then(function (d) {
         if (!d || !d.pontos || d.pontos.length < 2) return;
         var p = d.pontos;
