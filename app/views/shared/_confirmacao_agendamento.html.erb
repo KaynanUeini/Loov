@@ -107,7 +107,9 @@
     .ok-check svg { width: 28px; height: 28px; }
     .ok .ok-addr, .ok .ok-pills, .ok .ok-aviso { display: none; }
     .ok-lado { display: block; grid-column: 2; grid-row: 1 / span 4; align-self: start; overflow: hidden; background: var(--paper); border: 1px solid var(--stone); border-radius: 24px; }
-    .ok-mapa { position: relative; height: 250px; background: var(--sand); }
+    /* isolation: as camadas do Leaflet (z-index 400 a 1000) ficam dentro
+       do mapa; sem isto o mapa passava por cima do menu ao rolar. */
+    .ok-mapa { position: relative; z-index: 0; isolation: isolate; height: 250px; background: var(--sand); }
     .ok-mapa .leaflet-bar { border: 1px solid var(--stone); box-shadow: 0 2px 8px rgba(40,35,28,.12); border-radius: 10px; overflow: hidden; }
     .ok-mapa .leaflet-bar a { width: 32px; height: 32px; line-height: 32px; color: var(--ink); display: flex; align-items: center; justify-content: center; }
     .ok-mapa .leaflet-bar a:hover { background: var(--sand); }

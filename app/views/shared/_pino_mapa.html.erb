@@ -16,7 +16,8 @@
 <script src="/vendor/leaflet-1.9.4/leaflet.js" nonce="<%= csp_nonce %>"></script>
 <style>
   .lp { display: grid; gap: 8px; }
-  .lp-mapa { height: 240px; border-radius: 16px; overflow: hidden; border: 1px solid var(--stone); background: var(--sand); }
+  /* isolation: as camadas do Leaflet ficam dentro do mapa, abaixo do menu. */
+  .lp-mapa { position: relative; z-index: 0; isolation: isolate; height: 240px; border-radius: 16px; overflow: hidden; border: 1px solid var(--stone); background: var(--sand); }
   .lp-mapa .leaflet-tile-pane { filter: grayscale(1) sepia(.18) contrast(.92) brightness(1.03); }
   .lp-mapa .leaflet-control-attribution { font-size: 9px; background: rgba(250,250,246,.8); }
   .lp-mapa .leaflet-bar { border: 1px solid var(--stone); border-radius: 10px; overflow: hidden; }

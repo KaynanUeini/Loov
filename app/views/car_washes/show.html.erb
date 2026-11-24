@@ -157,7 +157,8 @@
   .cw-addr { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; letter-spacing: -0.2px; }
   .cw-addr-sub { margin-top: 4px; font-size: 13px; line-height: 19px; color: var(--graphite); }
   .cw-addr-dist { margin-top: 8px; font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: .3px; color: var(--coral-500); }
-  .cw-minimap { height: 150px; margin-top: 14px; border-radius: 12px; overflow: hidden; border: 1px solid var(--stone); background: var(--sand); }
+  /* isolation: as camadas do Leaflet ficam dentro do mapa, abaixo do menu. */
+  .cw-minimap { position: relative; z-index: 0; isolation: isolate; height: 150px; margin-top: 14px; border-radius: 12px; overflow: hidden; border: 1px solid var(--stone); background: var(--sand); }
   .cw-minimap .leaflet-tile-pane { filter: grayscale(1) sepia(.18) contrast(.92) brightness(1.03); }
   .cw-minimap .leaflet-control-attribution { font-size: 9px; background: rgba(250,250,246,.8); }
   .cw-pin { width: 18px; height: 18px; border-radius: 50%; background: var(--coral-500); border: 3px solid var(--cream); box-shadow: 0 2px 8px rgba(0,0,0,.35); }
