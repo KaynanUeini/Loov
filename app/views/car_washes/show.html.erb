@@ -407,6 +407,11 @@
     .cw-pn.cheio .cw-pn-lm-p b { color: var(--cream); }
     .cw-pn.cheio .cw-pn-off { background: rgba(111,200,140,.16); color: #8fe0ae; }
     .cw-pn.cheio .cw-pn-cta { background: var(--cream); color: var(--ink); }
+    .cw-pn.cheio .cw-pn-regra { background: rgba(250,250,246,.06); border-color: rgba(250,250,246,.16); color: var(--cream); }
+    .cw-pn.cheio .cw-pn-regra b { color: var(--cream); }
+    .cw-pn.cheio .cw-pn-regra p { color: rgba(250,250,246,.7); }
+    .cw-pn.cheio .cw-pn-regra a { border-color: var(--cream); color: var(--cream) !important; }
+    .cw-pn.cheio .cw-pn-regra a:hover { background: rgba(250,250,246,.1); }
     /* O conteúdo entra em cascata enquanto a tinta passa. */
     .cw-pn.entra > * { animation: cw-pn-sobe .5s cubic-bezier(.2,.8,.2,1) both; }
     .cw-pn.entra > *:nth-child(2) { animation-delay: .06s; } .cw-pn.entra > *:nth-child(3) { animation-delay: .12s; }
@@ -953,6 +958,7 @@
     if (!(IS_CLIENT || !SIGNED_IN) || !services.length) { el.hidden = true; return; }
     el.hidden = false;
     var s = pn.svc, hoje = dates[0], corpo = '', tabela = s ? Number(s.price) : 0, escolhido = null, temOff = false;
+    var travado = IS_CLIENT && (bloqueado() || noLimite());
     var outro = '<button type="button" class="cw-pn-h is-outro" data-pn-outro>outro dia</button>';
     if (!s) corpo = '<p class="cw-pn-vazio">Escolha um serviço para ver os horários de hoje.</p>';
     else if (closedOn(hoje)) corpo = '<p class="cw-pn-vazio">Fechado hoje.</p><div class="cw-pn-horas">' + outro + '</div>';
@@ -968,8 +974,13 @@
         corpo += '<button type="button" class="cw-pn-lm" data-lm="' + s.id + '" data-lm-hora="' + lh + '">' +
           '<span><b>' + icon('zap', 12) + lh + ' · Last Minute</b><small>' + (falta > 0 ? 'começa em ' + falta + ' min · ' : '') + 'reserva com cartão</small></span>' +
           '<span class="cw-pn-lm-p">' + (lp < tabela ? '<s>R$ ' + moneyC(tabela) + '</s>' : '') + '<b>R$ ' + moneyC(lp) + '</b></span></button>' +
-          (comuns.length ? '<div class="cw-pn-ou">Ou um horário normal</div>' : '');
+          (comuns.length && !travado ? '<div class="cw-pn-ou">Ou um horário normal</div>' : '');
       }
+      // No limite de agendamentos ou bloqueado por faltas: o aviso da tela de
+      // horários, aqui mesmo, antes de escolher. O Last Minute (acima) segue
+      // liberado nos dois casos.
+      if (travado) corpo += regraHtml();
+      else {
       if (!livres.length) corpo += '<p class="cw-pn-vazio">Sem horários livres hoje.</p>';
       corpo += '<div class="cw-pn-horas">' + comuns.map(function (t) {
         var ts = t.time || t, p = precoPn(t), difere = p !== tabela;
@@ -978,19 +989,32 @@
           (difere ? '<small class="' + (p < tabela ? 'is-menos' : '') + '">R$ ' + moneyC(p) + '</small>' : '') + '</button>';
       }).join('') + outro + '</div>' +
         (temOff ? '<p class="cw-pn-nota"><span class="cw-pn-off">' + HORA_OFF_IC + 'Hora Off</span>preço menor em horário com pouco movimento.</p>' : '');
+      }
     }
     var preco = escolhido ? precoPn(escolhido) : tabela;
     el.innerHTML = '<h2 class="cw-pn-t">Seu agendamento</h2>' +
       (s ? '<div class="cw-pn-l"><span>' + esc(s.title) + ' · ' + (s.duration || 30) + ' min</span><b>' + (preco < tabela ? '<s>R$ ' + moneyC(tabela) + '</s> ' : '') + 'R$ ' + moneyC(preco) + '</b></div>' +
         '<div class="cw-pn-l"><span>Hoje, ' + WD_LOWER[hoje.getDay()] + '</span><b>' + (pn.time || 'escolha o horário') + '</b></div>' : '') +
       corpo +
-      (s ? '<button type="button" class="cw-pn-cta" data-pn-go' + (pn.time ? '' : ' disabled') + '>Continuar' + (pn.time ? ' · R$ ' + moneyC(preco) : '') + icon('arrow-right', 16) + '</button>' : '');
+      (s && !travado ? '<button type="button" class="cw-pn-cta" data-pn-go' + (pn.time ? '' : ' disabled') + '>Continuar' + (pn.time ? ' · R$ ' + moneyC(preco) : '') + icon('arrow-right', 16) + '</button>' : '');
+  }
+  function regraHtml() {
+    var b = bloqueado();
+    return '<div class="bk-rule cw-pn-regra">' + icon(b ? 'slash' : 'calendar', 18) + '<div>' +
+      '<b>' + (b ? 'Agendamento bloqueado até ' + esc(RULES.ate) : 'Você já tem ' + RULES.limite + ' agendamentos marcados') + '</b>' +
+      '<p>' + (b
+        ? 'Por causa de ' + RULES.faltas + ' faltas nos últimos 90 dias. O Last Minute continua liberado. Se alguma falta foi registrada por engano, fale com o Suporte.'
+        : 'Pra marcar outro, cancele um deles ou espere um acontecer.') + '</p>' +
+      '<a href="' + (b ? '/disponivel' : '/appointments') + '">' + (b ? 'Ver o Last Minute →' : 'Ver meus agendamentos →') + '</a>' +
+      '</div></div>';
   }
   // Veio do painel com o horário escolhido: pula a escolha e abre a
   // confirmação assim que o horário for confirmado como livre.
   function talvezAvance() {
     if (!bk.avancar || bk.loading) return;
     bk.avancar = false;
+    // Quem não pode agendar fica na escolha, que mostra o porquê.
+    if (bloqueado() || noLimite()) return;
     if (bk.time && bk.step === 1) cta();
   }
 
