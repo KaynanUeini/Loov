@@ -192,7 +192,7 @@
   var VALES = <%= raw json_escape(vales.to_h { |v| [v.car_wash_id, {
     type: v.reward_type, value: v.reward_value.to_f, service_id: v.reward_service_id, short: v.resumo_curto,
     expires: v.expires_at.in_time_zone("America/Sao_Paulo").strftime("%d/%m") }] }.to_json) %>;
-  var HORA_OFF_IC = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 12l3-3M12 12v5M9.8 14.8L12 17l2.2-2.2"/></svg>';
+  var HORA_OFF_IC = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V5M10 20V9M15 20v-7M20 20v-4" stroke-width="3"/></svg>';
   var SEM_MOV = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var DESK = window.matchMedia('(min-width: 1024px) and (hover: hover) and (pointer: fine)');
   var CURVA = 'cubic-bezier(.87,0,.13,1)';

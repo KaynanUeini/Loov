@@ -114,13 +114,15 @@
      pra não prometer o desconto em qualquer horário. */
   .cw-svc-g { display: flex; flex-direction: column; }
   .cw-svc-g.has-off > .cw-svc { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
-  .cw-svc-off { text-decoration: none !important; display: flex; align-items: center; gap: 8px; width: 100%; padding: 11px 16px; margin-top: -1px; text-align: left; background: var(--coral-50); border: 1px solid var(--coral-100); border-radius: 0 0 16px 16px; color: var(--coral-700); font-size: 12.5px; transition: border-color .15s; }
-  .cw-svc-off:hover { border-color: var(--coral-500); }
+  /* Areia e texto escuro em todas: a Hora Off vale pro agendamento comum
+     também, e o coral é a cor do Last Minute. */
+  .cw-svc-off { text-decoration: none !important; display: flex; align-items: center; gap: 8px; width: 100%; padding: 11px 16px; margin-top: -1px; text-align: left; background: var(--sand); border: 1px solid var(--stone); border-radius: 0 0 16px 16px; color: var(--ink); font-size: 12.5px; transition: border-color .15s; }
+  .cw-svc-off:hover { border-color: var(--ink); }
   .cw-svc-off-ic { display: inline-flex; }
   .cw-svc-off-t { flex: 1; min-width: 0; }
   .cw-svc-off-t b { font-weight: 600; }
   .cw-svc-off-t s { color: var(--ash); margin-left: 4px; }
-  .cw-svc-off-go { display: inline-flex; color: var(--coral-500); }
+  .cw-svc-off-go { display: inline-flex; color: var(--graphite); }
   .cw-empty { padding: 40px 0; text-align: center; color: var(--graphite); font-size: 14px; }
   .cw-empty svg { margin: 0 auto 12px; color: var(--ash); }
 
@@ -393,14 +395,15 @@
     .cw-pn.cheio .cw-pn-h { background: transparent; border-color: rgba(250,250,246,.18); color: var(--cream); }
     .cw-pn.cheio .cw-pn-h:hover { border-color: var(--cream); }
     .cw-pn.cheio .cw-pn-h small { color: rgba(250,250,246,.6); }
-    .cw-pn.cheio .cw-pn-h small.is-menos { color: #8fe0ae; }
     .cw-pn.cheio .cw-pn-h.is-on { background: var(--cream); border-color: var(--cream); color: var(--ink); }
     .cw-pn.cheio .cw-pn-h.is-on small { color: var(--graphite); }
     .cw-pn.cheio .cw-pn-lmc { background: rgba(221,120,82,.08); color: var(--cream); }
     .cw-pn.cheio .cw-pn-lmc small { color: var(--coral-500); }
     .cw-pn.cheio .cw-pn-lmc em { color: rgba(250,250,246,.6); }
-    .cw-pn.cheio .cw-pn-lmc em s { color: rgba(250,250,246,.4); }
-    .cw-pn.cheio .cw-pn-off { background: rgba(111,200,140,.16); color: #8fe0ae; }
+    .cw-pn.cheio .cw-pn-lmc-p { color: rgba(250,250,246,.6); }
+    .cw-pn.cheio .cw-pn-lmc-p s { color: rgba(250,250,246,.4); }
+    .cw-pn.cheio .cw-pn-lmc-p strong { color: var(--cream); }
+    .cw-pn.cheio .cw-pn-off { color: rgba(250,250,246,.65); }
     .cw-pn.cheio .cw-pn-cta { background: var(--cream); color: var(--ink); }
     .cw-pn.cheio .cw-pn-regra { background: rgba(250,250,246,.06); border-color: rgba(250,250,246,.16); color: var(--cream); }
     .cw-pn.cheio .cw-pn-regra b { color: var(--cream); }
@@ -422,8 +425,8 @@
     .cw-pn-h:hover { border-color: var(--ink); }
     .cw-pn-h.is-on { background: var(--ink); border-color: var(--ink); color: var(--cream); }
     .cw-pn-h.has-p { height: 46px; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.15; }
-    .cw-pn-h small { font-family: 'Inter', sans-serif; font-weight: 500; font-size: 11px; color: var(--graphite); }
-    .cw-pn-h small.is-menos { color: #2d6b42; }
+    .cw-pn-h small { display: inline-flex; align-items: center; gap: 3px; font-family: 'Inter', sans-serif; font-weight: 500; font-size: 11px; color: var(--graphite); }
+    .cw-pn-h small svg { width: 11px; height: 11px; }
     .cw-pn-h.is-on small { color: rgba(250,250,246,.75); }
     .cw-pn-l s { font-weight: 400; color: var(--ash); }
     .cw-pn-lmc { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px 12px; padding: 12px 12px 12px 16px; border-radius: 16px; border: 1.5px solid var(--coral-500); background: var(--coral-50); color: var(--ink); }
@@ -431,12 +434,16 @@
     .cw-pn-lmc b { grid-column: 1; font-family: 'Space Grotesk', sans-serif; font-size: 19px; font-weight: 700; letter-spacing: -0.3px; }
     .cw-pn-lmc em { grid-column: 1; font-style: normal; font-size: 12.5px; color: var(--graphite); }
     .cw-pn-lmc em s { color: var(--ash); }
-    .cw-pn-lmc button { grid-column: 2; grid-row: 1 / span 3; height: 42px; padding: 0 16px; border: 0; border-radius: 999px; background: var(--coral-500); color: #fff; font-size: 14px; font-weight: 600; white-space: nowrap; transition: background .15s, transform .15s; }
+    .cw-pn-lmc-p { grid-column: 1; display: flex; align-items: baseline; gap: 6px; margin-top: 2px; white-space: nowrap; font-size: 12.5px; color: var(--graphite); }
+    .cw-pn-lmc-p s { color: var(--ash); }
+    .cw-pn-lmc-p strong { font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; color: var(--ink); }
+    .cw-pn-lmc button { grid-column: 2; grid-row: 1 / span 4; height: 42px; padding: 0 16px; border: 0; border-radius: 999px; background: var(--coral-500); color: #fff; font-size: 14px; font-weight: 600; white-space: nowrap; transition: background .15s, transform .15s; }
     .cw-pn-lmc button:hover { background: var(--coral-700); transform: translateY(-1px); }
     .cw-pn-lmc button:focus-visible { outline: 2px solid var(--coral-500); outline-offset: 2px; }
     .cw-pn-lmc button.is-loading { opacity: .6; cursor: progress; }
     .cw-pn-ou { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 1px; text-transform: uppercase; color: var(--graphite); }
-    .cw-pn-off { display: inline-flex; align-items: center; gap: 4px; margin-right: 6px; padding: 2px 8px; border-radius: 999px; background: #d1ebd6; color: #2d6b42; font-weight: 600; }
+    /* Hora Off sem cor própria: o ícone e o nome (o coral é do Last Minute). */
+    .cw-pn-off { display: inline-flex; align-items: center; gap: 5px; color: var(--graphite); font-weight: 500; }
     .cw-pn-h.is-outro { font-family: 'Inter', sans-serif; font-size: 12.5px; color: var(--graphite); }
     .cw-pn-h.is-loading { opacity: .6; cursor: progress; }
     .cw-pn-nota { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 12px; color: var(--graphite); }
@@ -557,8 +564,8 @@
     value: vale.reward_value.to_f, service_id: vale.reward_service_id,
     expires: vale.expires_at.in_time_zone("America/Sao_Paulo").strftime("%d/%m")
   } : nil).to_json) %>;
-  // Selo da Hora Off: relógio com a seta pra baixo, o mesmo do app e do painel.
-  var HORA_OFF_IC = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 12l3-3M12 12v5M9.8 14.8L12 17l2.2-2.2"/></svg>';
+  // Selo da Hora Off: barras descendo (o movimento cai), o mesmo do app e do painel.
+  var HORA_OFF_IC = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V5M10 20V9M15 20v-7M20 20v-4" stroke-width="3"/></svg>';
   var PCT = <%= Appointment::PREPAYMENT_PCT %>, PCT_LABEL = Math.round(PCT * 100) + '%';
   var MIN_PREPAGO = <%= Appointment::PREPAGO_MINIMO %>;
   var STRIPE_PK = <%= raw json_escape(ENV['STRIPE_PUBLISHABLE_KEY'].to_s.to_json) %>;
@@ -950,9 +957,10 @@
         var ts = t.time || t, p = precoPn(t), difere = p !== tabela;
         if (p < tabela) temOff = true;
         return '<button type="button" class="cw-pn-h' + (ts === pn.time ? ' is-on' : '') + (difere ? ' has-p' : '') + '" data-pn-time="' + ts + '">' + ts +
-          (difere ? '<small class="' + (p < tabela ? 'is-menos' : '') + '">R$ ' + moneyC(p) + '</small>' : '') + '</button>';
+          (difere ? '<small>' + (p < tabela ? HORA_OFF_IC : '') + 'R$ ' + moneyC(p) + '</small>' : '') + '</button>';
       }).join('') + outro + '</div>' +
-        (temOff ? '<p class="cw-pn-nota"><span class="cw-pn-off">' + HORA_OFF_IC + 'Hora Off</span>preço menor em horário com pouco movimento.</p>' : '');
+        // O ícone e o nome bastam: o preço embaixo do horário já diz o resto.
+        (temOff ? '<p class="cw-pn-nota"><span class="cw-pn-off">' + HORA_OFF_IC + 'Hora Off</span></p>' : '');
       }
     }
     var preco = escolhido ? precoPn(escolhido) : tabela;
@@ -967,7 +975,9 @@
   function lmCardHtml(hora, preco, de, falta, attrs) {
     return '<div class="cw-pn-lmc"><small>' + icon('zap', 11) + 'Last Minute</small>' +
       '<b>Vaga às ' + esc(hora) + '</b>' +
-      '<em>' + (falta > 0 ? 'começa em ' + falta + ' min · ' : '') + (de ? 'a partir de ' : '') + (preco.de ? '<s>R$ ' + moneyC(preco.de) + '</s> ' : '') + 'R$ ' + moneyC(preco.por) + '</em>' +
+      '<em>' + (falta > 0 ? 'começa em ' + falta + ' min' : 'começa agora') + '</em>' +
+      // O preço numa linha própria: com desconto, o valor final descia sozinho.
+      '<span class="cw-pn-lmc-p">' + (de ? 'a partir de ' : '') + (preco.de ? '<s>R$ ' + moneyC(preco.de) + '</s>' : '') + '<strong>R$ ' + moneyC(preco.por) + '</strong></span>' +
       '<button type="button" ' + attrs + ' aria-label="Reservar pelo Last Minute às ' + esc(hora) + '">Reservar</button></div>';
   }
   function regraHtml() {

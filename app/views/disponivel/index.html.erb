@@ -95,7 +95,7 @@
   .dp-fav { flex: 0 0 26px; height: 26px; border-radius: 50%; background: rgba(250,250,246,.08); display: flex; align-items: center; justify-content: center; color: rgba(250,250,246,.5); }
   .dp-chev { color: rgba(250,250,246,.35); transition: transform .2s; }
   .dp-card:hover .dp-chev { transform: translateX(3px); color: rgba(250,250,246,.6); }
-  /* Selo Hora Off: o relógio com a seta pra baixo, num tom de coral que se lê
+  /* Selo Hora Off: as barras descendo (pouco movimento), num tom de coral que se lê
      no cartão escuro. A Hora Pico não tem selo: o cliente vê só o preço. */
   .dp-off { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; background: rgba(232,154,124,.18); color: #e89a7c; display: inline-flex; align-items: center; justify-content: center; }
   .dp-tags { display: contents; }
@@ -429,7 +429,7 @@
   var ILL = '/illustrations/';
   var POLL_MS = 3000;
   var COORDS_KEY = 'loov_last_coords';
-  var HORA_OFF_IC = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 12l3-3M12 12v5M9.8 14.8L12 17l2.2-2.2"/></svg>';
+  var HORA_OFF_IC = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V5M10 20V9M15 20v-7M20 20v-4" stroke-width="3"/></svg>';
 
   var state = {
     loc: 'pending', coords: null, loading: true, items: [], sortBy: 'relevance',
