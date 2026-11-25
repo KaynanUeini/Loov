@@ -196,71 +196,80 @@
   .gm-empty { color: var(--ash); font-size: 13px; margin: 4px 0 10px; }
 
   /* ── Hora Off e Hora Pico ──
-     Ordem de leitura = ordem de decisão: a grade diz ONDE o preço muda, os
-     limites dizem ATÉ ONDE, e cada função vem num cartão próprio com o seu
-     interruptor (Hora Off coral claro, Hora Pico escuro), pra ler como duas
-     coisas diferentes e não como continuação uma da outra. */
-  .gm-ho-step { display: flex; align-items: baseline; gap: 10px; margin: 24px 0 12px; }
-  .gm-ho-step:first-of-type { margin-top: 8px; }
+     Ordem de decisão do dono: 1 o que ligar, 2 quanto, 3 a proteção do lucro
+     (que corta o "quanto", por isso logo embaixo), 4 quando e 5 em quais
+     serviços (os dois últimos já vêm prontos com o padrão da Loov). Ao lado,
+     a prévia do que o cliente paga, que muda a cada toque. Coral só no que é
+     Last Minute; vazio é areia, lotado é tinta. */
+  .gm-pc { display: grid; gap: 16px; margin-top: 8px; }
+  .gm-pc-main { display: grid; gap: 0; min-width: 0; }
+  .gm-pc-blk { padding: 22px 0; border-top: 1px solid var(--stone); display: grid; gap: 14px; min-width: 0; }
+  .gm-pc-blk:first-child { border-top: 0; padding-top: 4px; }
+  .gm-pc-h { display: flex; align-items: flex-start; gap: 10px; }
+  .gm-pc-ht { flex: 1; min-width: 0; }
+  .gm-pc-tl { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 12px; }
+  .gm-pc-res { font-size: 12.5px; color: var(--graphite); }
   .gm-ho-num {
     width: 24px; height: 24px; border-radius: 50%; flex: none;
     background: var(--ink); color: var(--cream);
     display: inline-flex; align-items: center; justify-content: center;
     font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 13px;
   }
-  .gm-ho-st { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 16px; color: var(--ink); }
+  .gm-ho-st { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 17px; color: var(--ink); line-height: 24px; }
   .gm-ho-ss { color: var(--graphite); font-size: 13px; line-height: 1.5; margin-top: 2px; }
-  .gm-ho-grid-wrap { overflow-x: auto; }
-  /* Cabe inteira numa tela de 360px (6 dias de pelo menos 36px); só rola de
-     lado quando o lava-rápido abre os 7 dias numa tela estreita. */
-  .gm-ho-grid { display: grid; gap: 5px; min-width: 300px; }
-  .gm-ho-dh { text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; color: var(--graphite); padding: 2px 0; }
-  .gm-ho-fx { display: flex; flex-direction: column; justify-content: center; }
-  .gm-ho-fx b { font-size: 13px; color: var(--ink); }
-  .gm-ho-fx span { font-size: 11px; color: var(--graphite); }
-  .gm-ho-cell {
-    height: 44px; border-radius: 10px; border: 1px solid var(--stone); background: var(--cream);
-    display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform .08s;
+  .gm-pc-off { opacity: .45; }
+  .gm-pc-off button, .gm-pc-off input { pointer-events: none; }
+
+  /* 1. O que ligar: o cartão inteiro é o interruptor */
+  .gm-pc-liga { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+  .gm-pc-lig {
+    display: flex; align-items: center; gap: 12px; padding: 14px; text-align: left; width: 100%;
+    border-radius: 16px; border: 1.5px solid var(--stone); background: var(--cream); color: var(--ink); cursor: pointer;
+    transition: border-color .15s, background .15s;
   }
-  .gm-ho-cell:active { transform: scale(.95); }
-  .gm-ho-cell:disabled { cursor: default; transform: none; }
-  .gm-ho-cell.fraco { background: var(--coral-50); border-color: var(--coral-100); color: var(--coral-700); }
-  .gm-ho-cell.forte { background: var(--ink); border-color: var(--ink); color: var(--cream); }
-  .gm-ho-cell.fechado { background: repeating-linear-gradient(135deg, var(--sand) 0 6px, transparent 6px 12px); border-style: dashed; cursor: default; }
-  .gm-ho-legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 10px; font-size: 12px; color: var(--graphite); }
-  .gm-ho-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 4px; margin-right: 6px; vertical-align: -1px; border: 1px solid var(--stone); background: var(--cream); }
-  .gm-ho-legend i.fraco { background: var(--coral-50); border-color: var(--coral-100); }
-  .gm-ho-legend i.fechado { background: repeating-linear-gradient(135deg, var(--sand) 0 3px, transparent 3px 6px); border-style: dashed; }
-  .gm-ho-legend i.forte { background: var(--ink); border-color: var(--ink); }
-  .gm-ho-lims { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .gm-ho-lim { background: var(--cream); border: 1px solid var(--stone); border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
-  .gm-ho-lim .gm-step { align-self: flex-start; }
-  .gm-step-v { width: 56px; text-align: center; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 18px; color: var(--ink); font-variant-numeric: tabular-nums; }
-  .gm-ho-value { display: flex; gap: 12px; align-items: center; margin-top: 14px; padding: 14px 16px; border-radius: 14px; background: var(--sand); color: var(--ink); font-size: 13.5px; line-height: 1.5; }
-  .gm-ho-value svg { flex: none; }
-  .gm-ho-card { margin-top: 26px; border-radius: 18px; overflow: hidden; border: 1px solid var(--coral-100); }
-  .gm-ho-card.pico { margin-top: 16px; border-color: var(--ink); }
-  .gm-ho-card-h { display: flex; align-items: center; gap: 12px; padding: 16px 18px; background: var(--coral-50); }
-  .gm-ho-card.pico .gm-ho-card-h { background: var(--ink); color: var(--cream); }
-  .gm-ho-card-ic { width: 36px; height: 36px; border-radius: 50%; flex: none; background: var(--paper); color: var(--coral-700); display: flex; align-items: center; justify-content: center; }
-  .gm-ho-card.pico .gm-ho-card-ic { background: rgba(250,250,246,.12); color: var(--cream); }
-  .gm-ho-card-t { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 18px; }
-  .gm-ho-card-s { font-size: 13px; color: var(--graphite); }
-  .gm-ho-card.pico .gm-ho-card-s { color: var(--stone); }
-  .gm-ho-card-b { padding: 16px 18px; background: var(--paper); display: flex; flex-direction: column; gap: 12px; }
-  /* Barra numa caixa de altura fixa, alinhada embaixo: o texto que quebra em
-     mais linhas no celular não desalinha os degraus. */
-  .gm-ho-ladder { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; align-items: start; }
-  .gm-ho-bar { height: 84px; display: flex; align-items: flex-end; }
-  .gm-ho-ladder i { display: block; width: 100%; border-radius: 8px 8px 0 0; }
-  .gm-ho-ladder b { display: block; margin-top: 6px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 18px; color: var(--coral-700); }
-  .gm-ho-ladder span { font-size: 12px; color: var(--graphite); }
-  .gm-ho-row { display: flex; align-items: center; gap: 14px; padding: 12px 14px; background: var(--cream); border: 1px solid var(--stone); border-radius: 14px; }
+  .gm-pc-lig[aria-checked="true"] { border-color: var(--ink); background: var(--paper); }
+  .gm-pc-lig:disabled { cursor: default; }
+  .gm-pc-lig-ic { width: 38px; height: 38px; flex: none; border-radius: 11px; background: var(--sand); display: grid; place-items: center; }
+  .gm-pc-lig[aria-checked="true"] .gm-pc-lig-ic { background: var(--ink); color: var(--cream); }
+  .gm-pc-lig-t { flex: 1; min-width: 0; display: grid; gap: 2px; }
+  .gm-pc-lig-t b { font-family: 'Space Grotesk', sans-serif; font-size: 16px; }
+  .gm-pc-lig-t span { font-size: 12.5px; color: var(--graphite); line-height: 1.4; }
+
+  /* 2. Quanto */
+  .gm-pc-card { display: grid; gap: 14px; padding: 16px; border-radius: 16px; background: var(--cream); border: 1px solid var(--stone); min-width: 0; }
+  .gm-pc-card-h { display: flex; align-items: center; gap: 8px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 16px; }
+  .gm-pc-q { display: grid; gap: 8px; }
+  .gm-pc-q > b { font-size: 14px; font-weight: 600; color: var(--ink); }
+  .gm-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .gm-chips button {
+    height: 40px; min-width: 60px; padding: 0 12px; border-radius: 999px;
+    border: 1.5px solid var(--stone); background: var(--paper); color: var(--ink);
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14.5px; cursor: pointer;
+    font-variant-numeric: tabular-nums;
+  }
+  .gm-chips button:hover:not(:disabled) { border-color: var(--ink); }
+  .gm-chips button[aria-checked="true"] { background: var(--ink); border-color: var(--ink); color: var(--cream); }
+  .gm-chips button:disabled { cursor: default; }
+  /* Linha do tempo: quatro colunas iguais e a linha atrás dos pontos, pra
+     caber em 320px sem nada vazar. */
+  .gm-tl { display: grid; gap: 8px; }
+  .gm-tl-ini { font-size: 12px; color: var(--graphite); }
+  .gm-tl-pts { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .gm-tl-pts::before { content: ""; position: absolute; left: 12.5%; right: 12.5%; top: 7px; height: 3px; border-radius: 2px; background: var(--stone); }
+  .gm-tl-pt { position: relative; display: grid; justify-items: center; gap: 3px; text-align: center; min-width: 0; }
+  .gm-tl-pt i { width: 17px; height: 17px; border-radius: 50%; background: var(--ink); border: 3px solid var(--cream); box-shadow: 0 0 0 1px var(--ink); }
+  .gm-tl-pt.lm i { background: var(--coral-500); box-shadow: 0 0 0 1px var(--coral-500); }
+  .gm-tl-pt b { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 16px; color: var(--ink); margin-top: 2px; }
+  .gm-tl-pt span { font-size: 11.5px; color: var(--graphite); line-height: 1.3; }
+  .gm-tl-pt em { font-style: normal; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 12.5px; color: var(--ink); padding: 1px 6px; border-radius: 6px; white-space: nowrap; }
+  .gm-tl-pt em.piso { background: var(--ink); color: var(--cream); }
+  .gm-tl-pt s { color: var(--ash); font-weight: 500; font-size: 12px; }
+  .gm-ho-row { display: flex; align-items: center; gap: 14px; padding-top: 14px; border-top: 1px solid var(--stone); }
   .gm-ho-row svg { flex: none; }
   .gm-ho-row-t { font-size: 14.5px; font-weight: 600; color: var(--ink); }
   .gm-ho-row-s { font-size: 12.5px; color: var(--graphite); margin-top: 2px; }
   .gm-switch {
-    width: 52px; height: 32px; border-radius: 999px; border: 0; padding: 0; flex: none;
+    width: 52px; height: 32px; border-radius: 999px; border: 0; padding: 0; flex: none; display: block;
     background: var(--stone); position: relative; cursor: pointer; transition: background .15s;
   }
   .gm-switch::after {
@@ -269,19 +278,92 @@
   }
   .gm-switch[aria-checked="true"] { background: var(--ink); }
   .gm-switch[aria-checked="true"]::after { transform: translateX(20px); }
-  .gm-ho-card.pico .gm-switch { background: rgba(250,250,246,.25); }
-  .gm-ho-card.pico .gm-switch[aria-checked="true"] { background: var(--cream); }
-  .gm-ho-card.pico .gm-switch[aria-checked="true"]::after { background: var(--ink); }
   .gm-switch:disabled { opacity: .55; cursor: default; }
-  .gm-ho-pico { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+
+  /* 3. Proteção do lucro: a conta como um recibo que termina no piso */
+  .gm-rec { border-radius: 16px; border: 1px solid var(--stone); overflow: hidden; background: var(--paper); }
+  .gm-rec-l { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 14px 16px; border-top: 1px solid var(--stone); }
+  .gm-rec-l:first-child { border-top: 0; }
+  .gm-rec-t { flex: 1 1 200px; min-width: 0; }
+  .gm-rec-t b { display: block; font-size: 14.5px; font-weight: 600; color: var(--ink); }
+  .gm-rec-t span { display: block; font-size: 12.5px; color: var(--graphite); line-height: 1.45; margin-top: 2px; }
+  .gm-rec-c { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .gm-rec-tot { display: grid; gap: 6px; padding: 16px; background: var(--obsidian); color: var(--cream); }
+  .gm-rec-tot b { font-family: 'Space Grotesk', sans-serif; font-size: 20px; letter-spacing: -.3px; }
+  .gm-rec-tot small { font-size: 12.5px; color: rgba(250,250,246,.65); line-height: 1.45; }
+  .gm-rec-bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; margin-top: 4px; gap: 2px; }
+  .gm-rec-bar i { display: block; min-width: 3px; }
+  .gm-rec-leg { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: rgba(250,250,246,.75); }
+  .gm-rec-leg i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; }
+  .gm-c-custo { background: var(--ash); } .gm-c-taxa { background: var(--graphite); } .gm-c-margem { background: var(--cream); }
+  .gm-step-v { width: 56px; text-align: center; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 18px; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  /* 4. Quando: pincel + grade */
+  .gm-pincel { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .gm-pincel > span { font-size: 13px; color: var(--graphite); margin-right: 2px; }
+  .gm-pincel button {
+    display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 14px; border-radius: 999px;
+    border: 1.5px solid var(--stone); background: var(--paper); color: var(--ink); font-size: 13.5px; font-weight: 600; cursor: pointer;
+  }
+  .gm-pincel button[aria-checked="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+  .gm-pincel i { width: 13px; height: 13px; border-radius: 4px; border: 1px solid var(--stone); background: var(--paper); }
+  .gm-pincel i.fraco { background: var(--sand); border-color: var(--ash); }
+  .gm-pincel i.forte { background: var(--ink); border-color: var(--ink); }
+  .gm-ho-grid-wrap { overflow-x: auto; }
+  /* Cabe inteira numa tela de 320px (6 dias de pelo menos 32px); só rola de
+     lado quando o lava-rápido abre os 7 dias numa tela estreita. */
+  .gm-ho-grid { display: grid; gap: 5px; min-width: 270px; }
+  .gm-ho-dh { text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 1px; color: var(--graphite); padding: 2px 0; }
+  .gm-ho-fx { display: flex; flex-direction: column; justify-content: center; }
+  .gm-ho-fx b { font-size: 13px; color: var(--ink); }
+  .gm-ho-fx span { font-size: 11px; color: var(--graphite); }
+  .gm-ho-cell {
+    height: 44px; border-radius: 10px; border: 1px solid var(--stone); background: var(--paper); color: var(--ink);
+    display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform .08s;
+  }
+  .gm-ho-cell:active { transform: scale(.95); }
+  .gm-ho-cell:disabled { cursor: default; transform: none; }
+  .gm-ho-cell.fraco { background: var(--sand); border-color: var(--ash); }
+  .gm-ho-cell.forte { background: var(--ink); border-color: var(--ink); color: var(--cream); }
+  .gm-ho-cell.fechado { background: repeating-linear-gradient(135deg, var(--sand) 0 6px, transparent 6px 12px); border-style: dashed; cursor: default; }
+  .gm-pc-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  /* 5. Serviços */
   .gm-ho-svc { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--stone); }
   .gm-ho-svc:first-child { border-top: 0; }
   .gm-ho-money { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 15px; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .gm-ho-pill { padding: 7px 14px; border-radius: 999px; border: 1px solid var(--stone); background: var(--paper); color: var(--ink); font-size: 12.5px; font-weight: 600; cursor: pointer; }
+  .gm-ho-money.tab { color: var(--graphite); font-weight: 500; font-size: 13.5px; }
+  .gm-ho-pill { padding: 0 16px; min-height: 40px; border-radius: 999px; border: 1.5px solid var(--stone); background: var(--paper); color: var(--ink); font-size: 13px; font-weight: 600; cursor: pointer; }
+  .gm-ho-pill:hover:not(:disabled) { border-color: var(--ink); }
   .gm-ho-pill:disabled { opacity: .55; cursor: default; }
-  @media (max-width: 560px) {
-    .gm-ho-lims { grid-template-columns: 1fr; }
-    .gm-ho-ladder b { font-size: 16px; }
+  .gm-ho-value { display: flex; gap: 12px; align-items: center; margin-top: 14px; padding: 14px 16px; border-radius: 14px; background: var(--sand); color: var(--ink); font-size: 13.5px; line-height: 1.5; }
+  .gm-ho-value svg { flex: none; }
+
+  /* Prévia: o que o cliente paga */
+  .gm-pv { display: grid; gap: 10px; padding: 18px; border-radius: 20px; background: var(--obsidian); color: var(--cream); min-width: 0; }
+  .gm-pv-t { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 17px; }
+  .gm-pv-s { font-size: 12.5px; color: rgba(250,250,246,.6); margin-top: -6px; }
+  .gm-pv-list { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .gm-pv-c { display: grid; gap: 6px; padding: 12px; border-radius: 14px; background: rgba(250,250,246,.07); min-width: 0; }
+  .gm-pv-c > b { display: flex; justify-content: space-between; gap: 8px; font-family: 'Space Grotesk', sans-serif; font-size: 15px; }
+  .gm-pv-c > b span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .gm-pv-c > b span:last-child { color: rgba(250,250,246,.55); font-weight: 500; font-size: 12.5px; white-space: nowrap; }
+  .gm-pv-l { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 13px; color: rgba(250,250,246,.75); }
+  .gm-pv-l span { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+  .gm-pv-l strong { font-family: 'Space Grotesk', sans-serif; font-size: 14px; color: var(--cream); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .gm-pv-l.lm strong { color: var(--coral-300); }
+  .gm-pv-f { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; line-height: 1.45; color: rgba(250,250,246,.7); padding-top: 10px; border-top: 1px solid rgba(250,250,246,.12); }
+  .gm-pv-f svg { flex: none; margin-top: 2px; }
+  @media (min-width: 1200px) and (hover: hover) and (pointer: fine) {
+    #sec-precos { overflow: visible; }
+    .gm-pc { grid-template-columns: minmax(0, 1fr) 280px; gap: 28px; align-items: start; }
+    .gm-pv { position: sticky; top: 88px; order: 2; }
+    .gm-pv-list { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 420px) {
+    .gm-tl-pt b { font-size: 14.5px; }
+    .gm-tl-pt span { font-size: 10.5px; }
+    .gm-tl-pt em { font-size: 11.5px; padding: 1px 4px; }
   }
 
   .gm-add {
@@ -701,8 +783,6 @@
   const HO_URL = '/owner/hora_off';
   const FAIXA_NOME = { manha: 'Manhã', almoco: 'Almoço', tarde: 'Tarde', noite: 'Noite' };
   const FAIXA_HORA = { manha: 'até 12h', almoco: '12h às 14h', tarde: '14h às 18h', noite: 'depois das 18h' };
-  const NIVEL_NOME = { fraco: 'fraco', normal: 'normal', forte: 'forte' };
-  const PROXIMO    = { fraco: 'normal', normal: 'forte', forte: 'fraco' };
   const ho = { server: null, st: null, original: '', loading: CAN_CHECK, error: false };
 
   function hoFromServer(d) {
@@ -763,6 +843,24 @@
   // Só conta o que o lava-rápido atende: célula de dia fechado não é horário.
   const hoAberto = k => ho.server.grade.some(c => `${c.dia}-${c.faixa}` === k && c.aberto !== false);
   const hoContar = nivel => Object.entries(ho.st.grade).filter(([k, n]) => n === nivel && hoAberto(k)).length;
+  // Padrão da Loov da grade (o mesmo de DemandCell.nivel_padrao), pro
+  // "Voltar ao padrão". Dia 0 é domingo.
+  function hoNivelPadrao(dia, faixa) {
+    if (dia >= 1 && dia <= 4 && (faixa === 'manha' || faixa === 'almoco')) return 'fraco';
+    if (dia === 6 && faixa !== 'noite') return 'forte';
+    if (dia === 5 && faixa === 'tarde') return 'forte';
+    return 'normal';
+  }
+  // Preço de um horário vazio com `pct` de desconto, limitado pelo máximo do
+  // dono e pelo piso; `segurou` diz quando foi o piso que parou o desconto.
+  function hoPrecoVazio(preco, pct, lastMinute) {
+    const efetivo = Math.min(pct, ho.st.desconto_max);
+    const solto = Math.round(preco * (100 - efetivo) / 100);
+    const piso = hoPiso(lastMinute);
+    const final = Math.min(preco, piso ? Math.max(solto, piso) : solto);
+    return { pct: efetivo, preco: final, segurou: final > solto };
+  }
+  const hoPicoPreco = preco => Math.round(preco * (100 + ho.st.pico_pct) / 100);
 
   // ── Calculadora do custo de uma lavagem a mais ───────────────────────
   // Quatro perguntas que o dono responde de cabeça. Lavagem a mais =
@@ -871,7 +969,7 @@
     if (key === 'precos') {
       if (!ho.st) return ho.loading ? 'Carregando…' : 'Indisponível agora';
       const on = [ho.st.hora_off_enabled && 'Off', ho.st.hora_pico_enabled && 'Pico'].filter(Boolean);
-      const grade = `${hoContar('fraco')} fracos · ${hoContar('forte')} fortes`;
+      const grade = `${hoContar('fraco')} vazios · ${hoContar('forte')} lotados`;
       if (!on.length) return `Desligadas · ${grade}`;
       return `${on.length === 2 ? 'Off e Pico ligadas' : `Hora ${on[0]} ligada`} · ${grade}`;
     }
@@ -1207,22 +1305,115 @@
         const v = S[key];
         return `<div class="gm-step">
           <button type="button" data-ho-step="${key}" data-ho-d="-${passo}" ${!hoPode() || v - passo < lim.min ? 'disabled' : ''} aria-label="Diminuir ${label}">${ic('minus', 16)}</button>
-          <span class="gm-step-v">${key === 'pico_pct' ? '+' : ''}${v}%</span>
+          <span class="gm-step-v">${v}%</span>
           <button type="button" data-ho-step="${key}" data-ho-d="${passo}" ${!hoPode() || v + passo > lim.max ? 'disabled' : ''} aria-label="Aumentar ${label}">${ic('plus', 16)}</button>
         </div>`;
       };
-      const exemplo = D.servicos.find(s => S.servicos[s.id]);
+      // Escolha de porcentagem em botões; o valor atual entra mesmo fora da
+      // lista (veio de antes, com o − e o +).
+      const chips = (key, vals, fmt, label) => {
+        const lim = D.limites[HO_LIMITE[key]];
+        const lista = [...new Set([...vals, S[key]])].filter(v => v >= lim.min && v <= lim.max).sort((a, b) => a - b);
+        return `<div class="gm-chips" role="radiogroup" aria-label="${label}">${lista.map(v => `<button type="button" role="radio"
+          aria-checked="${v === S[key]}" data-ho-set="${key}" data-ho-v="${v}" ${dis}>${fmt(v)}</button>`).join('')}</div>`;
+      };
+      const head = (n, titulo, resumo, sub) => `<div class="gm-pc-h"><span class="gm-ho-num">${n}</span>
+        <div class="gm-pc-ht"><div class="gm-pc-tl"><span class="gm-ho-st">${titulo}</span>${resumo ? `<span class="gm-pc-res">${resumo}</span>` : ''}</div>
+        ${sub ? `<div class="gm-ho-ss">${sub}</div>` : ''}</div></div>`;
+
+      const incluidos = D.servicos.filter(s => S.servicos[s.id]);
+      const exemplo = incluidos[0] || D.servicos[0];
       const piso = hoPiso(false), pisoLm = hoPiso(true);
       // Piso a 10% da tabela ou menos: a Hora Off quase não consegue descontar.
-      const travados = D.servicos.filter(s => S.servicos[s.id] && pisoLm && pisoLm >= s.price * 0.9);
+      const travados = incluidos.filter(s => pisoLm && pisoLm >= s.price * 0.9);
+      const escada = [...D.escada].sort((a, b) => b.minutos - a.minutos);
 
-      let html = IS_ATTENDANT ? `<div class="gm-banner info">${ic('info', 16)}<span>Só o dono muda a Hora Off e a Hora Pico.</span></div>` : '';
+      let main = IS_ATTENDANT ? `<div class="gm-banner info">${ic('info', 16)}<span>Só o dono muda a Hora Off e a Hora Pico.</span></div>` : '';
 
-      // 1. Grade
-      const cols = `minmax(56px, 92px) repeat(${D.dias.length}, minmax(36px, 1fr))`;
-      html += `<div class="gm-ho-step"><span class="gm-ho-num">1</span><div>
-          <div class="gm-ho-st">Horários fracos e fortes</div>
-          <div class="gm-ho-ss">Fraco costuma ficar vazio, forte costuma lotar. Toque pra trocar entre fraco, normal e forte.</div></div></div>
+      // 1. O que ligar
+      const liga = (key, icone, titulo, txt) => `<button type="button" class="gm-pc-lig" role="switch" data-ho-sw="${key}" aria-checked="${!!S[key]}" ${dis}>
+          <span class="gm-pc-lig-ic">${ic(icone, 18)}</span>
+          <span class="gm-pc-lig-t"><b>${titulo}</b><span>${txt}</span></span>
+          <span class="gm-switch" aria-hidden="true" aria-checked="${!!S[key]}"></span></button>`;
+      main += `<div class="gm-pc-blk">${head(1, 'O que ligar')}
+        <div class="gm-pc-liga">
+          ${liga('hora_off_enabled', 'hora-off', 'Hora Off', 'Horários vazios ficam mais baratos.')}
+          ${liga('hora_pico_enabled', 'hora-pico', 'Hora Pico', 'Horários lotados ficam mais caros no Last Minute.')}
+        </div></div>`;
+
+      // 2. Quanto
+      const pontos = [
+        ...escada.map(e => ({ pct: e.pct, txt: `${fmtMin(e.minutos)} antes`, lm: false })),
+        { pct: D.desconto_last_minute, txt: 'Last Minute', lm: true },
+      ];
+      const tl = exemplo ? pontos.map(p => {
+        const v = hoPrecoVazio(exemplo.price, p.pct, p.lm);
+        return `<div class="gm-tl-pt${p.lm ? ' lm' : ''}"><i></i>
+          <b>${v.pct < p.pct ? `<s>−${p.pct}%</s> ` : ''}−${v.pct}%</b><span>${p.txt}</span>
+          <em class="${v.segurou ? 'piso' : ''}">${reais(v.preco)}</em></div>`;
+      }).join('') : '';
+      const algumPiso = exemplo && pontos.some(p => hoPrecoVazio(exemplo.price, p.pct, p.lm).segurou);
+      main += `<div class="gm-pc-blk">${head(2, 'Quanto', [S.hora_off_enabled && `até −${S.desconto_max}%`, S.hora_pico_enabled && `+${S.pico_pct}% no pico`].filter(Boolean).join(' · ') || 'Desligadas')}
+        <div class="gm-pc-card${S.hora_off_enabled ? '' : ' gm-pc-off'}">
+          <div class="gm-pc-card-h">${ic('hora-off', 17)} Hora Off</div>
+          <div class="gm-pc-q"><b>Desconto máximo</b>${chips('desconto_max', [10, 15, 20, 25, 30], v => `−${v}%`, 'Desconto máximo')}</div>
+          ${exemplo ? `<div class="gm-tl">
+            <div class="gm-tl-ini">Mais de ${fmtMin(escada[0].minutos)} antes: tabela, ${reais(exemplo.price)} na ${esc(exemplo.title)}</div>
+            <div class="gm-tl-pts">${tl}</div></div>` : ''}
+          <div class="gm-ho-ss" style="margin:0">O desconto cresce enquanto o horário vazio chega e continua livre, e para no seu máximo.${exemplo ? ` Em reais, a ${esc(exemplo.title)}.` : ''}${algumPiso ? ' No fundo escuro, a proteção do lucro segurou o preço.' : ''}</div>
+          <div class="gm-ho-row">${ic('cloud-rain', 18)}
+            <div style="flex:1;min-width:0"><div class="gm-ho-row-t">Chuva prevista no bairro</div>
+              <div class="gm-ho-row-s">Mais −${D.extra_chuva}% nos horários vazios do dia, até o seu máximo.</div></div>
+            ${sw('chuva_enabled', 'Desconto extra com chuva')}</div>
+        </div>
+        <div class="gm-pc-card${S.hora_pico_enabled ? '' : ' gm-pc-off'}">
+          <div class="gm-pc-card-h">${ic('hora-pico', 17)} Hora Pico</div>
+          <div class="gm-pc-q"><b>Acréscimo nos horários lotados, só no Last Minute</b>${chips('pico_pct', [10, 15, 20, 25, 30], v => `+${v}%`, 'Acréscimo da Hora Pico')}</div>
+          <div class="gm-ho-ss" style="margin:0">${exemplo ? `${esc(exemplo.title)} de ${reais(exemplo.price)} sai por <b style="color:var(--ink)">${reais(hoPicoPreco(exemplo.price))}</b>. ` : ''}O cliente vê só o preço final, e você aceita cada pedido, como hoje.</div>
+        </div></div>`;
+
+      // 3. Proteção do lucro
+      const custo = Number(S.custo_lavagem) || 0;
+      const pTaxas = piso ? Math.round(piso * S.taxas_pct / 100) : 0;
+      const pMargem = piso ? Math.max(0, piso - custo - pTaxas) : 0;
+      main += `<div class="gm-pc-blk${S.hora_off_enabled ? '' : ' gm-pc-off'}">${head(3, 'Proteção do lucro', piso ? `nunca abaixo de ${reais(piso)}` : 'sem piso',
+          'Com estes três números, a Loov calcula o menor preço que ainda dá lucro. A Hora Off nunca desce dele.')}
+        <div class="gm-rec">
+          <div class="gm-rec-l"><label class="gm-rec-t" for="ho-custo"><b>Custo de cada lavagem</b>
+              <span>Produto, comissão do lavador e um pouco de água e luz. Aluguel e salários não entram.</span></label>
+            <div class="gm-rec-c">
+              <div class="gm-step" style="padding:0 14px;gap:6px">
+                <span style="font-family:'Space Grotesk',sans-serif;font-weight:600;color:var(--graphite)">R$</span>
+                <input id="ho-custo" data-ho-custo value="${S.custo_lavagem != null ? esc(String(S.custo_lavagem).replace('.', ',')) : ''}"
+                  placeholder="8" inputmode="decimal" maxlength="7" ${dis}
+                  style="width:64px;height:44px;text-align:left;font-size:18px">
+              </div>
+              ${hoPode() ? `<button type="button" class="gm-ho-calc-btn" data-ho-calc>${ic('calc', 16)} Calcular</button>` : ''}
+            </div></div>
+          <div class="gm-rec-l"><div class="gm-rec-t"><b>Taxas sobre a venda</b><span>Imposto e taxa do cartão ou Pix.</span></div>
+            ${stepper('taxas_pct', 'as taxas sobre a venda', 1)}</div>
+          <div class="gm-rec-l"><div class="gm-rec-t"><b>Margem mínima</b><span>O que precisa sobrar de cada lavagem com desconto.</span></div>
+            ${stepper('margem_minima', 'a margem mínima', 5)}</div>
+          <div class="gm-rec-tot">${piso ? `
+            <b>Nunca abaixo de ${reais(piso)}</b>
+            <small>No Last Minute, ${reais(pisoLm)}, porque entram os ${D.taxa_loov_last_minute}% da Loov. Conta: ${money(custo)} ÷ (1 − ${S.taxas_pct}% − ${S.margem_minima}%).</small>
+            <div class="gm-rec-bar" aria-hidden="true"><i class="gm-c-custo" style="flex:${custo}"></i><i class="gm-c-taxa" style="flex:${pTaxas}"></i><i class="gm-c-margem" style="flex:${pMargem}"></i></div>
+            <div class="gm-rec-leg"><span><i class="gm-c-custo"></i>custo ${reais(custo)}</span><span><i class="gm-c-taxa"></i>taxas ${reais(pTaxas)}</span><span><i class="gm-c-margem"></i>sua margem ${reais(pMargem)}</span></div>`
+            : `<b>Sem piso ainda</b><small>Informe o custo de lavagem pra Loov proteger sua margem. Sem ele, vale só o desconto máximo.</small>`}
+          </div>
+        </div>
+        ${travados.length ? `<div class="gm-banner warn" style="margin:0">${ic('alert-triangle', 16)}<span>Com esses números, a Hora Off quase não consegue dar desconto em ${esc(travados.map(s => s.title).join(', '))}: o piso fica perto da tabela. Confira o custo de lavagem.</span></div>` : ''}
+      </div>`;
+
+      // 4. Quando
+      const pincel = ui.hoPincel || 'fraco';
+      const cols = `minmax(46px, 92px) repeat(${D.dias.length}, minmax(32px, 1fr))`;
+      const NOME_NIVEL = { fraco: 'vazio', normal: 'normal', forte: 'lotado' };
+      main += `<div class="gm-pc-blk">${head(4, 'Quando', `${hoContar('fraco')} vazios · ${hoContar('forte')} lotados`,
+          'Marque quando seu lava-rápido costuma ficar vazio ou lotado. É aí que a Hora Off e a Hora Pico valem.')}
+        <div class="gm-pincel" role="radiogroup" aria-label="Marcar como"><span>Marcar como</span>
+          ${[['fraco', 'Vazio'], ['normal', 'Normal'], ['forte', 'Lotado']].map(([n, t]) => `<button type="button" role="radio" data-ho-pincel="${n}" aria-checked="${pincel === n}" ${dis}><i class="${n}"></i>${t}</button>`).join('')}
+        </div>
         <div class="gm-ho-grid-wrap"><div class="gm-ho-grid" style="grid-template-columns:${cols}">
           <span></span>${D.dias.map(d => `<span class="gm-ho-dh">${DAY_SHORT[d].toUpperCase()}</span>`).join('')}
           ${D.faixas.map(f => `
@@ -1233,91 +1424,55 @@
               // célula apagada, sem toque.
               if (!hoAberto(`${d}-${f}`)) return `<span class="gm-ho-cell fechado" aria-label="${DAY_NAMES[d]}, ${FAIXA_NOME[f].toLowerCase()}: fechado"></span>`;
               return `<button type="button" class="gm-ho-cell ${n}" data-ho-cell="${d}-${f}" ${dis}
-                aria-label="${DAY_NAMES[d]}, ${FAIXA_NOME[f].toLowerCase()}: ${NIVEL_NOME[n]}">${n === 'fraco' ? ic('hora-off', 16) : n === 'forte' ? ic('hora-pico', 16) : ''}</button>`;
+                aria-label="${DAY_NAMES[d]}, ${FAIXA_NOME[f].toLowerCase()}: ${NOME_NIVEL[n]}">${n === 'fraco' ? ic('hora-off', 16) : n === 'forte' ? ic('hora-pico', 16) : ''}</button>`;
             }).join('')}`).join('')}
         </div></div>
-        <div class="gm-ho-legend"><span><i class="fraco"></i>Fraco · Hora Off</span><span><i></i>Normal · tabela</span><span><i class="forte"></i>Forte · Hora Pico</span>${D.grade.some(c => c.aberto === false) ? '<span><i class="fechado"></i>Fechado</span>' : ''}</div>
-        <div class="gm-hint">Começa com o padrão da Loov: segunda a quinta de manhã e no almoço fracos, sexta à tarde e sábado fortes.</div>`;
+        <div class="gm-ho-ss" style="margin:0">Escolha o tipo e toque nos horários. Tocar de novo volta pra normal.${D.grade.some(c => c.aberto === false) ? ' Listrado é horário em que você não abre.' : ''}</div>
+        ${hoPode() ? `<div class="gm-pc-acts"><button type="button" class="gm-ho-pill" data-ho-grade="padrao">Voltar ao padrão da Loov</button>
+          <button type="button" class="gm-ho-pill" data-ho-grade="normal">Deixar tudo normal</button></div>` : ''}
+      </div>`;
 
-      // 2. Limites
-      html += `<div class="gm-ho-step"><span class="gm-ho-num">2</span><div>
-          <div class="gm-ho-st">Limites do desconto</div>
-          <div class="gm-ho-ss">Até onde o preço de um horário fraco pode descer.</div></div></div>
-        <div class="gm-ho-lims">
-          <div class="gm-ho-lim"><label class="gm-label" style="margin:0">Desconto máximo</label>
-            ${stepper('desconto_max', 'o desconto máximo', 5)}
-            <div class="gm-hint" style="margin:0">Somando a escada e a chuva, nunca passa disso.</div></div>
-          <div class="gm-ho-lim"><label class="gm-label" style="margin:0" for="ho-custo">Custo de lavagem</label>
-            <div class="gm-ho-custo-row">
-              <div class="gm-step" style="padding:0 14px;gap:6px">
-                <span style="font-family:'Space Grotesk',sans-serif;font-weight:600;color:var(--graphite)">R$</span>
-                <input id="ho-custo" data-ho-custo value="${S.custo_lavagem != null ? esc(String(S.custo_lavagem).replace('.', ',')) : ''}"
-                  placeholder="8" inputmode="decimal" maxlength="7" ${dis}
-                  style="width:64px;height:44px;text-align:left;font-size:18px">
-              </div>
-              ${hoPode() ? `<button type="button" class="gm-ho-calc-btn" data-ho-calc>${ic('calc', 16)} Calcular</button>` : ''}
-            </div>
-            <div class="gm-hint" style="margin:0">Quanto gasta cada carro lavado: produto, comissão do lavador e um pouco de água e luz. Aluguel e salários não entram. Não sabe? Toque em Calcular.</div></div>
-          <div class="gm-ho-lim"><label class="gm-label" style="margin:0">Taxas sobre a venda</label>
-            ${stepper('taxas_pct', 'as taxas sobre a venda', 1)}
-            <div class="gm-hint" style="margin:0">Imposto e taxa do cartão ou Pix. No Last Minute, os ${D.taxa_loov_last_minute}% da Loov entram sozinhos.</div></div>
-          <div class="gm-ho-lim"><label class="gm-label" style="margin:0">Margem mínima</label>
-            ${stepper('margem_minima', 'a margem mínima', 5)}
-            <div class="gm-hint" style="margin:0">O que precisa sobrar de cada lavagem com desconto, depois do custo e das taxas.</div></div>
-        </div>
-        <div class="gm-ho-value">${ic('shield', 16)}<span>${piso
-          ? `Nada sai por menos de <b>${reais(piso)}</b> no agendamento e <b>${reais(pisoLm)}</b> no Last Minute. Conta: ${money(S.custo_lavagem)} ÷ (1 − ${S.taxas_pct}% − ${S.margem_minima}%).`
-          : `Informe o custo de lavagem pra Loov proteger sua margem. Sem ele, vale só o desconto máximo.`}</span></div>
-        ${travados.length ? `<div class="gm-banner warn" style="margin:12px 0 0">${ic('alert-triangle', 16)}<span>Com esses números, a Hora Off quase não consegue dar desconto em ${esc(travados.map(s => s.title).join(', '))}: o piso fica perto da tabela. Confira o custo de lavagem.</span></div>` : ''}`;
-
-      // 3. Hora Off
-      const escada = [...D.escada].sort((a, b) => b.minutos - a.minutos);
-      const degraus = [
-        ...escada.map((e, i) => ({ pct: e.pct, txt: i === 0 ? `a partir de ${fmtMin(e.minutos)} antes` : `${fmtMin(e.minutos)} antes` })),
-        { pct: D.desconto_last_minute, txt: '30 min antes · Last Minute' },
-      ];
-      const cores = ['var(--coral-100)', 'var(--coral-300)', 'var(--coral-500)', 'var(--coral-700)'];
-      html += `<div class="gm-ho-card">
-        <div class="gm-ho-card-h"><span class="gm-ho-card-ic">${ic('hora-off', 18)}</span>
-          <div style="flex:1;min-width:0"><div class="gm-ho-card-t">Hora Off</div><div class="gm-ho-card-s">Desconto nos horários fracos que ainda estão livres</div></div>
-          ${sw('hora_off_enabled', 'Hora Off')}</div>
-        <div class="gm-ho-card-b">
-          <div class="gm-ho-ss" style="margin:0">Quanto mais perto do horário, maior o desconto. Quem agenda com antecedência paga a tabela.</div>
-          <div class="gm-ho-ladder">${degraus.map((g, i) => `<div><div class="gm-ho-bar"><i style="height:${24 + i * 20}px;background:${cores[i]}"></i></div><b>−${g.pct}%</b><span>${g.txt}</span></div>`).join('')}</div>
-          <div class="gm-hint" style="margin:0">Seu lava-rápido ganha o selo Hora Off no app e no site quando há horário com desconto nas próximas ${fmtMin(escada[0].minutos)}.</div>
-          <div class="gm-ho-row">${ic('cloud-rain', 18)}
-            <div style="flex:1;min-width:0"><div class="gm-ho-row-t">Chuva prevista no bairro</div>
-              <div class="gm-ho-row-s">Mais −${D.extra_chuva}% nos horários fracos do dia. Horário normal e forte não muda com chuva.</div></div>
-            ${sw('chuva_enabled', 'Desconto extra com chuva')}</div>
-        </div></div>`;
-
-      // 4. Hora Pico
-      const exPico = exemplo ? `${esc(exemplo.title)} de ${reais(exemplo.price)} sai por ${reais(Math.round(exemplo.price * (100 + S.pico_pct) / 100))}. ` : '';
-      html += `<div class="gm-ho-card pico">
-        <div class="gm-ho-card-h"><span class="gm-ho-card-ic">${ic('hora-pico', 18)}</span>
-          <div style="flex:1;min-width:0"><div class="gm-ho-card-t">Hora Pico</div><div class="gm-ho-card-s">Acréscimo nos horários fortes, só no Last Minute</div></div>
-          ${sw('hora_pico_enabled', 'Hora Pico')}</div>
-        <div class="gm-ho-card-b"><div class="gm-ho-pico">
-          <div style="flex:1 1 260px;min-width:0">
-            <div class="gm-ho-ss" style="margin:0">Horário forte que ainda tem vaga nos últimos 30 minutos sai mais caro: a vaga sem fila vale mais. ${exPico}</div>
-            <div class="gm-hint">O cliente vê só o preço final. Você aceita cada pedido, como hoje. Horário normal e fraco nunca têm acréscimo.</div>
-          </div>
-          ${stepper('pico_pct', 'o acréscimo da Hora Pico', 5)}
-        </div></div></div>`;
-
-      // Por serviço
-      html += `<div class="gm-ho-step"><div><div class="gm-ho-st">Por serviço</div>
-          <div class="gm-ho-ss">Lavagens entram por padrão. Os outros serviços ficam sempre na tabela, a não ser que você inclua.</div></div></div>
+      // 5. Serviços
+      main += `<div class="gm-pc-blk">${head(5, 'Serviços', `${incluidos.length} de ${D.servicos.length} com Hora Off e Pico`,
+          'Lavagens entram por padrão. Os outros serviços ficam sempre na tabela, a não ser que você inclua.')}
         <div>${D.servicos.map(s => {
           const fx = hoFaixa(s);
-          const faixa = !fx ? 'Sempre tabela' : fx.min === fx.max ? reais(fx.min) : `${reais(fx.min)} a ${reais(fx.max)}`;
+          const faixa = !fx ? `Sempre ${reais(s.price)}` : fx.min === fx.max ? reais(fx.min) : `${reais(fx.min)} a ${reais(fx.max)}`;
           return `<div class="gm-ho-svc">
             <div style="flex:1;min-width:0"><div class="gm-item-t">${esc(s.title)}</div><div class="gm-item-s">Tabela ${reais(s.price)}</div></div>
-            <span class="gm-ho-money"${fx ? '' : ' style="color:var(--graphite);font-weight:500"'}>${faixa}</span>
-            <button type="button" class="gm-ho-pill" data-ho-svc="${s.id}" ${dis}>${S.servicos[s.id] ? 'Tirar' : 'Incluir'}</button>
+            <span class="gm-ho-money${fx ? '' : ' tab'}">${faixa}</span>
+            <button type="button" class="gm-switch" role="switch" data-ho-svc="${s.id}" aria-checked="${!!S.servicos[s.id]}"
+              aria-label="${esc(s.title)} com Hora Off e Hora Pico" ${dis}></button>
           </div>`;
-        }).join('') || '<div class="gm-empty">Nenhum serviço cadastrado.</div>'}</div>`;
-      return html;
+        }).join('') || '<div class="gm-empty">Nenhum serviço cadastrado.</div>'}</div></div>`;
+
+      // Prévia: o que o cliente paga em cada situação, com as escolhas de agora.
+      // No celular a prévia vem antes de tudo: dois serviços bastam.
+      const MAX_PV = matchMedia('(min-width: 1200px) and (hover: hover) and (pointer: fine)').matches ? 3 : 2;
+      const cartoes = incluidos.slice(0, MAX_PV).map(s => {
+        const cedo = hoPrecoVazio(s.price, escada[0].pct, false).preco;
+        const perto = hoPrecoVazio(s.price, escada[escada.length - 1].pct, false).preco;
+        const lm = hoPrecoVazio(s.price, D.desconto_last_minute, true).preco;
+        const linhas = [
+          S.hora_off_enabled && `<div class="gm-pv-l"><span>${ic('hora-off', 13)} Horário vazio</span><strong>${cedo === perto ? reais(cedo) : `${reais(cedo)} → ${reais(perto)}`}</strong></div>`,
+          S.hora_off_enabled && `<div class="gm-pv-l lm"><span>${ic('hora-off', 13)} Vazio, no Last Minute</span><strong>${reais(lm)}</strong></div>`,
+          S.hora_pico_enabled && `<div class="gm-pv-l lm"><span>${ic('hora-pico', 13)} Lotado, no Last Minute</span><strong>${reais(hoPicoPreco(s.price))}</strong></div>`,
+        ].filter(Boolean).join('') || `<div class="gm-pv-l"><span>Sempre a tabela</span><strong>${reais(s.price)}</strong></div>`;
+        return `<div class="gm-pv-c"><b><span>${esc(s.title)}</span><span>tabela ${reais(s.price)}</span></b>${linhas}</div>`;
+      }).join('');
+      const notas = [
+        S.hora_off_enabled && S.chuva_enabled && `Com chuva prevista, os horários vazios do dia têm mais −${D.extra_chuva}%.`,
+        S.hora_off_enabled && piso && `Nunca abaixo de ${reais(piso)} (${reais(pisoLm)} no Last Minute).`,
+        incluidos.length > MAX_PV && `Mais ${incluidos.length - MAX_PV} em Serviços, logo abaixo.`,
+      ].filter(Boolean);
+      const previa = `<aside class="gm-pv" aria-label="O que o cliente paga">
+        <div class="gm-pv-t">O que o cliente paga</div>
+        <div class="gm-pv-s">Muda a cada escolha. Vale depois de salvar.</div>
+        ${cartoes ? `<div class="gm-pv-list">${cartoes}</div>` : `<div class="gm-pv-l"><span>Nenhum serviço com Hora Off e Pico. Todos ficam na tabela.</span></div>`}
+        ${notas.length ? `<div class="gm-pv-f">${ic('shield', 14)}<span>${notas.join(' ')}</span></div>` : ''}
+      </aside>`;
+
+      return `<div class="gm-pc">${previa}<div class="gm-pc-main">${main}</div></div>`;
     },
 
     closures() {
@@ -1534,7 +1689,25 @@
     if ('hoRetry' in d) { ho.loading = true; render(); return hoLoad(); }
     if ('hoCalc' in d && hoPode()) { return calcAbrir(); }
     if (hoPode()) {
-      if (d.hoCell) { ho.st.grade[d.hoCell] = PROXIMO[ho.st.grade[d.hoCell] || 'normal']; render(); return; }
+      // Pincel: pinta com o tipo escolhido; tocar de novo volta pra normal.
+      if (d.hoCell) {
+        const pincel = ui.hoPincel || 'fraco', atual = ho.st.grade[d.hoCell] || 'normal';
+        ho.st.grade[d.hoCell] = atual === pincel ? 'normal' : pincel;
+        render(); return;
+      }
+      if (d.hoPincel) { ui.hoPincel = d.hoPincel; render(); return; }
+      if (d.hoGrade) {
+        Object.keys(ho.st.grade).forEach(k => {
+          const [dia, faixa] = k.split('-');
+          ho.st.grade[k] = d.hoGrade === 'padrao' ? hoNivelPadrao(Number(dia), faixa) : 'normal';
+        });
+        render(); return;
+      }
+      if (d.hoSet) {
+        const lim = ho.server.limites[HO_LIMITE[d.hoSet]];
+        ho.st[d.hoSet] = Math.min(lim.max, Math.max(lim.min, Number(d.hoV)));
+        render(); return;
+      }
       if (d.hoSw)   { ho.st[d.hoSw] = !ho.st[d.hoSw]; render(); return; }
       if (d.hoSvc)  { ho.st.servicos[d.hoSvc] = !ho.st.servicos[d.hoSvc]; render(); return; }
       if (d.hoStep) {
