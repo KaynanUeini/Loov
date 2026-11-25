@@ -106,6 +106,7 @@
   .dp-pay-card.missing { background: var(--coral-50); color: var(--coral-700); line-height: 1.4; }
   .dp-pay-card.missing svg { color: var(--coral-500); }
   .dp-hint { margin: 16px 0 12px; text-align: center; font-size: 11px; line-height: 15px; color: var(--ash); }
+  .dp-hint-a { color: var(--graphite) !important; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
   .dp-confirm { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; padding: 16px; border: 0; border-radius: 14px !important; background: var(--coral-500) !important; color: var(--cream) !important; font-size: 14px; font-weight: 600; }
   .dp-confirm[disabled] { opacity: .6; cursor: default; }
   .dp-confirm .dp-spin { width: 18px; height: 18px; border-color: rgba(255,255,255,.35); border-top-color: #fff; }
@@ -365,7 +366,7 @@
     return '<div class="dp-foot"><p class="dp-hint">' + (prepayOf(totalDe(cw, svc))
         ? 'Os ' + PCT_LABEL + ' ficam reservados no cartão e só são cobrados se o lava-rápido aceitar: ele tem até 3 min pra responder. ' +
           'Se ele recusar ou o tempo acabar, o valor é liberado. Depois de aceita, não há reembolso se você não for; ' +
-          'se o lava-rápido cancelar, você recebe de volta.'
+          'se o lava-rápido cancelar, você recebe de volta. <a class="dp-hint-a" href="/ajuda/last-minute-cancelar-reembolso" target="_blank" rel="noopener">Como funciona o reembolso</a>'
         : 'Nada é cobrado no cartão agora. O lava-rápido tem até 3 min pra responder' + (descontoDe(cw, svc) > 0 ? '; se ele recusar ou o tempo acabar, o vale volta pra você' : '') + '.') + '</p>' +
       '<button type="button" class="dp-confirm" id="dp-confirm"' + (st.reserving || !svc ? ' disabled' : '') + '>' +
         (st.reserving ? '<span class="dp-spin"></span>'

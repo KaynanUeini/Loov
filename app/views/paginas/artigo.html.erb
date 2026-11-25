@@ -1,0 +1,43 @@
+<%#
+  Um artigo da Central de Ajuda, com endereço próprio (dá pra mandar o link
+  pro cliente). Links internos do texto seguem no modo app quando abertos
+  dentro do app.
+%>
+<%= render "paginas/estilo" %>
+<% corpo = @artigo[:corpo].gsub(/href="(\/[^"]*)"/) { %(href="#{pagina_path(Regexp.last_match(1))}") } %>
+<style>
+  .ar-rel { display: grid; gap: 8px; max-width: 68ch; }
+  .ar-rel h2 { margin: 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 18px; color: var(--ink) !important; }
+  .ar-rel a { display: flex; align-items: center; gap: 12px; padding: 14px 6px; border-bottom: 1px solid var(--stone); color: var(--ink) !important; text-decoration: none; font-size: 15px; font-weight: 500; }
+  .ar-rel a:first-of-type { border-top: 1px solid var(--stone); }
+  .ar-rel a:hover { background: var(--sand); }
+  .ar-rel a span { flex: 1; }
+  .ar-rel svg { width: 16px; height: 16px; color: var(--graphite); }
+</style>
+
+<section class="pp<%= ' embed' if @embed %>">
+  <div class="pp-in">
+    <a class="pp-back" href="<%= pagina_path(@artigo[:publico] == 'lava' ? '/ajuda?p=lava' : '/ajuda') %>">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>Ajuda
+    </a>
+    <header>
+      <div class="pp-eyebrow"><%= @artigo[:publico] == "lava" ? "Lava-rápidos" : "Clientes" %> · <%= @tema[:titulo] %></div>
+      <h1 class="pp-title" style="font-size:clamp(28px,4.6vw,44px);line-height:1.08"><%= @artigo[:titulo] %></h1>
+    </header>
+    <div class="pp-txt"><%= raw corpo %></div>
+
+    <% if @relacionados.any? %>
+      <nav class="ar-rel" aria-label="Relacionados">
+        <h2>Sobre <%= @tema[:titulo] %></h2>
+        <% @relacionados.each do |a| %>
+          <a href="<%= pagina_path("/ajuda/#{a[:id]}") %>"><span><%= a[:titulo] %></span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></a>
+        <% end %>
+      </nav>
+    <% end %>
+
+    <%= render "paginas/contato" %>
+  </div>
+</section>
+
+<%= render "shared/site_footer", audience: (user_signed_in? && current_user.client? ? :client : :visitor) unless @embed %>

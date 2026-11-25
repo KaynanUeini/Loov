@@ -109,6 +109,10 @@
   .sx-meter[data-lvl="3"] i:nth-child(-n+3) { background: #3fa66b; }
   .sx-meter-txt { margin-top: 6px; font-size: 12.5px; color: var(--graphite); min-height: 1.2em; }
   .sx-hidden { display: none !important; }
+  .sx-terms { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; line-height: 1.45; color: var(--graphite); cursor: pointer; }
+  .sx-terms input { flex: none; width: 20px; height: 20px; margin: 0; accent-color: var(--ink); cursor: pointer; }
+  .sx-terms a { color: var(--ink); font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+  .sx-terms input.is-err { outline: 2px solid var(--rose-500, #c0392b); outline-offset: 2px; }
   .sx-submit { text-transform: none !important; width: 100%; height: 56px; margin-top: 8px; border-radius: 9999px !important; display: inline-flex; align-items: center; justify-content: center; gap: 10px; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; letter-spacing: .2px; box-shadow: 0 10px 24px -10px rgba(221,120,82,.7); transition: transform .15s ease, box-shadow .2s ease !important; }
   .sx-submit:hover { transform: translateY(-1px); box-shadow: 0 14px 28px -10px rgba(221,120,82,.8); }
   .sx-submit .sx-arrow { transition: transform .2s ease; }
@@ -235,6 +239,14 @@
           </div>
           <%# Confirmação = a própria senha (o olho já permite conferir). %>
           <%= f.hidden_field :password_confirmation, id: "sx-pass2" %>
+
+          <div class="sx-field">
+            <label class="sx-terms" for="sx-terms">
+              <input type="checkbox" id="sx-terms">
+              <span>Li e concordo com os <a href="<%= termos_path %>" target="_blank" rel="noopener">Termos de Uso</a> e a <a href="<%= privacidade_path %>" target="_blank" rel="noopener">Política de Privacidade</a>.</span>
+            </label>
+            <div class="sx-ferr" data-for="sx-terms"></div>
+          </div>
 
           <button type="submit" class="sx-submit loov-btn-primary" id="sx-submit">
             <span class="sx-spin" aria-hidden="true"></span>
@@ -374,7 +386,8 @@
     var cpf = $('sx-cpf').value.replace(/\D/g, '');
     if (role === 'client' && cpf && cpf.length !== 11) e['sx-cpf'] = 'CPF incompleto.';
     if (pass.value.length < MIN) e['sx-pass'] = 'A senha precisa de pelo menos ' + MIN + ' caracteres.';
-    (only ? [only] : ['sx-cwname', 'sx-name', 'sx-email', 'sx-phone', 'sx-cpf', 'sx-pass']).forEach(function (id) { setErr(id, e[id]); });
+    if (!$('sx-terms').checked) e['sx-terms'] = 'Para criar a conta, aceite os termos e a política de privacidade.';
+    (only ? [only] : ['sx-cwname', 'sx-name', 'sx-email', 'sx-phone', 'sx-cpf', 'sx-pass', 'sx-terms']).forEach(function (id) { setErr(id, e[id]); });
     return e;
   }
   ['sx-cwname', 'sx-name', 'sx-email', 'sx-phone', 'sx-cpf', 'sx-pass'].forEach(function (id) {
@@ -382,6 +395,8 @@
     el.addEventListener('blur', function () { if (el.value) validate(id); });
     el.addEventListener('input', function () { if (el.classList.contains('is-err')) validate(id); });
   });
+
+  $('sx-terms').addEventListener('change', function () { validate('sx-terms'); });
 
   var form = $('sx-form'), btn = $('sx-submit');
   form.addEventListener('submit', function (ev) {

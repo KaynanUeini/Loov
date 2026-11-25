@@ -1,0 +1,42 @@
+<%#
+  Estilo das páginas públicas (Ajuda, Termos, Privacidade). Leitura antes de
+  tudo: coluna de texto de ~66 caracteres, título grande (wiemer), hierarquia
+  por tamanho e peso (Apple). Coral só no que é Last Minute.
+%>
+<style>
+  .pp { background: var(--cream); color: var(--ink); min-height: 100vh; padding: 76px 0 64px; }
+  .pp.embed { padding-top: 20px; }
+  .pp *, .pp *::before, .pp *::after { box-sizing: border-box; }
+  .pp-in { max-width: 1040px; margin: 0 auto; padding: 0 20px; display: grid; gap: 28px; }
+  .pp-eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--ash); }
+  .pp-title { margin: 6px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: clamp(34px, 6vw, 60px); line-height: 1; letter-spacing: -0.04em; color: var(--ink) !important; text-wrap: balance; }
+  .pp-lead { margin: 14px 0 0 !important; max-width: 56ch; font-size: 15.5px; line-height: 1.55; color: var(--graphite) !important; }
+  .pp-back { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 16px 0 10px; border-radius: 999px; background: var(--sand); color: var(--ink) !important; text-decoration: none; font-size: 14px; font-weight: 600; justify-self: start; }
+  .pp-back:hover { background: var(--stone); }
+  .pp-back svg { width: 18px; height: 18px; }
+
+  /* Texto longo (artigos, termos, privacidade) */
+  .pp-txt { max-width: 68ch; display: grid; gap: 14px; font-size: 16px; line-height: 1.65; color: var(--ink); }
+  .pp-txt p, .pp-txt ul, .pp-txt ol { margin: 0 !important; }
+  .pp-txt p, .pp-txt li { color: var(--ink) !important; font-size: 16px !important; line-height: 1.65 !important; }
+  .pp-txt ul, .pp-txt ol { padding-left: 22px; display: grid; gap: 7px; }
+  .pp-txt ul { list-style: disc; } .pp-txt ol { list-style: decimal; }
+  .pp-txt h2 { margin: 22px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 24px; letter-spacing: -0.02em; color: var(--ink) !important; scroll-margin-top: 90px; }
+  .pp-txt h3 { margin: 10px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 18px; color: var(--ink) !important; }
+  .pp-txt a { color: var(--ink) !important; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+  .pp-txt b, .pp-txt strong { font-weight: 600; }
+  .pp-txt .caixa { padding: 14px 16px; border-radius: 14px; background: var(--sand); font-size: 15px; line-height: 1.55; }
+  .pp-txt .caixa.lm { background: var(--coral-50); border: 1px solid var(--coral-100); }
+
+  /* Fale com a gente */
+  .pp-cont { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 20px; padding: 22px; border-radius: 20px; background: var(--obsidian); color: var(--cream); }
+  .pp-cont div { flex: 1 1 240px; display: grid; gap: 2px; }
+  .pp-cont b { font-family: 'Space Grotesk', sans-serif; font-size: 19px; }
+  .pp-cont span { font-size: 13.5px; color: rgba(250,250,246,.65); }
+  .pp-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 22px; border-radius: 999px; font-size: 15px; font-weight: 600; text-decoration: none !important; white-space: nowrap; }
+  .pp-btn.claro { background: var(--cream); color: var(--ink) !important; }
+  .pp-btn.claro:hover { background: #fff; }
+  .pp-legal { display: flex; flex-wrap: wrap; gap: 8px 22px; padding-top: 18px; border-top: 1px solid var(--stone); font-size: 13px; color: var(--graphite); }
+  .pp-legal a { color: var(--ink) !important; font-weight: 600; text-decoration: none; }
+  .pp-legal a:hover { text-decoration: underline; text-underline-offset: 3px; }
+</style>

@@ -48,7 +48,10 @@
           <tr>
             <td style="padding:24px 8px 0;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:18px;color:#ada699;text-align:center;">
               <% if content_for?(:footer) %><%= yield :footer %><br><% end %>
-              Loov · agendamento de lava-rápidos
+              Loov · agendamento de lava-rápidos<br>
+              <a href="<%= ajuda_url %>" style="color:#575148;text-decoration:underline;">Ajuda</a> ·
+              <a href="<%= termos_url %>" style="color:#575148;text-decoration:underline;">Termos</a> ·
+              <a href="<%= privacidade_url %>" style="color:#575148;text-decoration:underline;">Privacidade</a>
             </td>
           </tr>
 

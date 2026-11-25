@@ -62,6 +62,12 @@ Rails.application.routes.draw do
   # Chat de suporte no site (qualquer papel).
   get 'suporte', to: 'suporte#show', as: :suporte
 
+  # Páginas públicas: ajuda, termos e privacidade (o app abre com ?app=1).
+  get 'ajuda',     to: 'paginas#ajuda',       as: :ajuda
+  get 'ajuda/:id', to: 'paginas#artigo',      as: :ajuda_artigo, constraints: { id: /[a-z0-9-]+/ }
+  get 'termos',    to: 'paginas#termos',      as: :termos
+  get 'privacidade', to: 'paginas#privacidade', as: :privacidade
+
   # Conta de login (qualquer papel) pelo app: trocar e-mail e excluir.
   get    'account',       to: 'accounts#show'
   patch  'account/email', to: 'accounts#update_email'

@@ -1,0 +1,292 @@
+# Central de Ajuda pública (/ajuda). Cada artigo responde uma pergunta, em
+# linguagem de quem usa o app. As regras saem das bases do suporte
+# (config/support_agent_kb*.txt), que são escritas pro robô; quando uma regra
+# mudar, atualize as duas.
+#
+# corpo: HTML simples (p, ul, ol, h3, b, a, div.caixa). Links pra outros
+# artigos: href="/ajuda/<id>".
+
+temas:
+  clientes:
+    - { id: lm,     icone: raio,   lm: true, titulo: "Last Minute",         sub: "Pagamento, aceite e reembolso" }
+    - { id: ag,     icone: cal,    titulo: "Agendamentos",                  sub: "Marcar, cancelar e faltas" }
+    - { id: pg,     icone: cartao, titulo: "Pagamentos e cartão",           sub: "Cobranças e estornos" }
+    - { id: ct,     icone: user,   titulo: "Conta e dados",                 sub: "Senha, privacidade e exclusão" }
+  lava:
+    - { id: lml,    icone: raio,   lm: true, titulo: "Last Minute",         sub: "Aceite, valores e suspensão" }
+    - { id: ho,     icone: barras, titulo: "Hora Off e Hora Pico",          sub: "Como o preço muda" }
+    - { id: loja,   icone: loja,   titulo: "Agenda e loja",                 sub: "Horários, serviços e fechamentos" }
+    - { id: eq,     icone: equipe, titulo: "Equipe e conta",                sub: "Atendentes e acesso" }
+
+artigos:
+  # ── Clientes · Last Minute ────────────────────────────────────────────
+  - id: last-minute-como-funciona
+    publico: clientes
+    tema: lm
+    titulo: "Como funciona o Last Minute"
+    corpo: |
+      <p>São vagas de lavagem que começam nos próximos 30 minutos, em lava-rápidos a até 5 km de você. Para usar, a localização precisa estar ligada e você precisa de um cartão cadastrado.</p>
+      <h3>Como você paga</h3>
+      <ul>
+        <li><b>35% no cartão</b>, pelo app, quando o lava-rápido aceita a reserva.</li>
+        <li><b>65% no lava-rápido</b>, quando você chegar.</li>
+      </ul>
+      <h3>O aceite</h3>
+      <p>Depois de reservar, o lava-rápido tem 3 minutos para aceitar. Enquanto isso o valor fica só reservado no cartão. Se ele recusar ou não responder a tempo, a reserva é desfeita e você não paga nada.</p>
+      <p>Outros serviços, como polimento e higienização, não entram no Last Minute. Para eles, use o agendamento comum.</p>
+
+  - id: last-minute-cancelar-reembolso
+    publico: clientes
+    tema: lm
+    titulo: "Posso cancelar um Last Minute? Tenho reembolso?"
+    corpo: |
+      <ul>
+        <li><b>Antes do aceite:</b> na tela de espera, segure o botão "Segure para cancelar". Nada é cobrado.</li>
+        <li><b>Depois do aceite:</b> a reserva não pode ser cancelada pelo app, e não há reembolso se você não for. A vaga ficou guardada para você.</li>
+        <li><b>Se o lava-rápido cancelar</b> uma reserva já aceita, o valor pago no app volta para o seu cartão automaticamente.</li>
+        <li><b>Se você foi e não foi atendido</b>, veja <a href="/ajuda/nao-fui-atendido">Paguei um Last Minute e não fui atendido</a>.</li>
+      </ul>
+
+  - id: nao-fui-atendido
+    publico: clientes
+    tema: lm
+    titulo: "Paguei um Last Minute e não fui atendido"
+    corpo: |
+      <p>Se o lava-rápido aceitou sua reserva e, ao chegar, você não foi atendido (estava fechado, lotado ou recusou), a Loov devolve o que você pagou no app.</p>
+      <h3>Como pedir</h3>
+      <ol>
+        <li>Abra a Agenda e o card do agendamento.</li>
+        <li>Toque em <b>Ajuda</b>. O botão aparece no horário de início e fica disponível até 24 horas depois.</li>
+        <li>Escolha <b>Não fui atendido</b> e conte o que aconteceu.</li>
+      </ol>
+      <h3>O que acontece depois</h3>
+      <ul>
+        <li>O lava-rápido é avisado e tem 24 horas para responder.</li>
+        <li>Se ele confirmar, ou não responder, devolvemos os 35% no seu cartão. O prazo para aparecer no extrato depende do banco.</li>
+        <li>Se ele discordar, a equipe da Loov analisa o caso e te responde.</li>
+      </ul>
+      <div class="caixa lm">Lava-rápido com 3 casos confirmados em 60 dias tem o Last Minute suspenso. Seu pedido ajuda a manter a qualidade para todo mundo.</div>
+
+  - id: cobranca-antes-do-aceite
+    publico: clientes
+    tema: lm
+    titulo: "Apareceu uma cobrança, mas a reserva não foi aceita"
+    corpo: |
+      <p>Enquanto o lava-rápido decide, o valor fica apenas <b>reservado</b> no cartão. Alguns bancos mostram isso como compra pendente.</p>
+      <p>Se a reserva for recusada, o tempo acabar ou você desistir antes do aceite, a reserva é desfeita e você não é cobrado. O prazo para ela sumir do extrato depende do banco.</p>
+
+  # ── Clientes · Agendamentos ───────────────────────────────────────────
+  - id: como-agendar
+    publico: clientes
+    tema: ag
+    titulo: "Como agendar um horário"
+    corpo: |
+      <ol>
+        <li>Na página do lava-rápido, escolha o serviço.</li>
+        <li>Escolha o dia (até 15 dias à frente) e o horário.</li>
+        <li>Confira o resumo e confirme.</li>
+      </ol>
+      <p>No agendamento comum você não paga nada pelo app: paga tudo no lava-rápido, em dinheiro, Pix ou cartão.</p>
+      <p>Horários com um raio no meio da grade começam muito em breve e só podem ser reservados pelo <a href="/ajuda/last-minute-como-funciona">Last Minute</a>.</p>
+
+  - id: cancelar-agendamento
+    publico: clientes
+    tema: ag
+    titulo: "Como cancelar um agendamento"
+    corpo: |
+      <ul>
+        <li>No card do agendamento, toque em <b>Cancelar agendamento</b> e confirme.</li>
+        <li>Dá para cancelar pelo app até 2 horas antes do horário. Cancelando nesse prazo, não conta como falta.</li>
+        <li>Passou do prazo? Avise o lava-rápido e fale com o suporte.</li>
+      </ul>
+      <p>Last Minute tem regra própria: veja <a href="/ajuda/last-minute-cancelar-reembolso">Posso cancelar um Last Minute?</a></p>
+
+  - id: faltas
+    publico: clientes
+    tema: ag
+    titulo: "Faltas: o que acontece se eu não for"
+    corpo: |
+      <p>Quando o lava-rápido registra que você não foi e não cancelou, conta uma falta. Faltas com mais de 90 dias deixam de contar.</p>
+      <ul>
+        <li><b>2 faltas em 90 dias:</b> por 60 dias, o agendamento comum pede um sinal de 35% no cartão. O sinal volta se você cancelar até 2 horas antes ou se o lava-rápido cancelar. Se você faltar, ele não volta.</li>
+        <li><b>3 faltas em 90 dias:</b> o agendamento comum fica bloqueado por 30 dias. O app mostra até quando.</li>
+        <li>O Last Minute continua liberado nos dois casos.</li>
+      </ul>
+      <div class="caixa">Falta registrada por engano? Toque em <b>Ajuda</b> no card do agendamento ou fale com o suporte, informando o código do agendamento (LV-0000).</div>
+
+  - id: limite-de-agendamentos
+    publico: clientes
+    tema: ag
+    titulo: "Quantos agendamentos posso ter ao mesmo tempo"
+    corpo: |
+      <p>Até 3 agendamentos comuns marcados ao mesmo tempo, e no máximo 3 no mesmo lava-rápido no mesmo dia. Para marcar outro, cancele um ou espere um acontecer.</p>
+
+  - id: cancelado-pelo-lava-rapido
+    publico: clientes
+    tema: ag
+    titulo: "O lava-rápido cancelou meu agendamento"
+    corpo: |
+      <p>Isso pode acontecer por imprevisto, feriado, férias ou manutenção. Você recebe uma notificação no app, às vezes com o motivo, e pode receber um e-mail.</p>
+      <p>É só escolher outro horário. Se era Last Minute ou se você pagou sinal, o valor volta para o seu cartão.</p>
+
+  - id: problema-no-atendimento
+    publico: clientes
+    tema: ag
+    titulo: "Tive um problema no atendimento"
+    corpo: |
+      <p>No card do agendamento, toque em <b>Ajuda</b>. O botão aparece no horário de início e fica até 24 horas depois. Escolha o que aconteceu:</p>
+      <ul>
+        <li><b>Não fui atendido:</b> o lava-rápido estava fechado, lotado ou recusou.</li>
+        <li><b>Fui atendido, mas tive um problema:</b> serviço, valor cobrado no local ou atendimento.</li>
+        <li><b>Outra coisa:</b> abre uma conversa com o suporte já com o agendamento.</li>
+      </ul>
+      <p>Depois do atendimento, você também pode avaliar o lava-rápido no card, em Anteriores.</p>
+
+  # ── Clientes · Pagamentos ─────────────────────────────────────────────
+  - id: cartao
+    publico: clientes
+    tema: pg
+    titulo: "Cadastrar, trocar ou remover o cartão"
+    corpo: |
+      <p>Em Perfil › Pagamentos. O cartão só é usado no Last Minute e no sinal de quem tem faltas; o agendamento comum é pago no lava-rápido.</p>
+      <ul>
+        <li>Fica salvo um cartão por vez. Alguns bancos pedem uma confirmação no cadastro.</li>
+        <li>Você recebe um e-mail sempre que um cartão é adicionado, trocado ou removido. Se não foi você, troque sua senha e fale com o suporte.</li>
+        <li>"O cartão não foi aceito": confira os dados, o limite e se o cartão está liberado para compras online.</li>
+      </ul>
+
+  - id: numero-do-cartao
+    publico: clientes
+    tema: pg
+    titulo: "A Loov guarda o número do meu cartão?"
+    corpo: |
+      <p>Não. Os dados do cartão são guardados e processados pelo Stripe, empresa de pagamentos. A Loov vê só a bandeira e os últimos 4 números.</p>
+
+  - id: estorno
+    publico: clientes
+    tema: pg
+    titulo: "Quando o estorno aparece no cartão"
+    corpo: |
+      <p>A Loov pede o estorno na hora. O prazo para ele aparecer no extrato é do banco e costuma levar alguns dias, às vezes até a próxima fatura. Se passar disso, fale com o suporte.</p>
+
+  - id: confirmacao-do-banco
+    publico: clientes
+    tema: pg
+    titulo: "O banco pediu uma confirmação"
+    corpo: |
+      <p>Alguns bancos pedem uma confirmação extra no app do banco ou numa tela dele. Confirme para seguir. Se você cancelar ou o banco negar, a reserva não acontece e nada é cobrado.</p>
+
+  # ── Clientes · Conta ──────────────────────────────────────────────────
+  - id: esqueci-a-senha
+    publico: clientes
+    tema: ct
+    titulo: "Esqueci minha senha"
+    corpo: |
+      <p>Na tela de entrar, toque em <b>Esqueci minha senha</b> e informe o e-mail. Chega um link para criar uma senha nova, que vale por 6 horas.</p>
+      <p>Não chegou? Confira o spam e se o e-mail foi digitado certo. Se mesmo assim não chegar, fale com o suporte.</p>
+
+  - id: excluir-conta
+    publico: clientes
+    tema: ct
+    titulo: "Como excluir minha conta"
+    corpo: |
+      <p>Em Perfil › Privacidade e segurança › Excluir conta. Seus dados pessoais, o cartão e os favoritos são apagados, e os agendamentos futuros são cancelados. Não dá para desfazer.</p>
+      <p>Uma reserva Last Minute já aceita não é reembolsada. O que a lei obriga a guardar, como registros de pagamento, fica pelo prazo legal. Veja a <a href="/privacidade">Política de Privacidade</a>.</p>
+
+  - id: meus-dados
+    publico: clientes
+    tema: ct
+    titulo: "Que dados a Loov guarda e por quê"
+    corpo: |
+      <p>Nome, e-mail, celular, CPF (se você informar), modelo e placa do carro, sua localização enquanto você busca lava-rápidos e o histórico de agendamentos. Cada dado tem um motivo, explicado na <a href="/privacidade">Política de Privacidade</a>, junto com os seus direitos e como pedir uma cópia ou a exclusão.</p>
+
+  # ── Lava-rápidos · Last Minute ────────────────────────────────────────
+  - id: aceitar-last-minute
+    publico: lava
+    tema: lml
+    titulo: "Como aceitar um pedido de Last Minute"
+    corpo: |
+      <p>O pedido chega com som e notificação, em qualquer tela do painel. Você tem 3 minutos para aceitar ou recusar. Sem resposta, o pedido expira e o cliente não é cobrado.</p>
+      <p>Aceite só se tiver como atender no horário: depois do aceite, o cliente já pagou e está a caminho.</p>
+
+  - id: valores-last-minute
+    publico: lava
+    tema: lml
+    titulo: "Quanto eu recebo num Last Minute"
+    corpo: |
+      <p>O cliente paga 35% no app e 65% no lava-rápido. A Loov fica com 5% do valor total; o resto é seu.</p>
+      <div class="caixa">Exemplo com um serviço de R$ 100: o cliente paga R$ 35 no app e R$ 65 na chegada. A Loov fica com R$ 5, e você recebe R$ 30 do que foi pago no app, mais os R$ 65 no local: R$ 95.</div>
+
+  - id: cliente-nao-atendido
+    publico: lava
+    tema: lml
+    titulo: "Um cliente disse que não foi atendido"
+    corpo: |
+      <p>Quando um cliente de Last Minute toca em "Não fui atendido", você recebe um aviso e tem 24 horas para responder no app ou no site.</p>
+      <ul>
+        <li><b>Confirmar:</b> o cliente recebe os 35% de volta e o valor sai do seu próximo repasse.</li>
+        <li><b>Discordar:</b> conte o que houve. A equipe da Loov analisa e decide.</li>
+        <li><b>Sem resposta em 24 horas:</b> vale como confirmado.</li>
+      </ul>
+
+  - id: suspensao-last-minute
+    publico: lava
+    tema: lml
+    titulo: "Por que meu Last Minute foi suspenso"
+    corpo: |
+      <p>Com 3 casos de "Não fui atendido" confirmados ou sem resposta em 60 dias, o Last Minute da loja fica suspenso por 30 dias. O aviso aparece no Início do painel, com as datas dos casos.</p>
+      <ul>
+        <li>No 2º caso, o painel já avisa que mais um suspende o Last Minute.</li>
+        <li>Agendamentos comuns continuam normais durante a suspensão.</li>
+        <li>Casos que a equipe da Loov decidiu a seu favor não contam.</li>
+      </ul>
+
+  # ── Lava-rápidos · Hora Off e Hora Pico ───────────────────────────────
+  - id: hora-off-hora-pico
+    publico: lava
+    tema: ho
+    titulo: "Como funcionam a Hora Off e a Hora Pico"
+    corpo: |
+      <ul>
+        <li><b>Hora Off:</b> horário que costuma ficar vazio fica mais barato conforme se aproxima e continua livre. Quem agenda com mais de 6 horas de antecedência paga a tabela.</li>
+        <li><b>Hora Pico:</b> horário que costuma lotar fica mais caro no Last Minute.</li>
+      </ul>
+      <p>Você define o desconto máximo, o acréscimo, os horários vazios e lotados e quais serviços entram, em Gerenciar › Hora Off e Hora Pico. A tela mostra na hora quanto o cliente vai pagar.</p>
+
+  - id: protecao-do-lucro
+    publico: lava
+    tema: ho
+    titulo: "O que é a proteção do lucro"
+    corpo: |
+      <p>Com o custo de cada lavagem, as taxas sobre a venda e a margem mínima, a Loov calcula o menor preço que ainda dá lucro. A Hora Off nunca desce dele.</p>
+      <p>Não sabe o custo de cada lavagem? Toque em <b>Calcular</b>: são quatro perguntas do dia a dia, e a Loov faz a conta.</p>
+
+  # ── Lava-rápidos · Agenda e loja ──────────────────────────────────────
+  - id: horarios-e-servicos
+    publico: lava
+    tema: loja
+    titulo: "Mudar horários, capacidade e serviços"
+    corpo: |
+      <p>Em Gerenciar. Você edita tudo e salva de uma vez em "Salvar alterações". Se a mudança afetar agendamentos já marcados, a Loov mostra quais antes de salvar.</p>
+
+  - id: fechamentos
+    publico: lava
+    tema: loja
+    titulo: "Vou fechar por uns dias"
+    corpo: |
+      <p>Em Gerenciar › Fechamentos, marque o período (férias, feriado, manutenção). Vale na hora: os agendamentos do período são cancelados e os clientes são avisados. Quem pagou no app recebe o valor de volta.</p>
+
+  # ── Lava-rápidos · Equipe ─────────────────────────────────────────────
+  - id: convidar-atendente
+    publico: lava
+    tema: eq
+    titulo: "Como convidar um atendente"
+    corpo: |
+      <p>Em Equipe, convide pelo e-mail. O atendente vê a agenda e atende os pedidos; o que ele mudar na loja passa pela sua aprovação antes de valer.</p>
+
+  - id: excluir-conta-lava-rapido
+    publico: lava
+    tema: eq
+    titulo: "Dados da loja e exclusão da conta"
+    corpo: |
+      <p>A exclusão fica em Perfil › Privacidade e segurança. Antes de excluir, fale com o suporte se houver agendamentos futuros ou valores a receber. Veja os <a href="/termos">Termos de Uso</a> e a <a href="/privacidade">Política de Privacidade</a>.</p>

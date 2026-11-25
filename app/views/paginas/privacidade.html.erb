@@ -1,0 +1,105 @@
+<%#
+  Política de Privacidade (LGPD). A lista de dados e de fornecedores segue o
+  que o app faz hoje: quando entrar um fornecedor novo que receba dado
+  pessoal, ele entra aqui também. Revisão jurídica antes do lançamento.
+%>
+<%= render "paginas/estilo" %>
+<% empresa = [ENV["LOOV_RAZAO_SOCIAL"].presence, ENV["LOOV_CNPJ"].presence && "CNPJ #{ENV['LOOV_CNPJ']}"].compact.join(", ") %>
+<% dados = [
+     ["Conta", "Nome, e-mail, celular, senha (guardada cifrada) e CPF, se você informar.", "Criar e proteger sua conta, falar com você e confirmar quem chega no lava-rápido."],
+     ["Carro", "Modelo e placa.", "Para o lava-rápido saber qual carro vai chegar."],
+     ["Localização", "Sua posição enquanto você busca lava-rápidos, usa o Last Minute ou abre a rota.", "Mostrar o que está perto, as vagas a até 5 km e o tempo de carro. Não acompanhamos você em segundo plano."],
+     ["Pagamento", "Bandeira e últimos 4 números do cartão. O cartão completo fica com o Stripe.", "Cobrar o Last Minute e o sinal, e fazer estornos."],
+     ["Fotos da ficha do carro", "As fotos tiradas no lava-rápido na chegada.", "Registrar o estado do carro antes do serviço."],
+     ["Uso da Loov", "Agendamentos, faltas, avaliações, favoritos e cartões fidelidade.", "Fazer o app funcionar, aplicar as regras de faltas e mostrar seu histórico."],
+     ["Suporte", "As conversas com o suporte.", "Resolver o que você pediu."],
+     ["Aparelho", "Identificador para notificações e dados técnicos de acesso.", "Enviar avisos e manter a segurança."],
+     ["Lava-rápidos", "Dados da loja, da equipe, agenda, caixa e custos lançados no financeiro.", "Operar a loja na Loov e gerar os relatórios do dono."]
+   ] %>
+<% fornecedores = [
+     ["Stripe", "pagamentos com cartão"],
+     ["Render", "hospedagem do app e do site"],
+     ["Neon", "banco de dados"],
+     ["Cloudflare", "armazenamento de fotos e logos"],
+     ["Resend", "envio de e-mails"],
+     ["Expo, Apple e Google", "notificações no celular"],
+     ["TomTom e OpenRouteService", "cálculo da rota e do tempo de carro (recebem sua posição e a do lava-rápido)"],
+     ["Anthropic", "inteligência artificial do suporte automático e da conferência das fotos da ficha"]
+   ] %>
+<style>
+  .pv-tab { display: grid; border-radius: 18px; border: 1px solid var(--stone); background: var(--paper); overflow: hidden; max-width: 68ch; }
+  .pv-l { display: grid; grid-template-columns: minmax(130px, 190px) 1fr; gap: 4px 18px; padding: 14px 16px; border-top: 1px solid var(--stone); font-size: 14.5px; line-height: 1.5; }
+  .pv-l:first-child { border-top: 0; }
+  .pv-l b { font-weight: 600; }
+  .pv-l span { color: var(--graphite); }
+  .pv-l span em { display: block; font-style: normal; color: var(--ink); margin-bottom: 2px; }
+  .pv-l.anon { background: var(--sand); }
+  @media (max-width: 560px) { .pv-l { grid-template-columns: 1fr; } }
+</style>
+
+<section class="pp<%= ' embed' if @embed %>">
+  <div class="pp-in">
+    <header>
+      <div class="pp-eyebrow">Versão de 25 de novembro de 2026</div>
+      <h1 class="pp-title">Política de Privacidade</h1>
+      <p class="pp-lead">Quais dados a Loov guarda, para quê, com quem compartilha e como você controla tudo isso, conforme a Lei Geral de Proteção de Dados (LGPD).</p>
+    </header>
+
+    <div class="pp-txt">
+      <h2 id="quem">1. Quem cuida dos seus dados</h2>
+      <p>A Loov<%= " (#{empresa})" if empresa.present? %> é a controladora dos dados tratados na plataforma. Para qualquer assunto de privacidade, fale com o nosso encarregado pelo e-mail suporte@loov.app.</p>
+
+      <h2 id="dados">2. Quais dados guardamos e por quê</h2>
+    </div>
+    <div class="pv-tab">
+      <% dados.each do |nome, o_que, por_que| %>
+        <div class="pv-l"><b><%= nome %></b><span><em><%= o_que %></em><%= por_que %></span></div>
+      <% end %>
+      <div class="pv-l anon"><b>Dados agregados e anonimizados</b><span><em>Números que juntam muitos usuários, sem nome, CPF, placa ou qualquer informação que identifique alguém. Por exemplo: as marcas de carro mais comuns numa região, ou os horários de mais movimento num bairro.</em>Usamos em estudos e para melhorar a Loov, e podemos compartilhar ou vender a parceiros. Só entram grupos grandes o bastante para ninguém ser reconhecido. Dados que identificam você nunca são vendidos.</span></div>
+    </div>
+
+    <div class="pp-txt">
+      <h2 id="bases">3. Com base em quê</h2>
+      <ul>
+        <li><b>Para cumprir o serviço que você pediu</b> (conta, agendamentos, pagamentos, suporte).</li>
+        <li><b>Por obrigação legal</b>, como guardar registros de pagamento e de acesso pelo prazo da lei.</li>
+        <li><b>Por interesse legítimo</b>, como prevenir fraudes, aplicar as regras de faltas e melhorar o app, sempre respeitando seus direitos.</li>
+        <li><b>Com o seu consentimento</b>, como a localização e as notificações, que você pode desligar nas configurações do celular.</li>
+      </ul>
+
+      <h2 id="compartilhamento">4. Com quem compartilhamos</h2>
+      <ul>
+        <li><b>Com o lava-rápido</b> que você escolheu: seu nome, celular, carro, placa e o agendamento, para ele te atender.</li>
+        <li><b>Com fornecedores</b> que fazem a Loov funcionar, cada um só com o necessário:
+          <ul style="margin-top:6px !important">
+            <% fornecedores.each do |nome, para| %><li><b><%= nome %></b>: <%= para %>.</li><% end %>
+          </ul>
+        </li>
+        <li><b>Com autoridades</b>, quando a lei ou uma ordem judicial exigir.</li>
+      </ul>
+      <p>Alguns desses fornecedores guardam dados fora do Brasil. Nesses casos exigimos proteção compatível com a LGPD.</p>
+
+      <h2 id="tempo">5. Por quanto tempo</h2>
+      <p>Guardamos os dados enquanto sua conta existir. Ao excluir a conta, apagamos os dados pessoais, o cartão e os favoritos. Ficam só os registros que a lei obriga a manter, pelo prazo legal, e os dados anonimizados, que não identificam você.</p>
+
+      <h2 id="direitos">6. Seus direitos</h2>
+      <p>Você pode pedir, a qualquer momento: confirmação de que tratamos seus dados, acesso e cópia, correção, anonimização ou exclusão do que for desnecessário, portabilidade, informação sobre com quem compartilhamos, e revogar um consentimento. Muita coisa você mesmo faz no app, em Perfil. Para o resto, escreva para suporte@loov.app. Você também pode reclamar à Autoridade Nacional de Proteção de Dados (ANPD).</p>
+
+      <h2 id="seguranca">7. Segurança</h2>
+      <p>Usamos conexão cifrada, senhas guardadas cifradas, acesso restrito aos dados e fornecedores reconhecidos. Se acontecer um incidente que possa te afetar, avisamos você e a ANPD.</p>
+
+      <h2 id="cookies">8. Cookies</h2>
+      <p>O site usa cookies para manter você conectado e guardar preferências, como o último filtro usado. Não usamos cookies de publicidade.</p>
+
+      <h2 id="menores">9. Menores de idade</h2>
+      <p>A Loov é para maiores de 18 anos e não coleta dados de crianças de propósito.</p>
+
+      <h2 id="mudancas">10. Mudanças</h2>
+      <p>Quando esta política mudar de forma importante, avisamos no app ou por e-mail. Os <a href="<%= pagina_path('/termos') %>">Termos de Uso</a> completam esta política.</p>
+    </div>
+
+    <%= render "paginas/contato" %>
+  </div>
+</section>
+
+<%= render "shared/site_footer", audience: (user_signed_in? && current_user.client? ? :client : :visitor) unless @embed %>

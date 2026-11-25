@@ -632,7 +632,8 @@
   </style>
 </head>
 <body>
-  <%= render 'layouts/navbar' %>
+  <%# Dentro do app (páginas públicas com ?app=1): sem a barra do site. %>
+  <%= render 'layouts/navbar' unless @embed %>
   <main>
     <%= yield %>
   </main>

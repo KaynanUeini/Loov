@@ -1,0 +1,93 @@
+<%#
+  Termos de Uso. Texto em linguagem direta, com as regras que o app já
+  aplica. A empresa aparece pela razão social e pelo CNPJ das variáveis
+  LOOV_RAZAO_SOCIAL e LOOV_CNPJ (sem elas, só "Loov"). Revisão jurídica antes
+  do lançamento.
+%>
+<%= render "paginas/estilo" %>
+<% empresa = [ENV["LOOV_RAZAO_SOCIAL"].presence, ENV["LOOV_CNPJ"].presence && "CNPJ #{ENV['LOOV_CNPJ']}"].compact.join(", ") %>
+<section class="pp<%= ' embed' if @embed %>">
+  <div class="pp-in">
+    <header>
+      <div class="pp-eyebrow">Versão de 25 de novembro de 2026</div>
+      <h1 class="pp-title">Termos de Uso</h1>
+      <p class="pp-lead">As regras para usar a Loov, para quem agenda e para quem tem lava-rápido. Escrevemos do jeito mais direto que conseguimos.</p>
+    </header>
+
+    <div class="pp-txt">
+      <h2 id="o-que-e">1. O que é a Loov</h2>
+      <p>A Loov<%= " (#{empresa})" if empresa.present? %> é uma plataforma que conecta pessoas que querem lavar o carro a lava-rápidos parceiros. Pela Loov você encontra lava-rápidos, agenda horários e reserva vagas de última hora (Last Minute).</p>
+      <p>O serviço no carro é prestado pelo lava-rápido, que é responsável por ele: qualidade, prazo, preço de tabela e atendimento. A Loov cuida da plataforma, da reserva, do pagamento feito pelo app e do suporte.</p>
+
+      <h2 id="conta">2. Sua conta</h2>
+      <ul>
+        <li>Para criar uma conta você precisa ter 18 anos ou mais e informar dados verdadeiros.</li>
+        <li>A conta é pessoal. Guarde sua senha e avise o suporte se suspeitar que alguém a usou.</li>
+        <li>Você pode excluir a conta quando quiser, em Perfil › Privacidade e segurança.</li>
+      </ul>
+
+      <h2 id="agendamento">3. Agendamento comum</h2>
+      <ul>
+        <li>Não há pagamento pelo app: você paga tudo no lava-rápido.</li>
+        <li>Dá para cancelar pelo app até 2 horas antes do horário, sem custo e sem contar falta.</li>
+        <li>Quando o lava-rápido registra que você não foi e não cancelou, conta uma falta. Faltas valem por 90 dias.</li>
+        <li>Com 2 faltas em 90 dias, por 60 dias o agendamento comum pede um sinal de 35% no cartão. O sinal volta se você cancelar até 2 horas antes ou se o lava-rápido cancelar, e não volta se você faltar.</li>
+        <li>Com 3 faltas em 90 dias, o agendamento comum fica bloqueado por 30 dias.</li>
+        <li>Há um limite de 3 agendamentos comuns ao mesmo tempo, e de 3 no mesmo lava-rápido no mesmo dia.</li>
+      </ul>
+
+      <h2 id="last-minute">4. Last Minute</h2>
+      <ul>
+        <li>São vagas de lavagem que começam nos próximos 30 minutos. Você paga 35% do valor no cartão, pelo app, e 65% no lava-rápido.</li>
+        <li>O lava-rápido tem 3 minutos para aceitar. Até lá o valor fica só reservado no cartão; sem aceite, nada é cobrado.</li>
+        <li>Depois do aceite, a reserva não pode ser cancelada pelo app e o valor pago não é devolvido se você não for: a vaga ficou guardada para você.</li>
+        <li>Se o lava-rápido cancelar uma reserva aceita, devolvemos o valor pago no app.</li>
+        <li>Se você foi e não foi atendido, peça pelo botão Ajuda no card, até 24 horas depois do horário. O lava-rápido tem 24 horas para responder. Se ele confirmar ou não responder, devolvemos os 35%. Se ele discordar, a Loov analisa e decide.</li>
+      </ul>
+
+      <h2 id="precos">5. Preços e pagamentos</h2>
+      <ul>
+        <li>O preço de cada serviço é definido pelo lava-rápido. Ele pode variar conforme o horário (Hora Off, com desconto em horários vazios, e Hora Pico, com acréscimo no Last Minute em horários lotados). O preço final aparece antes de você confirmar.</li>
+        <li>Pagamentos pelo app são processados pelo Stripe. A Loov não guarda o número do seu cartão.</li>
+        <li>Estornos são pedidos na hora; o prazo para aparecer no extrato é do banco.</li>
+      </ul>
+
+      <h2 id="avaliacoes">6. Avaliações</h2>
+      <p>Depois do atendimento você pode avaliar o lava-rápido. A avaliação aparece com o seu nome. Podemos remover avaliações ofensivas, falsas ou sem relação com o atendimento.</p>
+
+      <h2 id="lava-rapidos">7. Para lava-rápidos parceiros</h2>
+      <ul>
+        <li>Você é responsável pelas informações da loja (endereço, horários, serviços e preços) e por mantê-las corretas.</li>
+        <li>Agendamentos e reservas aceitas devem ser atendidos. Se precisar cancelar, cancele pela Loov o quanto antes: o cliente é avisado e, se pagou no app, recebe o valor de volta.</li>
+        <li>No Last Minute a Loov fica com 5% do valor total do serviço. O restante do valor pago no app é seu.</li>
+        <li>Quando um cliente de Last Minute disser que não foi atendido, você tem 24 horas para responder. Confirmado ou sem resposta, o valor devolvido ao cliente sai do seu repasse.</li>
+        <li>Com 3 casos de cliente não atendido confirmados ou sem resposta em 60 dias, o Last Minute da loja fica suspenso por 30 dias. Agendamentos comuns continuam.</li>
+        <li>Você responde pelos atendentes que convidar e pelo que eles fizerem na Loov.</li>
+      </ul>
+
+      <h2 id="proibido">8. O que não é permitido</h2>
+      <ul>
+        <li>Fazer reservas falsas, usar dados de outra pessoa ou tentar burlar as regras de faltas e de pagamento.</li>
+        <li>Publicar conteúdo ofensivo, enganoso ou que viole direitos de alguém.</li>
+        <li>Tentar acessar dados de outras pessoas ou atrapalhar o funcionamento da Loov.</li>
+      </ul>
+      <p>Nesses casos podemos limitar, suspender ou encerrar a conta.</p>
+
+      <h2 id="responsabilidade">9. Responsabilidade</h2>
+      <p>A Loov responde pela plataforma, pelas reservas e pelos pagamentos feitos pelo app. Problemas no serviço prestado no carro são de responsabilidade do lava-rápido, e a Loov ajuda a resolver pelo suporte. Nada nestes termos limita os direitos que o Código de Defesa do Consumidor garante a você.</p>
+
+      <h2 id="mudancas">10. Mudanças nestes termos</h2>
+      <p>Podemos atualizar estes termos. Quando a mudança for importante, avisamos no app ou por e-mail antes de ela valer.</p>
+
+      <h2 id="lei">11. Lei e foro</h2>
+      <p>Valem as leis do Brasil. Para clientes, o foro é o do seu domicílio.</p>
+
+      <h2 id="contato">12. Contato</h2>
+      <p>Pelo chat do suporte no app ou no site, ou pelo e-mail suporte@loov.app. A forma como tratamos seus dados está na <a href="<%= pagina_path('/privacidade') %>">Política de Privacidade</a>.</p>
+    </div>
+
+    <%= render "paginas/contato" %>
+  </div>
+</section>
+
+<%= render "shared/site_footer", audience: (user_signed_in? && current_user.client? ? :client : :visitor) unless @embed %>
