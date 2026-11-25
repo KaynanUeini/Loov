@@ -8,9 +8,9 @@ class AppointmentsController < ApplicationController
   # não consegue enviar esse cabeçalho, então no navegador a proteção segue.
   skip_before_action :verify_authenticity_token, if: -> {
     action_name.in?(%w[create authorized]) ||
-      (action_name == 'cancel' && request.authorization.to_s.start_with?('Bearer '))
+      (action_name.in?(%w[cancel ajuda]) && request.authorization.to_s.start_with?('Bearer '))
   }
-  before_action :set_appointment, only: [:show, :cancel, :help, :authorized]
+  before_action :set_appointment, only: [:show, :cancel, :help, :authorized, :ajuda]
   before_action :set_car_wash, only: [:new, :create]
   # Cleanup lazy de Disponíveis vencidos a cada acesso. Throttled no model
   # (1x/30s app-wide) — não pesa no banco mesmo com polling frequente.
@@ -292,11 +292,13 @@ class AppointmentsController < ApplicationController
 
   # Mesmo JSON da aba Agenda do app; a página HTML também o usa (embutido).
   private def appointments_payload
+    # Pedido de devolução com o prazo do dono vencido resolve aqui (sem fila).
+    NaoAtendido.vencer!(NaoAtendido.where(user_id: current_user.id))
     # awaiting_payment é a reserva ainda na janela do banco (3DS): não é
     # agendamento até o banco confirmar.
     all = current_user.appointments
       .where.not(status: "awaiting_payment")
-      .includes(:service, :car_wash, :review, :vale_aplicado)
+      .includes(:service, :car_wash, :review, :vale_aplicado, :nao_atendido)
       .order(scheduled_at: :desc)
 
     # Último 4 dígitos do próprio telefone do cliente — usado no card do
@@ -332,6 +334,13 @@ class AppointmentsController < ApplicationController
         # Sinal pago no app (agendamento comum de quem tem faltas recentes):
         # volta pro cartão se cancelar dentro do prazo.
         deposit:           (a.regular? && a.stripe_payment_intent_id.present?) ? a.prepayment_amount.to_f : nil,
+        # Botão Ajuda (do início até 24h depois) e o pedido de devolução do
+        # Last Minute pago, quando houver.
+        ajuda:             a.ajuda_disponivel?,
+        ajuda_ate:         a.scheduled_at && (a.scheduled_at + NaoAtendido::JANELA_AJUDA).iso8601,
+        reembolso_possivel: a.reembolso_possivel? && a.nao_atendido.nil?,
+        reembolso_valor:   a.reembolso_possivel? ? a.prepayment_amount.to_f : nil,
+        reembolso:         a.nao_atendido&.resumo_cliente,
         car_wash: {
           id:   a.car_wash.id,
           name: a.car_wash.name,
@@ -398,6 +407,34 @@ class AppointmentsController < ApplicationController
     respond_to do |format|
       format.html { redirect_to appointments_path, notice: "Agendamento cancelado. O horário foi liberado." }
       format.json { render json: { ok: true, status: 'cancelled', refund: estorno } }
+    end
+  end
+
+  # POST /appointments/:id/ajuda  { tipo: nao_atendido | problema | outro, relato }
+  # Botão Ajuda do card (do horário do início até 24h depois). Last Minute
+  # pago + "Não fui atendido" vira pedido de devolução, que o dono responde
+  # (NaoAtendido); o resto vira conversa no suporte, já com o agendamento.
+  def ajuda
+    a = @appointment
+    tipo   = params[:tipo].to_s
+    relato = params[:relato].to_s.strip
+    erro = if !a.ajuda_disponivel?
+      "A ajuda deste agendamento fica disponível do horário do início até 24 horas depois."
+    elsif !%w[nao_atendido problema outro].include?(tipo)
+      "Escolha o que aconteceu."
+    elsif relato.length < 5
+      "Conte em poucas palavras o que aconteceu."
+    elsif tipo == "nao_atendido" && a.reembolso_possivel? && a.nao_atendido
+      "Você já pediu a devolução desta reserva."
+    end
+    return render(json: { error: erro }, status: :unprocessable_entity) if erro
+
+    if tipo == "nao_atendido" && a.reembolso_possivel?
+      caso = NaoAtendido.abrir!(a, relato)
+      render json: { ok: true, reembolso: caso.resumo_cliente }
+    else
+      ticket = abrir_chamado_de_ajuda(a, tipo, relato)
+      render json: { ok: true, ticket_id: ticket.id }
     end
   end
 
@@ -472,6 +509,22 @@ class AppointmentsController < ApplicationController
 
   def active_status?(a)
     %w[pending confirmed pending_acceptance].include?(a.status)
+  end
+
+  def abrir_chamado_de_ajuda(a, tipo, relato)
+    titulo = { "nao_atendido" => "Não fui atendido", "problema" => "Fui atendido, mas tive um problema", "outro" => "Ajuda com o agendamento" }[tipo]
+    codigo = "LV-#{a.id.to_s.rjust(4, '0')}"
+    horario = a.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%d/%m às %H:%M")
+    ticket = current_user.support_tickets.create!(
+      category: tipo == "outro" ? "outro" : (a.disponivel? ? "disponivel" : "agendamento"),
+      status: "open", car_wash: a.car_wash,
+      description: "#{titulo} · #{codigo}"
+    )
+    ticket.messages.create!(
+      user: current_user, from_admin: false,
+      body: "#{relato}\n\n#{titulo} · #{codigo} · #{a.car_wash.name} · #{a.service&.title} · #{horario}"
+    )
+    ticket
   end
 
   def set_appointment

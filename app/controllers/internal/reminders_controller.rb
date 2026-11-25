@@ -30,6 +30,13 @@ module Internal
         Rails.logger.error("[Internal::Reminders] lembrete de vale falhou: #{e.message}")
         { vales_lembrados: "erro" }
       end
+      # Pedidos de "não fui atendido" com o prazo do dono vencido (o card e o
+      # painel já resolvem quando alguém olha; aqui é a rede de segurança).
+      begin
+        NaoAtendido.vencer!
+      rescue => e
+        Rails.logger.error("[Internal::Reminders] prazo de não atendido falhou: #{e.message}")
+      end
       # Foto semanal da grade da Hora Off / Hora Pico: também pega carona no
       # gatilho diário e só grava na primeira passada de cada semana.
       fotos = begin

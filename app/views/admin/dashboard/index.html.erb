@@ -718,6 +718,17 @@
         <div class="msg-time">${m.created_at}</div>
       </div>`).join('');
 
+    // Last Minute não atendido com o dono discordando: a equipe decide aqui.
+    const casoHtml = t.nao_atendido && t.nao_atendido.status==='contestado' ? `
+      <div class="agent-draft-box">
+        <div class="agent-draft-label"><i class="fas fa-scale-balanced"></i> Não atendido · ${t.nao_atendido.codigo} · R$ ${t.nao_atendido.valor.toFixed(2).replace('.',',')} pagos no app</div>
+        <div class="agent-draft-body">Procedente devolve o valor ao cliente e conta pra suspensão do Last Minute da loja. Improcedente não devolve e não conta.</div>
+        <div class="draft-actions">
+          <button class="draft-btn draft-approve" onclick="decidirNaoAtendido(${t.nao_atendido.id},true,this)"><i class="fas fa-check"></i> Procedente</button>
+          <button class="draft-btn draft-discard" onclick="decidirNaoAtendido(${t.nao_atendido.id},false,this)"><i class="fas fa-xmark"></i> Improcedente</button>
+        </div>
+      </div>` : '';
+
     const replyArea = t.status!=='resolved' ? `
       <div class="reply-area">
         <textarea class="reply-textarea" id="reply-${t.id}" placeholder="Escreva sua resposta..."></textarea>
@@ -742,6 +753,7 @@
         <span style="font-size:11px;color:var(--ash);font-family:'JetBrains Mono',monospace;letter-spacing:0.5px;">${t.created_at}</span>
       </div>
       <div style="padding:14px 18px;">
+        ${casoHtml}
         ${agentDraftHtml}
         <div class="support-thread" id="thread-${t.id}">${msgs||'<div style="color:var(--ash);font-size:12px;padding:8px 0;">Nenhuma mensagem.</div>'}</div>
         ${replyArea}
@@ -749,6 +761,13 @@
     </div>`;
   }
 
+  window.decidirNaoAtendido = async function(id, procedente, btn) {
+    btn.disabled=true;
+    const r=await fetch(`/admin/nao_atendidos/${id}/decidir`,{method:'POST',headers:{'X-CSRF-Token':CSRF,'Content-Type':'application/json'},body:JSON.stringify({procedente})});
+    const d=await r.json();
+    if(d.ok){toast(d.message);loadSupport();}
+    else{toast(d.error||'Erro','err');btn.disabled=false;}
+  };
   window.sendReply = async function(id, btn) {
     const ta=document.getElementById('reply-'+id); const body=ta?.value.trim(); if(!body)return;
     btn.disabled=true; btn.innerHTML='<i class="fas fa-circle-notch spin"></i>';

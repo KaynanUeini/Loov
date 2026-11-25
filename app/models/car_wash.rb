@@ -13,6 +13,7 @@ class CarWash < ApplicationRecord
   has_many :vehicle_checks,  dependent: :delete_all
   has_many :demand_cells,     dependent: :delete_all
   has_many :demand_snapshots, dependent: :delete_all
+  has_many :nao_atendidos,    dependent: :delete_all
 
   accepts_nested_attributes_for :operating_hours, allow_destroy: true, reject_if: :all_blank
   accepts_nested_attributes_for :services,        allow_destroy: true, reject_if: :all_blank
@@ -183,6 +184,9 @@ class CarWash < ApplicationRecord
     # ser esquecida em um deles — que é exatamente o que aconteceu cinco vezes
     # nesta base com a regra de capacidade.
     return nil if pausado?(agora)
+    # Suspensão por clientes não atendidos (3 em 60 dias): mesma lógica, mora
+    # aqui pra valer em todo caminho que oferece Last Minute.
+    return nil if last_minute_suspenso_ate(agora)
 
     fecha = closing_at(agora)
     return nil if fecha.nil?
@@ -255,6 +259,15 @@ class CarWash < ApplicationRecord
     return false unless oh&.opens_at && oh&.closes_at
     seg = agora.seconds_since_midnight
     seg >= oh.opens_at.seconds_since_midnight && seg <= oh.closes_at.seconds_since_midnight
+  end
+
+  # Até quando o Last Minute está suspenso (NaoAtendido), memorizado por
+  # instância: as listagens perguntam várias vezes pelo mesmo lava-rápido.
+  def last_minute_suspenso_ate(agora = Time.current)
+    @lm_suspenso ||= {}
+    chave = agora.to_i / 60
+    return @lm_suspenso[chave] if @lm_suspenso.key?(chave)
+    @lm_suspenso[chave] = NaoAtendido.suspenso_ate(id, agora)
   end
 
   def pausado?(agora = Time.current)

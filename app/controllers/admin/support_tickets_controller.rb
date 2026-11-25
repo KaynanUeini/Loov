@@ -4,6 +4,7 @@ module Admin
       tickets    = SupportTicket.all.order(updated_at: :desc)
       tickets    = tickets.where(status: params[:status]) if params[:status].present?
       users      = User.where(id: tickets.map(&:user_id).uniq).index_by(&:id)
+      casos      = NaoAtendido.where(support_ticket_id: tickets.map(&:id)).index_by(&:support_ticket_id)
 
       render json: tickets.map { |t|
         user     = users[t.user_id]
@@ -31,7 +32,10 @@ module Admin
           message_count:    messages.count,
           agent_draft:      t.agent_draft,
           agent_drafted_at: t.agent_drafted_at&.strftime("%d/%m %H:%M"),
-          agent_sent:       t.agent_sent
+          agent_sent:       t.agent_sent,
+          # Cliente de Last Minute não atendido e o dono discordou: a equipe
+          # decide pelos botões do chamado.
+          nao_atendido:     (c = casos[t.id]) && { id: c.id, status: c.status, valor: c.valor.to_f, codigo: c.codigo }
         }
       }
     end
@@ -44,6 +48,15 @@ module Admin
       render json: { ok: true }
     rescue => e
       render json: { error: e.message }, status: :unprocessable_entity
+    end
+
+    # POST /admin/nao_atendidos/:id/decidir  { procedente: true|false }
+    def decidir_nao_atendido
+      caso = NaoAtendido.find(params[:id])
+      procedente = ActiveModel::Type::Boolean.new.cast(params[:procedente])
+      return render(json: { error: "Este caso já foi decidido." }, status: :unprocessable_entity) unless caso.decidir!(procedente: procedente, por: current_user)
+      caso.support_ticket&.update_columns(status: "resolved", resolved_at: Time.current, updated_at: Time.current)
+      render json: { ok: true, message: procedente ? "Valor devolvido ao cliente; o caso conta pra loja." : "Pedido negado; o caso não conta pra loja." }
     end
 
     def resolve

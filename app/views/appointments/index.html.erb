@@ -83,6 +83,25 @@
   .ag-cancel { display: block; width: 100%; margin-top: 2px; padding: 13px 0; border: 0; border-top: 1px solid var(--l); background: transparent; color: var(--q); font-size: 11.5px; font-weight: 600; letter-spacing: .2px; transition: color .15s; }
   .ag-cancel:hover { color: var(--rose-500, #c0392b); }
 
+  /* Ajuda (do horário do início até 24h depois) e o pedido de devolução */
+  .ag-help { flex: none; min-height: 38px; padding: 0 16px; border-radius: 100px; border: 1.5px solid var(--t); background: transparent; color: var(--t); font-size: 12.5px; font-weight: 600; transition: background .15s; }
+  .ag-help:hover { background: var(--sand); }
+  .ag-card.is-today .ag-help:hover { background: rgba(255,255,255,.08); }
+  .ag-reemb { display: flex; align-items: flex-start; gap: 8px; margin-top: 4px; padding: 12px 0 10px; border-top: 1px solid var(--l); font-size: 12px; line-height: 1.45; color: var(--b); }
+  .ag-reemb svg { flex: none; margin-top: 1px; }
+  .ag-reemb b { color: var(--t); font-weight: 600; }
+  .ag-opts { align-self: stretch; display: grid; gap: 8px; margin-top: 16px; }
+  .ag-opt { display: flex; align-items: center; gap: 12px; padding: 13px 14px; border-radius: 14px; border: 1px solid var(--stone); background: var(--paper); text-align: left; color: var(--ink); transition: border-color .15s; }
+  .ag-opt:hover { border-color: var(--ink); }
+  .ag-opt span { flex: 1; display: grid; gap: 2px; font-size: 14px; font-weight: 600; }
+  .ag-opt small { font-weight: 400; font-size: 12px; line-height: 1.4; color: var(--graphite); }
+  .ag-opt svg { flex: none; color: var(--graphite); }
+  .ag-ta { align-self: stretch; margin-top: 14px; min-height: 110px; padding: 12px 14px; border-radius: 14px !important; border: 1.5px solid var(--stone) !important; background: var(--paper) !important; font: 15px/1.45 'Inter', sans-serif; color: var(--ink); resize: vertical; box-shadow: none !important; }
+  .ag-ta:focus { border-color: var(--ink) !important; outline: none; }
+  .ag-btn-ink { align-self: stretch; min-height: 48px; margin-top: 14px; border: 0; border-radius: 100px; background: var(--ink); color: var(--cream); font-size: 14.5px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+  .ag-btn-ink[disabled] { opacity: .5; }
+  .ag-sheet .ag-desc.is-left { text-align: left; padding: 0; }
+
   .ag-empty { display: flex; flex-direction: column; align-items: center; padding: 48px 32px 60px; text-align: center; }
   .ag-empty img { width: min(84%, 340px); height: auto; margin-bottom: 18px; }
   .ag-empty h2 { margin: 0 0 8px !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 600; font-size: 18px; letter-spacing: -0.3px; color: var(--ink) !important; }
@@ -220,6 +239,10 @@
     </div>
   </div>
 
+  <div class="ag-sheet-bg" id="ag-ajuda" aria-hidden="true">
+    <div class="ag-sheet" role="dialog" aria-modal="true" aria-labelledby="ag-ajuda-t" id="ag-ajuda-in"></div>
+  </div>
+
   <div class="ag-toast" id="ag-toast" role="status" aria-live="polite"></div>
 </div>
 
@@ -236,6 +259,9 @@
   // Próximos = confirmados; Anteriores = só os que o dono marcou "compareceu".
   // cancelled/no_show/rejected/expired ficam de fora, como no app.
   var ACTIVE = ['confirmed'], HISTORY = ['attended'];
+  // Falta marcada pelo dono também aparece em Anteriores enquanto o cliente
+  // pode pedir ajuda ou tem um pedido de devolução: é aí que ele contesta.
+  function inHistory(a) { return HISTORY.indexOf(a.status) !== -1 || (a.status === 'no_show' && (a.ajuda || a.reembolso)); }
   var TAGS_BY_RATING = {
     1: ['Demorou muito', 'Serviço ruim', 'Atendimento ruim'],
     2: ['Demorou muito', 'Serviço ruim', 'Atendimento ruim'],
@@ -284,7 +310,7 @@
   function lists() {
     var up = DATA.filter(function (a) { return ACTIVE.indexOf(a.status) !== -1 && !isPast(a); })
       .sort(function (a, b) { return new Date(a.scheduled_at) - new Date(b.scheduled_at); });
-    var past = DATA.filter(function (a) { return HISTORY.indexOf(a.status) !== -1 || (ACTIVE.indexOf(a.status) !== -1 && isPast(a)); })
+    var past = DATA.filter(function (a) { return inHistory(a) || (ACTIVE.indexOf(a.status) !== -1 && isPast(a)); })
       .sort(function (a, b) { return new Date(b.scheduled_at) - new Date(a.scheduled_at); });
     return { up: up, past: past };
   }
@@ -320,9 +346,24 @@
       for (var k = 1; k <= 5; k++) bt += '<button type="button" class="ag-star" data-rate="' + a.id + '" data-n="' + k + '" aria-label="' + k + (k === 1 ? ' estrela' : ' estrelas') + '">' + icon('star', 18) + '</button>';
       out += '<div class="ag-foot"><span class="ag-rate-l">Como foi?</span><span class="ag-stars">' + bt + '</span></div>';
     }
+    if (a.reembolso) out += reembolsoHtml(a.reembolso);
+    if (a.ajuda && !(a.reembolso && a.reembolso.status === 'aguardando')) {
+      out += '<div class="ag-foot"><span class="ag-hint">Algo deu errado?</span><button type="button" class="ag-help" data-ajuda="' + a.id + '">Ajuda</button></div>';
+    }
     if (canCancel(a)) out += '<button type="button" class="ag-cancel" data-cancel="' + a.id + '">Cancelar agendamento</button>';
     return out + '</article>';
   }
+
+  // Situação do pedido de devolução (Last Minute pago e não atendido).
+  function reembolsoHtml(r) {
+    var v = money2(r.valor), txt;
+    if (r.status === 'aguardando') txt = '<b>Pedido de devolução enviado.</b> O lava-rápido responde até ' + diaHora(r.prazo_em) + '. Sem resposta, devolvemos ' + v + '.';
+    else if (r.devolvido) txt = '<b>' + v + ' devolvidos</b> ao seu cartão. O prazo pra aparecer no extrato depende do banco.';
+    else if (r.status === 'contestado') txt = '<b>O lava-rápido discordou.</b> A equipe da Loov está analisando e responde pelo suporte.';
+    else txt = '<b>Pedido analisado, sem devolução.</b> A resposta da equipe está no suporte.';
+    return '<div class="ag-reemb">' + icon(r.devolvido ? 'check-circle' : 'clock', 14) + '<span>' + txt + '</span></div>';
+  }
+  function diaHora(iso) { var d = new Date(iso); return (sameDay(d, new Date()) ? 'hoje' : d.getDate() + '/' + String(d.getMonth() + 1).padStart(2, '0')) + ' às ' + hm(iso); }
 
   function render() {
     var L = lists(), list = state.tab === 'proximos' ? L.up : L.past;
@@ -408,6 +449,64 @@
       .catch(function () { state.cancelling = false; setCancelBusy(false); setCancelErr('Erro de conexão. Tente novamente.'); });
   }
 
+  // ── Ajuda: o que aconteceu → conta em poucas palavras → envia ───────────
+  var AJ = { a: null, tipo: null, sending: false, err: null };
+  var OPCOES = [
+    ['nao_atendido', 'Não fui atendido', 'O lava-rápido estava fechado, lotado ou recusou.'],
+    ['problema', 'Fui atendido, mas tive um problema', 'Serviço, valor cobrado no local ou atendimento.'],
+    ['outro', 'Outra coisa', 'Fale com o suporte sobre este agendamento.']
+  ];
+  function openAjuda(id) {
+    var a = DATA.filter(function (x) { return x.id === id; })[0]; if (!a) return;
+    AJ = { a: a, tipo: null, sending: false, err: null };
+    renderAjuda();
+    var s = $('ag-ajuda'); s.classList.add('is-on'); s.setAttribute('aria-hidden', 'false');
+  }
+  function closeAjuda() {
+    if (AJ.sending) return;
+    var s = $('ag-ajuda'); s.classList.remove('is-on'); s.setAttribute('aria-hidden', 'true');
+  }
+  function renderAjuda() {
+    var a = AJ.a, d = new Date(a.scheduled_at), h = '<div class="ag-handle"></div>';
+    var sum = '<div class="ag-sum"><b>' + esc(a.car_wash && a.car_wash.name) + '</b><small>' + WD[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' · ' + hm(a.scheduled_at) + ' · LV-' + String(a.id).padStart(4, '0') + '</small></div>';
+    if (!AJ.tipo) {
+      h += '<h2 id="ag-ajuda-t">Como podemos ajudar?</h2>' + sum + '<div class="ag-opts">' + OPCOES.map(function (o) {
+        return '<button type="button" class="ag-opt" data-aj-tipo="' + o[0] + '"><span>' + o[1] + '<small>' + o[2] + '</small></span>' + icon('chevron-right', 16) + '</button>';
+      }).join('') + '</div><button type="button" class="ag-btn-ghost" data-aj-fechar>Voltar</button>';
+    } else {
+      var devolve = AJ.tipo === 'nao_atendido' && a.reembolso_possivel;
+      var op = OPCOES.filter(function (o) { return o[0] === AJ.tipo; })[0];
+      h += '<h2 id="ag-ajuda-t">' + op[1] + '</h2>' + sum +
+        '<p class="ag-desc is-left">' + (devolve
+          ? 'Conte o que aconteceu. O lava-rápido tem 24 horas para responder. Se ele confirmar ou não responder, devolvemos os ' + money2(a.reembolso_valor) + ' pagos no app.'
+          : 'Conte o que aconteceu. A equipe da Loov recebe sua mensagem com os dados do agendamento e responde pelo suporte.') + '</p>' +
+        '<textarea class="ag-ta" id="ag-aj-txt" maxlength="1000" placeholder="Ex.: cheguei às 14h e o portão estava fechado."></textarea>' +
+        (AJ.err ? '<div class="ag-err">' + icon('alert-circle', 13) + '<span>' + esc(AJ.err) + '</span></div>' : '') +
+        '<button type="button" class="ag-btn-ink" id="ag-aj-go"' + (AJ.sending ? ' disabled' : '') + '>' + (AJ.sending ? '<span class="ag-spin"></span>' : (devolve ? 'Pedir devolução' : 'Enviar para o suporte')) + '</button>' +
+        '<button type="button" class="ag-btn-ghost" data-aj-voltar>Voltar</button>';
+    }
+    var txt = $('ag-aj-txt'), keep = txt ? txt.value : '';
+    $('ag-ajuda-in').innerHTML = h;
+    if ($('ag-aj-txt')) { $('ag-aj-txt').value = keep; if (!keep) $('ag-aj-txt').focus(); }
+  }
+  function enviarAjuda() {
+    var a = AJ.a, relato = ($('ag-aj-txt').value || '').trim();
+    if (relato.length < 5) { AJ.err = 'Conte em poucas palavras o que aconteceu.'; renderAjuda(); return; }
+    AJ.sending = true; AJ.err = null; renderAjuda();
+    fetch('/appointments/' + a.id + '/ajuda', { method: 'POST', credentials: 'same-origin',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF },
+      body: JSON.stringify({ tipo: AJ.tipo, relato: relato }) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (res) {
+        AJ.sending = false;
+        if (!res.ok) { AJ.err = res.d.error || 'Não foi possível enviar. Tente de novo.'; renderAjuda(); return; }
+        closeAjuda();
+        if (res.d.reembolso) { a.reembolso = res.d.reembolso; a.reembolso_possivel = false; render(); toast('Pedido enviado. O lava-rápido tem 24 horas para responder.'); }
+        else { location.href = '/suporte'; }
+      })
+      .catch(function () { AJ.sending = false; AJ.err = 'Erro de conexão. Tente novamente.'; renderAjuda(); });
+  }
+
   // ── Avaliar (tela própria, com o voltar do navegador) ────────────────────
   function openReview(id, n, push) {
     var a = DATA.filter(function (x) { return x.id === id; })[0];
@@ -484,6 +583,11 @@
     var t;
     if ((t = e.target.closest('.ag-tabs button'))) { state.tab = t.dataset.tab; render(); return; }
     if ((t = e.target.closest('[data-cancel]'))) { openCancel(Number(t.dataset.cancel)); return; }
+    if ((t = e.target.closest('[data-ajuda]'))) { openAjuda(Number(t.dataset.ajuda)); return; }
+    if ((t = e.target.closest('[data-aj-tipo]'))) { AJ.tipo = t.dataset.ajTipo; AJ.err = null; renderAjuda(); return; }
+    if (e.target.closest('[data-aj-voltar]')) { AJ.tipo = null; AJ.err = null; renderAjuda(); return; }
+    if (e.target.closest('#ag-aj-go')) { enviarAjuda(); return; }
+    if (e.target.closest('[data-aj-fechar]') || e.target.id === 'ag-ajuda') { closeAjuda(); return; }
     if ((t = e.target.closest('[data-rate]'))) { openReview(Number(t.dataset.rate), Number(t.dataset.n), true); return; }
     if (e.target.closest('#ag-cancel-go')) { confirmCancel(); return; }
     if (e.target.closest('#ag-cancel-back') || e.target.id === 'ag-cancel') { closeCancel(); return; }
@@ -503,7 +607,7 @@
     var c = $('rv-count'); c.textContent = state.review.comment.length + '/' + MAX_COMMENT;
     c.classList.toggle('is-warn', state.review.comment.length > MAX_COMMENT * 0.9);
   });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeCancel(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { closeCancel(); closeAjuda(); } });
 
   function boot() {
     if (window.feather) feather.replace();

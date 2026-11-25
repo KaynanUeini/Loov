@@ -960,6 +960,9 @@
     </a>
     <% end %>
 
+    <%# Clientes de Last Minute não atendidos e a suspensão do Last Minute %>
+    <%= render "owner/nao_atendidos" %>
+
     <%# Pausa: só o dono decide parar de receber (o endpoint é ensure_owner) %>
     <% if current_user.owner? %>
     <div class="od-pause-group" id="od-pause-group" hidden>

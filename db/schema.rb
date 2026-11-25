@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_11_22_130000) do
+ActiveRecord::Schema[7.1].define(version: 2026_11_26_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -264,6 +264,32 @@ ActiveRecord::Schema[7.1].define(version: 2026_11_22_130000) do
     t.index ["car_wash_id"], name: "index_monthly_costs_on_car_wash_id"
   end
 
+  create_table "nao_atendidos", force: :cascade do |t|
+    t.bigint "appointment_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "car_wash_id", null: false
+    t.text "relato"
+    t.string "status", default: "aguardando", null: false
+    t.datetime "prazo_em", null: false
+    t.text "resposta_dono"
+    t.bigint "respondido_por_id"
+    t.datetime "respondido_em"
+    t.bigint "decidido_por_id"
+    t.datetime "decidido_em"
+    t.decimal "valor", precision: 10, scale: 2
+    t.string "estorno"
+    t.datetime "contado_em"
+    t.bigint "support_ticket_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["appointment_id"], name: "index_nao_atendidos_on_appointment_id", unique: true
+    t.index ["car_wash_id", "contado_em"], name: "index_nao_atendidos_on_car_wash_id_and_contado_em"
+    t.index ["car_wash_id"], name: "index_nao_atendidos_on_car_wash_id"
+    t.index ["status", "prazo_em"], name: "index_nao_atendidos_on_status_and_prazo_em"
+    t.index ["support_ticket_id"], name: "index_nao_atendidos_on_support_ticket_id"
+    t.index ["user_id"], name: "index_nao_atendidos_on_user_id"
+  end
+
   create_table "notification_reads", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.string "key", null: false
@@ -499,6 +525,10 @@ ActiveRecord::Schema[7.1].define(version: 2026_11_22_130000) do
   add_foreign_key "loyalty_rewards", "car_washes"
   add_foreign_key "loyalty_rewards", "users"
   add_foreign_key "monthly_costs", "car_washes"
+  add_foreign_key "nao_atendidos", "appointments"
+  add_foreign_key "nao_atendidos", "car_washes"
+  add_foreign_key "nao_atendidos", "support_tickets"
+  add_foreign_key "nao_atendidos", "users"
   add_foreign_key "notification_reads", "users"
   add_foreign_key "operating_hours", "car_washes"
   add_foreign_key "outreach_meetings", "outreach_leads", column: "lead_id"

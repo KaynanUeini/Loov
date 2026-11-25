@@ -3,6 +3,7 @@ class Appointment < ApplicationRecord
   belongs_to :car_wash
   belongs_to :service
   has_one :review, dependent: :destroy
+  has_one :nao_atendido, dependent: :destroy
   # Vale de fidelidade usado neste atendimento (ver LoyaltyReward).
   has_one :vale_aplicado, class_name: "LoyaltyReward", foreign_key: :appointment_id, inverse_of: :appointment
   # Ficha do carro na entrada. delete (não destroy): a ficha é readonly e só
@@ -204,6 +205,19 @@ class Appointment < ApplicationRecord
     minutos = service&.duration.to_i
     minutos = 30 if minutos <= 0 # mesmo padrão do app
     (servico_desde || scheduled_at) + minutos.minutes > Time.current
+  end
+
+  # Botão Ajuda do card: do horário do início até 24h depois, em agendamento
+  # que chegou a ser confirmado (o dono pode ter marcado compareceu ou falta).
+  def ajuda_disponivel?(agora = Time.current)
+    user_id.present? && !walk_in && %w[confirmed attended no_show].include?(status) &&
+      scheduled_at.present? && agora >= scheduled_at && agora <= scheduled_at + NaoAtendido::JANELA_AJUDA
+  end
+
+  # Last Minute pago no app: "Não fui atendido" vira pedido de devolução (o
+  # resto vira chamado no suporte).
+  def reembolso_possivel?
+    disponivel? && stripe_payment_intent_id.present? && prepayment_amount.to_f.positive?
   end
 
   def disponivel?

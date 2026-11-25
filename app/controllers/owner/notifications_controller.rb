@@ -90,6 +90,25 @@ module Owner
         end
       end
 
+      # ── 1a. Cliente de Last Minute diz que não foi atendido ─────────────────
+      # Fica na central enquanto o prazo de 24h pra responder estiver aberto.
+      if car_wash
+        NaoAtendido.vencer!(car_wash.nao_atendidos)
+        car_wash.nao_atendidos.aguardando.includes(appointment: :service).each do |c|
+          key = "nao_atendido-#{c.id}"
+          notifications << {
+            id:         key,
+            type:       "nao_atendido",
+            title:      "Cliente diz que não foi atendido",
+            desc:       "#{c.appointment.display_client} · Last Minute das #{c.appointment.scheduled_at.in_time_zone('America/Sao_Paulo').strftime('%H:%M')} · responda até #{c.prazo_em.in_time_zone('America/Sao_Paulo').strftime('%d/%m às %H:%M')}",
+            route:      "OwnerTabs",
+            params:     { screen: "OwnerDashboard" },
+            created_at: c.created_at.iso8601,
+            read:       reads.key?(key)
+          }
+        end
+      end
+
       # ── 1b. Ciclo da análise de IA aberto (apenas owner) ─────────────────────
       # Fica na central enquanto o ciclo atual não tiver análise (até 3 dias
       # depois de abrir), pra quem não viu o push.

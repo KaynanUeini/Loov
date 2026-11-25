@@ -34,6 +34,7 @@ Rails.application.routes.draw do
     member do
       delete :cancel
       get    :help
+      post   :ajuda
       post   :authorized
     end
   end
@@ -113,6 +114,11 @@ Rails.application.routes.draw do
     get   'car_wash',                  to: 'car_wash#show'
     patch 'car_wash',                  to: 'car_wash#update'
     get   'car_wash/slot_diagnostics', to: 'car_wash#slot_diagnostics'
+
+    # Cliente de Last Minute que diz não ter sido atendido: o dono responde.
+    get  'nao_atendidos',               to: 'nao_atendidos#index'
+    post 'nao_atendidos/:id/confirmar', to: 'nao_atendidos#confirmar', as: :nao_atendido_confirmar
+    post 'nao_atendidos/:id/contestar', to: 'nao_atendidos#contestar', as: :nao_atendido_contestar
 
     # Pausa do Last Minute — um toque no dashboard do dono.
     patch  'car_wash/pause', to: 'car_wash#pause'
@@ -236,6 +242,7 @@ Rails.application.routes.draw do
   end
 
   namespace :admin do
+    post 'nao_atendidos/:id/decidir', to: 'support_tickets#decidir_nao_atendido', as: :decidir_nao_atendido
     get 'dashboard',          to: 'dashboard#index',    as: :dashboard
     get 'dashboard/stats',    to: 'dashboard#stats',    as: :dashboard_stats
     get 'dashboard/activity', to: 'dashboard#activity', as: :dashboard_activity

@@ -1,0 +1,143 @@
+<%#
+  Início do dono: clientes de Last Minute que disseram não ter sido atendidos
+  (responder em 24h) e a situação da loja: alerta no 2º caso em 60 dias,
+  suspensão do Last Minute no 3º. Regra em /ajuda/suspensao-last-minute.
+  Lê /owner/nao_atendidos; a mesma lista e o mesmo aviso do app.
+
+  Desenho do próprio Início, pra não parecer peça de fora: o aviso é o
+  banner do "Termine o cadastro" (coral, porque é sobre o Last Minute) e o
+  caso é um card de atendimento — bloco de hora em areia, nome com o raio,
+  valor à direita, a pendência em vermelho no lugar da fase e as mesmas
+  pílulas Discordar / Confirmar. A explicação do prazo fica fora do card, em
+  cinza, como o rodapé da pausa.
+%>
+<style>
+  .na { display: grid; gap: 12px; margin: 0 0 1.25rem; }
+  .na:empty { display: none; }
+  .na-banner { display: flex; align-items: center; gap: 12px; padding: 16px; border-radius: 18px; background: var(--od-coral-50); border: 1px solid #e8a48a; color: inherit; text-decoration: none !important; transition: border-color .15s; }
+  .na-banner:hover { border-color: var(--od-coral-500); }
+  .na-banner-ic { flex: 0 0 34px; height: 34px; border-radius: 50%; background: var(--od-coral-100); color: var(--od-coral-700); display: flex; align-items: center; justify-content: center; }
+  .na-banner-t { flex: 1; min-width: 0; }
+  .na-banner-t b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px; letter-spacing: -.2px; color: var(--od-coral-700); }
+  .na-banner-t span { display: block; margin-top: 2px; font-size: 12px; line-height: 16px; color: var(--od-graphite); }
+  .na-banner > svg { flex: none; color: var(--od-coral-700); }
+  .na-grupo { display: grid; gap: 7px; }
+  .na .owner-dash-card-row1 { flex-wrap: nowrap; }
+  .na .owner-dash-client { min-width: 0; }
+  .na-preco { text-align: right; flex-shrink: 0; }
+  .na-preco b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 15px; color: var(--od-ink); font-variant-numeric: tabular-nums; }
+  .na-preco small { display: block; margin-top: 2px; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: .8px; color: var(--od-ash); }
+  .na-linha { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; }
+  .na-prazo { font-size: 12px; color: var(--od-graphite); white-space: nowrap; }
+  .na-relato { margin: 8px 0 0; padding: 8px 10px; border-radius: 10px; background: var(--od-sand); color: var(--od-ink); font-size: 13px; line-height: 1.45; }
+  .na-ta { display: block; width: 100%; min-height: 84px; margin-top: 12px; padding: 10px 12px; border-radius: 12px !important; border: 1.5px solid var(--od-stone) !important; background: var(--od-cream) !important; font: 14px/1.45 'Inter', sans-serif; color: var(--od-ink); resize: vertical; box-shadow: none !important; }
+  .na-ta:focus { border-color: var(--od-ink) !important; outline: none; }
+  .na-err { margin-top: 8px; font-size: 12px; font-weight: 600; color: var(--od-rose-500); }
+  .na-rodape { padding: 0 4px; font-size: 11.5px; line-height: 16px; color: var(--od-ash); }
+</style>
+
+<div class="na" id="na" aria-live="polite"></div>
+
+<script>
+(function () {
+  var CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content;
+  var ALERTA = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>';
+  var SETA = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+  var D = null, ui = {};   // ui[id] = { modo: 'confirmar' | 'contestar', enviando, erro }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function dia(iso) { var d = new Date(iso); return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0'); }
+  function hm(iso) { var d = new Date(iso); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+  function reais(v) { return 'R$ ' + (Number(v) || 0).toFixed(2).replace('.', ','); }
+  function lista(ds) { return ds.length < 2 ? ds.join('') : ds.slice(0, -1).join(', ') + ' e ' + ds[ds.length - 1]; }
+  function primeiro(n) { return String(n || 'o cliente').split(' ')[0]; }
+
+  function banner(titulo, texto) {
+    return '<a class="na-banner" href="/ajuda/suspensao-last-minute"><span class="na-banner-ic">' + ALERTA + '</span>' +
+      '<span class="na-banner-t"><b>' + titulo + '</b><span>' + texto + '</span></span>' + SETA + '</a>';
+  }
+
+  function caso(c) {
+    var u = ui[c.id] || {}, h = '<div class="owner-dash-card" data-caso="' + c.id + '">' +
+      '<div class="owner-dash-card-top">' +
+        '<div class="owner-dash-time-block"><span class="owner-dash-time-date">' + dia(c.horario) + '</span><span class="owner-dash-time">' + hm(c.horario) + '</span></div>' +
+        '<div class="owner-dash-card-body"><div class="owner-dash-card-row1"><span class="owner-dash-client">' + esc(c.cliente) + '</span>' +
+          '<span class="owner-dash-zap" title="Last Minute"><i class="fas fa-bolt"></i></span></div>' +
+          '<div class="owner-dash-meta">' + esc(c.servico) + ' · ' + esc(c.codigo) + '</div></div>' +
+        '<div class="na-preco"><b>' + reais(c.valor) + '</b><small>PAGO NO APP</small></div>' +
+      '</div>' +
+      '<div class="na-linha"><span class="owner-dash-pend"><i></i>DIZ QUE NÃO FOI ATENDIDO</span><span class="na-prazo">responda até ' + dia(c.prazo_em) + ', ' + hm(c.prazo_em) + '</span></div>' +
+      (c.relato ? '<p class="na-relato">“' + esc(c.relato) + '”</p>' : '');
+    var dis = u.enviando ? ' disabled' : '';
+    if (u.modo === 'confirmar') {
+      h += '<div class="od-confirm"><b>Devolver ' + reais(c.valor) + ' a ' + esc(primeiro(c.cliente)) + '?</b>' +
+        '<small>Sai do seu repasse e o caso conta pra sua loja.</small>' +
+        '<div class="owner-dash-actions"><button type="button" class="owner-dash-btn-ghost" data-na="voltar"' + dis + '>Voltar</button>' +
+        '<button type="button" class="owner-dash-btn-primary" data-na="sim"' + dis + '>' + (u.enviando ? 'Devolvendo…' : 'Devolver') + '</button></div></div>';
+    } else if (u.modo === 'contestar') {
+      h += '<div class="od-confirm"><b>O que aconteceu?</b><small>A equipe da Loov analisa e decide.</small>' +
+        '<textarea class="na-ta" data-na-txt maxlength="1000" placeholder="Ex.: o cliente não apareceu até 14h40."></textarea>' +
+        (u.erro ? '<div class="na-err">' + esc(u.erro) + '</div>' : '') +
+        '<div class="owner-dash-actions"><button type="button" class="owner-dash-btn-ghost" data-na="voltar"' + dis + '>Voltar</button>' +
+        '<button type="button" class="owner-dash-btn-primary" data-na="enviar"' + dis + '>' + (u.enviando ? 'Enviando…' : 'Enviar à Loov') + '</button></div></div>';
+    } else {
+      h += (u.erro ? '<div class="na-err">' + esc(u.erro) + '</div>' : '') +
+        '<div class="owner-dash-actions"><button type="button" class="owner-dash-btn-ghost" data-na="contestar">Discordar</button>' +
+        '<button type="button" class="owner-dash-btn-primary" data-na="confirmar">Confirmar</button></div>';
+    }
+    return h + '</div>';
+  }
+
+  function render() {
+    var el = document.getElementById('na'); if (!el || !D) return;
+    var h = '';
+    if (D.suspenso_ate) {
+      h += banner('Last Minute suspenso até ' + dia(D.suspenso_ate),
+        D.casos.length + ' clientes não foram atendidos em 60 dias (' + lista(D.casos.map(dia)) + '). Agendamentos comuns seguem normais.');
+    } else if (D.recentes === D.limite - 1) {
+      h += banner('Mais 1 caso suspende o Last Minute',
+        D.recentes + ' clientes não foram atendidos em 60 dias (' + lista(D.casos.map(dia)) + '). No próximo, a suspensão é de 30 dias.');
+    }
+    var pend = D.pendentes || [];
+    if (pend.length) {
+      h += '<div class="na-grupo">' + pend.map(caso).join('') +
+        '<p class="na-rodape">Sem resposta até o prazo, o valor volta pro cliente e o caso conta pra sua loja.</p></div>';
+    }
+    var txt = el.querySelector('[data-na-txt]'), keep = txt ? txt.value : null;
+    el.innerHTML = h;
+    var novo = el.querySelector('[data-na-txt]');
+    if (novo && keep !== null) novo.value = keep; else if (novo) novo.focus();
+  }
+
+  function carregar() {
+    fetch('/owner/nao_atendidos', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+      .then(function (d) { D = d; if (!document.querySelector('.na [data-na-txt]')) render(); })
+      .catch(function () {});
+  }
+  function enviar(id, acao, corpo) {
+    ui[id] = Object.assign(ui[id] || {}, { enviando: true, erro: null }); render();
+    fetch('/owner/nao_atendidos/' + id + '/' + acao, { method: 'POST', credentials: 'same-origin',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF }, body: JSON.stringify(corpo || {}) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (res) {
+        if (!res.ok) { ui[id] = Object.assign(ui[id], { enviando: false, erro: res.d.error || 'Não foi possível enviar.' }); render(); return; }
+        delete ui[id]; D = res.d; render();
+      })
+      .catch(function () { ui[id] = Object.assign(ui[id], { enviando: false, erro: 'Erro de conexão. Tente de novo.' }); render(); });
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-na]'); if (!b) return;
+    var id = Number(b.closest('[data-caso]').dataset.caso), a = b.dataset.na;
+    if (a === 'confirmar' || a === 'contestar') { ui[id] = { modo: a }; render(); }
+    else if (a === 'voltar') { delete ui[id]; render(); }
+    else if (a === 'sim') enviar(id, 'confirmar');
+    else if (a === 'enviar') {
+      var t = (b.closest('[data-caso]').querySelector('[data-na-txt]').value || '').trim();
+      if (t.length < 5) { ui[id].erro = 'Conte o que aconteceu, pra equipe da Loov analisar.'; render(); return; }
+      enviar(id, 'contestar', { resposta: t });
+    }
+  });
+  carregar();
+  setInterval(carregar, 60000);
+})();
+</script>
