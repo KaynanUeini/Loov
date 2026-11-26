@@ -3,8 +3,10 @@
     LoovParaBrisa.html({...}); o vidro se arma sozinho quando aparece na
     página (MutationObserver + ResizeObserver). A sujeira é desenhada num
     canvas por cima do texto; os dois limpadores passam uma vez e a pessoa
-    pode terminar de limpar arrastando o dedo ou o mouse. Um toque sem
-    arrastar suja de novo e os limpadores passam outra vez. %>
+    pode terminar de limpar arrastando o dedo ou o mouse. Depois dos
+    limpadores, o cursor vira uma esponja (no celular, uma esponja faz uma
+    passada curta de demonstração) e uma etiqueta avisa que dá pra limpar.
+    Um toque sem arrastar suja de novo e os limpadores passam outra vez. %>
 <style>
   .pb { container-type: inline-size; width: 100%; margin: 8px 0 24px; }
   .pb-glass { position: relative; height: 440px; background: #ece7dc; touch-action: none; user-select: none; -webkit-user-select: none; }
@@ -29,6 +31,11 @@
   .pb-under .pb-btn { visibility: hidden; }
   .pb-blade { position: absolute; left: 0; top: 0; z-index: 3; height: 6px; margin-top: -3px; border-radius: 6px; background: #1a1714; transform-origin: 0 50%; opacity: 0; pointer-events: none; box-shadow: 0 2px 4px rgba(0,0,0,.3); }
   .pb-blade::after { content: ""; position: absolute; left: 0; top: -3px; width: 38%; height: 12px; border-radius: 6px; background: #1a1714; }
+  .pb-chip { position: absolute; z-index: 4; left: 50%; bottom: 22px; display: inline-flex; align-items: center; gap: 10px; padding: 8px 16px 8px 8px; border-radius: 100px; background: rgba(40,35,28,.88); color: var(--cream); font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; white-space: nowrap; pointer-events: none; opacity: 0; transform: translate(-50%, 10px); transition: opacity .35s, transform .35s; }
+  .pb-chip img { width: 26px; height: 26px; border-radius: 50%; background: var(--cream); padding: 2px; }
+  .pb.is-sponge .pb-chip { opacity: 1; transform: translate(-50%, 0); }
+  .pb.is-used .pb-chip { opacity: 0; transform: translate(-50%, 10px); }
+  .pb-demo { position: absolute; z-index: 5; left: 0; top: 0; width: 76px; height: 76px; margin: -38px 0 0 -38px; opacity: 0; pointer-events: none; transition: opacity .25s; }
   @container (min-width: 640px) {
     .pb-glass { height: clamp(380px, 56vh, 500px); }
     .pb-lay { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: center; gap: 48px; padding: 0 8cqi 0 8.5cqi; }
@@ -39,6 +46,18 @@
   window.LoovParaBrisa = (function () {
     var REDUCE = false;
     try { REDUCE = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+    // Memória por vidro (página + frase): telas que redesenham sozinhas
+    // (Disponível a cada 3 s, Agendamentos a cada 30 s, Home ao voltar pra
+    // aba) recriam o elemento; sem isso os limpadores recomeçavam e a
+    // limpeza feita pela pessoa sumia. Só recarregar a página ou tocar no
+    // vidro faz os limpadores passarem de novo.
+    var MEM = {};
+    // Esponja dupla face: preta com a face áspera em coral.
+    var SPONGE = '<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 44 44"><g transform="rotate(-12 22 23)"><rect x="8" y="15" width="30" height="20" rx="7" fill="#000" fill-opacity=".16"/><rect x="7" y="13" width="30" height="20" rx="7" fill="#dd7852"/><rect x="7" y="13" width="30" height="14" rx="7" fill="#28231c"/><rect x="7" y="20" width="30" height="7" fill="#28231c"/><g fill="#fafaf6" fill-opacity=".5"><circle cx="13" cy="18" r="1.3"/><circle cx="19" cy="22.5" r="1.1"/><circle cx="25" cy="17.5" r="1.4"/><circle cx="31" cy="21.5" r="1.1"/></g></g></svg>';
+    var SPONGE_URL = 'data:image/svg+xml,' + encodeURIComponent(SPONGE);
+    var SPONGE_CURSOR = 'url("' + SPONGE_URL + '") 36 37, grab';
+    var TOUCH = false;
+    try { TOUCH = window.matchMedia('(hover: none) and (pointer: coarse)').matches; } catch (e) {}
     function rnd(seed) { return function () { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }; }
 
     // opts: { big: 'Agenda<br>livre', text, cta: { label, href } ou { html }, dark }
@@ -55,12 +74,54 @@
       };
       return '<div class="pb' + (o.dark ? ' pb-dark' : '') + '"><div class="pb-glass">' + lay(false) +
         '<canvas class="pb-cv" aria-hidden="true"></canvas>' + lay(true) +
+        '<span class="pb-chip" aria-hidden="true"><img alt="" src="' + SPONGE_URL + '">' + (TOUCH ? 'Passe o dedo para limpar' : 'Passe a esponja para limpar') + '</span>' +
+        (TOUCH ? '<img class="pb-demo" alt="" aria-hidden="true" src="' + SPONGE_URL + '">' : '') +
         '<span class="pb-blade"></span><span class="pb-blade"></span></div></div>';
     }
 
     function mount(root) {
       var el = root.querySelector('.pb-glass'), cv = el.querySelector('.pb-cv'), blades = el.querySelectorAll('.pb-blade');
       var ctx = cv.getContext('2d'), W, H, AREA, piv, R, raf = 0, A0 = Math.PI * 1.02, A1 = Math.PI * 1.97;
+      var key = location.pathname + '|' + root.querySelector('.pb-over').textContent, mem = MEM[key] || (MEM[key] = {});
+      function save() {
+        var c = mem.snap || document.createElement('canvas');
+        c.width = cv.width; c.height = cv.height; c.getContext('2d').drawImage(cv, 0, 0);
+        mem.snap = c; mem.w = W; mem.h = H;
+      }
+      function restore() {
+        size();
+        if (!mem.snap || mem.w !== W || mem.h !== H) { still(); return; }
+        ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); ctx.drawImage(mem.snap, 0, 0); ctx.restore();
+        hideBlades(); root.classList.add('is-clear'); spongeOn();
+      }
+
+      // Depois dos limpadores: esponja no cursor, etiqueta e, no celular,
+      // uma passada de demonstração (uma vez por vidro).
+      function spongeOn() {
+        root.classList.add('is-sponge'); cv.style.cursor = SPONGE_CURSOR;
+        if (mem.used) root.classList.add('is-used');
+        if (TOUCH && !mem.demoed && !REDUCE) { mem.demoed = true; demo(); }
+      }
+      function demo() {
+        var d = root.querySelector('.pb-demo'); if (!d) return;
+        var t0 = null, px = null, py = null;
+        d.style.opacity = 1;
+        function st(ts) {
+          if (t0 === null) t0 = ts;
+          var k = Math.min(1, (ts - t0) / 1500), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2, w = Math.sin(e * Math.PI * 3);
+          var x = W * (.86 - .62 * e), y = H * .8 + w * 22;
+          d.style.transform = 'translate(' + x + 'px,' + y + 'px) rotate(' + (w * 12) + 'deg)';
+          if (px !== null) clean(px, py, x, y);
+          px = x; py = y;
+          if (k < 1) requestAnimationFrame(st); else { d.style.opacity = 0; save(); }
+        }
+        setTimeout(function () { requestAnimationFrame(st); }, 250);
+      }
+      function clean(x0, y0, x1, y1) {
+        ctx.globalCompositeOperation = 'destination-out'; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = brush() * 2;
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+        ctx.globalCompositeOperation = 'source-over';
+      }
 
       function size() {
         W = el.offsetWidth; H = el.offsetHeight; AREA = W * H / (640 * 400);
@@ -122,20 +183,22 @@
         cancelAnimationFrame(raf); size(); mud();
         piv.forEach(function (p) { wedge(p, A0 - .02, A1 + .02); });
         splashes(Math.round(30 * AREA), 3); streaks(); hideBlades(); root.classList.add('is-clear');
+        mem.done = true; save(); spongeOn();
       }
-      function sweep() {
+      function sweep(resumeAt) {
         if (REDUCE) { still(); return; }
-        cancelAnimationFrame(raf); size(); mud(); root.classList.remove('is-clear');
-        var last = A0, t0 = null, splashed = false;
+        cancelAnimationFrame(raf); size(); mud(); root.classList.remove('is-clear', 'is-sponge'); cv.style.cursor = '';
+        var last = A0, t0 = resumeAt || performance.now() + 500, splashed = false;
+        mem.t0 = t0; mem.done = false;
         Array.prototype.forEach.call(blades, function (b, i) { setB(i, A0); b.style.opacity = 1; });
         function ease(t) { return t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
         function step(ts) {
-          if (t0 === null) t0 = ts + 500;
           var t = (ts - t0) / 1000;
           if (t < 0) { raf = requestAnimationFrame(step); return; }
           if (t <= 1.15) { var a = A0 + (A1 - A0) * ease(t / 1.15); piv.forEach(function (p, i) { wedge(p, Math.min(last, a) - .02, Math.max(last, a) + .02); setB(i, a); }); last = a; }
+          else if (last < A1) { piv.forEach(function (p) { wedge(p, last - .02, A1 + .02); }); last = A1; raf = requestAnimationFrame(step); return; }
           else if (t <= 2.1) { var b = A1 - (A1 - A0) * ease((t - 1.15) / .95); piv.forEach(function (p, i) { setB(i, b); }); if (!splashed && t > 1.25) { splashes(Math.round(30 * AREA), 3); splashed = true; root.classList.add('is-clear'); } }
-          else { hideBlades(); streaks(); return; }
+          else { hideBlades(); streaks(); mem.done = true; save(); spongeOn(); return; }
           raf = requestAnimationFrame(step);
         }
         raf = requestAnimationFrame(step);
@@ -154,12 +217,12 @@
         if (!down) return; var p = pos(e);
         if (!moved && Math.hypot(p[0] - sx, p[1] - sy) < 6) return;
         moved = true;
-        ctx.globalCompositeOperation = 'destination-out'; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = brush() * 2;
-        ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(p[0], p[1]); ctx.stroke();
-        ctx.globalCompositeOperation = 'source-over';
+        clean(lx, ly, p[0], p[1]);
         lx = p[0]; ly = p[1];
+        if (mem.done && !mem.used) { mem.used = true; root.classList.add('is-used'); }
+        if (mem.done && performance.now() - (mem.saved || 0) > 200) { mem.saved = performance.now(); save(); }
       });
-      function up() { if (down && !moved) sweep(); down = false; }
+      function up() { if (down && !moved) sweep(); else if (down && mem.done) save(); down = false; }
       cv.addEventListener('pointerup', up);
       cv.addEventListener('pointercancel', function () { down = false; });
 
@@ -167,8 +230,14 @@
       var ro = new ResizeObserver(function () {
         var w = el.offsetWidth;
         if (!w) return;
-        if (!started) { started = true; lastW = w; sweep(); return; }
-        if (Math.abs(w - lastW) > 2) { lastW = w; still(); }
+        if (!started) {
+          started = true; lastW = w;
+          if (mem.done) restore();
+          else if (mem.t0 && performance.now() < mem.t0 + 2200) sweep(mem.t0);
+          else sweep();
+          return;
+        }
+        if (Math.abs(w - lastW) > 2) { lastW = w; restore(); }
       });
       ro.observe(el);
     }

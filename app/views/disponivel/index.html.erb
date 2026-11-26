@@ -580,6 +580,8 @@
     } else if (state.loading) {
       body.innerHTML = '<div class="dp-state"><div class="dp-spin"></div></div>';
     } else if (!valid.length) {
+      // O poll de 3 s não recria o vidro já na tela (interromperia a limpeza).
+      if (body.querySelector('.dp-pb')) { renderMap(valid); return; }
       body.innerHTML = '<div class="dp-pb">' + LoovParaBrisa.html({ dark: true, big: 'Volta<br>já',
         text: 'Nenhum lava-rápido a até 5 km tem horário livre nos próximos 30 minutos. Essa janela muda sozinha, vale voltar daqui a pouco. Se preferir não esperar, dá pra marcar um horário certo na Home.',
         cta: { label: 'Ver lava-rápidos', href: '/' } }) + '</div>';
