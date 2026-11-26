@@ -4,8 +4,8 @@
     página (MutationObserver + ResizeObserver). A sujeira é desenhada num
     canvas por cima do texto; os dois limpadores passam uma vez e a pessoa
     pode terminar de limpar arrastando o dedo ou o mouse. Depois dos
-    limpadores, o cursor vira uma esponja (no celular, uma esponja faz uma
-    passada curta de demonstração) e uma etiqueta avisa que dá pra limpar.
+    limpadores, o cursor vira uma esponja, sem aviso: a surpresa é parte da
+    graça (no celular, uma esponja faz uma passada curta de demonstração).
     Um toque sem arrastar suja de novo e os limpadores passam outra vez. %>
 <style>
   .pb { container-type: inline-size; width: 100%; margin: 8px 0 24px; }
@@ -31,10 +31,6 @@
   .pb-under .pb-btn { visibility: hidden; }
   .pb-blade { position: absolute; left: 0; top: 0; z-index: 3; height: 6px; margin-top: -3px; border-radius: 6px; background: #1a1714; transform-origin: 0 50%; opacity: 0; pointer-events: none; box-shadow: 0 2px 4px rgba(0,0,0,.3); }
   .pb-blade::after { content: ""; position: absolute; left: 0; top: -3px; width: 38%; height: 12px; border-radius: 6px; background: #1a1714; }
-  .pb-chip { position: absolute; z-index: 4; left: 50%; bottom: 22px; display: inline-flex; align-items: center; gap: 10px; padding: 8px 16px 8px 8px; border-radius: 100px; background: rgba(40,35,28,.88); color: var(--cream); font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; white-space: nowrap; pointer-events: none; opacity: 0; transform: translate(-50%, 10px); transition: opacity .35s, transform .35s; }
-  .pb-chip img { width: 26px; height: 26px; border-radius: 50%; background: var(--cream); padding: 2px; }
-  .pb.is-sponge .pb-chip { opacity: 1; transform: translate(-50%, 0); }
-  .pb.is-used .pb-chip { opacity: 0; transform: translate(-50%, 10px); }
   .pb-demo { position: absolute; z-index: 5; left: 0; top: 0; width: 76px; height: 76px; margin: -38px 0 0 -38px; opacity: 0; pointer-events: none; transition: opacity .25s; }
   @container (min-width: 640px) {
     .pb-glass { height: clamp(380px, 56vh, 500px); }
@@ -74,7 +70,6 @@
       };
       return '<div class="pb' + (o.dark ? ' pb-dark' : '') + '"><div class="pb-glass">' + lay(false) +
         '<canvas class="pb-cv" aria-hidden="true"></canvas>' + lay(true) +
-        '<span class="pb-chip" aria-hidden="true"><img alt="" src="' + SPONGE_URL + '">' + (TOUCH ? 'Passe o dedo para limpar' : 'Passe a esponja para limpar') + '</span>' +
         (TOUCH ? '<img class="pb-demo" alt="" aria-hidden="true" src="' + SPONGE_URL + '">' : '') +
         '<span class="pb-blade"></span><span class="pb-blade"></span></div></div>';
     }
@@ -95,11 +90,10 @@
         hideBlades(); root.classList.add('is-clear'); spongeOn();
       }
 
-      // Depois dos limpadores: esponja no cursor, etiqueta e, no celular,
+      // Depois dos limpadores: esponja no cursor e, no celular,
       // uma passada de demonstração (uma vez por vidro).
       function spongeOn() {
         root.classList.add('is-sponge'); cv.style.cursor = SPONGE_CURSOR;
-        if (mem.used) root.classList.add('is-used');
         if (TOUCH && !mem.demoed && !REDUCE) { mem.demoed = true; demo(); }
       }
       function demo() {
@@ -219,7 +213,6 @@
         moved = true;
         clean(lx, ly, p[0], p[1]);
         lx = p[0]; ly = p[1];
-        if (mem.done && !mem.used) { mem.used = true; root.classList.add('is-used'); }
         if (mem.done && performance.now() - (mem.saved || 0) > 200) { mem.saved = performance.now(); save(); }
       });
       function up() { if (down && !moved) sweep(); else if (down && mem.done) save(); down = false; }
