@@ -20,10 +20,6 @@
   .ap-wrap { width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 20px 64px; }
   /* Lista na largura de leitura; o cabeçalho segue a largura da página. */
   .ap-list { display: grid; gap: 12px; max-width: 760px; padding-top: 28px; }
-  .ap-empty { display: flex; flex-direction: column; align-items: center; max-width: 760px; padding: 32px 20px 60px; text-align: center; }
-  .ap-empty img { width: min(84%, 340px); height: auto; margin-bottom: 18px; }
-  .ap-empty h2 { margin: 0 0 4px !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: 18px; letter-spacing: -0.2px; color: var(--ink) !important; }
-  .ap-empty p { margin: 0; font-size: 13px; line-height: 18px; color: var(--ash); }
   .ap-toast { position: fixed; left: 16px; right: 16px; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); z-index: 70; max-width: 440px; margin: 0 auto; padding: 13px 16px; border-radius: 14px; background: var(--ink); color: var(--cream); font-size: 13px; box-shadow: 0 14px 36px -16px rgba(40,35,28,.6); transform: translateY(16px); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
   .ap-toast.is-on { opacity: 1; transform: none; }
   .ap-toast.is-err { background: var(--rose-500, #c0392b); }
@@ -58,7 +54,7 @@
       : '';
     $('ap-body').innerHTML = n
       ? '<div class="ap-list">' + list.map(function (pc) { return LoovApv.card(pc); }).join('') + '</div>'
-      : '<div class="ap-empty"><img src="/illustrations/aprovacoes-vazia.svg" alt="Ilustração de uma prancheta com um visto e um passarinho pousado"><h2>Tudo em dia</h2><p>Quando um atendente mudar algo no lava-rápido, a mudança espera aqui pela sua decisão.</p></div>';
+      : LoovParaBrisa.html({ big: 'Nada para<br>aprovar', text: 'Quando um atendente mudar algo no lava-rápido, a mudança espera aqui pela sua decisão.' });
   }
 
   LoovApv.bind($('ap-body'), {

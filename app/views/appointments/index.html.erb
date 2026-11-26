@@ -103,7 +103,6 @@
   .ag-sheet .ag-desc.is-left { text-align: left; padding: 0; }
 
   .ag-empty { display: flex; flex-direction: column; align-items: center; padding: 48px 32px 60px; text-align: center; }
-  .ag-empty img { width: min(84%, 340px); height: auto; margin-bottom: 18px; }
   .ag-empty h2 { margin: 0 0 8px !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 600; font-size: 18px; letter-spacing: -0.3px; color: var(--ink) !important; }
   .ag-empty p { margin: 0; max-width: 36ch; font-size: 13px; line-height: 20px; color: var(--graphite); }
   .ag-empty a { margin-top: 20px; padding: 13px 22px; border-radius: 100px; background: var(--coral-500); color: var(--cream) !important; font-size: 14px; font-weight: 600; }
@@ -380,7 +379,7 @@
 
     if (!list.length) {
       $('ag-list').innerHTML = state.tab === 'proximos'
-        ? '<div class="ag-empty"><img src="/illustrations/agenda-vazia.svg" alt="Ilustração de um calendário vazio com um dia marcado e um passarinho pousado"><h2>Nenhum agendamento próximo</h2><p>Quando você reservar uma lavagem, ela aparece aqui com dia, hora e lava-rápido.</p><a href="' + HOME + '">Encontrar lava-rápido</a></div>'
+        ? LoovParaBrisa.html({ big: 'Agenda<br>livre', text: 'Quando você reservar uma lavagem, ela aparece aqui com dia, hora e lava-rápido.', cta: { label: 'Encontrar lava-rápido', href: HOME } })
         : '<div class="ag-empty"><h2>Sem anteriores</h2><p>Atendimentos concluídos aparecem nesta aba.</p></div>';
       return;
     }

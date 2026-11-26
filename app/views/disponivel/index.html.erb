@@ -104,7 +104,6 @@
   .dp-rate { flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 100px; background: rgba(250,250,246,.08); font-size: 11px; font-weight: 600; }
 
   .dp-state { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 56px var(--pad) 80px; }
-  .dp-state img { width: 72%; max-width: 320px; height: auto; margin-bottom: 6px; }
   .dp-state h2 { margin: 14px 0 6px !important; color: var(--cream) !important; font-family: 'Inter', sans-serif !important; font-size: 16px; font-weight: 700; letter-spacing: 0; }
   .dp-state p { margin: 0; max-width: 420px; color: #b5ae9f; font-size: 13px; line-height: 19px; }
   .dp-state .dp-btn { margin-top: 18px; }
@@ -426,7 +425,6 @@
     { key: 'distance',  label: 'Mais perto',  icon: 'map-pin' },
     { key: 'price',     label: 'Menor preço', icon: 'tag' }
   ];
-  var ILL = '/illustrations/';
   var POLL_MS = 3000;
   var COORDS_KEY = 'loov_last_coords';
   var HORA_OFF_IC = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V5M10 20V9M15 20v-7M20 20v-4" stroke-width="3"/></svg>';
@@ -582,9 +580,9 @@
     } else if (state.loading) {
       body.innerHTML = '<div class="dp-state"><div class="dp-spin"></div></div>';
     } else if (!valid.length) {
-      body.innerHTML = '<div class="dp-state"><img src="' + ILL + 'vaga-vazia.svg" alt="Ilustração de um relógio com um passarinho pousado em cima">' +
-        '<h2>Sem vaga por agora</h2><p>Nenhum lava-rápido a até 5 km tem horário livre nos próximos 30 minutos. Essa janela muda sozinha, vale voltar daqui a pouco. Se preferir não esperar, dá pra marcar um horário certo na Home.</p>' +
-        '<a class="dp-btn" href="/">Ver lava-rápidos</a></div>';
+      body.innerHTML = '<div class="dp-pb">' + LoovParaBrisa.html({ dark: true, big: 'Volta<br>já',
+        text: 'Nenhum lava-rápido a até 5 km tem horário livre nos próximos 30 minutos. Essa janela muda sozinha, vale voltar daqui a pouco. Se preferir não esperar, dá pra marcar um horário certo na Home.',
+        cta: { label: 'Ver lava-rápidos', href: '/' } }) + '</div>';
     } else {
       var now = Date.now();
       body.innerHTML = '<div class="dp-list">' + sortItems(valid, state.sortBy).map(function (it) { return card(it, now, allSame ? null : common); }).join('') + '</div>';

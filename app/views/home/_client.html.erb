@@ -256,14 +256,10 @@
   .ch-x:hover { background: var(--sand); color: var(--ink); }
   .ch-empty-recent { padding: 24px 32px; text-align: center; font-size: 13px; line-height: 20px; color: var(--graphite); }
   .ch-search-empty { text-align: center; padding: 28px 24px 0; }
-  .ch-search-empty img { width: 78%; max-width: 340px; height: auto; margin-bottom: 16px; }
   .ch-search-empty h3 { margin: 0; font-family: 'Space Grotesk', sans-serif !important; font-weight: 600; font-size: 16px; letter-spacing: -0.2px; }
   .ch-search-empty p { margin: 6px 0 0; font-size: 13px; line-height: 19px; color: var(--graphite); }
 
   /* Estados */
-  .ch-empty { text-align: center; padding: 32px; }
-  .ch-empty img { width: 80%; max-width: 360px; height: auto; margin-bottom: 14px; }
-  .ch-empty p { margin: 0; font-size: 13px; line-height: 19px; color: var(--ash); }
   .ch-clear-all { margin-top: 14px; padding: 13px 16px; border: 1px solid var(--stone); border-radius: 100px; background: var(--paper); color: var(--ink); font-size: 12px; font-weight: 600; }
   .ch-error { display: flex; align-items: center; gap: 10px; margin: 0 20px 12px; padding: 12px; border-radius: 12px; background: #fbe9e9; border: 1px solid #f3c8c8; }
   .ch-error span { flex: 1; color: var(--rose-500); font-size: 12px; font-weight: 600; }
@@ -437,8 +433,6 @@
     { key: 'perto de mim',       label: 'Perto de mim',       icon: 'map-pin' },
     { key: 'melhores avaliados', label: 'Melhores avaliados', icon: 'star' }
   ];
-  var ARTE = '/illustrations/busca-vazia.svg';
-  var ARTE_ALT = 'Ilustração de uma lupa ampliando um terreno vazio com mato, e um passarinho pousado nela';
   var RECENTS_KEY = 'loov_recent_shops';
   var COORDS_KEY = 'loov_last_coords';
   var FIRST_NAME = <%= raw first_name.to_s.to_json %>;
@@ -823,9 +817,9 @@
     var list = filteredShops();
     if (!list.length) {
       var filtered = state.categories.length || state.filter;
-      el.innerHTML = '<div class="ch-empty"><img src="' + ARTE + '" alt="' + ARTE_ALT + '"><p>' +
-        (filtered ? 'Nenhum lava-rápido corresponde a esses filtros.' : 'Nenhum lava-rápido por aqui.') + '</p>' +
-        (filtered ? '<button type="button" class="ch-clear-all" id="ch-clear-all">Limpar tudo</button>' : '') + '</div>';
+      el.innerHTML = '<div class="ch-pb">' + LoovParaBrisa.html({ big: 'Nada<br>por aqui',
+        text: filtered ? 'Nenhum lava-rápido corresponde a esses filtros.' : 'Ainda não tem lava-rápido na Loov perto de você.',
+        cta: filtered ? { label: 'Limpar tudo', html: '<button type="button" class="pb-btn is-out" id="ch-clear-all">Limpar tudo</button>' } : null }) + '</div>';
       return;
     }
     $('ch-count').textContent = list.length + (list.length === 1 ? ' lava-rápido' : ' lava-rápidos');
@@ -881,8 +875,9 @@
     var res = searchResults();
     if (!res.length) {
       // Enquanto digita, só o texto; a ilustração entra quando a busca é confirmada.
-      view.innerHTML = '<div class="ch-search-empty">' + (state.searchConfirmed ? '<img src="' + ARTE + '" alt="' + ARTE_ALT + '">' : '') +
-        '<h3>Nada encontrado para "' + esc(q) + '"</h3><p>Tente o nome do bairro ou de um serviço, como "polimento".</p></div>';
+      view.innerHTML = state.searchConfirmed
+        ? '<div class="ch-pb">' + LoovParaBrisa.html({ big: 'Nada<br>encontrado', text: 'Nada para "' + esc(q) + '". Tente o nome do bairro ou de um serviço, como "polimento".' }) + '</div>'
+        : '<div class="ch-search-empty"><h3>Nada encontrado para "' + esc(q) + '"</h3><p>Tente o nome do bairro ou de um serviço, como "polimento".</p></div>';
       return;
     }
     view.innerHTML = resultsBlock(res, false);

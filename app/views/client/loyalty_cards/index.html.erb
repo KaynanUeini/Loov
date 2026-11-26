@@ -172,12 +172,7 @@
 
   /* Sem cartões: um cartão "fantasma" pra mostrar o que vem. */
   /* Sem cartões: a ilustração do passarinho, como o vazio de Agendamentos. */
-  .fd-empty { display: flex; flex-direction: column; align-items: center; padding: 32px 12px 8px; text-align: center; }
-  .fd-empty img { width: min(84%, 340px); height: auto; margin-bottom: 18px; }
-  .fd-empty h2 { margin: 0 0 8px !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 600; font-size: 18px; letter-spacing: -0.3px; color: var(--ink) !important; }
-  .fd-empty p { margin: 0 !important; max-width: 36ch; font-size: 13px !important; line-height: 20px !important; color: var(--graphite) !important; }
-  .fd-cta { display: inline-flex; align-items: center; gap: 8px; margin-top: 20px; padding: 13px 22px; border-radius: 100px; background: var(--ink); color: var(--cream) !important; font-size: 14px; font-weight: 600; transition: background .15s; }
-  .fd-cta:hover { background: #3a342b; }
+  .fd-empty { padding: 20px 0 0; }
 
   /* ── Perto de você ─────────────────────────────────────────────────── */
   .fd-near { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 0 -20px; padding: 2px 20px 8px; scrollbar-width: none; }
@@ -303,12 +298,12 @@
         <div class="fd-dots" id="fd-dots"><% @cards.size.times do |i| %><i class="<%= 'is-on' if i.zero? %>"></i><% end %></div>
       <% end %>
     <% else %>
-      <div class="fd-empty">
-        <img src="/illustrations/fidelidade-vazia.svg" alt="Ilustração de um cartão de carimbos vazio, com o presente no último espaço e um passarinho pousado">
-        <h2>Nenhum cartão ainda</h2>
-        <p>Lave num lava-rápido com o selo Fidelidade e seu cartão aparece aqui, já com o primeiro carimbo.</p>
-        <a class="fd-cta" href="/<%= qs %>">Encontrar lava-rápido</a>
-      </div>
+      <div class="fd-empty" id="fd-empty"></div>
+      <script nonce="<%= csp_nonce %>">
+        document.getElementById('fd-empty').innerHTML = LoovParaBrisa.html({ big: 'Nenhum<br>carimbo',
+          text: 'Lave num lava-rápido com o selo Fidelidade e seu cartão aparece aqui, já com o primeiro carimbo.',
+          cta: { label: 'Encontrar lava-rápido', href: <%= raw "/#{qs}".to_json %> } });
+      </script>
     <% end %>
 
     <% if @nearby.any? %>
