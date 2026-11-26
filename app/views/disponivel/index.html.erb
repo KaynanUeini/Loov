@@ -95,9 +95,10 @@
   .dp-fav { flex: 0 0 26px; height: 26px; border-radius: 50%; background: rgba(250,250,246,.08); display: flex; align-items: center; justify-content: center; color: rgba(250,250,246,.5); }
   .dp-chev { color: rgba(250,250,246,.35); transition: transform .2s; }
   .dp-card:hover .dp-chev { transform: translateX(3px); color: rgba(250,250,246,.6); }
-  /* Selo Hora Off: as barras descendo (pouco movimento), num tom de coral que se lê
-     no cartão escuro. A Hora Pico não tem selo: o cliente vê só o preço. */
-  .dp-off { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; background: rgba(232,154,124,.18); color: #e89a7c; display: inline-flex; align-items: center; justify-content: center; }
+  /* Selo Hora Off: as barras descendo (pouco movimento), em creme no cartão
+     escuro; o coral fica só com o Last Minute. A Hora Pico não tem selo: o
+     cliente vê só o preço. */
+  .dp-off { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; background: rgba(250,250,246,.12); color: var(--cream); display: inline-flex; align-items: center; justify-content: center; }
   .dp-tags { display: contents; }
   /* Desconto do Last Minute: só na linha do computador (abaixo). */
   .dp-de, .dp-pct { display: none; }

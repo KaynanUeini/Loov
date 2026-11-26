@@ -350,6 +350,9 @@
   .gm-pv-c > b span:last-child { color: rgba(250,250,246,.55); font-weight: 500; font-size: 12.5px; white-space: nowrap; }
   .gm-pv-l { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 13px; color: rgba(250,250,246,.75); }
   .gm-pv-l span { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+  .gm-pv-l .gm-pv-k { display: grid; gap: 1px; line-height: 1.2; }
+  .gm-pv-k b { font-weight: 600; color: var(--cream); }
+  .gm-pv-k small { font-size: 11px; color: rgba(250,250,246,.55); }
   .gm-pv-l strong { font-family: 'Space Grotesk', sans-serif; font-size: 14px; color: var(--cream); white-space: nowrap; font-variant-numeric: tabular-nums; }
   .gm-pv-l.lm strong { color: var(--coral-300); }
   .gm-pv-f { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; line-height: 1.45; color: rgba(250,250,246,.7); padding-top: 10px; border-top: 1px solid rgba(250,250,246,.12); }
@@ -1356,7 +1359,7 @@
       main += `<div class="gm-pc-blk">${head(2, 'Quanto', [S.hora_off_enabled && `até −${S.desconto_max}%`, S.hora_pico_enabled && `+${S.pico_pct}% no pico`].filter(Boolean).join(' · ') || 'Desligadas')}
         <div class="gm-pc-card${S.hora_off_enabled ? '' : ' gm-pc-off'}">
           <div class="gm-pc-card-h">${ic('hora-off', 17)} Hora Off</div>
-          <div class="gm-pc-q"><b>Desconto máximo</b>${chips('desconto_max', [10, 15, 20, 25, 30], v => `−${v}%`, 'Desconto máximo')}</div>
+          <div class="gm-pc-q"><b>Desconto máximo</b>${chips('desconto_max', [10, 15, 20, 25], v => `−${v}%`, 'Desconto máximo')}<span class="gm-ho-ss" style="margin:0">O maior desconto é −${D.desconto_last_minute}% no Last Minute, mais −${D.extra_chuva}% com chuva.</span></div>
           ${exemplo ? `<div class="gm-tl">
             <div class="gm-tl-ini">Mais de ${fmtMin(escada[0].minutos)} antes: tabela, ${reais(exemplo.price)} na ${esc(exemplo.title)}</div>
             <div class="gm-tl-pts">${tl}</div></div>` : ''}
@@ -1454,9 +1457,9 @@
         const perto = hoPrecoVazio(s.price, escada[escada.length - 1].pct, false).preco;
         const lm = hoPrecoVazio(s.price, D.desconto_last_minute, true).preco;
         const linhas = [
-          S.hora_off_enabled && `<div class="gm-pv-l"><span>${ic('hora-off', 13)} Horário vazio</span><strong>${cedo === perto ? reais(cedo) : `${reais(cedo)} → ${reais(perto)}`}</strong></div>`,
-          S.hora_off_enabled && `<div class="gm-pv-l lm"><span>${ic('hora-off', 13)} Vazio, no Last Minute</span><strong>${reais(lm)}</strong></div>`,
-          S.hora_pico_enabled && `<div class="gm-pv-l lm"><span>${ic('hora-pico', 13)} Lotado, no Last Minute</span><strong>${reais(hoPicoPreco(s.price))}</strong></div>`,
+          S.hora_off_enabled && `<div class="gm-pv-l"><span>${ic('hora-off', 13)}<span class="gm-pv-k"><b>Hora Off</b><small>horário vazio</small></span></span><strong>${cedo === perto ? reais(cedo) : `${reais(cedo)} → ${reais(perto)}`}</strong></div>`,
+          S.hora_off_enabled && `<div class="gm-pv-l lm"><span>${ic('hora-off', 13)}<span class="gm-pv-k"><b>Hora Off no Last Minute</b><small>horário vazio, em até 30 min</small></span></span><strong>${reais(lm)}</strong></div>`,
+          S.hora_pico_enabled && `<div class="gm-pv-l lm"><span>${ic('hora-pico', 13)}<span class="gm-pv-k"><b>Hora Pico no Last Minute</b><small>horário lotado, em até 30 min</small></span></span><strong>${reais(hoPicoPreco(s.price))}</strong></div>`,
         ].filter(Boolean).join('') || `<div class="gm-pv-l"><span>Sempre a tabela</span><strong>${reais(s.price)}</strong></div>`;
         return `<div class="gm-pv-c"><b><span>${esc(s.title)}</span><span>tabela ${reais(s.price)}</span></b>${linhas}</div>`;
       }).join('');

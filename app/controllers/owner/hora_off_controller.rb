@@ -11,7 +11,9 @@ module Owner
     before_action :ensure_owner, only: [:update]
 
     LIMITES = {
-      hora_off_desconto_max: 5..50,
+      # O maior desconto possível é o do Last Minute com chuva (20 + 5): teto
+      # acima disso não mudava nada.
+      hora_off_desconto_max: 5..25,
       margem_minima:         0..80,
       hora_pico_pct:         0..30,
       taxas_venda_pct:       0..30
