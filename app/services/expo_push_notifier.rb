@@ -16,7 +16,9 @@ require "json"
 class ExpoPushNotifier
   ENDPOINT = "https://exp.host/--/api/v2/push/send".freeze
 
-  def notify_user(user, title:, body:, data: {}, sound: "default")
+  # channel_id (Android) e interruption_level (iOS, ex.: "time-sensitive")
+  # são opcionais: o pedido de Last Minute usa os dois pra furar o modo foco.
+  def notify_user(user, title:, body:, data: {}, sound: "default", channel_id: nil, interruption_level: nil)
     if user.blank?
       Rails.logger.warn("[ExpoPushNotifier] user vazio — push abortado")
       return
@@ -37,7 +39,9 @@ class ExpoPushNotifier
         data:     data,
         sound:    sound,
         priority: "high",
-      }
+        channelId: channel_id,
+        interruptionLevel: interruption_level,
+      }.compact
     end
 
     response = post(messages)

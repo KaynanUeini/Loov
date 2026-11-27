@@ -582,23 +582,34 @@ class DisponivelController < ApplicationController
       Rails.logger.warn("#{log_tag} sem dono pra notificar car_wash_id=#{appointment.car_wash_id}")
       return
     end
-    return if owner == appointment.user # dono testando no próprio lava-rápido
+    # Dono e atendentes da equipe: quem estiver com o celular na mão aceita.
+    atendentes = User.where(id: appointment.car_wash.attendant_invitations.accepted.select(:attendant_id))
+    destinos   = ([owner] + atendentes.to_a).uniq.reject { |u| u == appointment.user } # dono testando no próprio lava-rápido
+    return if destinos.empty?
 
     horario = appointment.scheduled_at.in_time_zone("America/Sao_Paulo").strftime("%H:%M")
     minutos = (Appointment::ACCEPTANCE_TTL / 60).to_i
+    notifier = ExpoPushNotifier.new
 
-    ExpoPushNotifier.new.notify_user(
-      owner,
-      title: "Novo pedido Last Minute · #{horario}",
-      body:  "#{appointment.display_client} quer #{appointment.service&.title}. " \
-             "Você tem #{minutos} min pra aceitar.",
-      data: {
-        type:           "disponivel_request",
-        appointment_id: appointment.id,
-        car_wash_id:    appointment.car_wash_id,
-        expires_at:     appointment.acceptance_expires_at&.iso8601
-      }
-    )
+    destinos.each do |destino|
+      notifier.notify_user(
+        destino,
+        title: "Novo pedido Last Minute · #{horario}",
+        body:  "#{appointment.display_client} quer #{appointment.service&.title}. " \
+               "Você tem #{minutos} min pra aceitar.",
+        data: {
+          type:           "disponivel_request",
+          role:           destino == owner ? "owner" : "attendant",
+          appointment_id: appointment.id,
+          car_wash_id:    appointment.car_wash_id,
+          expires_at:     appointment.acceptance_expires_at&.iso8601
+        },
+        # Urgente: canal "pedidos" no Android e "time-sensitive" no iPhone,
+        # que passa pelo modo foco. O dono tem 3 minutos.
+        channel_id:         "pedidos",
+        interruption_level: "time-sensitive"
+      )
+    end
   rescue => e
     Rails.logger.error("#{log_tag} push pro dono falhou: #{e.class}: #{e.message}")
   end
