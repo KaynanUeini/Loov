@@ -432,6 +432,18 @@
     if (f) f.focus({ preventScroll: true });
   }
   function falhou(msg) { toast(msg, 'error'); if (st.op.aoFalhar) st.op.aoFalhar(); }
+  // Onde o cliente está: a da URL da página (latitude/longitude) ou a última
+  // guardada pela vitrine e pela home. Sem nenhuma, o servidor recusa e pede
+  // pra ativar a localização.
+  function posicaoAtual() {
+    try {
+      var q = new URLSearchParams(location.search), la = parseFloat(q.get('latitude')), lo = parseFloat(q.get('longitude'));
+      if (isFinite(la) && isFinite(lo)) return { latitude: la, longitude: lo };
+      var c = JSON.parse(localStorage.getItem('loov_last_coords') || 'null');
+      if (c && isFinite(c.lat) && isFinite(c.lng)) return { latitude: c.lat, longitude: c.lng };
+    } catch (e) {}
+    return null;
+  }
   function confirmar() {
     var it = st.target;
     var svc = it && (it.services || []).find(function (s) { return s.id === st.selectedId; });
@@ -444,7 +456,10 @@
     // também recusa; aqui só evita a ida e volta.
     if (new Date(slot).getTime() <= Date.now()) { fechar(); falhou('Esse horário já passou. Atualizamos as vagas: escolha de novo.'); return; }
     st.reserving = true; render();
-    api('/disponivel', { method: 'POST', body: JSON.stringify({ car_wash_id: it.car_wash.id, service_id: svc.id, slot: slot, use_reward: !!valeDe(it.car_wash) && useReward }) })
+    // O servidor só aceita o Last Minute no raio dele, então a posição vai junto.
+    var pos = posicaoAtual();
+    api('/disponivel', { method: 'POST', body: JSON.stringify({ car_wash_id: it.car_wash.id, service_id: svc.id, slot: slot, use_reward: !!valeDe(it.car_wash) && useReward,
+      latitude: pos && pos.latitude, longitude: pos && pos.longitude }) })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { r: r, d: d }; }); })
       .then(function (x) {
         if (x.r.status === 401) { location.href = '/users/sign_in'; return; }

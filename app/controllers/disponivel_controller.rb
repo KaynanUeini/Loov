@@ -229,6 +229,25 @@ class DisponivelController < ApplicationController
     log_tag = "[Disponivel#create]"
     Rails.logger.info("#{log_tag} IN user_id=#{current_user&.id} params=#{params.permit(:car_wash_id, :service_id, :slot).to_h.inspect}")
 
+    # Last Minute só pra quem está no raio dele (RelevanciaLastMinute::RAIO_KM),
+    # e pra saber isso o cliente precisa mandar onde está. Conferido aqui, e
+    # não só nas telas: vale também pra uma versão antiga do app.
+    lat = params[:latitude].presence&.to_f
+    lng = params[:longitude].presence&.to_f
+    unless lat && lng
+      Rails.logger.warn("#{log_tag} sem_localizacao user_id=#{current_user&.id}")
+      render json: { error: "Ative a localização para reservar pelo Last Minute.", code: "location_required" },
+             status: :unprocessable_entity
+      return
+    end
+    alvo = CarWash.find(params[:car_wash_id])
+    if !alvo.has_valid_coordinates? || alvo.distance_to([lat, lng], :km) > RelevanciaLastMinute::RAIO_KM
+      Rails.logger.warn("#{log_tag} fora_do_raio car_wash_id=#{alvo.id}")
+      render json: { error: "Fora do raio do Last Minute: ele vale para lava-rápidos a até #{RelevanciaLastMinute::RAIO_KM.to_i} km de você.",
+                     code: "out_of_range" }, status: :unprocessable_entity
+      return
+    end
+
     unless current_user.has_payment_method?
       render json: {
         error: "Cadastre um cartão para reservar no Last Minute. Você paga #{(Appointment::PREPAYMENT_PCT * 100).round}% agora pra garantir a vaga.",

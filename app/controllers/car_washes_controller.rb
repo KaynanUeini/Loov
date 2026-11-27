@@ -113,7 +113,11 @@ class CarWashesController < ApplicationController
               motor = PrecoDinamico.new(cw, agora: now_br)
               next unless motor.desconto_em_breve?
               hora_off_ids << cw.id
-              melhor = cw.services.filter_map { |s| motor.melhor_oferta(s)&.merge(service_id: s.id) }
+              # Sem posição ou longe demais pro Last Minute: a oferta só pode
+              # ser de agendamento.
+              perto = lat_param && lng_param && cw.has_valid_coordinates? &&
+                      cw.distance_to([lat_param, lng_param], :km) <= RelevanciaLastMinute::RAIO_KM
+              melhor = cw.services.filter_map { |s| motor.melhor_oferta(s, com_last_minute: perto)&.merge(service_id: s.id) }
                          .min_by { |o| [o[:preco], o[:slot]] }
               hora_off_oferta[cw.id] = oferta_json(melhor) if melhor
             end
@@ -205,9 +209,10 @@ class CarWashesController < ApplicationController
   # Mesmo payload do app (CarWashDetailScreen). A página HTML também usa:
   # vai embutido nela, então o site e o app leem exatamente os mesmos dados.
   private def detail_payload(cw)
-    dist = if params[:latitude].present? && params[:longitude].present? && cw.has_valid_coordinates?
-      cw.distance_to([params[:latitude].to_f, params[:longitude].to_f], :km).round(1)
+    dist_exata = if params[:latitude].present? && params[:longitude].present? && cw.has_valid_coordinates?
+      cw.distance_to([params[:latitude].to_f, params[:longitude].to_f], :km)
     end
+    dist = dist_exata&.round(1)
 
     favorited = user_signed_in? && current_user.client? &&
       current_user.favorite_car_washes.exists?(car_wash_id: cw.id)
@@ -225,7 +230,13 @@ class CarWashesController < ApplicationController
 
     # Próxima vaga (em minutos a partir de agora) — null se fechado o dia inteiro.
     next_slot_minutes = next_available_slot_minutes(cw, now_sp)
-    ofertas = ofertas_hora_off(cw)
+    # Last Minute só pra quem está no raio dele, como na vitrine, e pra isso a
+    # página precisa saber onde o cliente está. Sem posição ou longe demais,
+    # a vaga dele não é oferecida e a página explica por quê.
+    tem_posicao  = params[:latitude].present? && params[:longitude].present?
+    fora_do_raio = tem_posicao && (dist_exata.nil? || dist_exata > RelevanciaLastMinute::RAIO_KM)
+    lm_possivel  = cw.services.any?(&:last_minute?)
+    ofertas = ofertas_hora_off(cw, com_last_minute: tem_posicao && !fora_do_raio)
 
     {
       id:                cw.id,
@@ -256,7 +267,12 @@ class CarWashesController < ApplicationController
       # pra liberar slots disponivel_only como link pro fluxo Disponível.
       # Mesma regra da listagem (Service.last_minute) — antes era duração
       # curta, e um lava-rápido só de polimento entrava por engano.
-      disponivel_eligible: open_now && cw.services.any?(&:last_minute?),
+      disponivel_eligible: open_now && lm_possivel && tem_posicao && !fora_do_raio,
+      # Teria Last Minute, mas o cliente está longe ou sem localização: a
+      # página explica (e, sem localização, oferece ativar).
+      lm_fora_do_raio:     !!(open_now && lm_possivel && fora_do_raio),
+      lm_sem_localizacao:  !!(open_now && lm_possivel && !tem_posicao),
+      lm_raio_km:          RelevanciaLastMinute::RAIO_KM.to_i,
       # Programa de fidelidade ativo (selo na página do lava-rápido). Com
       # cliente logado, já vem o cartão dele (quantas visitas tem ali).
       loyalty:           (lp = cw.loyalty_program)&.active? ?
@@ -302,7 +318,7 @@ class CarWashesController < ApplicationController
   # A melhor oferta da Hora Off de cada serviço, { service_id => oferta }.
   # A página mostra o preço junto do horário em que ele vale e, ao tocar,
   # abre o agendamento já nele.
-  private def ofertas_hora_off(cw)
+  private def ofertas_hora_off(cw, com_last_minute: true)
     return {} unless cw.hora_off_enabled
 
     agora  = Time.current.in_time_zone("America/Sao_Paulo")
@@ -310,7 +326,7 @@ class CarWashesController < ApplicationController
     janela = PrecoDinamico::ESCADA.map(&:first).max + 3.hours
     Appointment.with_preloaded_occupancy([cw.id], from: agora - 1.minute, to: agora + janela) do
       cw.services.each_with_object({}) do |s, h|
-        o = motor.melhor_oferta(s)
+        o = motor.melhor_oferta(s, com_last_minute: com_last_minute)
         h[s.id] = oferta_json(o) if o
       end
     end

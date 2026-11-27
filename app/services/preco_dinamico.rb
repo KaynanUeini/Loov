@@ -104,11 +104,13 @@ class PrecoDinamico
   # last_minute: true: é onde o desconto é maior, e sem ela o cliente via
   # "R$ 30 às 22h" sem saber que às 20h saía por R$ 28. Só lavagem entra no
   # Last Minute, como em todo o resto.
-  def melhor_oferta(service)
+  # com_last_minute: false deixa de fora a vaga do Last Minute (cliente fora
+  # do raio dele, RelevanciaLastMinute::RAIO_KM): só sobra o agendamento.
+  def melhor_oferta(service, com_last_minute: true)
     return nil unless car_wash.hora_off_enabled && aplica?(service)
 
     melhor = nil
-    if service.last_minute? && (lm = car_wash.last_minute_slot(agora, service)) && !fechado_no_dia?(lm.to_date)
+    if com_last_minute && service.last_minute? && (lm = car_wash.last_minute_slot(agora, service)) && !fechado_no_dia?(lm.to_date)
       r = para(service, lm, last_minute: true)
       melhor = { preco: r.preco, tabela: r.tabela, slot: lm, last_minute: true } if r.tipo == "off"
     end
