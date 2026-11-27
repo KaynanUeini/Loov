@@ -166,12 +166,18 @@ if (document.getElementById('state-waiting').classList.contains('active')) {
   updateRing(secondsLeft);
   countdownEl.textContent = formatTime(secondsLeft);
 
-  const timer = setInterval(() => {
-    secondsLeft--;
-    if (secondsLeft < 0) secondsLeft = 0;
+  // Conta até um prazo fixo e troca o número no instante exato em que o
+  // segundo vira (um setInterval de 1 s nunca é exato).
+  const fim = Date.now() + SECONDS_LEFT * 1000;
+  let timer = null;
+  const tick = () => {
+    const resta = fim - Date.now();
+    secondsLeft = Math.max(0, Math.ceil(resta / 1000));
     updateRing(secondsLeft);
     countdownEl.textContent = formatTime(secondsLeft);
-  }, 1000);
+    if (secondsLeft > 0) timer = setTimeout(tick, resta - (secondsLeft - 1) * 1000 + 20);
+  };
+  timer = setTimeout(tick, Math.max(0, fim - Date.now() - (SECONDS_LEFT - 1) * 1000 + 20));
 
   const poll = setInterval(() => {
     fetch('/disponivel/<%= @appointment.id %>', {
@@ -180,11 +186,11 @@ if (document.getElementById('state-waiting').classList.contains('active')) {
     .then(r => r.json())
     .then(data => {
       if (data.status === 'confirmed') {
-        clearInterval(timer);
+        clearTimeout(timer);
         clearInterval(poll);
         showState('confirmed');
       } else if (['cancelled', 'rejected'].includes(data.status)) {
-        clearInterval(timer);
+        clearTimeout(timer);
         clearInterval(poll);
         showState('rejected');
       }

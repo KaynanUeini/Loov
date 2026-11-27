@@ -674,10 +674,16 @@
     startPolling(appt.id);
     startTicker(appt.expires_at);
   }
+  // Cada troca do relógio é agendada pro instante exato em que o segundo
+  // vira (contando até expires_at). Um setInterval de 1 s nunca é exato e,
+  // com o arredondamento, de vez em quando duas trocas caíam quase juntas.
   function startTicker(exp) {
-    clearInterval(tickT);
+    clearTimeout(tickT);
+    var fim = new Date(exp).getTime();
     var tick = function () {
-      state.secondsLeft = Math.max(0, Math.round((new Date(exp).getTime() - Date.now()) / 1000));
+      var resta = fim - Date.now();
+      state.secondsLeft = Math.max(0, Math.ceil(resta / 1000));
+      tickT = setTimeout(tick, state.secondsLeft > 0 ? resta - (state.secondsLeft - 1) * 1000 + 20 : 1000);
       var el = $('dw-count'); if (el) rola(el, relogio(state.secondsLeft));
       if (!state.outcome) document.title = relogio(state.secondsLeft) + ' · Decidindo · Loov';
       var p = passouPct(state.appt) + '%';
@@ -685,7 +691,7 @@
       poeCarro();
       updateUrgency();
     };
-    tick(); tickT = setInterval(tick, 1000);
+    tick();
   }
   // Encadeado com recuo: servidor fora ou limitando não melhora com insistência.
   function startPolling(id) {
@@ -703,7 +709,7 @@
     };
     pollT = setTimeout(step, POLL_MS);
   }
-  function stopPolling() { clearTimeout(pollT); pollT = null; clearInterval(tickT); tickT = null; }
+  function stopPolling() { clearTimeout(pollT); pollT = null; clearTimeout(tickT); tickT = null; }
   // O desfecho chega com a espera na tela: um movimento conta o que
   // aconteceu antes da tela seguinte. Sem a espera na tela, vai direto.
   function setOutcome(o) {
@@ -820,7 +826,7 @@
   // Aceito: o carro estaciona em "Sua vaga" e o topo sobe como cortina,
   // revelando o Agendado, que entra em cascata.
   function transAceito() {
-    clearInterval(tickT);
+    clearTimeout(tickT);
     var c = $('dw-carro');
     $('dw').classList.remove('is-urgent');
     $('dw-barra').style.transition = 'none';
@@ -853,7 +859,7 @@
   // cima do escuro, o relógio rola até o horário, a frase é riscada e a
   // palavra nova sobe. Sem quique: é notícia ruim.
   function transVirar(o) {
-    clearInterval(tickT);
+    clearTimeout(tickT);
     var a = state.appt || {}, name = (a.car_wash && a.car_wash.name) || 'lava-rápido', v = valores(a);
     var dw = $('dw'), meio = document.querySelector('#dw-in .dw-meio');
     dw.classList.remove('is-urgent');

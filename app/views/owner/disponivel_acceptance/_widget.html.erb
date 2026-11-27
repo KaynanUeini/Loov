@@ -185,7 +185,17 @@
   var baseTitle = document.title;
 
   function brl(v) { return 'R$ ' + (Number(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-  function secsLeft() { return Math.max(0, Math.round((st.deadline - Date.now()) / 1000)); }
+  function secsLeft() { return Math.max(0, Math.ceil((st.deadline - Date.now()) / 1000)); }
+  // Cada troca do relógio no instante exato em que o segundo vira (contando
+  // até o prazo). Um setInterval de 1 s nunca é exato e, de vez em quando,
+  // duas trocas caíam quase juntas.
+  function agendaTick() {
+    clearTimeout(st.tick);
+    updateTick();
+    if (st.done) return;
+    var resta = st.deadline - Date.now(), s = secsLeft();
+    st.tick = setTimeout(agendaTick, s > 0 ? resta - (s - 1) * 1000 + 20 : 1000);
+  }
 
   // ── Som (Web Audio: sem arquivo, sem custo de carga) ──────────────────
   var actx = null;
@@ -305,8 +315,7 @@
     // Sobe de baixo com o clarão, como no app.
     void root.offsetWidth; root.classList.add('entra');
     document.documentElement.style.overflow = 'hidden';
-    updateTick();
-    clearInterval(st.tick); st.tick = setInterval(updateTick, 1000);
+    agendaTick();
 
     if (!st.seenIds[a.id]) {
       st.seenIds[a.id] = true;
@@ -339,14 +348,14 @@
   }
 
   function hide() {
-    clearInterval(st.tick); stopSignals();
+    clearTimeout(st.tick); stopSignals();
     root.hidden = true; st.cur = null;
     document.documentElement.style.overflow = '';
     next();
   }
 
   function finish(kind, titulo, text) {
-    st.done = true; stopSignals(); clearInterval(st.tick);
+    st.done = true; stopSignals(); clearTimeout(st.tick);
     root.classList.remove('urgent'); $('lma-mute').hidden = true;
     $('lma-actions').hidden = true; $('lma-confirm').hidden = true;
     root.classList.remove('is-err'); $('lma-r-hora').hidden = false;
