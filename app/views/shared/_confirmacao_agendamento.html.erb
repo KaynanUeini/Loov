@@ -122,8 +122,9 @@
     .ok-tempo { color: var(--ink); font-weight: 600; }
     /* Lava-rápido: pino em gota com o ícone de lava-rápido (carro e gotas),
        pra não confundir com o ponto de quem vai. A ponta marca o lugar. */
-    .ok-pino { position: relative; width: 38px; height: 38px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: var(--coral-500); border: 3px solid #fff; box-shadow: 0 3px 10px rgba(0,0,0,.35); }
-    .ok-pino svg { position: absolute; left: 50%; top: 50%; width: 20px; height: 20px; margin: -10px 0 0 -10px; transform: rotate(45deg); color: #fff; }
+    /* O mesmo pino do mapa da rota no app: gota coral com um miolo branco. */
+    .ok-pino { position: relative; width: 34px; height: 34px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: var(--coral-500); border: 3px solid #fff; box-shadow: 0 3px 10px rgba(0,0,0,.35); }
+    .ok-pino::after { content: ""; position: absolute; inset: 8px; border-radius: 50%; background: #fff; }
     .ok-lado-in { padding: 18px 22px 22px; }
     .ok-end { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
     .ok-end b { display: block; font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 16px; }
@@ -209,10 +210,6 @@
         '</ul></div></div>';
   }
   // Ícone de lava-rápido: um carro de frente com gotas em cima.
-  var LAVA_IC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-    '<path d="M4 17v-3.2l1.6-3.6A2 2 0 0 1 7.4 9h9.2a2 2 0 0 1 1.8 1.2L20 13.8V17"/><path d="M3 17h18v2.2a.8.8 0 0 1-.8.8h-1.4a.8.8 0 0 1-.8-.8V19H6v.2a.8.8 0 0 1-.8.8H3.8a.8.8 0 0 1-.8-.8z"/>' +
-    '<circle cx="7.5" cy="15" r=".6" fill="currentColor"/><circle cx="16.5" cy="15" r=".6" fill="currentColor"/>' +
-    '<path d="M8 2.5s-1.4 1.6-1.4 2.5a1.4 1.4 0 0 0 2.8 0C9.4 4.1 8 2.5 8 2.5z"/><path d="M16 2.5s-1.4 1.6-1.4 2.5a1.4 1.4 0 0 0 2.8 0c0-.9-1.4-2.5-1.4-2.5z"/><path d="M12 1.5s-1.2 1.4-1.2 2.2a1.2 1.2 0 0 0 2.4 0c0-.8-1.2-2.2-1.2-2.2z"/></svg>';
   // De onde o cliente sai: a origem da página (a lista manda a localização)
   // ou a do navegador, só se já estiver liberada. Pedir permissão aqui seria
   // um susto logo depois de agendar.
@@ -283,7 +280,7 @@
       clearTimeout(dicaT); dicaT = setTimeout(function () { dica.classList.remove('is-on'); }, 1400);
     }, { passive: false });
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(m);
-    L.marker(c, { title: 'Lava-rápido', zIndexOffset: 1000, icon: L.divIcon({ className: '', html: '<div class="ok-pino">' + LAVA_IC + '</div>', iconSize: [38, 38], iconAnchor: [19, 46] }) }).addTo(m);
+    L.marker(c, { title: 'Lava-rápido', zIndexOffset: 1000, icon: L.divIcon({ className: '', html: '<div class="ok-pino"></div>', iconSize: [34, 34], iconAnchor: [17, 42] }) }).addTo(m);
     el._mapa = m;
     // A tela pode mudar de tamanho logo depois (a cortina do Last Minute):
     // sem isto parte do mapa ficava sem desenhar.
