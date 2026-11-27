@@ -1,6 +1,6 @@
 <%#
   Cabeçalho padrão das páginas da conta (Pagamentos, Fidelidade, Favoritos,
-  Notificações…): voltar, sobretítulo em mono, título grande e uma frase de
+  Notificações…): voltar, título grande e uma frase de
   apoio. Título grande e respiro (wiemer); hierarquia por tamanho, sem caixa
   em volta (Apple / Spotify). Uma página que mexe no título ou na frase pelo
   JS usa os ids.
@@ -8,7 +8,7 @@
   Locals:
     back_href  — pra onde o voltar leva sem histórico (obrigatório)
     back_id    — id do voltar (opcional; a página pode tratar o clique)
-    eyebrow    — sobretítulo
+    eyebrow    — aceito mas não exibido: os títulos não levam etiqueta em cima
     title      — título (passe html_safe; <em> fica preto como o resto — modelo das páginas da conta é título todo em tinta)
     title_id   — id do título (opcional)
     lead       — frase de apoio (opcional)
@@ -21,9 +21,8 @@
   .lp-back { width: 40px; height: 40px; border-radius: 50%; background: var(--sand); color: var(--ink) !important; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; transition: background .15s; }
   .lp-back:hover { background: var(--stone); }
   .lp-back svg { display: block; }
-  .lp-eyebrow { margin-top: 18px; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px; color: var(--ash); text-transform: uppercase; }
   .lp-title { margin: 6px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: clamp(36px, 6vw, 72px); line-height: .98; letter-spacing: -0.04em; color: var(--ink) !important; }
-  .lp-back + .lp-title { margin-top: 18px !important; } /* sem sobretítulo: o título desce pro lugar dele */
+  .lp-back + .lp-title { margin-top: 18px !important; }
   .lp-title em { font-style: normal; color: inherit; }
   .lp-lead { margin: 14px 0 0 !important; max-width: 46ch; font-size: 15px !important; line-height: 22px !important; color: var(--graphite) !important; }
   .lp-lead:empty { display: none; }
@@ -31,7 +30,6 @@
 </style>
 <div class="lp-head">
   <a class="lp-back"<% if local_assigns[:back_id] %> id="<%= back_id %>"<% end %> href="<%= back_href %>" aria-label="Voltar"><i data-feather="chevron-left" style="width:18px;height:18px"></i></a>
-  <% if local_assigns[:eyebrow].present? %><div class="lp-eyebrow"><%= eyebrow %></div><% end %>
   <h1 class="lp-title"<% if local_assigns[:title_id] %> id="<%= title_id %>"<% end %>><%= title %></h1>
   <% if lead || lead_id %>
     <p class="lp-lead"<% if lead_id %> id="<%= lead_id %>"<% end %>><%= lead %></p>

@@ -38,7 +38,7 @@
   .pg-head { padding: 8px 0; }
   .pg-back { width: 40px; height: 40px; border-radius: 50%; background: var(--sand); color: var(--ink) !important; display: inline-flex; align-items: center; justify-content: center; transition: background .15s; }
   .pg-back:hover { background: var(--stone); }
-  .pg-eyebrow { margin-top: 18px; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px; color: var(--ash); text-transform: uppercase; }
+  .pg-back + .pg-title { margin-top: 18px !important; }
   .pg-title { margin: 6px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: clamp(36px, 6vw, 72px); line-height: .98; letter-spacing: -0.04em; color: var(--ink) !important; }
   .pg-title em { font-style: normal; color: inherit; }
   .pg-lead { margin: 14px 0 0; max-width: 46ch; font-size: 15px; line-height: 22px; color: var(--graphite); }
@@ -220,7 +220,6 @@
   <div class="pg-wrap">
     <div class="pg-head">
       <a class="pg-back" href="<%= back_href %>" aria-label="Voltar"><i data-feather="chevron-left" style="width:18px;height:18px"></i></a>
-      <div class="pg-eyebrow">Pagamentos</div>
       <h1 class="pg-title"><%= has_card ? raw("Seu <em>cartão</em>.") : raw("Um cartão, <em>zero fila</em>.") %></h1>
       <p class="pg-lead">Usado só nas reservas Last Minute: o valor é reservado no cartão e só é cobrado depois que o lava-rápido aceitar. Agendamentos comuns você continua pagando no local.</p>
       <% if params[:add_card] && !has_card %>

@@ -52,7 +52,7 @@
   .fd-head { padding: 8px 0; }
   .fd-back { width: 40px; height: 40px; border-radius: 50%; background: var(--sand); color: var(--ink) !important; display: inline-flex; align-items: center; justify-content: center; transition: background .15s; }
   .fd-back:hover { background: var(--stone); }
-  .fd-eyebrow { margin-top: 18px; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1px; color: var(--ash); text-transform: uppercase; }
+  .fd-back + .fd-title { margin-top: 18px !important; }
   .fd-title { margin: 6px 0 0 !important; font-family: 'Space Grotesk', sans-serif !important; font-weight: 700; font-size: clamp(36px, 6vw, 72px); line-height: .98; letter-spacing: -0.04em; color: var(--ink) !important; }
   .fd-title em { font-style: normal; color: inherit; }
   .fd-lead { margin: 14px 0 0 !important; max-width: 46ch; font-size: 15px !important; line-height: 22px !important; color: var(--graphite) !important; }
@@ -207,7 +207,6 @@
   <div class="fd-wrap">
     <div class="fd-head">
       <a class="fd-back" id="fd-back" href="/users/edit<%= qs %>" aria-label="Voltar"><i data-feather="chevron-left" style="width:18px;height:18px"></i></a>
-      <div class="fd-eyebrow">Recompensas · Fidelidade</div>
       <% if @cards.any? %>
         <h1 class="fd-title">Seus <em>carimbos</em>.</h1>
         <p class="fd-lead">Cada lavagem concluída vira um carimbo. Completou, ganha um vale pra próxima visita.</p>

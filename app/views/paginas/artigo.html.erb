@@ -21,7 +21,6 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>Ajuda
     </a>
     <header>
-      <div class="pp-eyebrow"><%= @artigo[:publico] == "lava" ? "Lava-rápidos" : "Clientes" %> · <%= @tema[:titulo] %></div>
       <h1 class="pp-title" style="font-size:clamp(28px,4.6vw,44px);line-height:1.08"><%= @artigo[:titulo] %></h1>
     </header>
     <div class="pp-txt"><%= raw corpo %></div>
