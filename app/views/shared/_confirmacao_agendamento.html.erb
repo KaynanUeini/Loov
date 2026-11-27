@@ -224,11 +224,12 @@
       navigator.geolocation.getCurrentPosition(function (pos) { vai({ lat: pos.coords.latitude, lng: pos.coords.longitude }); }, function () {}, { maximumAge: 300000, timeout: 8000 });
     }).catch(function () {});
   }
-  // Com trânsito (TomTom): "14 min de carro (+3 min de trânsito)". Sem ele
-  // (a reserva, OpenRouteService): "≈ 12 min de carro".
+  // O tempo total, com o trânsito já dentro (o TomTom devolve assim):
+  // "14 min de carro". Sem dado de trânsito (a reserva, OpenRouteService),
+  // é estimativa: "≈ 12 min de carro".
   function tempoTxt(d) {
-    var min = Math.max(1, Math.round(d.duracao_s / 60)), atraso = Math.round((d.atraso_s || 0) / 60);
-    return d.transito ? min + ' min de carro' + (atraso >= 1 ? ' (+' + atraso + ' min de trânsito)' : '') : '≈ ' + min + ' min de carro';
+    var min = Math.max(1, Math.round(d.duracao_s / 60));
+    return (d.transito ? '' : '≈ ') + min + ' min de carro';
   }
   function buscaRota(cw, o) {
     return fetch('/rota?car_wash_id=' + encodeURIComponent(cw) + '&lat=' + o.lat + '&lng=' + o.lng, { credentials: 'same-origin', headers: { Accept: 'application/json' } })
