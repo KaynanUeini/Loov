@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2026_11_26_130000) do
+ActiveRecord::Schema[7.1].define(version: 2026_11_28_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -162,6 +162,8 @@ ActiveRecord::Schema[7.1].define(version: 2026_11_26_130000) do
     t.integer "taxas_venda_pct", default: 10, null: false
     t.jsonb "custo_lavagem_calc", default: {}, null: false
     t.string "logo_key"
+    t.string "capa_key"
+    t.string "cor_marca"
     t.index ["active"], name: "index_car_washes_on_active"
     t.index ["user_id"], name: "index_car_washes_on_user_id"
   end

@@ -11,7 +11,7 @@
   app pede o PNG final com o zoom e a posição escolhidos.
   Mensagens:
     app → { b64, tipo }                         página → { evento: 'fontes', forma, foto, fundoLiso, transparente }
-    app → { acao: 'compor', modo, zoom, dx, dy } página → { evento: 'composto', url }
+    app → { acao: 'compor', modo, zoom, dx, dy } página → { evento: 'composto', url, cor }
     página → { evento: 'pronta' } ao abrir · { evento: 'erro' } se a imagem não abrir
   forma/foto: { url, w, h } (forma é null quando não há fundo que dê pra tirar).
   O app chama window.loovLogoReceber(msg) direto (injectJavaScript), que é igual
@@ -39,7 +39,9 @@
       if (!prep) return responder({ evento: 'erro', etapa: 'compor' });
       var modo = msg.modo === 'forma' && prep.forma ? 'forma' : 'foto';
       var r = P.compor(modo === 'forma' ? prep.forma : prep.foto, modo, msg.zoom || 1, msg.dx || 0, msg.dy || 0);
-      return responder({ evento: 'composto', url: r.canvas.toDataURL('image/png') });
+      var cor = null;
+      try { cor = P.corPrincipal(r.canvas); } catch (e) { cor = null; }
+      return responder({ evento: 'composto', url: r.canvas.toDataURL('image/png'), cor: cor });
     }
     if (!msg.b64) return;
     var img = new Image();

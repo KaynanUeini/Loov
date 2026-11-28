@@ -123,6 +123,17 @@
   .gm-logo-img svg { width: 100%; height: 100%; display: block; }
   .gm-logo .gm-hint { margin-top: 3px; }
   .gm-logo-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  /* ── Foto de capa (logo abaixo do logo) ── também vale na hora. */
+  .gm-capa { background: var(--cream); border: 1px solid var(--stone); border-radius: 14px; padding: 14px; margin-bottom: 14px; }
+  .gm-capa-img { width: 100%; aspect-ratio: 2 / 1; border-radius: 10px; overflow: hidden; background: var(--sand); margin-bottom: 12px;
+    display: flex; align-items: center; justify-content: center; color: var(--ash); font-size: 12.5px; }
+  .gm-capa-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .gm-capa-crop { position: relative; width: 100%; aspect-ratio: 2 / 1; margin: 16px auto 0; border-radius: 12px; overflow: hidden; touch-action: none; cursor: grab; background: var(--sand); box-shadow: 0 0 0 1px var(--stone); }
+  .gm-capa-crop:active { cursor: grabbing; }
+  .gm-capa-crop canvas { width: 100%; height: 100%; display: block; }
+  .gm-capa-crop .gm-capa-logo { position: absolute; left: 50%; bottom: -26px; width: 52px; height: 52px; margin-left: -26px; border-radius: 50%; background: var(--paper); border: 3px solid var(--paper); box-shadow: 0 2px 8px rgba(40,35,28,.18); pointer-events: none; }
+  .gm-capa-dicas { margin: 14px 0 0; padding-left: 18px; font-size: 12.5px; line-height: 1.55; color: var(--graphite); }
+  .gm-capa-modal .gm-zoom { width: 100%; }
   /* Enquadrar: o quadrado é o que sai; arrasta e aproxima. O xadrez é a
      transparência — o logo fica com a forma dele, sem moldura. */
   .gm-crop { position: relative; width: 260px; max-width: 100%; aspect-ratio: 1; margin: 16px auto 0; border-radius: 12px; overflow: hidden; touch-action: none; cursor: grab;
@@ -652,6 +663,24 @@
   </div>
 </div>
 
+<input type="file" id="gm-capa-file" accept="image/*" hidden>
+<div class="gm-ov" id="gm-capa" hidden>
+  <div class="gm-modal wide gm-capa-modal" role="dialog" aria-modal="true" aria-labelledby="gm-capa-t">
+    <h3 id="gm-capa-t">Enquadre a foto de capa</h3>
+    <p>Arraste pra escolher a parte que aparece e use o controle pra aproximar. O círculo embaixo é onde fica o logo.</p>
+    <div class="gm-capa-crop" id="gm-capa-crop"><canvas id="gm-capa-c" width="1200" height="600"></canvas><div class="gm-capa-logo"></div></div>
+    <label class="gm-zoom"><span id="gm-capa-out"></span><input type="range" id="gm-capa-z" min="1" max="3" step="0.01" value="1" aria-label="Aproximar"><span id="gm-capa-in"></span></label>
+    <ul class="gm-capa-dicas">
+      <li>Foto deitada, de dia, com o lava-rápido ou um carro limpo.</li>
+      <li>Evite texto, banner e preço na foto: o nome e os preços já aparecem na página.</li>
+    </ul>
+    <div class="gm-form-acts">
+      <button type="button" class="gm-btn ghost" id="gm-capa-no">Cancelar</button>
+      <button type="button" class="gm-btn primary" id="gm-capa-yes">Usar esta foto</button>
+    </div>
+  </div>
+</div>
+
 <div class="gm-ov" id="gm-conflict" hidden>
   <div class="gm-modal wide" role="dialog" aria-modal="true" aria-labelledby="gm-cf-title">
     <h3 id="gm-cf-title">Reduzir capacidade</h3>
@@ -1140,7 +1169,9 @@
       if (!r.ok) throw new Error(d.error || 'Não deu pra enviar o logo agora.');
       const put = await fetch(d.url, { method: 'PUT', headers: { 'Content-Type': 'image/png' }, body: blob });
       if (!put.ok) throw new Error('O envio da imagem falhou. Tente de novo.');
-      r = await fetch('/owner/logo', { method: 'PATCH', headers: hdr, body: JSON.stringify({ key: d.key }) });
+      let cor = null;
+      try { cor = window.LoovLogoProcessa.corPrincipal(document.getElementById('gm-crop-c')); } catch { cor = null; }
+      r = await fetch('/owner/logo', { method: 'PATCH', headers: hdr, body: JSON.stringify({ key: d.key, cor }) });
       d = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(d.error || 'Não deu pra salvar o logo agora.');
       logo.url = d.logo_url;
@@ -1204,10 +1235,130 @@
     ov.addEventListener('click', e => { if (e.target === ov) { ov.hidden = true; logo.prep = null; } });
   })();
 
+  // ── Foto de capa: o topo da página do lava-rápido no app. Sai um JPG de
+  // 1200×600 (2:1), enquadrado aqui. Vale na hora, como o logo.
+  const capa = { url: INITIAL.capa_url || null, busy: false, img: null, zoom: 1, dx: 0, dy: 0 };
+  function capaBlock() {
+    const hint = IS_ATTENDANT ? 'Só o dono troca a foto de capa.'
+      : !CAN_CHECK ? 'Pra trocar a foto desta loja, entre com a conta vinculada a ela.'
+      : capa.url ? 'Aparece no topo da página do lava-rápido no app. A troca vale na hora.'
+      : 'Sem foto, a página abre com uma faixa curta. Com foto, o cliente vê o seu lava-rápido logo de cara.';
+    return `
+      <div class="gm-capa">
+        <div class="gm-capa-img">${capa.url ? `<img src="${esc(capa.url)}" alt="Foto de capa">` : 'Sem foto de capa'}</div>
+        <div class="gm-cap-t">Foto de capa</div>
+        <div class="gm-hint">${hint}</div>
+        ${LOGO_PODE ? `<div class="gm-logo-acts">
+          <button type="button" class="gm-btn ghost" data-capa-pick ${capa.busy ? 'disabled' : ''}>${ic(capa.busy ? 'loader' : 'image', 14)} ${capa.busy ? 'Enviando…' : capa.url ? 'Trocar foto' : 'Subir foto'}</button>
+          ${capa.url && !capa.busy ? '<button type="button" class="gm-btn ghost" data-capa-remove>Remover</button>' : ''}
+        </div>` : ''}
+      </div>`;
+  }
+  // A foto cobre o quadro 2:1 inteiro; arrastar move, o controle aproxima.
+  function capaDraw() {
+    const im = capa.img; if (!im) return;
+    const W = 1200, H = 600;
+    const k = Math.max(W / im.naturalWidth, H / im.naturalHeight) * capa.zoom;
+    const w = im.naturalWidth * k, h = im.naturalHeight * k;
+    const px = Math.min(0, Math.max(W - w, (W - w) / 2 + capa.dx));
+    const py = Math.min(0, Math.max(H - h, (H - h) / 2 + capa.dy));
+    capa.dx = px - (W - w) / 2; capa.dy = py - (H - h) / 2;
+    const g = document.getElementById('gm-capa-c').getContext('2d');
+    g.fillStyle = '#f1eee6'; g.fillRect(0, 0, W, H);
+    g.drawImage(im, px, py, w, h);
+  }
+  function capaOpen(file) {
+    const falhou = () => toast('error', 'Não deu pra abrir essa imagem. Tente uma foto em JPG ou PNG.');
+    const fr = new FileReader();
+    fr.onerror = falhou;
+    fr.onload = () => {
+      const im = new Image();
+      im.onload = () => {
+        Object.assign(capa, { img: im, zoom: 1, dx: 0, dy: 0 });
+        document.getElementById('gm-capa-z').value = 1;
+        document.getElementById('gm-capa').hidden = false;
+        capaDraw();
+      };
+      im.onerror = falhou;
+      im.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  }
+  async function capaSend() {
+    if (!capa.img) return;
+    document.getElementById('gm-capa').hidden = true;
+    capa.busy = true; render();
+    try {
+      const blob = await new Promise(r => document.getElementById('gm-capa-c').toBlob(r, 'image/jpeg', 0.82));
+      const hdr = { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-Token': CSRF };
+      let r = await fetch('/owner/capa/envio', { method: 'POST', headers: hdr });
+      let d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || 'Não deu pra enviar a foto agora.');
+      const put = await fetch(d.url, { method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: blob });
+      if (!put.ok) throw new Error('O envio da foto falhou. Tente de novo.');
+      r = await fetch('/owner/capa', { method: 'PATCH', headers: hdr, body: JSON.stringify({ key: d.key }) });
+      d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || 'Não deu pra salvar a foto agora.');
+      capa.url = d.capa_url;
+      toast('success', 'Foto de capa atualizada. O cliente já vê a nova.');
+    } catch (err) {
+      toast('error', err.message || 'Não deu pra enviar a foto agora.', 4000);
+    } finally {
+      capa.busy = false; capa.img = null; render();
+    }
+  }
+  async function capaRemove() {
+    if (!await ask('Remover a foto de capa?', 'A página do lava-rápido volta a abrir com a faixa curta, sem foto.')) return;
+    capa.busy = true; render();
+    try {
+      const r = await fetch('/owner/capa', { method: 'DELETE', headers: { Accept: 'application/json', 'X-CSRF-Token': CSRF } });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || 'Não deu pra remover agora.');
+      capa.url = null;
+      toast('success', 'Foto de capa removida.');
+    } catch (err) {
+      toast('error', err.message, 4000);
+    } finally {
+      capa.busy = false; render();
+    }
+  }
+  (function capaWire() {
+    const box = document.getElementById('gm-capa-crop'), z = document.getElementById('gm-capa-z');
+    document.getElementById('gm-capa-out').innerHTML = ic('minus', 14);
+    document.getElementById('gm-capa-in').innerHTML = ic('plus', 14);
+    let drag = null;
+    box.addEventListener('pointerdown', e => { if (!capa.img) return; box.setPointerCapture(e.pointerId); drag = { px: e.clientX, py: e.clientY, dx: capa.dx, dy: capa.dy }; });
+    box.addEventListener('pointermove', e => {
+      if (!drag) return;
+      const f = 1200 / box.clientWidth;
+      capa.dx = drag.dx + (e.clientX - drag.px) * f; capa.dy = drag.dy + (e.clientY - drag.py) * f;
+      capaDraw();
+    });
+    const end = () => { drag = null; };
+    box.addEventListener('pointerup', end); box.addEventListener('pointercancel', end);
+    z.addEventListener('input', () => {
+      if (!capa.img) return;
+      const k = Number(z.value) / capa.zoom;
+      capa.dx *= k; capa.dy *= k; capa.zoom = Number(z.value); capaDraw();
+    });
+    document.getElementById('gm-capa-file').addEventListener('change', e => {
+      const f = e.target.files[0]; e.target.value = '';
+      if (!f) return;
+      if (!/^image\//.test(f.type)) return toast('error', 'Escolha um arquivo de imagem.');
+      if (f.size > 20 * 1024 * 1024) return toast('error', 'Imagem grande demais. Escolha uma de até 20 MB.');
+      capaOpen(f);
+    });
+    const ov = document.getElementById('gm-capa');
+    document.getElementById('gm-capa-no').addEventListener('click', () => { ov.hidden = true; capa.img = null; });
+    document.getElementById('gm-capa-yes').addEventListener('click', capaSend);
+    ov.addEventListener('click', e => { if (e.target === ov) { ov.hidden = true; capa.img = null; } });
+  })();
+
   const BODY = {
     info() {
       return `
         ${logoBlock()}
+        ${capaBlock()}
         ${field('Nome', 'name', st.name, 'placeholder="Ex.: Meu Lava-Rápido" autocomplete="organization"')}
         <div class="gm-row addr">
           <div class="gm-field"><label class="gm-label" for="f-cep">CEP</label>
@@ -1678,6 +1829,8 @@
 
     if ('logoPick' in d) { document.getElementById('gm-logo-file').click(); return; }
     if ('logoRemove' in d) { logoRemove(); return; }
+    if ('capaPick' in d) { document.getElementById('gm-capa-file').click(); return; }
+    if ('capaRemove' in d) { capaRemove(); return; }
 
     if (d.rail) {
       // De dentro de uma seção (o atalho em Serviços), abre e rola até a

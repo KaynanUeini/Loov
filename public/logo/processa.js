@@ -167,5 +167,31 @@
     return { forma: forma, foto: base, fundoLiso: info.fundoLiso, transparente: info.transparente };
   }
 
-  g.LoovLogoProcessa = { LADO: LADO, preparar: preparar, compor: compor, analisar: analisar, removerFundo: removerFundo, recortar: recortar };
+  // Cor principal do logo pronto, pra capa da página do lava-rápido ficar na
+  // cor da marca. Conta só pixels com cor de verdade (ignora transparente,
+  // branco, preto e cinza) e fica com a faixa de matiz mais presente. Logo
+  // sem cor (preto, cinza, branco) devolve null: a capa fica no areia.
+  function corPrincipal(cv) {
+    var d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+    var caixas = [], opacos = 0, coloridos = 0, i;
+    for (i = 0; i < 12; i++) caixas.push({ n: 0, r: 0, g: 0, b: 0 });
+    for (i = 0; i < d.length; i += 16) {
+      if (d[i + 3] < 128) continue;
+      opacos++;
+      var r = d[i], gg = d[i + 1], b = d[i + 2], mx = Math.max(r, gg, b), mn = Math.min(r, gg, b);
+      if (mx - mn < 40 || mx < 40 || mn > 225) continue;
+      var h;
+      if (mx === r) h = ((gg - b) / (mx - mn) + 6) % 6;
+      else if (mx === gg) h = (b - r) / (mx - mn) + 2;
+      else h = (r - gg) / (mx - mn) + 4;
+      var c = caixas[Math.floor(h * 2) % 12];
+      c.n++; c.r += r; c.g += gg; c.b += b; coloridos++;
+    }
+    if (!opacos || coloridos / opacos < 0.05) return null;
+    var m = caixas.reduce(function (a, c) { return c.n > a.n ? c : a; });
+    var hex = function (v) { return ('0' + Math.round(v / m.n).toString(16)).slice(-2); };
+    return '#' + hex(m.r) + hex(m.g) + hex(m.b);
+  }
+
+  g.LoovLogoProcessa = { LADO: LADO, preparar: preparar, compor: compor, analisar: analisar, removerFundo: removerFundo, recortar: recortar, corPrincipal: corPrincipal };
 })(window);

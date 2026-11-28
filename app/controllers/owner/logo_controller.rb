@@ -29,7 +29,11 @@ module Owner
       end
 
       antiga = @car_wash.logo_key
-      @car_wash.update_columns(logo_key: chave, updated_at: Time.current)
+      # Cor principal do logo (calculada no site/app), pra capa ficar na cor
+      # da marca. Sem cor (logo preto, cinza): nil, a capa fica no areia.
+      cor = params[:cor].to_s.downcase
+      cor = nil unless cor.match?(/\A#[0-9a-f]{6}\z/)
+      @car_wash.update_columns(logo_key: chave, cor_marca: cor, updated_at: Time.current)
       storage.apagar(antiga) if antiga.present? && antiga != chave
       render json: { logo_url: @car_wash.logo_url }
     end
@@ -37,7 +41,7 @@ module Owner
     # DELETE /owner/logo → volta pro logo gerado pelo nome.
     def destroy
       antiga = @car_wash.logo_key
-      @car_wash.update_columns(logo_key: nil, updated_at: Time.current)
+      @car_wash.update_columns(logo_key: nil, cor_marca: nil, updated_at: Time.current)
       LogoStorage.new.apagar(antiga) if antiga.present?
       render json: { logo_url: nil }
     end

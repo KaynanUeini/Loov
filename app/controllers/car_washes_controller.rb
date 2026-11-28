@@ -231,6 +231,12 @@ class CarWashesController < ApplicationController
                          .pick(Arel.sql("COALESCE(AVG(rating), 0)"), Arel.sql("COUNT(*)"))
     rating_avg    = rating_stats[0].to_f.round(1)
     reviews_count = rating_stats[1].to_i
+    # Resumo da aba Reviews: quantas notas de cada valor e as etiquetas mais
+    # marcadas (só as que aparecem), da mais citada pra menos.
+    rating_dist = Review.where(car_wash_id: cw.id).group(:rating).count
+    tag_counts  = Review.where(car_wash_id: cw.id).where.not(tags: [nil, ""]).pluck(:tags)
+                        .flat_map { |t| t.split(",").map(&:strip) }.reject(&:blank?).tally
+                        .sort_by { |tag, n| [-n, tag] }.first(6)
 
     # Aberto agora? (operating_hours + nenhum CarWashClosure ativo)
     now_sp     = Time.current.in_time_zone("America/Sao_Paulo")
@@ -251,6 +257,8 @@ class CarWashesController < ApplicationController
       id:                cw.id,
       name:              cw.name,
       logo_url:          cw.logo_url,
+      capa_url:          cw.capa_url,
+      cor_marca:         cw.cor_marca,
       address:           cw.address,
       route_address:     cw.endereco_rota,
       favorited:         favorited,
@@ -289,7 +297,7 @@ class CarWashesController < ApplicationController
       reviews:           Review.where(car_wash_id: cw.id)
                                .order(created_at: :desc)
                                .limit(20)
-                               .includes(:user)
+                               .includes(:user, appointment: :service)
                                .map { |r|
                                  {
                                    id:         r.id,
@@ -297,9 +305,13 @@ class CarWashesController < ApplicationController
                                    comment:    r.comment.to_s,
                                    tags:       r.tags_list,
                                    author:     r.user&.display_name || "Cliente",
+                                   service:    r.appointment&.service&.title,
                                    created_at: r.created_at.iso8601,
                                  }
                                },
+      rating_dist:       (1..5).to_h { |n| [n, rating_dist[n].to_i] },
+      hora_off:          !!cw.hora_off_enabled,
+      tag_counts:        tag_counts.map { |tag, n| { tag: tag, count: n } },
       operating_hours: (cw.operating_hours || []).order(:day_of_week).map { |oh|
         {
           id:          oh.id,
@@ -669,6 +681,7 @@ class CarWashesController < ApplicationController
         id:                cw.id,
         name:              cw.name,
         logo_url:          cw.logo_url,
+        capa_url:          cw.capa_url,
         cep:               cw.cep,
         logradouro:        cw.logradouro,
         numero:            cw.numero,

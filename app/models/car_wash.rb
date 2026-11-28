@@ -41,6 +41,13 @@ class CarWash < ApplicationRecord
     LogoStorage.url_publica(logo_key)
   end
 
+  # Foto de capa que o dono subiu (CapaStorage), ou nil: aí a página do
+  # lava-rápido abre com a faixa curta, sem foto.
+  def capa_url
+    return nil if capa_key.blank? || ENV["R2_LOGOS_URL"].blank?
+    CapaStorage.url_publica(capa_key)
+  end
+
   # Campos que descrevem ONDE o lava-rápido fica. Mudar qualquer um destes
   # é motivo pra tentar geocodificar de novo -- antes só `address` disparava,
   # mas a tela de gerenciar edita logradouro/bairro/cidade/uf/cep como campos

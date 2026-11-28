@@ -144,6 +144,11 @@ Rails.application.routes.draw do
     patch  'logo',       to: 'logo#update'
     delete 'logo',       to: 'logo#destroy'
 
+    # Foto de capa da página do lava-rápido: mesmo caminho do logo.
+    post   'capa/envio', to: 'capa#envio'
+    patch  'capa',       to: 'capa#update'
+    delete 'capa',       to: 'capa#destroy'
+
     get   'vehicle_checks/settings',              to: 'vehicle_checks#settings'
     patch 'vehicle_checks/settings',              to: 'vehicle_checks#settings_update'
     get   'vehicle_checks',                       to: 'vehicle_checks#index'
