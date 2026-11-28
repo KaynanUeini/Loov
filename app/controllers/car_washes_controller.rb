@@ -1,4 +1,8 @@
 class CarWashesController < ApplicationController
+  # Lista do "Perto de você" guardada por 30 s (ver index). Na memória do
+  # processo: com um processo só no Puma, todo mundo usa a mesma.
+  LISTA_GUARDADA = ActiveSupport::Cache::MemoryStore.new(size: 16.megabytes)
+
   before_action :authenticate_user!, except: [:index, :show]
   before_action :set_car_wash, only: %i[show manage update available_times]
   before_action :ensure_owner_or_attendant, only: [:manage]
@@ -22,21 +26,6 @@ class CarWashesController < ApplicationController
         @car_washes = @car_washes.joins(:services).where(services: { category: params[:category] }).distinct
       else
         @car_washes = @car_washes.joins(:services).where(services: { category: group_categories }).distinct
-      end
-    end
-
-    if params[:latitude].present? && params[:longitude].present?
-      begin
-        latitude  = params[:latitude].to_f
-        longitude = params[:longitude].to_f
-        # Eager-load antes de converter em Array — caso contrário o bloco JSON
-        # fica N+1 (ou, se chamar .includes no Array, quebra com NoMethodError).
-        preloaded = @car_washes.includes(:services, :operating_hours)
-        with_coords    = preloaded.select(&:has_valid_coordinates?).sort_by { |cw| cw.distance_to([latitude, longitude], :km) }
-        without_coords = preloaded.reject(&:has_valid_coordinates?)
-        @car_washes    = with_coords + without_coords
-      rescue => e
-        Rails.logger.error("Erro ao calcular distância: #{e.message}")
       end
     end
 
@@ -66,11 +55,16 @@ class CarWashesController < ApplicationController
         today_dow    = now_br.wday
         now_seconds  = now_br.seconds_since_midnight.to_i
 
-        # @car_washes pode ser Relation (sem coords) ou Array (ordenado por
-        # distância acima). Só chama .includes se ainda é Relation.
-        collection = @car_washes.respond_to?(:includes) ?
-          @car_washes.includes(:services, :operating_hours) :
-          @car_washes
+        # A parte pesada (preço da Hora Off, avaliações, horário, fechamentos
+        # de 80+ lava-rápidos) é igual pra quem está no mesmo lugar: fica
+        # guardada 30 s, por filtro e posição arredondada (~100 m). Favorito
+        # e distância exata são de cada um e entram depois, por pedido.
+        chave = ["lista", params[:search], params[:group], params[:category], params[:service_title],
+                 lat_param&.round(3), lng_param&.round(3)].join("|")
+        linhas = LISTA_GUARDADA.fetch(chave, expires_in: 30.seconds) do
+        collection = @car_washes.includes(:services, :operating_hours).to_a
+        lat_param = lat_param&.round(3)
+        lng_param = lng_param&.round(3)
 
         # Agrega rating em batch (evita N+1 ao somar/avg por lava-rápido).
         cw_ids = collection.map(&:id)
@@ -84,11 +78,6 @@ class CarWashesController < ApplicationController
         # Pré-carrega ids favoritados em UMA query (batch) — evita N+1
         # e permite o mobile mostrar heart preenchido no card sem
         # precisar chamar /client/favorites separadamente.
-        favorited_ids = if user_signed_in? && current_user.client?
-          current_user.favorite_car_washes.where(car_wash_id: cw_ids).pluck(:car_wash_id).to_set
-        else
-          Set.new
-        end
 
         # Fechamentos que cobrem hoje, de todas as lojas numa consulta só. Antes
         # era cw.closed_on? por loja aberta — dezenas de idas ao banco (no Neon,
@@ -124,7 +113,7 @@ class CarWashesController < ApplicationController
           end
         end
 
-        render json: collection.map { |cw|
+        collection.map { |cw|
           # Hora de hoje do lava-rápido (pode não existir se fechado no dia)
           today_oh = cw.operating_hours.find { |oh| oh.day_of_week.to_i == today_dow }
 
@@ -144,7 +133,6 @@ class CarWashesController < ApplicationController
             name:          cw.name,
             logo_url:      cw.logo_url,
             address:       cw.address,
-            favorited:     favorited_ids.include?(cw.id),
             logradouro:    cw.logradouro,
             numero:        cw.numero,
             bairro:        cw.bairro,
@@ -179,11 +167,32 @@ class CarWashesController < ApplicationController
               }
             }
           }
-          if lat_param && lng_param && cw.has_valid_coordinates?
-            data[:distance_km] = cw.distance_to([lat_param, lng_param], :km).round(2)
-          end
           data
         }
+        end
+
+        lat_param = params[:latitude].presence&.to_f
+        lng_param = params[:longitude].presence&.to_f
+        # Pré-carrega ids favoritados em UMA query — o mobile mostra o
+        # coração preenchido sem chamar /client/favorites.
+        favorited_ids = if user_signed_in? && current_user.client?
+          current_user.favorite_car_washes.where(car_wash_id: linhas.map { |l| l[:id] }).pluck(:car_wash_id).to_set
+        else
+          Set.new
+        end
+        linhas = linhas.map do |l|
+          l = l.merge(favorited: favorited_ids.include?(l[:id]))
+          if lat_param && lng_param && l[:latitude].present? && l[:longitude].present? && l[:latitude].to_f != 0.0 && l[:longitude].to_f != 0.0
+            l[:distance_km] = Geocoder::Calculations.distance_between([lat_param, lng_param], [l[:latitude], l[:longitude]], units: :km).round(2)
+          end
+          l
+        end
+        # Com posição: os com coordenada por distância, os sem no fim.
+        if lat_param && lng_param
+          com, sem = linhas.partition { |l| l[:distance_km] }
+          linhas = com.sort_by { |l| l[:distance_km] } + sem
+        end
+        render json: linhas
       end
     end
   end

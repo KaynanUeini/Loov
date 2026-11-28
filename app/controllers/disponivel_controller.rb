@@ -8,6 +8,13 @@ class DisponivelController < ApplicationController
     @lat = params[:latitude].presence&.to_f
     @lon = params[:longitude].presence&.to_f
 
+    # Sem posição não há Last Minute: a reserva exige estar a até 5 km, e
+    # sem ela a lista vinha com todos os abertos, de qualquer distância e
+    # sem distância no card (que depois seriam recusados na reserva).
+    if request.format.json? && !(@lat && @lon)
+      return render json: []
+    end
+
     window_start = Time.current
     today_dow    = Date.current.wday
     now_seconds  = Time.current.seconds_since_midnight.to_i
