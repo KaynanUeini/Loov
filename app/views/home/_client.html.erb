@@ -440,6 +440,15 @@
   // Tour da home: só contas novas, uma vez (visto vale pro app também).
   var TOUR_HOME = <%= current_user.mostrar_tour_home? ? 'true' : 'false' %>;
 
+  // Link pra página do lava-rápido já com a posição: sem ela, o site
+  // recarregava a página do lava-rápido só pra pôr lat/lng no endereço, e a
+  // capa começava a animação duas vezes.
+  function lojaHref(id) {
+    var c = state.coords;
+    return '/car_washes/' + id + (c && c.latitude != null && c.longitude != null
+      ? '?latitude=' + encodeURIComponent(c.latitude) + '&longitude=' + encodeURIComponent(c.longitude) : '');
+  }
+
   // ── Estado ────────────────────────────────────────────────────────────────
   var state = {
     shops: [], disponiveis: [], coords: null, locating: true,
@@ -746,7 +755,7 @@
       ? (svcs.length ? '<ul class="ch-specs">' + svcs.slice(0, 4).map(function (x) { return '<li><span>' + esc(x.title) + '</span><span>' + money(x.price) + '</span></li>'; }).join('') + '</ul>' +
           (svcs.length > 4 ? '<div class="ch-specs-more">+ ' + (svcs.length - 4) + ' serviços</div>' : '') : '')
       : (titles.length ? '<div class="ch-card-svcs">' + esc(titles.slice(0, 3).join(' · ')) + (titles.length > 3 ? ' · +' + (titles.length - 3) : '') + '</div>' : '');
-    return '<a class="ch-card' + (open ? '' : ' is-closed') + (feature ? ' is-feature' : '') + '" href="/car_washes/' + cw.id + '" data-open-shop="' + cw.id + '">' +
+    return '<a class="ch-card' + (open ? '' : ' is-closed') + (feature ? ' is-feature' : '') + '" href="' + lojaHref(cw.id) + '" data-open-shop="' + cw.id + '">' +
       '<div class="ch-card-vis" style="--brand:' + brandOf(cw).color.bg + '">' +
         '<span class="ch-card-logo">' + logoOf(cw) + '</span>' +
         '<span class="ch-card-status"><i></i>' + esc(hoursStatus(cw)) + '</span>' +
@@ -789,7 +798,7 @@
   function shopRow(cw) {
     var open = isOpenNow(cw), reviews = Number(cw.reviews_count) || 0, rating = Number(cw.rating_avg) || 0;
     var meta = [cw.bairro, fmtDistance(cw.distance_km)].filter(Boolean).join(' · ');
-    return '<a class="ch-row' + (open ? '' : ' is-closed') + '" href="/car_washes/' + cw.id + '" data-open-shop="' + cw.id + '">' +
+    return '<a class="ch-row' + (open ? '' : ' is-closed') + '" href="' + lojaHref(cw.id) + '" data-open-shop="' + cw.id + '">' +
       '<div class="ch-thumb has-logo">' + logoOf(cw) + '</div>' +
       '<div class="ch-body"><div class="ch-name-line"><span class="ch-name">' + esc(cw.name) + '</span>' +
         (cw.hora_off ? '<span class="ch-off" role="img" aria-label="Hora Off" title="Hora Off">' + icon('hora-off', 12) + '</span>' : '') +
@@ -857,7 +866,7 @@
   }
   function resultRow(shop, removable) {
     var sub = shop.bairro ? 'Lava-rápido · ' + shop.bairro : (shop.cidade ? 'Lava-rápido · ' + shop.cidade : 'Lava-rápido');
-    return '<a class="ch-result" href="/car_washes/' + shop.id + '" data-open-shop="' + shop.id + '">' +
+    return '<a class="ch-result" href="' + lojaHref(shop.id) + '" data-open-shop="' + shop.id + '">' +
       '<div class="ch-thumb has-logo">' + logoOf(shop) + '</div>' +
       '<div class="ch-body"><div class="ch-name">' + esc(shop.name) + '</div><div class="ch-result-sub">' + esc(sub) + '</div></div>' +
       (removable ? '<button type="button" class="ch-x" data-remove-recent="' + shop.id + '" aria-label="Remover dos recentes">' + icon('x', 16) + '</button>' : '') +

@@ -136,7 +136,6 @@
   .cw-pane.is-on { display: block; }
 
   /* Serviços */
-  .cw-hint { margin: 4px 2px 10px; font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: .3px; color: var(--ash); }
   .cw-svcs { display: grid; gap: 10px; }
   .cw-svc { display: flex; align-items: center; gap: 14px; width: 100%; padding: 16px; text-align: left; background: var(--paper); border: 1px solid var(--stone); border-radius: 16px; color: var(--ink); transition: border-color .15s, transform .15s, box-shadow .2s; }
   .cw-svc:hover { border-color: var(--ink); box-shadow: 0 10px 24px -18px rgba(40,35,28,.5); }
@@ -751,6 +750,18 @@
       '<g fill="none" stroke="' + T.tinta + '" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' + uses + '</g></svg>';
   }
   function montarCapa() {
+    // Cliente sem a posição no endereço: o site vai recarregar a página pra
+    // pô-la (layout). Aí a capa espera a segunda carga, senão o rodo começava
+    // aqui e recomeçava no meio.
+    var q = new URLSearchParams(location.search), recarrega = false;
+    if (IS_CLIENT && !(q.has('latitude') && q.has('longitude'))) {
+      try { recarrega = !!localStorage.getItem('loov_last_coords'); } catch (x) {}
+    }
+    // Se por algum motivo a página não recarregar, a capa segue sozinha.
+    if (recarrega) { setTimeout(function () { recarrega = false; montarCapaJa(); }, 1500); return; }
+    montarCapaJa();
+  }
+  function montarCapaJa() {
     var hero = $('cw-hero'), capa = $('cw-capa'), foi = false;
     var REDUZ = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var limpar = function () { if (foi) return; foi = true; hero.classList.add(REDUZ ? 'limpo' : 'limpa'); };
@@ -904,7 +915,7 @@
   function renderServices() {
     var bookable = IS_CLIENT || !SIGNED_IN;
     if (!services.length) { $('cw-pane-servicos').innerHTML = '<div class="cw-empty">Este lava-rápido ainda não cadastrou serviços.</div>'; return; }
-    $('cw-pane-servicos').innerHTML = (bookable ? '<div class="cw-hint">' + (DESK.matches ? 'Clique num serviço para ver os horários' : 'Toque num serviço para agendar') + '</div>' : '') +
+    $('cw-pane-servicos').innerHTML =
       '<div class="cw-svcs">' + services.map(function (s, i) {
         var o = s.hora_off_oferta;
         return '<div class="cw-svc-g' + (o ? ' has-off' : '') + '">' +
